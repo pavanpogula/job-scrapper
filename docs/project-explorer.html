@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Scraper - Project Explorer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #252542;
+            --bg-hover: #2f2f50;
+            --accent-blue: #6366f1;
+            --accent-purple: #a855f7;
+            --accent-pink: #ec4899;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-cyan: #06b6d4;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: rgba(255,255,255,0.08);
+            --shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
+        .header { background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card)); padding: 1.5rem 2rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        .header h1 { font-size: 1.5rem; background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 0.6rem; }
+        .header p { color: var(--text-secondary); margin-top: 0.3rem; font-size: 0.85rem; }
+        .header .generated { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem; }
+        .main { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 80px); }
+        .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); padding: 1.2rem; overflow-y: auto; height: calc(100vh - 80px); position: sticky; top: 80px; }
+        .sidebar-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 0.8rem; padding-left: 0.5rem; }
+        .tree { list-style: none; }
+        .tree ul { list-style: none; padding-left: 1rem; display: none; margin-top: 0.2rem; }
+        .tree li { margin: 0.15rem 0; }
+        .tree-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem; border-radius: 8px; cursor: pointer; transition: all 0.15s; font-size: 0.8rem; color: var(--text-secondary); }
+        .tree-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .tree-item.active { background: rgba(99, 102, 241, 0.2); color: var(--accent-blue); }
+        .tree-item .material-icons-round { font-size: 1rem; transition: transform 0.2s; }
+        .tree-item.folder .folder-icon { color: var(--accent-yellow); }
+        .tree-item.file .material-icons-round { color: var(--accent-blue); }
+        .expanded > ul { display: block; }
+        .expanded > .tree-item .arrow { transform: rotate(90deg); }
+        .tree-badge { margin-left: auto; font-size: 0.6rem; padding: 0.1rem 0.4rem; border-radius: 12px; background: rgba(236, 72, 153, 0.2); color: var(--accent-pink); }
+        .content { padding: 2rem; background: var(--bg-primary); overflow-y: auto; }
+        #defaultView { display: block; }
+        #fileDetail { display: none; }
+        .file-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+        .file-icon-large { width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+        .file-header h2 { font-size: 1.4rem; }
+        .file-header .path { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem; font-family: monospace; }
+        .back-btn { margin-left: auto; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; transition: all 0.15s; }
+        .back-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .file-summary { background: var(--bg-card); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid var(--border); }
+        .file-summary h3 { font-size: 0.9rem; margin-bottom: 0.8rem; color: var(--accent-purple); }
+        .file-summary p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+        .tags-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+        .tag { font-size: 0.7rem; padding: 0.3rem 0.8rem; border-radius: 20px; background: rgba(99, 102, 241, 0.15); color: var(--accent-blue); }
+        .functions-section { margin-top: 1.5rem; }
+        .functions-section h3 { font-size: 0.9rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .functions-section h3 .material-icons-round { color: var(--accent-purple); font-size: 1.2rem; }
+        .function-card { background: var(--bg-secondary); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 0.8rem; border: 1px solid var(--border); transition: all 0.15s; }
+        .function-card:hover { border-color: var(--accent-purple); transform: translateX(4px); }
+        .function-name { font-weight: 600; font-size: 0.9rem; color: var(--accent-cyan); font-family: monospace; }
+        .function-desc { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.4rem; line-height: 1.5; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .info-card { background: var(--bg-card); border-radius: 10px; padding: 1rem; border: 1px solid var(--border); text-align: center; }
+        .info-card .label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
+        .info-card .value { font-size: 1.1rem; font-weight: 600; margin-top: 0.3rem; color: var(--accent-blue); }
+        .overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; }
+        .overview-card { background: var(--bg-card); border-radius: 14px; padding: 1.3rem; border: 1px solid var(--border); cursor: pointer; transition: all 0.2s; }
+        .overview-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: rgba(99,102,241,0.3); }
+        .overview-card h4 { font-size: 0.95rem; margin-bottom: 0.4rem; }
+        .overview-card p { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; }
+        .overview-card .card-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.8rem; font-size: 1.2rem; }
+        .card-icon.pink { background: rgba(236, 72, 153, 0.15); }
+        .card-icon.yellow { background: rgba(245, 158, 11, 0.15); }
+        .card-icon.cyan { background: rgba(6, 182, 212, 0.15); }
+        .card-icon.green { background: rgba(16, 185, 129, 0.15); }
+        .card-icon.purple { background: rgba(168, 85, 247, 0.15); }
+        .card-icon.blue { background: rgba(99, 102, 241, 0.15); }
+        .section-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.2rem; font-size: 1rem; font-weight: 600; }
+        .section-header .material-icons-round { color: var(--accent-purple); }
+        @media (max-width: 768px) { .main { grid-template-columns: 1fr; } .sidebar { display: none; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1><span class="material-icons-round">folder_special</span> Job Scraper Project Explorer</h1>
+        <p>Click any file to see details and functions</p>
+        <div class="generated">Auto-generated on 2025-12-27</div>
+    </header>
+    <div class="main">
+        <aside class="sidebar">
+            <div class="sidebar-title">Project Structure</div>
+            <ul class="tree">
+                <li class="expanded">
+        <div class="tree-item folder" onclick="toggleFolder(this)">
+            <span class="material-icons-round arrow">chevron_right</span>
+            <span class="material-icons-round folder-icon">folder</span>
+            <span>job-scrapper</span>
+        </div>
+        <ul><li class="expanded">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>prisma</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('prisma_schema_prisma')">
+                        <span class="material-icons-round">description</span>
+                        <span>schema.prisma</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="expanded">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>src</span>
+                    </div>
+                    <ul><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>config</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_config_companies_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>companies.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>discovery</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_discovery_cdx-worker_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>cdx-worker.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>lib</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_redis_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>redis.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>scripts</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_scripts_clean-db_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>clean-db.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_scripts_db-inspect_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>db-inspect.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_scripts_db-menu_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>db-menu.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_scraper_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>scraper.ts</span>
+                        <span class="tree-badge">⭐ Core</span>
+                    </div>
+                </li></ul>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('seed_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>seed.ts</span>
+                        
+                    </div>
+                </li></ul>
+    </li>
+            </ul>
+        </aside>
+        <main class="content">
+            <div id="defaultView">
+                <div class="section-header"><span class="material-icons-round">apps</span><span>Select a file to view details</span></div>
+                <div class="overview-grid"><div class="overview-card" onclick="showFile('src_scraper_ts')">
+            <div class="card-icon pink">⭐</div>
+            <h4>scraper.ts</h4>
+            <p>Fetches jobs from Ashby API, normalizes data, and stores in ...</p>
+        </div>
+<div class="overview-card" onclick="showFile('src_discovery_cdx-worker_ts')">
+            <div class="card-icon yellow">🔍</div>
+            <h4>cdx-worker.ts</h4>
+            <p>Auto-discovers companies from Wayback Machine CDX API. Valid...</p>
+        </div>
+<div class="overview-card" onclick="showFile('src_scripts_db-menu_ts')">
+            <div class="card-icon cyan">💻</div>
+            <h4>db-menu.ts</h4>
+            <p>CLI menu for querying database. Dashboard, search, salaries,...</p>
+        </div>
+<div class="overview-card" onclick="showFile('src_scripts_clean-db_ts')">
+            <div class="card-icon blue">🧹</div>
+            <h4>clean-db.ts</h4>
+            <p>Removes invalid company entries using isValidSlug. Deletes j...</p>
+        </div>
+<div class="overview-card" onclick="showFile('src_scripts_db-inspect_ts')">
+            <div class="card-icon purple">🔬</div>
+            <h4>db-inspect.ts</h4>
+            <p>Shows table names, column details (type, nullable), and row ...</p>
+        </div>
+<div class="overview-card" onclick="showFile('src_lib_redis_ts')">
+            <div class="card-icon pink">⚡</div>
+            <h4>redis.ts</h4>
+            <p>Provides Redis client for caching job content hashes. Enable...</p>
+        </div></div>
+            </div>
+            <div id="fileDetail">
+                <div class="file-header">
+                    <div id="fileIconLarge" class="file-icon-large"></div>
+                    <div><h2 id="fileName"></h2><div class="path" id="filePath"></div></div>
+                    <button class="back-btn" onclick="showDefault()"><span class="material-icons-round">arrow_back</span>Back</button>
+                </div>
+                <div class="file-summary"><h3>Summary</h3><p id="fileSummary"></p><div class="tags-row" id="fileTags"></div></div>
+                <div class="info-grid" id="fileInfo"></div>
+                <div class="functions-section" id="functionsSection"><h3><span class="material-icons-round">functions</span>Functions</h3><div id="functionsList"></div></div>
+            </div>
+        </main>
+    </div>
+    <script>
+        const files = {
+  "src_scraper_ts": {
+    "name": "scraper.ts",
+    "path": "src/scraper.ts",
+    "icon": "⭐",
+    "iconClass": "pink",
+    "summary": "Fetches jobs from Ashby API, normalizes data, and stores in database with Redis caching for change detection",
+    "tags": [
+      "Core",
+      "Ashby API",
+      "Redis",
+      "Upsert",
+      "Change Detection"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "6"
+      }
+    ],
+    "functions": [
+      {
+        "name": "fetchJobs()",
+        "desc": "Calls Ashby API to fetch all jobs for a company. Handles 404 by marking company as NOT_FOUND."
+      },
+      {
+        "name": "generateHash()",
+        "desc": "Creates MD5 hash of job content for change detection. Avoids redundant DB writes."
+      },
+      {
+        "name": "getOrCreateDepartment()",
+        "desc": "Upserts a department record. Returns ID or null if name is empty."
+      },
+      {
+        "name": "getOrCreateLocation()",
+        "desc": "Upserts a location record. Returns ID or null if name is empty."
+      },
+      {
+        "name": "processCompany()",
+        "desc": "Processes all jobs for a company. Checks Redis cache, upserts changed jobs."
+      },
+      {
+        "name": "runAll()",
+        "desc": "Entry point. Fetches all ACTIVE companies and scrapes each one sequentially."
+      }
+    ]
+  },
+  "src_discovery_cdx-worker_ts": {
+    "name": "cdx-worker.ts",
+    "path": "src/discovery/cdx-worker.ts",
+    "icon": "🔍",
+    "iconClass": "yellow",
+    "summary": "Auto-discovers companies from Wayback Machine CDX API. Validates slugs with regex and blocklist.",
+    "tags": [
+      "Discovery",
+      "Wayback Machine",
+      "Validation",
+      "Regex",
+      "Blocklist"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "isValidSlug()",
+        "desc": "Validates company slug against regex, length, blocklist, and numeric patterns"
+      },
+      {
+        "name": "fetchAshbyUrls()",
+        "desc": "Fetches archived Ashby URLs from Wayback Machine CDX API"
+      },
+      {
+        "name": "extractCompanySlug()",
+        "desc": "Parses Ashby URL and extracts company slug from path"
+      },
+      {
+        "name": "runDiscovery()",
+        "desc": "Main discovery function. Fetches URLs, extracts slugs, upserts to DB."
+      }
+    ]
+  },
+  "src_scripts_db-menu_ts": {
+    "name": "db-menu.ts",
+    "path": "src/scripts/db-menu.ts",
+    "icon": "💻",
+    "iconClass": "cyan",
+    "summary": "CLI menu for querying database. Dashboard, search, salaries, raw SQL.",
+    "tags": [
+      "CLI",
+      "Interactive",
+      "readline",
+      "Query Tool",
+      "SQL"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "8"
+      }
+    ],
+    "functions": [
+      {
+        "name": "showDashboard()",
+        "desc": "Shows high-level stats: company, job, department, location counts"
+      },
+      {
+        "name": "showJobsPerCompany()",
+        "desc": "Shows top 15 companies ranked by job count"
+      },
+      {
+        "name": "showTopSalaries()",
+        "desc": "Shows top 10 highest-paying jobs with salary info"
+      },
+      {
+        "name": "searchJobs()",
+        "desc": "Prompts for search term and finds matching jobs by title"
+      },
+      {
+        "name": "showLocations()",
+        "desc": "Shows top 10 locations by job count"
+      },
+      {
+        "name": "showGhostCompanies()",
+        "desc": "Finds companies with zero job listings"
+      },
+      {
+        "name": "runSqlQuery()",
+        "desc": "Prompts for raw SQL query and executes it"
+      },
+      {
+        "name": "prompt()",
+        "desc": "Main menu loop. Displays options and handles user input."
+      }
+    ]
+  },
+  "src_scripts_clean-db_ts": {
+    "name": "clean-db.ts",
+    "path": "src/scripts/clean-db.ts",
+    "icon": "🧹",
+    "iconClass": "blue",
+    "summary": "Removes invalid company entries using isValidSlug. Deletes jobs first for FK constraint.",
+    "tags": [
+      "Maintenance",
+      "Cleanup",
+      "Dry-run",
+      "--execute"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "cleanDatabase()",
+        "desc": "Scans all companies, deletes invalid entries and their jobs"
+      }
+    ]
+  },
+  "src_scripts_db-inspect_ts": {
+    "name": "db-inspect.ts",
+    "path": "src/scripts/db-inspect.ts",
+    "icon": "🔬",
+    "iconClass": "purple",
+    "summary": "Shows table names, column details (type, nullable), and row counts via raw SQL",
+    "tags": [
+      "Debug",
+      "Schema",
+      "information_schema",
+      "Raw SQL"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "inspectDatabase()",
+        "desc": "Queries information_schema to list tables, columns, and row counts"
+      }
+    ]
+  },
+  "src_lib_redis_ts": {
+    "name": "redis.ts",
+    "path": "src/lib/redis.ts",
+    "icon": "⚡",
+    "iconClass": "pink",
+    "summary": "Provides Redis client for caching job content hashes. Enables change detection to avoid redundant DB writes.",
+    "tags": [
+      "Cache",
+      "ioredis",
+      "Change Detection",
+      "Performance"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "retryStrategy()",
+        "desc": "Retry strategy for connection failures"
+      }
+    ]
+  },
+  "src_config_companies_ts": {
+    "name": "companies.ts",
+    "path": "src/config/companies.ts",
+    "icon": "📋",
+    "iconClass": "green",
+    "summary": "Hardcoded list of company slugs to seed into the database",
+    "tags": [
+      "Config",
+      "Seed Data",
+      "Company List"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "seed_ts": {
+    "name": "seed.ts",
+    "path": "seed.ts",
+    "icon": "🌱",
+    "iconClass": "green",
+    "summary": "Seeds database from config. Memory-efficient diff strategy for bulk inserts.",
+    "tags": [
+      "Setup",
+      "Bulk Insert",
+      "Memory Diff",
+      "Initial Data"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "seed()",
+        "desc": "Compares TARGET_COMPANIES against DB, bulk inserts new entries"
+      }
+    ]
+  },
+  "prisma_schema_prisma": {
+    "name": "schema.prisma",
+    "path": "prisma/schema.prisma",
+    "icon": "🗄️",
+    "iconClass": "purple",
+    "summary": "Database schema with Prisma ORM models for Company, Job, Department, Location",
+    "tags": [
+      "Prisma",
+      "PostgreSQL",
+      "Schema",
+      "ORM"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "Schema"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "Company",
+        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• status: CompanyStatus\\n• jobs: Job[]\\n• createdAt: DateTime"
+      },
+      {
+        "name": "Department",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
+      },
+      {
+        "name": "Location",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
+      },
+      {
+        "name": "Job",
+        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• createdAt: DateTime\\n• updatedAt: DateTime"
+      }
+    ]
+  }
+};
+        function toggleFolder(el) { el.parentElement.classList.toggle('expanded'); }
+        function toggleModel(el) { 
+            const fields = el.nextElementSibling;
+            if (fields) {
+                fields.style.display = fields.style.display === 'none' ? 'block' : 'none';
+                el.querySelector('.expand-icon').textContent = fields.style.display === 'none' ? '▶' : '▼';
+            }
+        }
+        function showFile(key) {
+            const file = files[key];
+            if (!file) return;
+            document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
+            event?.target?.closest('.tree-item')?.classList.add('active');
+            document.getElementById('defaultView').style.display = 'none';
+            document.getElementById('fileDetail').style.display = 'block';
+            document.getElementById('fileIconLarge').className = 'file-icon-large card-icon ' + file.iconClass;
+            document.getElementById('fileIconLarge').textContent = file.icon;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('filePath').textContent = file.path;
+            document.getElementById('fileSummary').textContent = file.summary;
+            document.getElementById('fileTags').innerHTML = file.tags.map(t => '<span class="tag">' + t + '</span>').join('');
+            document.getElementById('fileInfo').innerHTML = file.info.map(i => '<div class="info-card"><div class="label">' + i.label + '</div><div class="value">' + i.value + '</div></div>').join('');
+            
+            // Check if this is schema file (functions have field lists)
+            const isSchema = file.path.includes('.prisma');
+            if (isSchema) {
+                document.getElementById('functionsList').innerHTML = file.functions.map(f => {
+                    const fields = f.desc.split('\\n').map(field => '<li style="font-family:monospace;font-size:0.8rem;color:var(--text-secondary);margin:0.3rem 0;">' + field.replace('• ', '') + '</li>').join('');
+                    return '<div class="function-card" style="cursor:pointer" onclick="toggleModel(this)"><div class="function-name"><span class="expand-icon" style="margin-right:0.5rem">▶</span>' + f.name + '</div></div><ul style="display:none;list-style:none;padding-left:1.5rem;margin:0 0 0.8rem 0;background:var(--bg-primary);border-radius:8px;padding:0.8rem 1rem;">' + fields + '</ul>';
+                }).join('');
+            } else {
+                document.getElementById('functionsList').innerHTML = file.functions.map(f => '<div class="function-card"><div class="function-name">' + f.name + '</div><div class="function-desc">' + f.desc + '</div></div>').join('');
+            }
+        }
+        function showDefault() {
+            document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('defaultView').style.display = 'block';
+            document.getElementById('fileDetail').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

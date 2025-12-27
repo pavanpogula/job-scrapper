@@ -1,0 +1,87 @@
+{
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "plugins": [
+        "@typescript-eslint",
+        "jsdoc"
+    ],
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended"
+    ],
+    "env": {
+        "node": true,
+        "es2022": true
+    },
+    "rules": {
+        // =============================
+        // MANDATORY JSDOC RULES
+        // These ensure the docs generator works well
+        // =============================
+        // Require JSDoc for functions
+        "jsdoc/require-jsdoc": [
+            "warn",
+            {
+                "require": {
+                    "FunctionDeclaration": true,
+                    "MethodDefinition": true,
+                    "ClassDeclaration": true,
+                    "ArrowFunctionExpression": false,
+                    "FunctionExpression": false
+                },
+                "checkConstructors": false
+            }
+        ],
+        // Require @summary tag for docs generator
+        "jsdoc/require-description": "off",
+        // Allow custom tags (@file, @summary, @tags)
+        "jsdoc/check-tag-names": [
+            "warn",
+            {
+                "definedTags": [
+                    "file",
+                    "summary",
+                    "tags",
+                    "example",
+                    "configuration",
+                    "behavior"
+                ]
+            }
+        ],
+        // Disable noisy rules
+        "jsdoc/require-param": "off",
+        "jsdoc/require-param-type": "off",
+        "jsdoc/require-returns": "off",
+        "jsdoc/require-returns-type": "off",
+        "jsdoc/tag-lines": "off",
+        "jsdoc/no-undefined-types": "off",
+        // =============================
+        // TYPESCRIPT RULES
+        // =============================
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unused-vars": [
+            "warn",
+            {
+                "argsIgnorePattern": "^_",
+                "varsIgnorePattern": "^_"
+            }
+        ],
+        // =============================
+        // GENERAL RULES
+        // =============================
+        "no-console": "off",
+        "no-empty": "warn",
+        "prefer-const": "warn"
+    },
+    "ignorePatterns": [
+        "node_modules/",
+        "dist/",
+        "docs/",
+        "*.js",
+        "scripts/"
+    ]
+}

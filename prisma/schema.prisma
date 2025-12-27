@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CompanyStatus {
+  ACTIVE
+  NOT_FOUND
+  REDIRECTED
+}
+
+model Company {
+  id        String        @id @default(uuid())
+  slug      String        @unique // e.g. "deel"
+  name      String?
+  logoUrl   String?
+  status    CompanyStatus @default(ACTIVE)
+  jobs      Job[]
+  createdAt DateTime      @default(now())
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String   @unique // "Engineering", "Sales"
+  jobs      Job[]
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  name      String   @unique // "Remote", "London, UK"
+  jobs      Job[]
+}
+
+model Job {
+  id          String   @id @default(uuid())
+  ashbyId     String   @unique // External ID from Ashby
+  title       String
+  applyUrl    String
+  
+  // Relations
+  companySlug String
+  company     Company @relation(fields: [companySlug], references: [slug])
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  locationId   String?
+  location     Location? @relation(fields: [locationId], references: [id])
+  
+  // Compensation
+  salaryMin      Float?
+  salaryMax      Float?
+  salaryCurrency String?
+
+  // Raw Data & Metadata
+  metadata    Json
+  contentHash String   
+  
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Index for efficient filtering
+  @@index([companySlug])
+  @@index([departmentId])
+  @@index([locationId])
+  @@index([active])
+}
