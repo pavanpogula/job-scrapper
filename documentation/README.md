@@ -23,7 +23,7 @@
   5. Every run writes `output/latest-error-report.json` (telemetry for the Bug-Fix Agent loop, see 10).
   6. Optionally render the latest CSV into a giant Markdown table, `JOBS.md`.
 - **Stack:** TypeScript 5 · ts-node · Prisma 5 (PostgreSQL / Neon) · ioredis · axios · googleapis.
-- **Run anything:** every feature is an `npm run <script>` → `npx ts-node <file>.ts`, except `scripts/generate-readme.ts` and `scripts/test-drive-upload.ts`, which have no npm script (run them with `npx ts-node`, 09 #24). There is no build step.
+- **Run anything:** every feature is an `npm run <script>` → `npx ts-node <file>.ts`, except `scripts/generate-readme.ts`, which has no npm script (run it with `npx ts-node`). There is no build step.
 - **Scale seen so far:** ~3,072 discovered slugs → **34,035 live jobs** (across 1,747 hiring companies, 13,686 with extracted salaries) scraped into Neon PostgreSQL in **141.3s** via `npm run scrape:parallel -- --workers=8` (the default worker count is `min(4, max(2, cpus))`, see 09 #39).
 
 ---
@@ -57,7 +57,7 @@
 3. **Adaptive Rate Limiting:** `createLimiter()` in `src/lib/Concurrency.ts` dynamically halves concurrency and pauses the queue when `429`/`403` rate limits occur, then ramps back up after consecutive clean responses.
 4. **`GoogleDriveOAuth.ts` is misnamed** — it actually uses a *service-account JWT*, not user OAuth.
    The real user-OAuth flow lives in `GoogleDriveUserOAuth.ts`. See 07 & 09.
-5. **Some entry-point files execute on import** (`src/database/DbMenu.ts`, `src/database/DbInspect.ts`, `scripts/test-drive-upload.ts`, `scripts/GenerateDocs.ts`). Don't import them from other modules.
+5. **Some entry-point files execute on import** (`src/database/DbMenu.ts`, `src/database/DbInspect.ts`, `scripts/GenerateDocs.ts`). Don't import them from other modules.
    The others (`Scraper`, `ClusterScraper`, `ScraperCSV`, `CdxWorker`, `Seed`, `ProcessCdxData`, `Verify`, `DbClean`, `scripts/generate-readme.ts`) use a `require.main === module` guard.
 6. **Secrets live in `.env` and `apikeys/`** (both gitignored). Never print or commit their contents.
 7. **Verification scope:** `npx tsc --noEmit -p .` and `npm run lint` cover **`src/` only**, not `tests/` or `scripts/`.

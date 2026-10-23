@@ -154,12 +154,6 @@
                         <span>GenerateDocs.ts</span>
                         
                     </div>
-                </li><li>
-                    <div class="tree-item file" onclick="showFile('scripts_test-drive-upload_ts')">
-                        <span class="material-icons-round">description</span>
-                        <span>test-drive-upload.ts</span>
-                        
-                    </div>
                 </li></ul>
                 </li><li class="expanded">
                     <div class="tree-item folder" onclick="toggleFolder(this)">
@@ -225,12 +219,6 @@
                         <span>database</span>
                     </div>
                     <ul><li>
-                    <div class="tree-item file" onclick="showFile('src_database_BackfillJobFields_ts')">
-                        <span class="material-icons-round">description</span>
-                        <span>BackfillJobFields.ts</span>
-                        
-                    </div>
-                </li><li>
                     <div class="tree-item file" onclick="showFile('src_database_DbClean_ts')">
                         <span class="material-icons-round">description</span>
                         <span>DbClean.ts</span>
@@ -487,15 +475,15 @@
             <h4>generate-readme.ts</h4>
             <p>Parses the latest CSV job export with RFC-4180 quote handlin...</p>
         </div>
-<div class="overview-card" onclick="showFile('scripts_test-drive-upload_ts')">
-            <div class="card-icon cyan">📜</div>
-            <h4>test-drive-upload.ts</h4>
-            <p>Tests the OAuth user consent flow - YOU will own the uploade...</p>
-        </div>
 <div class="overview-card" onclick="showFile('src_api_Server_ts')">
             <div class="card-icon blue">📝</div>
             <h4>Server.ts</h4>
             <p>Serves REST API endpoints for jobs, companies, and facets qu...</p>
+        </div>
+<div class="overview-card" onclick="showFile('src_config_Companies_ts')">
+            <div class="card-icon green">📋</div>
+            <h4>Companies.ts</h4>
+            <p>Hardcoded list of company slugs to seed into the database...</p>
         </div></div>
             </div>
             <div id="fileDetail">
@@ -637,27 +625,6 @@
         "desc": "Formats JobRow array into Markdown table with pipe sanitization and truncation"
       }
     ]
-  },
-  "scripts_test-drive-upload_ts": {
-    "name": "test-drive-upload.ts",
-    "path": "scripts/test-drive-upload.ts",
-    "icon": "📜",
-    "iconClass": "cyan",
-    "summary": "Tests the OAuth user consent flow - YOU will own the uploaded files",
-    "tags": [
-      "Undocumented"
-    ],
-    "info": [
-      {
-        "label": "Type",
-        "value": "TypeScript"
-      },
-      {
-        "label": "Functions",
-        "value": "0"
-      }
-    ],
-    "functions": []
   },
   "src_api_Server_ts": {
     "name": "Server.ts",
@@ -864,36 +831,6 @@
       {
         "name": "scrapeToCSV()",
         "desc": "Main function - scrapes jobs concurrently and streams to CSV"
-      }
-    ]
-  },
-  "src_database_BackfillJobFields_ts": {
-    "name": "BackfillJobFields.ts",
-    "path": "src/database/BackfillJobFields.ts",
-    "icon": "📝",
-    "iconClass": "blue",
-    "summary": "Backfills structured columns on Job (salaryInterval, isRemote, workplaceType, employmentType, publishedAt, isListed, country, region, city, postalAddress) from metadata JSONB",
-    "tags": [
-      "Database",
-      "Migration",
-      "Backfill",
-      "PostgreSQL",
-      "JSONB"
-    ],
-    "info": [
-      {
-        "label": "Type",
-        "value": "TypeScript"
-      },
-      {
-        "label": "Functions",
-        "value": "1"
-      }
-    ],
-    "functions": [
-      {
-        "name": "backfillJobFields()",
-        "desc": "Backfills structured fields for all active jobs in PostgreSQL from their metadata JSONB"
       }
     ]
   },

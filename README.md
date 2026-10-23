@@ -13,14 +13,13 @@ openings (titles, departments, locations, salary ranges, apply links) instead of
 > Full project context for humans and AI agents lives in [`documentation/`](./documentation/README.md).
 > Agent rules live in [`AGENTS.md`](./AGENTS.md).
 
-## Free Cloud Deployment (1-Click)
+## Cloud Deployment
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/pavanpogula/job-scrapper)
-
-Click the button above to deploy this entire application (Express API + React Web UI) to **Render for 100% Free**:
-1. Sign in with GitHub.
-2. Enter your `DATABASE_URL` (Neon PostgreSQL connection string).
-3. Click **Apply** — Render automatically builds and hosts your app on a free 24/7 HTTPS domain.
+Deploy the frontend React application directly on **Vercel**:
+1. Import `pavanpogula/job-scrapper` on Vercel.
+2. Select Root Directory: `job-scrapper-ui`.
+3. Framework Preset: `Vite`.
+4. Click **Deploy**.
 
 ---
 
@@ -120,7 +119,6 @@ GOOGLE_DRIVE_FOLDER_ID="your_folder_id"
 | `npm run db:menu` | Interactive database explorer (dashboard, search, salaries, raw SQL) |
 | `npm run db:inspect` | Dump tables, columns and row counts via `information_schema` |
 | `npm run db:clean` | Dry-run listing of companies with invalid slugs; `-- --execute` deletes them and their jobs |
-| `npm run db:backfill` | Backfill structured `Job` columns (`salaryInterval`, `isRemote`, `workplaceType`, `country`, `publishedAt`, etc.) from metadata JSONB |
 | `npm run enrich:companies` | Concurrently enrich active hiring companies with real display names and hosted logos from Ashby |
 | `npm run prisma:studio` | Open Prisma Studio |
 | `npm run docs:generate` | Regenerate `docs/project-explorer.html` from JSDoc `@file`/`@summary`/`@tags` blocks and the Prisma schema |
@@ -132,7 +130,6 @@ Scripts without an npm alias:
 | Command | Description |
 |---------|-------------|
 | `npx ts-node scripts/generate-readme.ts` | Render the newest `output/jobs_*.csv` into `JOBS.md` |
-| `npx ts-node scripts/test-drive-upload.ts` | Test the user-OAuth Google Drive upload flow |
 
 ## Outputs
 

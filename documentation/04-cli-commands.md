@@ -20,7 +20,6 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run db:inspect` | `src/database/DbInspect.ts` | ✅ | — | — | read-only | 0 (errors caught & logged) |
 | `npm run db:clean` | `src/database/DbClean.ts` | ✅ | — | — | nothing (dry run) | 0 (errors caught & logged) |
 | `npm run db:clean -- --execute` | same | ✅ | — | — | **deletes** `Job` + `Company` rows with invalid slugs | 0 |
-| `npm run db:backfill` | `src/database/BackfillJobFields.ts` | ✅ | — | — | backfills structured `Job` columns from metadata JSONB | 1 |
 | `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force]` | `src/utils/EnrichCompanies.ts` | ✅ | — | Ashby hosted boards | updates `Company.name` & `Company.logoUrl` | 1 |
 | `npm run verify` | `src/utils/Verify.ts` | ✅ | — | — | read-only (console report) | 1 |
 | `npm run api:start` | `src/api/Server.ts` | ✅ | — | — | HTTP server on port 3001 with rate limiting and static UI serving | 1 |
@@ -30,7 +29,6 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm test` | `jest` (`jest.config.js`) | — (Prisma mocked) | — (mocked) | — (axios mocked) | nothing | non-zero on failing test |
 | `npx tsc --noEmit -p .` | TypeScript compiler | — | — | — | nothing (type-check `src/**/*` only) | non-zero on type error |
 | `npx ts-node scripts/generate-readme.ts` | *(no npm script)* | — | — | — | `JOBS.md` (repo root) | 1 if no `jobs_*.csv`; otherwise 0 |
-| `npx ts-node scripts/test-drive-upload.ts` | *(no npm script)* | — | — | Google OAuth/Drive | `apikeys/oauth-token.json`, Drive file; temp `output/test-upload.txt` | 0 (`.catch(console.error)`) |
 
 Prisma CLI (not wrapped): `npx prisma generate`, `npx prisma db push` (no `prisma/migrations/` folder exists — the schema
 is synced with `db push`, not `migrate`).
@@ -193,10 +191,4 @@ Interactive `readline` loop (`Select an option [1-8]`). Runs on import (no `requ
 - Exits 1 with `❌ No job CSV files found in output/` when no CSV exists (throws → logged, exit 0, if `output/` itself
   is missing).
 
-### `npx ts-node scripts/test-drive-upload.ts` *(no npm script shortcut)*
-- Runs on import (`main().catch(console.error)` at module level, no `require.main` guard).
-- Tests the Google Drive **user OAuth2** flow (`src/lib/GoogleDriveUserOAuth.ts`, scope `drive.file`).
-- Writes `output/test-upload.txt`, runs consent (prints URL, asks you to paste the code) or reuses/refreshes
-  `apikeys/oauth-token.json`, uploads the file to **My Drive root** (no folder ID is passed), lists your 10 most recently
-  modified files, then deletes the local test file. If an exception is thrown before cleanup the `.txt` is left behind.
-- Reads `apikeys/oauth-credentials.json` (`installed` or `web` client).
+

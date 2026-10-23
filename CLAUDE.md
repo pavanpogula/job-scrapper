@@ -91,6 +91,6 @@ pipeline changes), root `README.md`, `AGENTS.md` → `npm run docs:generate`.
 - `latest-error-report.json` is shared by DB and CSV runs (each overwrites it); transient 5xx/timeouts are not recorded.
 - Several BF invariants have no guarding test (BF-010 `createMany` fast path has none). Don't assume green tests prove them.
 - `tsc -p .` and `npm run lint` only cover `src/`. `tests/` and `scripts/` are not type-checked or linted.
-- `DbMenu.ts`, `DbInspect.ts`, `scripts/GenerateDocs.ts`, `scripts/test-drive-upload.ts` run on import — never import them.
+- `DbMenu.ts`, `DbInspect.ts`, `scripts/GenerateDocs.ts` run on import — never import them.
 - `JOBS.md` is a committed 5 MB generated snapshot; don't read it whole.
 - Never read/print `.env`, `apikeys/`, or commit `output/`.
