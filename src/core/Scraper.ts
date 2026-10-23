@@ -49,6 +49,8 @@ export class AshbyScraper {
     private locationCache = new Map<string, string>();
     private locationInFlight = new Map<string, Promise<string>>();
     private notFoundStrikes = new Map<string, number>();
+    private companiesWithExistingJobs = new Set<string>();
+    private hasLoadedExistingJobSlugs = false;
     private isRedisConnected = false;
 
     /**
@@ -301,10 +303,54 @@ export class AshbyScraper {
             let succeededJobs: ProcessedJob[] = batch;
 
             try {
-                // Use transaction for batch upsert
-                await prisma.$transaction(
-                    batch.map(job => prisma.job.upsert(buildUpsertArgs(job)))
-                );
+                const findManyFn = (prisma.job as any)?.findMany;
+                const createManyFn = (prisma.job as any)?.createMany;
+
+                if (typeof findManyFn === 'function' && typeof createManyFn === 'function') {
+                    // Fast bulk path: 1 SELECT + 1 INSERT (createMany) for new jobs, only upserting changed existing jobs
+                    const existingRows: { ashbyId: string; contentHash: string; active: boolean }[] = await findManyFn({
+                        where: { ashbyId: { in: batch.map(j => j.ashbyId) } },
+                        select: { ashbyId: true, contentHash: true, active: true }
+                    });
+                    const existingMap = new Map(existingRows.map(r => [r.ashbyId, r]));
+
+                    const toCreate = batch.filter(j => !existingMap.has(j.ashbyId));
+                    const toUpdate = batch.filter(j => {
+                        const prev = existingMap.get(j.ashbyId);
+                        return prev !== undefined && (prev.contentHash !== j.contentHash || !prev.active);
+                    });
+
+                    if (toCreate.length > 0) {
+                        await createManyFn({
+                            data: toCreate.map(job => ({
+                                ashbyId: job.ashbyId,
+                                title: job.title,
+                                companySlug: job.companySlug,
+                                departmentId: job.departmentId,
+                                locationId: job.locationId,
+                                applyUrl: job.applyUrl,
+                                salaryMin: job.salaryMin,
+                                salaryMax: job.salaryMax,
+                                salaryCurrency: job.salaryCurrency,
+                                metadata: job.metadata,
+                                contentHash: job.contentHash,
+                                active: true
+                            })),
+                            skipDuplicates: true
+                        });
+                    }
+
+                    if (toUpdate.length > 0) {
+                        await prisma.$transaction(
+                            toUpdate.map(job => prisma.job.upsert(buildUpsertArgs(job)))
+                        );
+                    }
+                } else {
+                    // Standard transaction upsert path
+                    await prisma.$transaction(
+                        batch.map(job => prisma.job.upsert(buildUpsertArgs(job)))
+                    );
+                }
             } catch (batchErr: any) {
                 console.warn(
                     `  ⚠️ [BatchError] Transaction failed for batch starting at index ${i} (${batchErr?.message || 'Unknown error'}). Falling back to per-job upsert...`
@@ -404,6 +450,27 @@ export class AshbyScraper {
 
         await this.initRedis();
 
+        // Pre-warm department and location caches in 2 queries to avoid per-company round trips
+        if (typeof (prisma.department as any)?.findMany === 'function') {
+            const depts = await (prisma.department as any).findMany({ select: { id: true, name: true } }).catch(() => []);
+            for (const d of depts || []) this.departmentCache.set(d.name, d.id);
+        }
+        if (typeof (prisma.location as any)?.findMany === 'function') {
+            const locs = await (prisma.location as any).findMany({ select: { id: true, name: true } }).catch(() => []);
+            for (const l of locs || []) this.locationCache.set(l.name, l.id);
+        }
+        if (typeof (prisma.job as any)?.findMany === 'function') {
+            const activeSlugs = await (prisma.job as any)
+                .findMany({ where: { active: true }, select: { companySlug: true }, distinct: ['companySlug'] })
+                .catch(() => null);
+            if (Array.isArray(activeSlugs)) {
+                this.hasLoadedExistingJobSlugs = true;
+                for (const row of activeSlugs) {
+                    if (row?.companySlug) this.companiesWithExistingJobs.add(row.companySlug);
+                }
+            }
+        }
+
         const companies = options.slugs
             ? options.slugs.map(slug => ({ slug }))
             : await prisma.company.findMany({
@@ -463,8 +530,10 @@ export class AshbyScraper {
                     await this.recordNotFoundStrike(company.slug, 3);
                 } else if (boardResult.source === 'rest' || boardResult.source === 'graphql') {
                     this.notFoundStrikes.delete(company.slug);
-                    const activeIds = boardResult.jobs.map(j => j.id);
-                    await this.deactivateStaleJobs(company.slug, activeIds);
+                    if (!this.hasLoadedExistingJobSlugs || this.companiesWithExistingJobs.has(company.slug)) {
+                        const activeIds = boardResult.jobs.map(j => j.id);
+                        await this.deactivateStaleJobs(company.slug, activeIds);
+                    }
                 }
 
                 if (boardResult.validationIssues && boardResult.validationIssues.length > 0) {
@@ -484,13 +553,15 @@ export class AshbyScraper {
                     totalProcessed += processed.length;
                     pendingJobs.push(...processed);
                     enqueueFlushIfNeeded(false);
-                    console.log(`  ✅ ${workerPrefix}${boardResult.slug}: ${boardResult.jobs.length} jobs (${processed.length} changed)`);
+                    if (companies.length <= 50) {
+                        console.log(`  ✅ ${workerPrefix}${boardResult.slug}: ${boardResult.jobs.length} jobs (${processed.length} changed)`);
+                    }
                 }
 
-                // Progress indicator every 100 companies
-                if (completed % 100 === 0) {
+                // Progress indicator every 50 companies
+                if (completed % 50 === 0 || completed === companies.length) {
                     console.log(
-                        `📊 ${workerPrefix}Progress: ${completed}/${companies.length} companies (concurrency: ${limit.getConcurrency()})`
+                        `📊 ${workerPrefix}Progress: ${completed}/${companies.length} companies | ${tracker.jobsCollected} jobs found (concurrency: ${limit.getConcurrency()})`
                     );
                 }
             })

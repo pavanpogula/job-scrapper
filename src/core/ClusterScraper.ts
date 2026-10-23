@@ -115,8 +115,8 @@ export async function runClusterScrape(argv: string[] = process.argv): Promise<E
     const slugs = companies.map(c => c.slug);
     const workerCount = resolveWorkerCount(argv, slugs.length);
     const shards = partitionSlugs(slugs, workerCount);
-    // Divide total target HTTP concurrency (~20) across OS processes (min 5 per worker)
-    const perWorkerConcurrency = Math.max(5, Math.ceil(20 / shards.length));
+    // Scale per-worker HTTP concurrency based on workload size (12 per worker for full-scale runs)
+    const perWorkerConcurrency = slugs.length > 100 ? 12 : Math.max(5, Math.ceil(20 / shards.length));
 
     console.log(`⚡ MULTI-PROCESS CLUSTER SCRAPER`);
     console.log(`   Active Companies : ${slugs.length}`);

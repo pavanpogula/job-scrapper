@@ -19,7 +19,7 @@
   4. Optionally render the latest CSV into a giant Markdown table, `JOBS.md`.
 - **Stack:** TypeScript 5 · ts-node · Prisma 5 (PostgreSQL / Neon) · ioredis · axios · googleapis.
 - **Run anything:** every feature is an `npm run <script>` → `npx ts-node <file>.ts`. There is no build step.
-- **Scale seen so far:** ~3,072 discovered slugs → ~29,900 jobs per CSV run.
+- **Scale seen so far:** ~3,072 discovered slugs → **34,035 live jobs** (across 1,747 hiring companies, 13,686 with extracted salaries) scraped into Neon PostgreSQL in **141.3s** via 8-worker `npm run scrape:parallel`.
 
 ---
 

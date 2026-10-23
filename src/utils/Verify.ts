@@ -59,12 +59,13 @@ export async function verifyDatabase(): Promise<DbVerificationReport> {
 
     const companiesPerSlug = await prisma.company.findMany({
         include: { _count: { select: { jobs: true } } },
-        orderBy: { slug: 'asc' }
+        orderBy: { jobs: { _count: 'desc' } },
+        take: 15
     });
 
-    console.log(`\n🏢 Company Breakdown:`);
+    console.log(`\n🏢 Top ${companiesPerSlug.length} Companies by Job Count:`);
     for (const c of companiesPerSlug) {
-        console.log(`   - ${c.slug.padEnd(15)} | status: ${c.status.padEnd(10)} | jobs: ${c._count.jobs}`);
+        console.log(`   - ${c.slug.padEnd(20)} | status: ${c.status.padEnd(10)} | jobs: ${c._count.jobs}`);
     }
 
     const sampleJobs = await prisma.job.findMany({
@@ -94,7 +95,7 @@ export async function verifyDatabase(): Promise<DbVerificationReport> {
     console.log(`   - Null-Byte JSONB Issues : ${nullByteMetadataIssues}`);
 
     const topSalaryJobs = await prisma.job.findMany({
-        where: { salaryMax: { not: null } },
+        where: { salaryMax: { not: null }, salaryCurrency: 'USD' },
         orderBy: { salaryMax: 'desc' },
         take: 5,
         include: { location: true }
