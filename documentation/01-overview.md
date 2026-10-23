@@ -1,103 +1,149 @@
 # 01 · Project Overview
 
-## 1. Purpose
+## 1. Purpose & Audience
 
-**Ashby Job Scraper** collects public job postings from every company it knows that hosts its careers page on
-**Ashby** (`jobs.ashbyhq.com/<company-slug>`). It is designed for frequent (e.g. hourly/daily) runs and produces:
+**Ashby Job Scraper** collects public job postings from every company it knows of that hosts its careers page on
+**Ashby** (`jobs.ashbyhq.com/<company-slug>`). It produces:
 
-- A normalized **PostgreSQL** dataset (`Company`, `Job`, `Department`, `Location`), and/or
-- A daily **CSV snapshot** `output/jobs_YYYY-MM-DD.csv` (≈30k rows), optionally pushed to **Google Drive**, and
-- An optional human-readable **`JOBS.md`** table generated from the newest CSV.
+- A normalized **PostgreSQL** dataset (`Company`, `Job`, `Department`, `Location`) with salary ranges and sanitized raw job JSON. This is the primary output.
+- A **CSV snapshot** `output/jobs_YYYY-MM-DD.csv`, optionally pushed to **Google Drive**.
+- An optional human-readable **`JOBS.md`** Markdown table rendered from the newest CSV (`scripts/generate-readme.ts`).
+- A machine-readable **run report** `output/latest-error-report.json`, which drives the Bug-Fix Agent loop (see 10).
 
-It is a **batch CLI tool**, not a service: no HTTP server, no API routes, no frontend, no scheduler/cron
-inside the repo (scheduling must be done externally, e.g. cron / GitHub Actions).
+**Audience:** the repo owner and AI agents who maintain it. The dataset is meant for job search and analysis of
+Ashby-hosted openings. The roadmap (10) is to package it later as a React dashboard, a desktop app or a single binary.
 
-## 2. Tech Stack
+It is a **batch CLI toolkit**, not a service. There is no HTTP server, API route, frontend, or built-in scheduler or cron
+(schedule it externally, e.g. with cron or GitHub Actions).
 
-| Layer | Technology | Version (package.json) | Notes |
+**Current scale:** 3,072 slugs in `extracted-slugs.json`. The full 8-worker run wrote **34,035 jobs from 1,747 hiring companies in
+141.3 s** (BF-010). The latest cached cluster run collected 34,021 jobs in about 24 s, with about 1,100 slugs returning 404 (see 09 #29).
+
+## 2. End-to-End Flow (one paragraph)
+
+`discover` (Wayback CDX ± CommonCrawl) or `process:cdx` → `extracted-slugs.json` → `seed [--all]` inserts `Company`
+rows (`ACTIVE`). Then `scrape` / `scrape:parallel` / `scrape:csv` load the `ACTIVE` companies and call
+`fetchAshbyBoardWithFallback()` for each slug (REST posting API, with the hosted GraphQL API as fallback). They pass every board
+through `sanitizeJobBatch()` and then either (DB modes) filter unchanged jobs with Redis hashes, resolve
+departments/locations, write 100-job batches (`createMany` for new jobs, `upsert` for changed ones, per-job fallback) and deactivate
+jobs that are gone, or (CSV mode) stream rows to the CSV. Every run ends by writing `output/latest-error-report.json`. See 02 for
+diagrams.
+
+## 3. Tech Stack
+
+| Layer | Technology | Version (package.json → installed) | Notes |
 |-------|-----------|------------------------|-------|
-| Language | TypeScript | `^5.9.3` | `strict: true`, target ES2020, CommonJS |
-| Runtime | Node.js | v24 on dev machine | Executed through `ts-node` (`^10.9.2`), no compile step |
-| HTTP client | axios | `^1.13.2` | 10 s timeout on Ashby calls |
-| ORM | Prisma (`prisma`, `@prisma/client`) | `^5.22.0` | PostgreSQL provider (`.env.example` mentions Neon) |
-| Cache | ioredis | `^5.8.2` | Optional; graceful degradation if unavailable |
-| Cloud | googleapis | `^169.0.0` | Drive v3 upload (service account JWT or user OAuth) |
-| Config | dotenv | `^17.2.3` | Loaded in `src/lib/Redis.ts`; Prisma loads `.env` itself |
-| Lint | ESLint 8 + `@typescript-eslint` 6 + `eslint-plugin-jsdoc` | dev | JSDoc `@file/@summary/@tags` convention feeds the doc generator |
-| Tests | Jest 29 + ts-jest | dev | 16 test suites, 79 unit & E2E tests |
+| Language | TypeScript | `^5.9.3` → 5.9.3 | `strict: true`, target ES2020, CommonJS. `tsconfig` `include` is `src/**/*` only |
+| Runtime | Node.js | v24.21.0 on the dev machine (no `engines` field) | Run through `ts-node` (`^10.9.2`), no compile step |
+| HTTP client | axios | `^1.13.2` | 10 s timeout. Browser headers. Retries `429`/`5xx`/timeouts |
+| ORM | Prisma (`prisma`, `@prisma/client`) | `^5.22.0` → 5.22.0 | PostgreSQL (`.env.example` mentions Neon) |
+| Cache | ioredis | `^5.8.2` | Optional. `lazyConnect`, and the scraper runs without it |
+| Cloud | googleapis | `^169.0.0` | Drive v3 upload (service-account JWT in `scrape:csv`; user OAuth via a script) |
+| Config | dotenv | `^17.2.3` | Loaded in `src/lib/Redis.ts`. Prisma reads `.env` itself |
+| Lint | ESLint 8.57 + `@typescript-eslint` 6 + `eslint-plugin-jsdoc` 46 | dev | Covers `src/` only. JSDoc `@file/@summary/@tags` feeds the doc generator |
+| Tests | **Jest 30.5** + ts-jest 29.4 (`isolatedModules`) | dev | 16 suites, 79 unit & E2E tests. Prisma is mocked. See [11-testing-guide.md](./11-testing-guide.md) |
 
-> `@types/node`, `prisma`, `ts-node`, `typescript` are listed under `dependencies` (not `devDependencies`).
-> `google-auth-library` is imported directly in `GoogleDriveUserOAuth.ts` but is only a *transitive* dependency of `googleapis`.
+> `@types/node`, `prisma`, `ts-node` and `typescript` are under `dependencies` (not `devDependencies`).
+> `google-auth-library` (10.5.0) is imported directly in `GoogleDriveUserOAuth.ts` but is only a *transitive* dependency of `googleapis`.
+> `package.json` has an empty `description`, `"main": "index.js"` (the file doesn't exist) and `version` `1.0.0`, although the docs call the current state "v1.1.0" (09 #40).
 
-## 3. Directory Layout (current working tree)
+## 4. Directory Layout
 
 ```
 job-scrapper/
 ├── AGENTS.md                      # Mandatory AI agent rules, architecture notes & commit workflow
-├── documentation/                 # ← THIS context documentation set (01–10)
-├── README.md                      # User-facing quick start & release overview
-├── JOBS.md                        # GENERATED: Markdown table of latest CSV (~30k rows, untracked)
+├── README.md                      # User-facing overview, quick start, scripts, outputs
+├── documentation/                 # ← THIS context documentation set (01–11 + README index)
+├── JOBS.md                        # GENERATED by scripts/generate-readme.ts, COMMITTED (~5.4 MB; 2026-01-05 snapshot, 29,911 rows from a 29,910-record CSV, 09 #42)
+├── extracted-slugs.json           # GENERATED by process:cdx: 3,072 slugs. Tracked although .gitignore lists it
 ├── package.json / package-lock.json
 ├── tsconfig.json                  # rootDir ./src, include src/**/*
-├── .eslintrc.json                 # Enforces JSDoc on functions/classes/methods
+├── jest.config.js                 # ts-jest preset, roots tests/, maps @prisma/client → __mocks__
+├── .eslintrc.json                 # Warns (not errors) on missing JSDoc for functions/classes/methods; ignores scripts/
 ├── .env / .env.example            # DATABASE_URL, REDIS_URL, GOOGLE_DRIVE_FOLDER_ID
-├── extracted-slugs.json           # GENERATED by process:cdx — 3,072 valid Ashby slugs
+├── __mocks__/@prisma/client.ts    # Global Prisma mock for Jest
 ├── apikeys/                       # (gitignored) google-credentials.json, oauth-credentials.json, oauth-token.json
 ├── output/                        # (gitignored) jobs_YYYY-MM-DD.csv, latest-error-report.json, error-report_YYYY-MM-DD.json
-├── prisma/
-│   └── schema.prisma              # Company, Department, Location, Job, enum CompanyStatus
+├── prisma/schema.prisma           # Company, Department, Location, Job, enum CompanyStatus
 ├── docs/
-│   ├── GOOGLE_DRIVE_SETUP.md      # Service-account setup guide (paths partially outdated, see 09)
-│   └── project-explorer.html      # GENERATED by docs:generate (interactive code explorer)
-├── scripts/                       # Dev/ops scripts (excluded from ESLint and tsconfig include)
-│   ├── GenerateDocs.ts            # Builds docs/project-explorer.html from JSDoc + Prisma schema
-│   ├── generate-readme.ts         # Builds JOBS.md from newest output/jobs_*.csv  (no npm script)
-│   └── test-drive-upload.ts       # Tests user-OAuth Drive upload               (no npm script)
+│   ├── GOOGLE_DRIVE_SETUP.md      # Service-account (apikeys/google-credentials.json) + user-OAuth setup guide
+│   └── project-explorer.html      # GENERATED by docs:generate
+├── scripts/                       # Dev/ops scripts (not linted, not type-checked by tsc -p .)
+│   ├── GenerateDocs.ts            # docs/project-explorer.html from JSDoc + Prisma schema (npm run docs:generate)
+│   ├── generate-readme.ts         # JOBS.md from newest output/jobs_*.csv          (no npm script)
+│   └── test-drive-upload.ts       # User-OAuth Drive upload smoke test             (no npm script)
+├── tests/
+│   ├── unit/                      # 14 suites (AshbyClient, Sanitizer, ScraperCore, ClusterScraper, …)
+│   ├── e2e/                       # DiscoveryPipeline, ScraperPipeline
+│   └── fixtures/                  # ashby-sample.json, cdx-sample.json (currently unused)
 └── src/
-    ├── config/Companies.ts        # TARGET_COMPANIES default seed list (7 slugs; use --all for 3,072)
+    ├── config/Companies.ts        # TARGET_COMPANIES: 7 sample slugs (use seed --all for 3,072)
     ├── core/
-    │   ├── ClusterScraper.ts      # Multi-process OS worker coordinator (npm run scrape:parallel)
-    │   ├── Scraper.ts             # AshbyScraper class → DB + Redis + IPC worker (npm run scrape)
-    │   └── ScraperCSV.ts          # Streaming CSV scraper + Drive     (npm run scrape:csv)
-    ├── discovery/CdxWorker.ts     # Wayback CDX + CommonCrawl + metadata enrichment (npm run discover)
+    │   ├── Scraper.ts             # AshbyScraper → DB + Redis; --ipc-worker mode   (npm run scrape)
+    │   ├── ClusterScraper.ts      # Multi-process coordinator (fork + IPC)        (npm run scrape:parallel)
+    │   └── ScraperCSV.ts          # Streaming CSV scraper + Drive upload           (npm run scrape:csv)
+    ├── discovery/CdxWorker.ts     # Wayback CDX + CommonCrawl + enrichment + isValidSlug (npm run discover)
     ├── database/
-    │   ├── DbMenu.ts              # Interactive readline explorer      (npm run db:menu)
-    │   ├── DbInspect.ts           # information_schema dump            (npm run db:inspect)
-    │   └── DbClean.ts             # Delete invalid-slug companies      (npm run db:clean)
+    │   ├── DbMenu.ts              # Interactive readline explorer (runs on import)   (npm run db:menu)
+    │   ├── DbInspect.ts           # information_schema dump (runs on import)        (npm run db:inspect)
+    │   └── DbClean.ts             # Delete invalid-slug companies (dry run default) (npm run db:clean)
     ├── lib/
-    │   ├── AshbyClient.ts         # Ashby REST + GraphQL fallback client, browser headers, retry, salary parser
-    │   ├── Sanitizer.ts           # Job description, URL, JSONB metadata sanitizer & error-driven validator
-    │   ├── ErrorTracker.ts        # Run telemetry, error event logger & multi-process report merger
+    │   ├── AshbyClient.ts         # REST + GraphQL fallback, BROWSER_HEADERS, retry, extractSalary, org metadata
+    │   ├── Sanitizer.ts           # Text/HTML/URL/JSONB sanitizers, validateAndSanitizeJob, sanitizeJobBatch
+    │   ├── ErrorTracker.ts        # Run telemetry, events, report writer & multi-worker merger
     │   ├── Concurrency.ts         # Adaptive createLimiter(), chunk()
     │   ├── Redis.ts               # Shared ioredis client (lazyConnect)
     │   ├── GoogleDriveOAuth.ts    # Service-account JWT upload (misnamed)
-    │   └── GoogleDriveUserOAuth.ts# Real user OAuth2 consent-flow upload
+    │   └── GoogleDriveUserOAuth.ts# User OAuth2 consent-flow upload
     └── utils/
         ├── Seed.ts                # Seeds Company from TARGET_COMPANIES or extracted-slugs.json (--all)
-        ├── ProcessCdxData.ts      # Raw CDX JSON → extracted-slugs.json (npm run process:cdx)
-        └── Verify.ts              # Prints row counts                   (npm run verify)
+        ├── ProcessCdxData.ts      # Raw CDX JSON → extracted-slugs.json  (npm run process:cdx)
+        └── Verify.ts              # DB health & integrity auditor        (npm run verify)
 ```
 
-## 4. Repository / Git State
+## 5. Key Defaults (from code)
 
-- Remote: `origin/main` (GitHub `pavanpogula/job-scrapper`).
-- **Restructure & Documentation commit:** All root scripts and database/lib utilities have been reorganized into modular subfolders:
+| Setting | Value | Where |
+|---|---|---|
+| Per-process HTTP concurrency | 15 (`scrape`, `scrape:csv`) | `CONCURRENCY_LIMIT` in `Scraper.ts` / `ScraperCSV.ts` |
+| Cluster workers | `min(4, max(2, cpus))`; `--workers=N` overrides it (capped at the company count) | `ClusterScraper.resolveWorkerCount()` |
+| Per-worker concurrency (cluster) | 12 if more than 100 companies, else `max(5, ceil(20 / shards))` | `ClusterScraper.runClusterScrape()` |
+| DB batch size | 100 jobs | `BATCH_SIZE` in `Scraper.ts` |
+| Retries | 2 retries, 300 ms base, exponential + 0–99 ms jitter | `fetchAshbyBoardWithFallback()` |
+| Rate-limit response | halve concurrency (min 2), pause 2 s, +1 after 25 successes | `createLimiter()` |
+| Redis hash TTL | 7 days (`job:<ashbyId>:hash`) | `batchUpsertJobs()` |
+| NOT_FOUND quarantine | 3 strikes (in memory, per run, so it never triggers in practice; 09 #29) | `recordNotFoundStrike()` |
+| Wayback CDX cap | 1,000 rows | `CdxWorker.fetchAshbyUrls()` |
+| Telemetry event cap | 500 events | `ErrorTracker` `MAX_EVENTS_STORED` |
 
-| Committed (old path) | Current (new path) |
+## 6. Repository / Git History
+
+- Remote: `origin` → `https://github.com/pavanpogula/job-scrapper.git`, branch `main`. No tags.
+
+| Commit | Change |
 |---|---|
-| `src/scraper.ts` | `src/core/Scraper.ts` (+ `src/core/ScraperCSV.ts`) |
-| `src/discovery/cdx-worker.ts` | `src/discovery/CdxWorker.ts` |
-| `src/lib/redis.ts` | `src/lib/Redis.ts` (+ `AshbyClient.ts`, `Concurrency.ts`, `GoogleDrive*.ts`) |
-| `src/scripts/{clean-db,db-inspect,db-menu}.ts` | `src/database/{DbClean,DbInspect,DbMenu}.ts` |
-| `seed.ts`, `verify.ts`, `process-cdx-data.ts` (root) | `src/utils/{Seed,Verify,ProcessCdxData}.ts` |
-| `scripts/generate-docs.ts` | `scripts/GenerateDocs.ts` (+ `generate-readme.ts`, `test-drive-upload.ts`) |
-| `src/config/companies.ts` | `src/config/Companies.ts` (renamed via `git mv`) |
-| `ashby_sample.html` | deleted |
+| `6c5a922` | Initial commit |
+| `7b7d2ef` | First working scraper (root `seed.ts`, `verify.ts`, `process-cdx-data.ts`, `src/scraper.ts`, `extracted-slugs.json`) |
+| `8194e1d` | Restructure into `src/{core,database,discovery,lib,utils}`, PascalCase renames, CSV scraper, Drive upload, `generate-readme.ts`/`JOBS.md`, docs set |
+| `f57f902` | Jest + ts-jest suite, Prisma mock, `require.main` guards |
+| `f872356` | AshbyClient (GraphQL fallback), Sanitizer, adaptive concurrency, ErrorTracker, streaming writes, stale deactivation, `seed --all` (BF-001…BF-007). Also the Scraper-side half of BF-008: `--ipc-worker` mode, `saveTelemetry`, `P2002` `findUnique` recovery, `ErrorTracker.mergeReports` |
+| `2cce729` | `ClusterScraper` / `scrape:parallel` coordinator, expanded tests (BF-008) |
+| `6bdb815` | Docs sync, `AGENTS.md` rules, Bug-Fix Registry (10) |
+| `635e69d` | `Verify.ts` integrity auditor (resolves 09 #28) |
+| `747d8d1` | CSV-mode telemetry parity (BF-009) |
+| `627dfae` | Bulk `createMany` fast path + cache pre-warming (BF-010) |
+| `89a1fd2` | README / architecture doc alignment |
 
+Old → new paths from the `8194e1d` restructure: `src/scraper.ts` → `src/core/Scraper.ts`; `src/discovery/cdx-worker.ts` →
+`CdxWorker.ts`; `src/lib/redis.ts` → `Redis.ts`; `src/scripts/{clean-db,db-inspect,db-menu}.ts` →
+`src/database/{DbClean,DbInspect,DbMenu}.ts`; root `seed.ts`/`verify.ts`/`process-cdx-data.ts` →
+`src/utils/{Seed,Verify,ProcessCdxData}.ts`; `scripts/generate-docs.ts` → `scripts/GenerateDocs.ts`;
+`src/config/companies.ts` → `Companies.ts`; `ashby_sample.html` deleted.
 
-## 5. Code Health Snapshot (2026-10-22)
+## 7. Code Health Snapshot (2026-10-22, HEAD `89a1fd2`)
 
-- `npx tsc --noEmit -p .` → **0 errors**.
-- `npm run lint` → **0 errors, 1 warning** (`no-empty` in `DbInspect.ts:56`).
-- `npm test` → **79 passed across 16 test suites (100% pass rate)**.
-- No CI config, no Dockerfile.
+- `npx tsc --noEmit -p .` → **0 errors** (checks `src/` only).
+- `npm run lint` → **0 errors, 1 warning** (`no-empty` in `DbInspect.ts:56`). `src/` only.
+- `npm test` → **79 passed across 16 suites**. It prints a ts-jest `isolatedModules` deprecation warning per suite (09 #45).
+- Coverage: about 61 % statements overall and about 31.6 % in `src/core` (see 11).
+- No CI config, no Dockerfile, no scheduler.

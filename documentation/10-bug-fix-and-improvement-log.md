@@ -1,67 +1,149 @@
 # 10 · Bug-Fix Registry, Regression Guards & Improvement Log
 
-> **Purpose:** This document is the **mandatory checklist and decision log** for any human developer or **Bug-Fix Agent** modifying this repository.
-> Every time the scraper runs, `ErrorTracker` (`src/lib/ErrorTracker.ts`) writes telemetry and captured errors to `output/latest-error-report.json`.
-> Before applying any new fix, the agent **must** verify that none of the existing **Regression Invariants** below are violated.
+> **Purpose:** This is the **mandatory checklist and decision log** for any human developer or **Bug-Fix Agent** changing this repository.
+> Every scrape run makes `ErrorTracker` (`src/lib/ErrorTracker.ts`) write telemetry and captured errors to `output/latest-error-report.json`.
+> Before applying any new fix, the agent **must** check that none of the **Regression Invariants** below would be broken.
+>
+> _Registry last audited against the code: 2026-10-22 (HEAD `89a1fd2`). Each entry cites where the fix lives and whether a test actually guards its invariant._
 
 ---
 
-## 🤖 Bug-Fix Agent Workflow (Mandatory 5-Step Loop)
+## 🤖 Bug-Fix Agent Workflow (Mandatory 6-Step Loop)
 
-When spun up to investigate errors or improve the scraper, follow this exact loop:
+When you are started to investigate errors or improve the scraper, follow this loop:
 
-1. **Inspect Latest Run Telemetry & Errors:**
-   - Read `output/latest-error-report.json` (and `output/error-report_YYYY-MM-DD.json`).
-   - Check `summary` (`jobsFilteredOut`, `jobsSanitized`, `dbErrors`, `graphqlFallbacksUsed`, `rateLimitsEncountered`) and inspect `events[]` for the exact `companySlug`, `jobId`, `field`, `category`, and `message`.
-2. **Check Regression Invariants (Below):**
-   - Review every entry (`BF-001` through `BF-007+`) in Section 2 of this file to ensure your proposed change will **not** break an earlier fix.
-3. **Implement Fix & Update Filters/Sanitizers:**
-   - Update the relevant module (`src/lib/Sanitizer.ts`, `src/lib/AshbyClient.ts`, `src/core/Scraper.ts`, `src/discovery/CdxWorker.ts`, etc.).
-4. **Add Unit & E2E Tests and Verify:**
-   - Add a unit test in `tests/unit/` and/or E2E test in `tests/e2e/` covering the exact error payload observed.
+1. **Inspect the latest run telemetry & errors**
+   - Read `output/latest-error-report.json` (and `output/error-report_YYYY-MM-DD.json`. Same-day runs overwrite it, see 09 #36).
+   - Check `summary` (`companiesNotFound`, `jobsFilteredOut`, `jobsSanitized`, `dbErrors`, `graphqlFallbacksUsed`, `rateLimitsEncountered`) and look at `events[]` (at most 500) for the exact `companySlug`, `jobId`, `field`, `category` and `message`.
+   - Event categories actually emitted: `graphql_fallback`, `validation_issue`, `db_error`. `api_error` is declared but never emitted (09 #33), so transient fetch failures do **not** appear in the report.
+2. **Check the Regression Invariants** below (`BF-001` … `BF-010`) so your change does not break an earlier fix. Also read [`09-known-issues-and-tech-debt.md`](./09-known-issues-and-tech-debt.md).
+3. **Implement the fix** in the relevant module (`src/lib/Sanitizer.ts`, `src/lib/AshbyClient.ts`, `src/core/Scraper.ts`, `src/discovery/CdxWorker.ts`, …).
+4. **Add unit & E2E tests and verify**
+   - Add a unit test in `tests/unit/` and/or an E2E test in `tests/e2e/` that covers the exact payload you observed.
    - Run:
      ```bash
      npx tsc --noEmit -p . && npm run lint && npm test && npm run docs:generate
      ```
-   - All existing and new tests must pass with `0` TypeScript and `0` ESLint errors.
-5. **Log the Fix & Sync Docs:**
-   - Append a new `BF-XXX` row to Section 2 of this file (including its **Regression Invariant** and **Guarding Test**), and update `AGENTS.md`, `README.md`, `documentation/09-known-issues-and-tech-debt.md`, and any other affected `documentation/*.md` files.
-6. **Commit with Detailed Description:**
-   - Stage all code, test, agent, and documentation changes (never `.env`, `apikeys/`, or `output/`) and create a detailed `git commit` describing the symptom, root cause, architectural fix, test coverage, and documentation updates.
+   - Everything must pass with `0` TypeScript and `0` ESLint errors. `tsc` and `lint` cover only `src/` (09 #44), so check test files yourself.
+5. **Log the fix & sync docs**: add a `BF-XXX` entry below in the same format (Symptom, Root cause & fix, Implemented in, Regression Invariant, Guarding tests). Then update `AGENTS.md`, `README.md`, `09-known-issues-and-tech-debt.md` and any other affected `documentation/*.md`.
+6. **Commit with a detailed description**: stage code, tests, agent files and docs (never `.env`, `apikeys/` or `output/`) and write a Conventional Commit that covers the symptom, root cause, fix, tests and doc updates.
 
 ---
 
-## 🛡️ Regression Guard Registry (Historical Bug Fixes)
+## 🛡️ Regression Guard Registry
 
-| ID | Date | Bug / Symptom | Root Cause & Architectural Fix | Regression Invariant (Must NEVER Break) | Guarding Tests |
-|---|---|---|---|---|---|
-| **BF-001** | 2026-10-22 | Company URLs return `404`/`403` in scraper (`api.ashbyhq.com`) but open with live jobs in the browser (`jobs.ashbyhq.com/<slug>`). | Ashby's external `posting-api` is opt-in. Companies using only Ashby's hosted board return `404`/`403` on the REST API. Added `fetchAshbyBoardWithFallback()` with Chrome `BROWSER_HEADERS`, retry/backoff, and automatic fallback to `POST https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams`. | Never mark a company `NOT_FOUND` on a `posting-api` 404/403 without first checking `fetchFromAshbyGraphQL()`. Always send `BROWSER_HEADERS`. | `tests/unit/AshbyClient.test.ts`, `tests/e2e/ScraperPipeline.test.ts` |
-| **BF-002** | 2026-10-22 | PostgreSQL `jsonb` transaction crashes when storing job descriptions (`descriptionHtml` / `descriptionPlain`) or `metadata`. | PostgreSQL `jsonb` rejects strings containing `\u0000` (null bytes) or lone UTF-16 surrogates, aborting the entire 100-job `$transaction`. Added `sanitizeJobDescriptionHtml()`, `sanitizeJobDescriptionPlain()`, and recursive `sanitizeJsonMetadata()` in `src/lib/Sanitizer.ts`. | Every string written to `Job.metadata` or text columns must be stripped of `\u0000` null bytes, lone surrogates, `<script>`/`<style>`/`<iframe>` tags, inline JS handlers, and `>1KB` base64 data URIs. | `tests/unit/Sanitizer.test.ts` |
-| **BF-003** | 2026-10-22 | Broken, missing, relative, or `javascript:` URLs in `jobUrl` and `applyUrl`. | Raw job objects occasionally omit `applyUrl`/`jobUrl` or contain relative paths or invalid strings. Added `sanitizeJobUrl()` to validate `http(s):` via `new URL()`, resolve relative paths against `https://jobs.ashbyhq.com`, and fall back to canonical `https://jobs.ashbyhq.com/{slug}/{id}[/application]`. | `Job.applyUrl` and CSV `Job Link` must always be valid absolute `http(s)://` URLs; invalid URLs must fall back to the canonical Ashby URL and log a `sanitized` issue. | `tests/unit/Sanitizer.test.ts` |
-| **BF-004** | 2026-10-22 | Single corrupt job record aborts entire 100-job DB batch transaction (`batchUpsertJobs`). | A single unexpected DB constraint error inside `prisma.$transaction(batch)` rolled back all 100 jobs in the chunk. Added `validateAndSanitizeJob()` pre-filtering plus a `try/catch` per-job fallback loop inside `batchUpsertJobs()`. | `batchUpsertJobs()` must catch `$transaction` errors and retry each job in the failed batch individually so 99 valid jobs are still saved and only the offending `ashbyId` is logged. | `tests/unit/ScraperCore.test.ts`, `tests/unit/Sanitizer.test.ts` |
-| **BF-005** | 2026-10-22 | Salary columns (`salaryMin`, `salaryMax`, `salaryCurrency`) in Postgres were always `NULL`. | `Scraper.ts` read non-existent `job.compensationTier` instead of `job.compensation.summaryComponents`. Added `extractSalary()` in `src/lib/AshbyClient.ts` supporting `summaryComponents`, `compensationTiers`, and legacy `compensationTier`. | `extractSalary()` must support all 3 compensation shapes and feed `generateHash()`, `create`, and `update` (including `salaryCurrency`). | `tests/unit/AshbyClient.test.ts`, `tests/unit/ScraperCore.test.ts` |
-| **BF-006** | 2026-10-22 | Concurrent `P2002` unique constraint crashes on `Department`/`Location` upserts, high RAM usage, and stale closed jobs staying `active=true`. | Parallel workers upserted identical new department/location names simultaneously; all 30k jobs were buffered until the end; removed jobs were never deactivated. Added `departmentInFlight`/`locationInFlight` Promise deduplication, incremental 100-job streaming flushes, 3-strike `NOT_FOUND` quarantine, and `deactivateStaleJobs()`. | Concurrent calls to `getOrCreateDepartment`/`getOrCreateLocation` for the same name must share a single in-flight Promise; closed jobs must be deactivated on successful board fetch. | `tests/unit/ScraperCore.test.ts`, `tests/unit/Concurrency.test.ts` |
-| **BF-007** | 2026-10-22 | Escaped quotes (`""`), `\r\n`, and pipe characters (`\|`) in job titles/locations corrupted CSV parsing and `JOBS.md` Markdown tables. | Naive quote toggling in `parseCSV()` and unescaped `\|` in `generateMarkdownTable()`. Updated `escapeCSV()`, `parseCSV()`, and `sanitizeMarkdownCell()`. | `parseCSV()` must unescape `""` inside quoted fields, and `generateMarkdownTable()` must escape `\|` and newlines in every cell. | `tests/unit/GenerateReadme.test.ts`, `tests/unit/ScraperCSV.test.ts` |
-| **BF-008** | 2026-10-22 | Single-process Node event loop bottleneck & cross-process unique constraint races when scaling across CPU cores. | Added `src/core/ClusterScraper.ts` (`npm run scrape:parallel [-- --workers=N]`) to fork OS child processes (`--ipc-worker`), shard slugs via round-robin (`partitionSlugs()`), recover cross-process `P2002` `Department`/`Location` races via `findUnique`, and merge telemetry via `ErrorTracker.mergeReports()`. | Multi-process workers must suppress individual `latest-error-report.json` writes (`saveTelemetry: false`), return `ErrorReportDocument` over IPC so `ClusterScraper` writes one unified report, and recover from cross-process `Department`/`Location` `P2002` races via `findUnique`. | `tests/unit/ClusterScraper.test.ts`, `tests/unit/ScraperCore.test.ts` |
-| **BF-009** | 2026-10-22 | `ScraperCSV.ts` (`csv_scrape` mode) reported `graphqlFallbacksUsed: 0` in `output/latest-error-report.json` even when recovering boards (`go-augment`) via GraphQL fallback, and omitted `Location` count in `Verify.ts`. | `fetchJobsForCompany()` in `ScraperCSV.ts` discarded `result.source`, `result.rateLimited`, `result.notFound`, and `result.validationIssues` from `fetchAshbyBoardWithFallback()`. Wired `ErrorTracker` and `AdaptiveLimiter` callbacks into `fetchJobsForCompany()` and upgraded `Verify.ts` (`verifyDatabase()`) to audit `Location`, salary coverage, and sanitization integrity. | `fetchJobsForCompany()` in `ScraperCSV.ts` must forward `graphql_fallback`, `rateLimited`, `notFound`, and `validationIssues` to `ErrorTracker` when a tracker is provided; `verifyDatabase()` must validate all 4 tables and 0 sanitization defects. | `tests/unit/ScraperCSV.test.ts`, `tests/unit/Verify.test.ts` |
-| **BF-010** | 2026-10-22 | Full 3,072-company (~34,035 jobs) WAN database scrape bottlenecked on 34,000 individual `prisma.job.upsert` queries and 3,072 `deactivateStaleJobs` round trips. | Added bulk `findMany` + `createMany({ skipDuplicates: true })` fast-path inside `batchUpsertJobs()` (falling back to `$transaction(upsert)` for changed rows or on error), pre-warmed `departmentCache` and `locationCache` at startup, and pre-loaded `companiesWithExistingJobs` to skip `deactivateStaleJobs` for companies with 0 prior jobs. | `batchUpsertJobs()` must use `createMany` for new `ashbyId`s when `prisma.job.createMany` is available and only run `$transaction(upsert)` for changed existing rows, while preserving the `catch` per-job fallback (`BF-004`). | `tests/unit/ScraperCore.test.ts`, `tests/unit/ClusterScraper.test.ts` |
+Guard status legend: ✅ an existing test fails if the invariant breaks · ⚠️ partially guarded · ❌ no test guards it.
+The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide.md` §5–§6](./11-testing-guide.md#6-bf--regression-invariants--guarding-tests). `src/core` has about 31.6 % statement coverage, and `runAll()`, `runClusterScrape()` and `scrapeToCSV()` have no tests.
+
+| ID | Commit | Summary | Guard status |
+|---|---|---|---|
+| BF-001 | `f872356` | REST 404/403/400 → GraphQL fallback, browser headers | ⚠️ (404 only, headers unchecked) |
+| BF-002 | `f872356` | `\u0000` / surrogate / script stripping before `jsonb` | ⚠️ (surrogates untested) |
+| BF-003 | `f872356` | URL validation + canonical fallback | ✅ |
+| BF-004 | `f872356` | Validation pre-filter + per-job batch fallback | ⚠️ (legacy branch only) |
+| BF-005 | `f872356` | Real salary extraction | ⚠️ (hash/upsert payload untested) |
+| BF-006 | `f872356` | Dept/location dedupe, streaming flushes, stale-job deactivation | ❌ (only the strike counter is tested) |
+| BF-007 | `f872356` | CSV / Markdown escaping | ⚠️ (newline/CRLF untested) |
+| BF-008 | `f872356`, `2cce729` | Multi-process cluster scraper | ⚠️ (IPC/`saveTelemetry` untested) |
+| BF-009 | `747d8d1`, `635e69d` | CSV-mode telemetry parity, `verify` auditor | ⚠️ (forwarding untested, Verify counts only) |
+| BF-010 | `627dfae` | Bulk `createMany` fast path, cache pre-warming | ❌ none, see 11-testing-guide.md |
+
+### BF-001: Posting API 404/403 for boards that are live in the browser
+- **Symptom:** Companies return `404`/`403` from `api.ashbyhq.com/posting-api/job-board/<slug>` but show live jobs at `jobs.ashbyhq.com/<slug>`.
+- **Root cause & fix:** Ashby's external posting API is opt-in. Added `fetchAshbyBoardWithFallback()`: it sends `BROWSER_HEADERS`, retries `429`/`5xx`/`ECONNABORTED`/`ETIMEDOUT`/`ECONNRESET` with exponential backoff + jitter (`maxRetries = 2`, base 300 ms), and on a final `404`/`403`/`400` calls `fetchFromAshbyGraphQL()` (`POST https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams`).
+- **Implemented in:** `src/lib/AshbyClient.ts` (`fetchAshbyBoardWithFallback`, `fetchFromAshbyGraphQL`, `isRetryableError`, `BROWSER_HEADERS`). `fetchAshbyBoardWithFallback()` is used by `Scraper.runAll()`, `ScraperCSV.fetchJobsForCompany()` and the dead `Scraper.fetchJobs()`. *(Correction: `CdxWorker` enrichment does **not** use it. `fetchOrganizationMetadata()` is a separate single `GET https://jobs.ashbyhq.com/<slug>` with `BROWSER_HEADERS`, no retries and no fallback.)*
+- **Regression Invariant:** `notFound: true` is returned **only** for a REST `404` **after** GraphQL also reports no board. A `403`/`400` that GraphQL cannot recover returns `notFound: false`. Every Ashby request sends `BROWSER_HEADERS`.
+- **Guarding tests:** `tests/unit/AshbyClient.test.ts` ("recover jobs via GraphQL when Posting API returns 404", "retry on HTTP 429", `isRetryableError`), `tests/e2e/ScraperPipeline.test.ts` (fallback + telemetry).
+- **⚠️ Unguarded:** only 404 → GraphQL is tested. 403 and 400 → GraphQL, 404 + GraphQL miss → `notFound: true`, and the fact that `BROWSER_HEADERS` are sent are not asserted (see 11-testing-guide.md §6).
+- **Known gaps:** GraphQL jobs have no salary numbers, `publishedAt` or descriptions, and their validation issues are dropped (09 #32). A `403` is also counted as a rate limit (09 #34).
+
+### BF-002: PostgreSQL `jsonb` crashes on corrupt descriptions / metadata
+- **Symptom:** A whole 100-job `$transaction` aborts when `Job.metadata` contains `\u0000` or a lone UTF-16 surrogate.
+- **Root cause & fix:** Postgres `jsonb` rejects those code points. Added recursive `sanitizeJsonMetadata()`, `sanitizeJobDescriptionHtml()` and `sanitizeJobDescriptionPlain()`, plus `sanitizeText()` for single-line fields.
+- **Implemented in:** `src/lib/Sanitizer.ts`. Applied in `validateAndSanitizeJob()` (inside `sanitizeJobBatch()`, called by `AshbyClient`) and again in `Scraper.processCompanyJobs()` (`sanitizeJsonMetadata(job)`).
+- **Regression Invariant:** Every string anywhere in `Job.metadata` has `\u0000` and lone surrogates removed. The `descriptionHtml` value additionally has `<script>`/`<style>`/`<iframe>`/`<object>`/`<embed>`, inline `on*=` handlers, `javascript:`/`vbscript:` `href`/`src`, and base64 data URIs of 1 KB or more stripped. `descriptionPlain` falls back to tag-stripped HTML. `title`/`department`/`location`/`employmentType` go through `sanitizeText()` (control chars removed, entities decoded, whitespace collapsed). *(Correction: the earlier wording said script/style stripping applied to "every string". It applies only to the two description keys.)*
+- **Guarding tests:** `tests/unit/Sanitizer.test.ts` (null bytes, tags, handlers, base64, nested descriptions). ⚠️ **Lone-surrogate stripping has no test**, and nothing checks that `processCompanyJobs()` sanitizes metadata before the write.
+
+### BF-003: Broken / relative / unsafe `jobUrl` and `applyUrl`
+- **Symptom:** Missing, relative, placeholder (`"undefined"`, `"null"`) or `javascript:` URLs.
+- **Root cause & fix:** `sanitizeJobUrl()` parses with `new URL()`, resolves `/`-relative paths against `https://jobs.ashbyhq.com`, rejects `javascript:`/`data:`/`vbscript:`/`file:`/`mailto:` and non-http(s) protocols, and otherwise falls back to `https://jobs.ashbyhq.com/{slug}/{id}[/application]`.
+- **Implemented in:** `src/lib/Sanitizer.ts` `sanitizeJobUrl()`. Called from `validateAndSanitizeJob()` (which records a `sanitized` issue), `Scraper.processCompanyJobs()` (`applyUrl`) and `ScraperCSV.fetchJobsForCompany()` (`jobUrl` → CSV "Job Link").
+- **Regression Invariant:** `Job.applyUrl` and the CSV `Job Link` are always absolute `http(s)://` URLs. Invalid input falls back to the canonical Ashby URL and logs a `sanitized` validation issue.
+- **Guarding tests:** `tests/unit/Sanitizer.test.ts`.
+
+### BF-004: One corrupt record aborts a whole DB batch
+- **Symptom:** A single constraint error inside `prisma.$transaction(batch)` rolled back all 100 jobs.
+- **Root cause & fix:** Malformed records are pre-filtered (`validateAndSanitizeJob()` / `sanitizeJobBatch()`: non-objects, invalid/placeholder IDs, empty titles, duplicate IDs). `batchUpsertJobs()` wraps each batch in `try/catch`, and on failure retries each job individually with `upsert`, logging `[BatchError]` → `[JobStoreError]` and recording a `db_error` event (`skipped_corrupt_job_in_fallback`).
+- **Implemented in:** `src/lib/Sanitizer.ts`, `src/core/Scraper.ts` `batchUpsertJobs()`.
+- **Regression Invariant:** Any error in a batch (either the `createMany` fast path or the `$transaction` path) must fall back to per-job upserts so the valid jobs are still saved. Only failing `ashbyId`s are skipped and counted in `tracker.dbErrors`. Redis hashes are written only for jobs that succeeded.
+- **Guarding tests:** `tests/unit/ScraperCore.test.ts` ("fall back to per-job upserts and isolate failing job"), `tests/unit/Sanitizer.test.ts`. ⚠️ Only on the legacy `$transaction` branch. The fallback after a failing `createMany` (BF-010 path) and `tracker.dbErrors` are not asserted.
+
+### BF-005: Salary columns always `NULL`
+- **Symptom:** `salaryMin` / `salaryMax` / `salaryCurrency` were always `NULL`.
+- **Root cause & fix:** The scraper read a non-existent `job.compensationTier`. Added `extractSalary()`, which tries `compensation.summaryComponents`, then `compensation.compensationTiers[].components`, then the legacy `compensationTier`. REST requests use `?includeCompensation=true` in DB mode.
+- **Implemented in:** `src/lib/AshbyClient.ts` `extractSalary()`. Used by `Scraper.generateHash()` and `Scraper.processCompanyJobs()` → `buildUpsertArgs` / `createMany` data.
+- **Regression Invariant:** `extractSalary()` supports all 3 shapes and uses only components with `compensationType === 'Salary'` and a non-null min or max. Its `min`/`max` go into `generateHash()`, and `min`/`max`/`currency` go into `create`, `update` and `createMany`. *(Correction: `salaryCurrency` is written but is **not** part of the hash, see 09 #31.)*
+- **Guarding tests:** `tests/unit/AshbyClient.test.ts` (all 3 shapes + empty) ✅. ⚠️ **Salary in the hash: no test.** The `generateHash` test only compares identical payloads, and the upsert/`createMany` salary arguments are never inspected.
+
+### BF-006: Dept/Location upsert races, unbounded memory, stale jobs left active
+- **Symptom:** Concurrent `P2002` crashes on `Department`/`Location`, all ~30k jobs buffered until the end of the run, and closed jobs staying `active = true`.
+- **Root cause & fix:** Added `departmentInFlight` / `locationInFlight` Promise maps in front of `departmentCache` / `locationCache`. Added streaming flushes (`enqueueFlushIfNeeded()` chunks of `BATCH_SIZE = 100`, serialized through `flushChain`), `deactivateStaleJobs()` after every successful `rest`/`graphql` fetch, and `recordNotFoundStrike()` (3-strike `NOT_FOUND`).
+- **Implemented in:** `src/core/Scraper.ts` (`getOrCreateDepartment`, `getOrCreateLocation`, `runAll`, `deactivateStaleJobs`, `recordNotFoundStrike`).
+- **Regression Invariant:** Concurrent `getOrCreateDepartment`/`getOrCreateLocation` calls for the same name share one in-flight Promise. Pending jobs are flushed every 100 and at the end. Jobs are deactivated **only** after a successful board fetch (never on `source: 'none'`).
+- **Guarding tests:** ❌ none for the invariant itself (see 11-testing-guide.md §6). `tests/unit/ScraperCore.test.ts` only covers a sequential cache hit, empty names and `recordNotFoundStrike()` called directly. *(Correction: `tests/unit/Concurrency.test.ts`, listed before, tests the limiter, not this invariant.)*
+- **⚠️ Unguarded / known broken:**
+  - Concurrent in-flight dedupe has no test (no `Promise.all([get(x), get(x)])` → 1 upsert check).
+  - `deactivateStaleJobs()` has no test.
+  - The 100-job streaming flush in `runAll()` has no test.
+  - **The 3-strike quarantine never triggers in production.** Strikes live in an in-memory `Map` per instance and `runAll()` fetches each company once per run (09 #29; the latest run had 1,109 `companiesNotFound`). The only test calls `recordNotFoundStrike()` three times directly.
+  - Jobs that reappear after deactivation are not reactivated while their Redis hash is cached (09 #30).
+
+### BF-007: CSV / `JOBS.md` corruption from quotes, CRLF and pipes
+- **Symptom:** Escaped quotes (`""`), `\r\n` and `|` in titles/locations broke CSV parsing and the Markdown table.
+- **Root cause & fix:** `escapeCSV()` strips `\x00` and quotes on `,` `"` `\n` `\r`. `parseCSV()` normalizes CRLF and unescapes `""` inside quoted fields. `sanitizeMarkdownCell()` escapes `\|` and flattens newlines. `generateMarkdownTable()` percent-encodes `)` and whitespace in links.
+- **Implemented in:** `src/core/ScraperCSV.ts` (`escapeCSV`, `formatCSVRow`), `scripts/generate-readme.ts` (`parseCSV`, `sanitizeMarkdownCell`, `generateMarkdownTable`).
+- **Regression Invariant:** `parseCSV()` unescapes `""` inside quoted fields and handles `\r\n`. Every `JOBS.md` cell is passed through `sanitizeMarkdownCell()`. *(Limitation: `parseCSV()` splits lines before parsing quotes, so quoted multi-line fields are not supported. New CSVs are safe only because `sanitizeText()` removes newlines first. The committed `JOBS.md`, built from a pre-sanitizer CSV, already has one split row (29,911 rows from 29,910 records), see 09 #42.)*
+- **Guarding tests:** `tests/unit/GenerateReadme.test.ts`, `tests/unit/ScraperCSV.test.ts`, `tests/e2e/ScraperPipeline.test.ts` (`""` and `\|` ✅). ⚠️ Newline flattening in Markdown cells and `\r\n` handling in `parseCSV()` have no test.
+
+### BF-008: Single-process bottleneck & cross-process unique races
+- **Symptom:** One Node event loop limited throughput, and multiple processes raced on `Department`/`Location` inserts.
+- **Root cause & fix:** `ClusterScraper.ts` (`npm run scrape:parallel [-- --workers=N]`, default `min(4, max(2, cpus))`) forks `Scraper.ts --ipc-worker` children, shards slugs round-robin with `partitionSlugs()`, and merges results with `ErrorTracker.mergeReports()` + `saveMergedReport()`. `getOrCreateDepartment/Location` catch the upsert error and recover with `findUnique`.
+- **Implemented in:** `src/core/ClusterScraper.ts` (`resolveWorkerCount`, `partitionSlugs`, `runWorkerShard`, `runClusterScrape`; added in `2cce729`), `src/core/Scraper.ts` (`--ipc-worker` handler, `runAll({ saveTelemetry })`, `findUnique` P2002 recovery; these landed earlier in `f872356`, and `2cce729` did not touch `Scraper.ts`), `src/lib/ErrorTracker.ts` (`mergeReports`/`saveMergedReport`, also from `f872356`).
+- **Regression Invariant:** Workers run with `saveTelemetry: false` (also the default when `workerId` is set) and send `{ type: 'worker_done', report }` over IPC. Only `ClusterScraper` writes `latest-error-report.json`. A cross-process `P2002` on `Department`/`Location` is recovered via `findUnique`.
+- **Guarding tests:** `tests/unit/ClusterScraper.test.ts` (`resolveWorkerCount`, `partitionSlugs`, `mergeReports`), `tests/unit/ScraperCore.test.ts` (P2002 recovery).
+- **⚠️ Unguarded:** the `saveTelemetry: false` / IPC `worker_done`/`worker_error` contract, the single `saveMergedReport` write, and `Location` P2002 recovery (only `Department` is tested) have no test. If one worker fails, `Promise.all` rejects and the merged report is lost (09 #35).
+
+### BF-009: CSV-mode telemetry under-reported fallbacks; `verify` incomplete
+- **Symptom:** `csv_scrape` reports showed `graphqlFallbacksUsed: 0` even when boards (e.g. `go-augment`) were recovered via GraphQL, and `Verify.ts` skipped `Location`.
+- **Root cause & fix:** `fetchJobsForCompany()` ignored `source`, `rateLimited`, `notFound` and `validationIssues`. It now takes `tracker`, `onRateLimit` and `onSuccess`, and `scrapeToCSV()` wires them to the `ErrorTracker` and the `AdaptiveLimiter`. `verifyDatabase()` was upgraded in `635e69d` to count all 4 tables, ACTIVE/NOT_FOUND companies and salary coverage, and to audit a 500-job sample.
+- **Implemented in:** `src/core/ScraperCSV.ts` `fetchJobsForCompany()` / `scrapeToCSV()`, `src/utils/Verify.ts` `verifyDatabase()`.
+- **Regression Invariant:** When a tracker is passed, `fetchJobsForCompany()` records `graphql_fallback` events, `rateLimitsEncountered`, `companiesNotFound` and `validationIssues`, and calls `onRateLimit`/`onSuccess`. `verifyDatabase()` returns counts for all 4 tables and the three integrity counters (`emptyTitles`, `invalidApplyUrls`, `nullByteMetadataIssues`). *(Correction: it reports defects but does not fail or exit non-zero on them.)*
+- **Guarding tests:** `tests/unit/Verify.test.ts` ✅. `tests/unit/ScraperCSV.test.ts` calls `fetchJobsForCompany()` **without** a tracker, so the forwarding invariant is ❌ unguarded.
+- **Known gap:** on the GraphQL path `validationIssues` is always undefined, because `fetchFromAshbyGraphQL()` drops them (09 #32).
+
+### BF-010: Full 3,072-company WAN scrape bottlenecked on per-row queries
+- **Symptom:** About 34,000 individual `prisma.job.upsert` calls and 3,072 `deactivateStaleJobs` round trips over WAN.
+- **Root cause & fix:** `batchUpsertJobs()` now runs one `findMany` per batch, `createMany({ skipDuplicates: true })` for new `ashbyId`s, and `$transaction(upsert)` only for existing rows whose `contentHash` changed or that are `!active`. It falls back to the plain `$transaction(upsert)` path when `findMany`/`createMany` are unavailable. `runAll()` pre-warms `departmentCache`/`locationCache` and loads `companiesWithExistingJobs` (distinct `companySlug` of active jobs) to skip `deactivateStaleJobs()` for companies with no prior active jobs. `ClusterScraper` uses 12 requests per worker when there are more than 100 companies. Result: 34,035 jobs / 1,747 companies in 141.3 s with `--workers=8`.
+- **Implemented in:** `src/core/Scraper.ts` (`batchUpsertJobs`, `runAll` pre-warm), `src/core/ClusterScraper.ts` (`perWorkerConcurrency`).
+- **Regression Invariant:** When `prisma.job.findMany` and `prisma.job.createMany` exist, new IDs go through `createMany` and only changed or inactive existing rows are upserted. Unchanged rows cause no write. The `catch` per-job fallback (BF-004) still wraps both paths.
+- **Guarding tests:** ❌ none (see 11-testing-guide.md §6). The `ScraperCore.test.ts` Prisma factory has no `job.findMany`/`createMany` and the global mock (`__mocks__/@prisma/client.ts`) has no `job.createMany`, so every `batchUpsertJobs` test takes the legacy `$transaction` path. *(Correction: the previously listed `ScraperCore.test.ts` / `ClusterScraper.test.ts` do not exercise this code.)*
+- **Known gap:** because the hash covers only five fields, "unchanged" can hide real changes (09 #31).
 
 ---
 
 ## 📈 Improvement Log & Future Packaging Roadmap
 
-### Completed Improvements (v1.1.0 Release)
-- **Adaptive Concurrency (`src/lib/Concurrency.ts`):** Dynamic rate-limit throttling (`onRateLimit` halves concurrency + cooldown pause; `onSuccess` ramps back up).
-- **Multi-Source Discovery (`src/discovery/CdxWorker.ts` & `src/utils/Seed.ts`):** Added CommonCrawl Index support (`--common-crawl`), Ashby `window.__appData` organization name/logo enrichment (`--enrich`), expanded slug `BLOCKLIST`, and `--all` seeding from `extracted-slugs.json`.
-- **Automated Telemetry (`src/lib/ErrorTracker.ts`):** Every DB or CSV scrape run emits `output/latest-error-report.json` for the Bug-Fix Agent.
+### Completed improvements (referred to as "v1.1.0". `package.json` still reads `1.0.0` and there are no tags)
+- **Adaptive concurrency (`src/lib/Concurrency.ts`):** `onRateLimit()` halves concurrency (floor 2) and pauses for 2 s. `onSuccess()` adds 1 back after 25 consecutive successes.
+- **Multi-source discovery (`src/discovery/CdxWorker.ts`, `src/utils/Seed.ts`):** CommonCrawl index (`--common-crawl`, first page of `CC-MAIN-2024-51` only), `window.__appData` name/logo enrichment (`--enrich`), a larger slug `BLOCKLIST`, and `seed -- --all` from `extracted-slugs.json` (3,072 slugs).
+- **Automated telemetry (`src/lib/ErrorTracker.ts`):** every DB, cluster or CSV scrape writes `output/latest-error-report.json` for the Bug-Fix Agent.
+- **Database auditor (`src/utils/Verify.ts`, `635e69d`):** `npm run verify` reports table counts, salary coverage and sample integrity.
 
-### Next Phase: Turning the Toolkit into an Application (Post-Stabilization)
-Once we finish running and stabilizing all company scrapes using the Bug-Fix Agent loop above, we have three clean paths to package this as an end-user application:
+### Next phase: turning the toolkit into an application (after stabilization)
+Once all company scrapes are stable through the Bug-Fix Agent loop above, there are three ways to package this for end users:
 
-1. **Recommended — React Web App (Next.js or Vite + Express/Fastify):**
-   - **Why:** Reuses 100% of our existing TypeScript code, Prisma schema, and Neon PostgreSQL database.
-   - **What it adds:** A dashboard UI to browse/filter ~30k jobs by title, salary, remote status, company, and location; a "Run Scraper" button with live progress and `latest-error-report.json` viewer.
-2. **Desktop App (Electron or Tauri + React):**
-   - Wraps the React UI and Node.js scraper into a standalone macOS (`.dmg`) / Windows (`.exe`) desktop app.
-3. **Standalone CLI Executable (Node Single Executable Applications / `pkg`):**
-   - Bundles the TypeScript CLI into a single binary (`job-scraper` / `job-scraper.exe`) without needing Python or a local Node installation.
+1. **Recommended: React web app (Next.js or Vite + Express/Fastify)**
+   - **Why:** It reuses the existing TypeScript code, Prisma schema and Neon PostgreSQL database.
+   - **What it adds:** A dashboard to browse and filter about 34k jobs by title, salary, remote status, company and location, plus a "Run Scraper" button with live progress and a `latest-error-report.json` viewer.
+2. **Desktop app (Electron or Tauri + React):** wraps the React UI and the Node.js scraper into a standalone macOS (`.dmg`) or Windows (`.exe`) app.
+3. **Standalone CLI executable (Node Single Executable Applications / `pkg`):** bundles the CLI into a single `job-scraper` binary that needs no local Node.js install.

@@ -13,7 +13,7 @@ import { ErrorReportDocument, ErrorTracker } from '../lib/ErrorTracker';
 const prisma = new PrismaClient();
 
 /**
- * @summary Parses --workers=N from CLI arguments, defaulting to min(4, CPU cores)
+ * @summary Parses --workers=N from CLI arguments, defaulting to min(4, max(2, CPU cores))
  */
 export function resolveWorkerCount(argv: string[], totalItems: number, cpuCount: number = os.cpus().length): number {
     const flag = argv.find(arg => arg.startsWith('--workers='));

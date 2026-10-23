@@ -2,125 +2,166 @@
 
 ## 1. Environment Variables (`.env`, template: `.env.example`)
 
-| Variable | Required | Used by | Default / Fallback | Example |
+These are the **only** environment variables read anywhere in `src/`, `scripts/` or `prisma/` (verified by grepping
+`process.env` / `env(`):
+
+| Variable | Required | Read by | Default / Fallback | Example |
 |---|---|---|---|---|
-| `DATABASE_URL` | ✅ (for every script except `process:cdx`, `docs:generate`, `generate-readme`) | Prisma (`schema.prisma`) | none — Prisma throws | `postgresql://user:pass@host:5432/jobscraper` (Neon works; add `?sslmode=require`) |
-| `REDIS_URL` | optional (README says required, code doesn't) | `src/lib/Redis.ts` | `redis://localhost:6379` | `rediss://default:xxx@xxx.upstash.io:6379` |
-| `GOOGLE_DRIVE_FOLDER_ID` | optional | `ScraperCSV.ts` upload | undefined → uploads to SA's root | ID from `drive.google.com/drive/folders/<ID>` |
+| `DATABASE_URL` | ✅ for every DB command (`seed`, `discover`, `scrape`, `scrape:parallel`, `scrape:csv`, `db:*`, `verify`, `prisma:studio`). Not needed by `process:cdx`, `docs:generate`, `generate-readme.ts`, `test-drive-upload.ts`, `lint`, `test` | Prisma (`prisma/schema.prisma` → `env("DATABASE_URL")`) | none — Prisma throws on first query | `postgresql://user:pass@host:5432/jobscraper` (Neon works; add `?sslmode=require`) |
+| `REDIS_URL` | optional (`.env.example` and `README.md` label it "Required"; code treats it as optional) | `src/lib/Redis.ts` (used only by `Scraper.ts`) | `redis://localhost:6379`; if unreachable, cache disabled for the run | `rediss://default:xxx@xxx.upstash.io:6379` |
+| `GOOGLE_DRIVE_FOLDER_ID` | optional; only with `scrape:csv -- --upload-cloud` | `src/core/ScraperCSV.ts` → `uploadToGoogleDrive()` | `undefined` → file goes to the service account's own My Drive root (not visible to you) | ID from `drive.google.com/drive/folders/<ID>` |
 
-Current local `.env` defines `DATABASE_URL` and `GOOGLE_DRIVE_FOLDER_ID` only (no `REDIS_URL`).
+No other tunables are environment-driven: concurrency (`CONCURRENCY_LIMIT = 15` in `Scraper.ts`/`ScraperCSV.ts`),
+`BATCH_SIZE = 100`, Redis TTL (7 days), HTTP timeouts (10 s Ashby, 15 s CommonCrawl), retries (`maxRetries = 2`,
+`baseDelayMs = 300`), limiter settings (`minConcurrency 2`, `recoveryThreshold 25`, `defaultCooldownMs 2000`), CDX
+`limit = 1000`, and the CommonCrawl index (`CC-MAIN-2024-51`) are hard-coded constants. Worker count is the CLI flag
+`--workers=N` (see [04 → `scrape:parallel`](./04-cli-commands.md)).
 
-> `dotenv.config()` is only called inside `src/lib/Redis.ts`. `ScraperCSV.ts` does **not** import Redis, so
-> `process.env.GOOGLE_DRIVE_FOLDER_ID` is only available there because Prisma's runtime also loads `.env`. If Prisma
-> ever stops doing that, the folder ID would silently be `undefined`. Safer: add `import 'dotenv/config'` to entry points.
+> **How `.env` gets loaded:** `dotenv.config()` is only called inside `src/lib/Redis.ts` (imported by `Scraper.ts`;
+> it reads `.env` from `process.cwd()`). Every other entry point relies on Prisma Client: `new PrismaClient()` loads the
+> repo-root `.env` (path baked into the generated client as `schemaEnvPath`) into `process.env`. `ScraperCSV.ts` does **not** import Redis, so `process.env.GOOGLE_DRIVE_FOLDER_ID` is only populated
+> because Prisma loaded `.env`. If that ever changes, the folder ID would silently be `undefined`. Safer: add
+> `import 'dotenv/config'` to entry points.
 
 ## 2. Credential Files (`apikeys/`, gitignored)
 
-| File | Kind | Required for | Created by |
-|---|---|---|---|
-| `apikeys/google-credentials.json` | Service-account key (`client_email`, `private_key`) | `scrape:csv --upload-cloud` | Downloaded from GCP IAM → Service Accounts → Keys |
-| `apikeys/oauth-credentials.json` | OAuth client (Desktop app) | `scripts/test-drive-upload.ts` / `uploadWithUserOAuth` | Downloaded from GCP → Credentials → OAuth client ID |
-| `apikeys/oauth-token.json` | Access + refresh token | same | Auto-written after first consent |
+| File | Kind | Required for | Read/written by | Created by |
+|---|---|---|---|---|
+| `apikeys/google-credentials.json` | Service-account key (`client_email`, `private_key`) | `scrape:csv -- --upload-cloud` | `src/lib/GoogleDriveOAuth.ts` (`CREDENTIALS_PATH = <cwd>/apikeys/google-credentials.json`) | GCP IAM → Service Accounts → Keys |
+| `apikeys/oauth-credentials.json` | OAuth client (Desktop app; `installed` or `web` block) | `scripts/test-drive-upload.ts` / `uploadWithUserOAuth()` | `src/lib/GoogleDriveUserOAuth.ts` | GCP → Credentials → OAuth client ID |
+| `apikeys/oauth-token.json` | Access + refresh token | same | written by `GoogleDriveUserOAuth.ts` after consent / refresh; deleted if refresh fails | auto |
 
-> ⚠️ `docs/GOOGLE_DRIVE_SETUP.md` and `README.md` say to put `google-credentials.json` in the **project root**; the code
-> reads it from **`apikeys/`**.
+All three paths are resolved relative to `process.cwd()`, so run commands from the repo root.
 
-## 3. First-Time Setup
+> `README.md` and older docs said `google-credentials.json` goes in the **project root**; the code reads it from
+> **`apikeys/`**. `docs/GOOGLE_DRIVE_SETUP.md` has been corrected.
+
+## 3. Requirements
+
+| Component | Requirement | Notes |
+|---|---|---|
+| Node.js | 18+ recommended (no `engines` field in `package.json`; Jest 30 needs ≥ 18; analysed on v24.21.0) | `ts-node` 10 runs everything; no build step |
+| npm | bundled with Node | `package-lock.json` is committed |
+| PostgreSQL | any version supported by Prisma 5.22 (Neon used in practice) | tables created by `npx prisma db push` |
+| Redis | optional; any server reachable by `ioredis` 5 (local or Upstash `rediss://`) | |
+| Google Cloud | optional; Drive API enabled + service-account key or OAuth client | only for uploads |
+
+Key packages: `@prisma/client`/`prisma` ^5.22.0, `ioredis` ^5.8.2, `axios` ^1.13.2, `googleapis` ^169.0.0,
+`dotenv` ^17.2.3, `typescript` ^5.9.3, `ts-node` ^10.9.2 (all in `dependencies`); `jest` ^30, `ts-jest` ^29,
+`eslint` ^8.57 + `@typescript-eslint` ^6 + `eslint-plugin-jsdoc` ^46 (dev). `google-auth-library` is imported by
+`GoogleDriveUserOAuth.ts` but only installed transitively via `googleapis`.
+
+## 4. First-Time Setup
 
 ```bash
 npm install
 cp .env.example .env               # fill DATABASE_URL (and REDIS_URL if available)
-npx prisma generate
-npx prisma db push                 # creates tables from schema.prisma
-npm run seed                       # seeds TARGET_COMPANIES (4 by default)
-# For the full ~3k company list: put extracted-slugs.json contents into src/config/Companies.ts, then npm run seed
-npm run verify
+npx prisma generate                # (also run automatically by npm install via @prisma/client postinstall)
+npx prisma db push                 # creates tables/enum/indexes from schema.prisma
+npm run seed                       # seeds TARGET_COMPANIES (7 slugs in src/config/Companies.ts)
+npm run seed -- --all              # or: seed all 3,072 slugs from extracted-slugs.json
+npm run verify                     # sanity-check counts
+npm run scrape                     # or: npm run scrape:parallel -- --workers=8
 ```
 
 Optional local Redis (macOS): `brew install redis && brew services start redis`.
 
-## 4. Google Drive Upload
- 
-### 4.1 Comparison Table
+Verify the toolchain: `npx tsc --noEmit -p . && npm run lint && npm test`.
 
-| | Service account (`GoogleDriveOAuth.ts`) | User OAuth (`GoogleDriveUserOAuth.ts`) |
+## 5. Google Drive Upload
+
+### 5.1 Comparison Table
+
+| | Service account (`GoogleDriveOAuth.ts`, `uploadWithOAuth`) | User OAuth (`GoogleDriveUserOAuth.ts`, `uploadWithUserOAuth`) |
 |---|---|---|
-| Wired into `scrape:csv`? | ✅ yes | ❌ no (only test script) |
-| Interactive? | No — good for cron/CI | First run needs browser consent + paste code |
-| Storage | **No quota on personal Drive** → use a Shared Drive or share folder (may still fail) | User's own quota ✅ |
-| Scope | `drive` (full) | `drive.file` (app-created files only) |
+| Wired into `scrape:csv`? | ✅ yes (`--upload-cloud`) | ❌ no (only `scripts/test-drive-upload.ts`) |
+| Auth | JWT from `client_email` + `private_key` | OAuth2 installed-app flow, token cached in `apikeys/oauth-token.json` |
+| Interactive? | No — good for cron/CI | First run: open URL, approve, paste code |
+| Storage | **No quota on personal Drive** → use a Shared Drive (`supportsAllDrives: true` is set) | User's own quota ✅ |
+| Scope | `https://www.googleapis.com/auth/drive` (full) | `https://www.googleapis.com/auth/drive.file` (app-created files only) |
+| MIME type | always `text/csv` | by extension: `.csv`, `.txt`, `.json`, `.pdf`, else `application/octet-stream` |
 
-### 4.2 Step-by-Step Setup: Service Account Mode (used by `npm run scrape:csv -- --upload-cloud`)
+### 5.2 Service Account Mode (used by `npm run scrape:csv -- --upload-cloud`)
 
-*(Synthesized and corrected from [docs/GOOGLE_DRIVE_SETUP.md](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/docs/GOOGLE_DRIVE_SETUP.md))*
+Step-by-step instructions live in [docs/GOOGLE_DRIVE_SETUP.md](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/docs/GOOGLE_DRIVE_SETUP.md). Summary:
 
-1. **Google Cloud Console Project**:
-   - Go to [Google Cloud Console](https://console.cloud.google.com/) and create a project (e.g. `job-scraper`).
-2. **Enable Google Drive API**:
-   - Navigate to **APIs & Services** → **Library** → Search for **"Google Drive API"** → Click **Enable**.
-3. **Create Service Account Credentials**:
-   - Go to **APIs & Services** → **Credentials** → **+ CREATE CREDENTIALS** → **Service Account**.
-   - Name: `job-scraper-uploader`. Click **Create and Continue** → **Done**.
-   - Click the newly created service account email (`job-scraper-uploader@<project>.iam.gserviceaccount.com`).
-   - Go to **Keys** tab → **Add Key** → **Create new key** → Choose **JSON** → Download the `.json` file.
-4. **Place Credentials in Project**:
-   - ⚠️ **Important path discrepancy:** While `docs/GOOGLE_DRIVE_SETUP.md` says to put it in the project root, the actual code (`src/lib/GoogleDriveOAuth.ts:13`) looks for it at:
-     ```bash
-     mkdir -p apikeys
-     mv ~/Downloads/your-key.json ./apikeys/google-credentials.json
-     ```
-   - Ensure `apikeys/` and `google-credentials.json` remain gitignored.
-5. **Create & Share Google Drive Folder**:
-   - In Google Drive, create a folder (e.g. `job-scraper-exports`).
-   - Right-click folder → **Share** → Add the service account email with **Editor** permissions.
-   - Get the folder ID from the browser URL (`https://drive.google.com/drive/folders/<FOLDER_ID>`).
-   - Add to `.env`:
-     ```env
-     GOOGLE_DRIVE_FOLDER_ID="<FOLDER_ID>"
-     ```
-6. **Execution**:
+1. Create a GCP project and enable the **Google Drive API**.
+2. Create a service account → **Keys** → **Add Key** → JSON.
+3. Save it as `apikeys/google-credentials.json`:
    ```bash
-   npm run scrape:csv -- --upload-cloud
+   mkdir -p apikeys
+   mv ~/Downloads/your-key.json ./apikeys/google-credentials.json
    ```
-
-### 4.3 Troubleshooting Service Account Uploads
-
-- **"google-credentials.json not found"**: Ensure the JSON file is placed in `apikeys/google-credentials.json` (not in project root).
-- **"Permission denied" / 404 on upload**: Ensure the service account email is added as an **Editor** to the specific folder whose ID is in `GOOGLE_DRIVE_FOLDER_ID`.
-- **"API not enabled"**: Enable the **Google Drive API** in Google Cloud Console under APIs & Services.
-- **"The user's drive storage quota has been exceeded" (HTTP 403)**: Service accounts have 0 bytes storage on personal Google accounts. Workarounds:
-  1. Use a Google Workspace **Shared Drive** (Team Drive) where storage belongs to the workspace, OR
-  2. Switch to User OAuth mode (below).
-
-### 4.4 Step-by-Step Setup: User OAuth Mode (`GoogleDriveUserOAuth.ts`)
-
-1. GCP Console → **APIs & Services** → **Credentials** → **Create Credentials** → **OAuth client ID**.
-2. Application type: **Desktop app**.
-3. Download JSON and save as: `apikeys/oauth-credentials.json`.
-4. Run the test script:
-   ```bash
-   npx ts-node scripts/test-drive-upload.ts
+4. Create a Drive folder (preferably inside a **Shared Drive**), share it with the service-account email as
+   **Editor** (Content manager for Shared Drives), and add its ID to `.env`:
+   ```env
+   GOOGLE_DRIVE_FOLDER_ID="<FOLDER_ID>"
    ```
-5. Follow the terminal prompt: open the consent URL in your browser, approve access, and paste the authorization code back into the terminal.
-6. The token is automatically cached at `apikeys/oauth-token.json`. Files uploaded will use your personal account storage quota.
-7. *To use in `ScraperCSV.ts`:* Change import in `src/core/ScraperCSV.ts` from `uploadWithOAuth` to `uploadWithUserOAuth` from `../lib/GoogleDriveUserOAuth`.
+5. Run `npm run scrape:csv -- --upload-cloud`. Success prints `✅ Uploaded successfully!`, the file ID and a link.
 
-## 5. TypeScript / Lint Config
+### 5.3 Troubleshooting Service Account Uploads
 
-- `tsconfig.json`: `target es2020`, `module commonjs`, `lib [es2020, dom]`, `strict`, `esModuleInterop`, `rootDir ./src`,
-  `outDir ./dist`, `include src/**/*`. (`scripts/` is outside `include`; ts-node still runs them.)
-- `.eslintrc.json`: `eslint:recommended` + `@typescript-eslint/recommended` + jsdoc rules; ignores `docs/`, `scripts/`, `*.js`, `dist/`.
+- **`❌ google-credentials.json not found!`**: the file must be at `apikeys/google-credentials.json` (relative to the
+  directory you run from), not in the project root. The upload is skipped (returns `null`).
+- **`Error authorizing Google Drive API: …`**: malformed/revoked key — this is thrown, and because `scrape:csv` uses
+  `.catch(console.error)` the process still exits 0.
+- **"File not found" / 404 on upload**: the folder ID is wrong, or the service account was not added to that folder.
+- **"API not enabled"**: enable the **Google Drive API** for the project that owns the key.
+- **"The user's drive storage quota has been exceeded" (HTTP 403)**: service accounts have no storage on personal Google
+  accounts; the code then prints the service-account email as a sharing tip. Workarounds: upload into a Workspace
+  **Shared Drive**, or switch to User OAuth mode.
 
-## 6. Scheduling (not included in repo)
+### 5.4 User OAuth Mode (`GoogleDriveUserOAuth.ts`)
 
-The README describes "hourly scraping" but there is no scheduler. Example cron (daily 06:00):
+1. GCP Console → **APIs & Services** → **OAuth consent screen**: configure it (External, add yourself as a test user).
+2. **Credentials** → **Create Credentials** → **OAuth client ID** → Application type **Desktop app**.
+3. Download JSON and save as `apikeys/oauth-credentials.json`.
+4. Run `npx ts-node scripts/test-drive-upload.ts`.
+5. Open the printed consent URL, approve access. The browser is redirected to the client's first `redirect_uris` entry
+   (`http://localhost` for Desktop clients), which will not load — copy the `code=` query parameter from the address bar
+   and paste it into the terminal.
+6. The token is saved at `apikeys/oauth-token.json` and refreshed automatically when `expiry_date` has passed.
+7. *To use it in `scrape:csv`:* change the import in `src/core/ScraperCSV.ts` from `uploadWithOAuth`
+   (`../lib/GoogleDriveOAuth`) to `uploadWithUserOAuth` (`../lib/GoogleDriveUserOAuth`) — same `(filePath, folderId?)`
+   signature. Note that this makes `scrape:csv --upload-cloud` interactive on first run.
+
+## 6. TypeScript / Lint / Test Config
+
+- **`tsconfig.json`**: `target es2020`, `module commonjs`, `lib [es2020, dom]`, `strict`, `esModuleInterop`,
+  `skipLibCheck`, `forceConsistentCasingInFileNames`, `types [node]`, `rootDir ./src`, `outDir ./dist`,
+  `include ["src/**/*"]`. ⇒ `npx tsc --noEmit -p .` type-checks **only `src/`**; `scripts/`, `tests/` and `__mocks__/`
+  are not type-checked by it (ts-node still runs `scripts/`).
+- **`.eslintrc.json`**: `eslint:recommended` + `plugin:@typescript-eslint/recommended` + `eslint-plugin-jsdoc`;
+  env `node`, `es2022`. JSDoc rules: `jsdoc/require-jsdoc` (functions, methods, classes; not arrows/constructors) and
+  `jsdoc/check-tag-names` (extra tags `file`, `summary`, `tags`, `example`, `configuration`, `behavior`) — both
+  **warn**. `@typescript-eslint/no-explicit-any` off; `no-unused-vars` warns (ignores `_`-prefixed); `no-console` off;
+  `no-empty` and `prefer-const` warn. `ignorePatterns`: `node_modules/`, `dist/`, `docs/`, `*.js`, `scripts/`.
+  `npm run lint` only targets `src/` anyway, so `tests/` and `__mocks__/` are never linted.
+- **`jest.config.js`**: preset `ts-jest`, `testEnvironment node`, `roots ['<rootDir>/tests']`, `testMatch **/*.test.ts`,
+  `clearMocks: true`, `modulePathIgnorePatterns` for `output/`, `documentation/`, `node_modules/`. ts-jest runs with
+  `isolatedModules: true` (transpile only — tests are **not** type-checked) and an inline tsconfig mirroring the root one.
+- **Prisma mock (`__mocks__/@prisma/client.ts`)**: `moduleNameMapper` maps `^@prisma/client$` to this file for **every**
+  test, so no Prisma engine or database is loaded. It exports a fake `PrismaClient` with `company`
+  (`findMany`, `createMany`, `deleteMany`, `upsert`, `update`, `count`), `job` (`findMany`, `deleteMany`, `updateMany`,
+  `upsert`, `count`, `groupBy`), `department`/`location` (`findMany`, `upsert`, `count`), `$transaction`, `$disconnect`,
+  `$queryRaw`, `$queryRawUnsafe`. The global mock has **no** `job.createMany` (so `Scraper.ts` takes the
+  `$transaction` path) and no `findUnique` — tests that need them override with their own `jest.mock('@prisma/client', …)`.
+  Redis, axios, `fs` and `googleapis` are mocked per test file. When you add a Prisma call to source code, add it to this
+  mock too.
+
+## 7. Scheduling (not included in repo)
+
+There is no scheduler in the repo (older README versions advertised "hourly scraping"; see 09 #17/18). Example cron (daily 06:00):
 
 ```cron
 0 6 * * * cd /path/to/job-scrapper && npm run scrape:csv -- --upload-cloud >> output/cron.log 2>&1
 ```
-Use the service-account mode (non-interactive) for unattended runs.
+Use the service-account mode (non-interactive) for unattended runs. Remember `scrape:csv` exits 0 even on failure — check
+`output/latest-error-report.json` or the log instead of the exit code.
 
-## 7. Security Notes
+## 8. Security Notes
 
-- `.env`, `apikeys/`, `output/`, `google-credentials.json` are gitignored. Keep it that way.
+- `.env`, `apikeys/`, `output/`, `google-credentials.json` and `/extracted-slugs*` are gitignored (`extracted-slugs.json`
+  is nevertheless tracked in git). Keep secrets out of git.
 - `db:menu` option 7 executes arbitrary SQL with the DB user's privileges (`$queryRawUnsafe`) — local use only.
+- The service-account scope is full `drive`; prefer a dedicated service account with access to one folder only.

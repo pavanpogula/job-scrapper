@@ -1,67 +1,133 @@
 # 08 · Outputs & Generated Artifacts
 
-| Artifact | Generator | Tracked in git? | Notes |
-|---|---|---|---|
-| `output/jobs_YYYY-MM-DD.csv` | `npm run scrape:csv` | ❌ (`output/` ignored) | ~4.5 MB, ~29.9k rows |
-| `output/latest-error-report.json` | `npm run scrape`, `scrape:parallel`, `scrape:csv` | ❌ (`output/` ignored) | Structured telemetry & error report for Bug-Fix Agent |
-| `output/error-report_YYYY-MM-DD.json` | `npm run scrape`, `scrape:parallel`, `scrape:csv` | ❌ (`output/` ignored) | Dated daily snapshot of run telemetry |
-| `output/test-upload.txt` | `scripts/test-drive-upload.ts` | ❌ | Should be auto-deleted; a leftover exists (script likely failed mid-way) |
-| `JOBS.md` | `scripts/generate-readme.ts` | untracked | ~30k-line Markdown table |
-| `extracted-slugs.json` | `npm run process:cdx` | ✅ tracked (despite `/extracted-slugs*` in `.gitignore`) | 3,072 slugs |
-| `docs/project-explorer.html` | `npm run docs:generate` | ✅ tracked | Interactive file/function explorer |
-| PostgreSQL tables | `seed`, `discover`, `scrape` | — | see [05](./05-database-and-cache.md) |
-| Redis keys `job:*:hash` | `scrape` | — | 7-day TTL |
+Every file written by the code (verified by grepping `writeFile*`, `createWriteStream`, `unlink*` in `src/` and `scripts/`):
+
+| Artifact | Format | Writer (code) | Command | Tracked in git? | Notes |
+|---|---|---|---|---|---|
+| `output/jobs_YYYY-MM-DD.csv` | CSV | `scrapeToCSV()` in `src/core/ScraperCSV.ts` (`fs.createWriteStream`) | `npm run scrape:csv` | ❌ (`output/` ignored) | ~4.5 MB, ~29.9k rows for a full run; deleted again if 0 jobs |
+| `output/latest-error-report.json` | JSON | `ErrorTracker.saveReport()` / `ErrorTracker.saveMergedReport()` in `src/lib/ErrorTracker.ts` | `npm run scrape`, `scrape:parallel` (merged), `scrape:csv` | ❌ | Always the **last** run of any of the three modes |
+| `output/error-report_YYYY-MM-DD.json` | JSON | same (identical content) | same | ❌ | Date = UTC date of `summary.startedAt`; later runs on the same UTC day overwrite it |
+| `output/test-upload.txt` | text | `main()` in `scripts/test-drive-upload.ts` | `npx ts-node scripts/test-drive-upload.ts` | ❌ | Deleted at the end of the script; left behind if the script throws before cleanup (a leftover exists locally) |
+| `apikeys/oauth-token.json` | JSON (Google OAuth tokens) | `src/lib/GoogleDriveUserOAuth.ts` | `test-drive-upload.ts` | ❌ (`apikeys/` ignored) | Secret — never print or commit |
+| `extracted-slugs.json` (CWD) | JSON array | `processRawCDXData()` in `src/utils/ProcessCdxData.ts` | `npm run process:cdx -- <file>` | ✅ tracked (despite `/extracted-slugs*` in `.gitignore`) | 3,072 slugs; read by `npm run seed -- --all` |
+| `JOBS.md` (repo root) | Markdown | `scripts/generate-readme.ts` | `npx ts-node scripts/generate-readme.ts` | ✅ tracked | ~5.4 MB, 29,911-row table (last generated 2026-01-05 UTC from `jobs_2025-12-29.csv`) |
+| `docs/project-explorer.html` | HTML | `scripts/GenerateDocs.ts` | `npm run docs:generate` | ✅ tracked | Interactive file/function explorer |
+| Google Drive file | CSV | `uploadWithOAuth()` (`GoogleDriveOAuth.ts`) | `npm run scrape:csv -- --upload-cloud` | — | Same file name as the local CSV, in `GOOGLE_DRIVE_FOLDER_ID` |
+| PostgreSQL tables | — | Prisma | `seed`, `discover`, `scrape`, `scrape:parallel`, `db:clean -- --execute` | — | see [05](./05-database-and-cache.md) |
+| Redis keys `job:{ashbyId}:hash` | string | `Scraper.ts` | `scrape`, `scrape:parallel` | — | 7-day TTL, see [05 §4](./05-database-and-cache.md#4-redis-cache) |
+
+`output/` is created on demand (`mkdirSync({ recursive: true })`) relative to `process.cwd()` by `ScraperCSV.ts`,
+`ErrorTracker` and `test-drive-upload.ts`; `generate-readme.ts` resolves it relative to the script (`<repo>/output`).
+Nothing writes a log file — all logs go to stdout/stderr.
 
 ## 1. CSV Format
 
 Header (exact): `Company,Job Title,Job Link,Published Date,Location,Department`
 
-| Column | Source | Example |
+| Column | Source (`fetchJobsForCompany()` in `ScraperCSV.ts`) | Example |
 |---|---|---|
-| Company | company **slug** (not display name) | `01c` |
-| Job Title | `job.title` | `Full Stack Developer` |
-| Job Link | `https://jobs.ashbyhq.com/{slug}/{job.id}` (constructed, not `jobUrl`) | `https://jobs.ashbyhq.com/01c/7fe8abc1-…` |
-| Published Date | `job.publishedAt.split('T')[0]` or empty | `2025-10-22` |
-| Location | `job.location` or empty | `London` |
-| Department | `job.department` or empty | `Engineering` |
+| Company | `sanitizeText(companySlug)` — the **slug**, not the display name | `01c` |
+| Job Title | `sanitizeText(job.title)` | `Full Stack Developer` |
+| Job Link | `sanitizeJobUrl(job.jobUrl, slug, job.id, false)` — Ashby's `jobUrl` normalised by `new URL()`; falls back to `https://jobs.ashbyhq.com/{slug}/{job.id}` if missing, malformed or unsafe. GraphQL-fallback boards always use the canonical URL | `https://jobs.ashbyhq.com/01c/7fe8abc1-…` |
+| Published Date | `sanitizePublishedDate(job.publishedAt)` → leading `YYYY-MM-DD`, or empty. Always empty for GraphQL-fallback boards (no `publishedAt`) | `2025-10-22` |
+| Location | `sanitizeText(job.location)` or empty | `London` |
+| Department | `sanitizeText(job.department)` or empty (GraphQL fallback: team name) | `Engineering` |
 
-- Fields containing `,`, `"` or `\n` are quoted, inner quotes doubled.
+- `escapeCSV()`: removes `\x00`; fields containing `,`, `"`, `\n` or `\r` are wrapped in quotes with inner quotes doubled.
+- Line ending `\n`; UTF-8; no BOM. No salary column (CSV mode fetches without `includeCompensation`).
 - Row order = order in which company requests complete (non-deterministic). Within a company, Ashby order.
 - File date = **UTC** date at run start; reruns on the same UTC day overwrite.
-- **Empty file cleanup:** If `totalJobs === 0` across all scraped companies, `ScraperCSV.ts` unlinks (deletes) the empty file with `fs.unlinkSync(filePath)` to avoid leaving empty files in `output/`.
+- **Empty file cleanup:** if `totalJobs === 0`, `ScraperCSV.ts` removes the file with `fs.unlinkSync(filePath)`.
 
 **Historical runs present locally**
 
 | File | Rows | Distinct companies |
 |---|---|---|
-| `jobs_2025-12-27.csv` | 29,918 | 2,099 |
-| `jobs_2025-12-28.csv` | 29,917 | 2,099 (file mtime is Dec 27 local → UTC naming) |
-| `jobs_2025-12-29.csv` | 29,911 | 2,098 |
+| `jobs_2025-12-27.csv` | 29,917 | 2,098 |
+| `jobs_2025-12-28.csv` | 29,916 | 2,098 (file mtime is Dec 27 local → UTC naming) |
+| `jobs_2025-12-29.csv` | 29,910 | 2,097 |
+| `jobs_2026-10-23.csv` | 160 | 4 (small run) |
 
-So of ~3,072 discovered slugs, ~2,100 had at least one open job.
+Rows = CSV records excluding the header, counted with a real CSV parser. Each Dec-2025 file has one quoted title
+containing a newline, so `wc -l` reports one extra line (and `generate-readme.ts` renders one extra row).
+
+So of ~3,072 discovered slugs, ~2,098 had at least one open job at the end of 2025 (1,747 hiring companies / 34,035
+jobs in the 2026-10 DB run, see `documentation/README.md`).
 
 ## 2. `JOBS.md`
 
-Generated by: `npx ts-node scripts/generate-readme.ts` (note: root `README.md` completely omits mentioning `JOBS.md` or this script, despite `JOBS.md` being a ~5.4 MB artifact in the repository root).
+Generated by `npx ts-node scripts/generate-readme.ts` from the newest `output/jobs_*.csv` (by file-name sort).
+Root `README.md` lists the script and describes `JOBS.md` as a committed, generated snapshot.
 
 ```markdown
 # 🔍 Job Listings
+
 *Last updated: YYYY-MM-DD* | **Total Jobs: N**
+
 | # | Company | Job Title | Location | Department | Posted | Apply |
+|---|---------|-----------|----------|------------|--------|-------|
+| 1 | slug | Title | Location | Dept | YYYY-MM-DD | [Apply →](link) |
 ```
-Truncation: Title > 40 → 37 + `...`; Company/Location > 20 → 17 + `...`; Department > 15 → 12 + `...`.
-Apply column = `[Apply →](link)`. Pipes (`|`) and newlines inside cells are escaped via `sanitizeMarkdownCell()`.
+- `Last updated` = UTC date at generation time; every CSV row is rendered (no cap).
+- Truncation: Title > 40 → first 37 + `...`; Company/Location > 20 → 17 + `...`; Department > 15 → 12 + `...`.
+- `sanitizeMarkdownCell()` replaces newlines with spaces and escapes `|` as `\|` in text cells; in the link, `)` and
+  whitespace are percent-encoded. `Posted` is copied verbatim from the CSV.
 
 ## 3. `extracted-slugs.json`
 
-Sorted JSON array of lowercase slugs that passed `ProcessCdxData` filters + `isValidSlug`. Can be seeded directly via `npm run seed -- --all`.
+Pretty-printed (`JSON.stringify(arr, null, 2)`), **sorted** JSON array of lowercase slugs that passed the
+`ProcessCdxData` filters + `isValidSlug()` (regex `^[a-z0-9]+(?:-[a-z0-9]+)*$`, length 2–50, blocklist, not purely
+numeric). Written to the current working directory. Seed it with `npm run seed -- --all` (read from `process.cwd()`).
 
 ## 4. `docs/project-explorer.html`
 
-Single HTML file with a collapsible file tree; per file shows `@summary`, `@tags`, functions (with summaries) and for
-`schema.prisma` the models with fields. Regenerate after adding/renaming files: `npm run docs:generate`.
+Single self-contained HTML file with a collapsible file tree; per file shows `@summary`, `@tags`, functions (with
+`@summary`) and, for `schema.prisma`, the models with fields. Covers every `*.ts`/`*.prisma` file under the repo root
+except `node_modules`, `dist`, `.git`, `docs`, `output`, `.vscode`, `apikeys`. Regenerate after adding/renaming files or
+changing JSDoc headers: `npm run docs:generate`.
 
 ## 5. `output/latest-error-report.json` (Telemetry & Bug-Fix Agent Input)
 
-Written automatically by `ErrorTracker` (`src/lib/ErrorTracker.ts`) at the end of every `npm run scrape`, `npm run scrape:parallel` (merged across all OS worker processes), and `npm run scrape:csv` run. Contains `summary` metrics (`companiesAttempted`, `companiesWithJobs`, `graphqlFallbacksUsed`, `rateLimitsEncountered`, `jobsCollected`, `jobsSanitized`, `jobsFilteredOut`, `dbErrors`) and `events[]` (up to 500 detailed error/fallback/sanitization events).
+Written by `ErrorTracker` (`src/lib/ErrorTracker.ts`) at the end of every `npm run scrape` (`saveReport()`),
+`npm run scrape:parallel` (`mergeReports()` + `saveMergedReport()`; `--ipc-worker` children never write files) and
+`npm run scrape:csv` (`saveReport()`). The same JSON is also written to `output/error-report_YYYY-MM-DD.json`.
+Pretty-printed with 2-space indentation. Write failures are swallowed (the function returns `null`).
 
+```jsonc
+{
+  "schemaVersion": "1.0",
+  "summary": {
+    "runId": "run_<startMs>",            // "cluster_run_<startMs>" for scrape:parallel
+    "mode": "db_scrape",                 // "db_scrape" (scrape, scrape:parallel) | "csv_scrape" (scrape:csv)
+    "startedAt": "<ISO-8601>",
+    "completedAt": "<ISO-8601>",
+    "durationSeconds": 0,                // 2 decimals
+    "companiesAttempted": 0,             // ACTIVE companies in this run
+    "companiesWithJobs": 0,              // companies whose board returned ≥ 1 job
+    "companiesNotFound": 0,              // REST 404 and GraphQL fallback found no board
+    "graphqlFallbacksUsed": 0,           // boards recovered via GraphQL
+    "rateLimitsEncountered": 0,          // fetches that saw HTTP 429 or 403 at least once
+    "jobsCollected": 0,                  // jobs returned after sanitization (before Redis/DB change detection)
+    "jobsSanitized": 0,                  // validation issues with action "sanitized"
+    "jobsFilteredOut": 0,                // validation issues with action "filtered"
+    "dbErrors": 0                        // jobs that failed even the per-job upsert fallback (DB mode only)
+  },
+  "events": [                            // max 500 (MAX_EVENTS_STORED); extra events are dropped silently
+    {
+      "timestamp": "<ISO-8601>",
+      "category": "graphql_fallback",    // "graphql_fallback" | "validation_issue" | "db_error" | "api_error" (declared, never emitted)
+      "companySlug": "<slug>",
+      "jobId": "<ashbyId>",              // optional (validation_issue, db_error)
+      "field": "applyUrl",               // optional (validation_issue)
+      "message": "<reason>",
+      "actionTaken": "recovered_12_jobs" // graphql_fallback: "recovered_<n>_jobs"; validation_issue: "sanitized" | "filtered"; db_error: "skipped_corrupt_job_in_fallback"
+      // "samplePayload": {}             // optional in the type, never populated
+    }
+  ]
+}
+```
+
+Merge semantics (`mergeReports`): numeric summary fields are summed across workers, `startedAt` / `durationSeconds`
+come from the coordinator, events are concatenated in worker order up to 500. Note that `jobsSanitized` /
+`jobsFilteredOut` count **issues**, not distinct jobs (one job can produce several issues), and validation issues from
+GraphQL-fallback boards are not reported.
