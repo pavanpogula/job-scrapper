@@ -52,7 +52,7 @@ GOOGLE_DRIVE_FOLDER_ID="your_folder_id"
 | Command | Description |
 |---------|-------------|
 | `npm run scrape` | Scrape jobs and save to database (single process, GraphQL fallback & streaming writes) |
-| `npm run scrape:parallel` | Multi-process cluster scrape across OS worker processes (`-- --workers=4`) |
+| `npm run scrape:parallel` | Multi-process cluster scrape across OS worker processes (`-- --workers=8`) |
 | `npm run scrape:csv` | Export jobs to CSV |
 | `npm run scrape:csv -- --upload-cloud` | Export to CSV and upload to Google Drive |
 | `npm run discover` | Discover new companies via Wayback CDX (`-- --common-crawl`, `-- --enrich`) |
@@ -162,8 +162,8 @@ To enable cloud uploads:
 ### What's New in `v1.1.0`
 - **Browser GraphQL Fallback (`src/lib/AshbyClient.ts`)**: Automatically recovers boards that return `404`/`403` on the external `posting-api` by querying Ashby's hosted GraphQL API (`ApiJobBoardWithTeams`) with browser headers and exponential backoff.
 - **Data Sanitization & Error-Driven Filtering (`src/lib/Sanitizer.ts`)**: Sanitizes `descriptionHtml`, `descriptionPlain`, `jobUrl`, `applyUrl`, and recursive `jsonb` metadata (stripping null bytes `\u0000`, `<script>`/`<style>`/`<iframe>`, inline JS handlers, and oversized base64 data URIs), with per-job transaction fallback in `Scraper.ts`.
-- **Adaptive Concurrency & Streaming Writes (`src/lib/Concurrency.ts`, `src/core/Scraper.ts`)**: Dynamic concurrency throttling on `429`/`403`, 3-strike `NOT_FOUND` quarantine, stale job deactivation (`active = false`), real salary extraction, and streaming 100-job batch flushes.
-- **Bug-Fix Agent Telemetry (`src/lib/ErrorTracker.ts`)**: Every scrape writes `output/latest-error-report.json` (and `output/error-report_YYYY-MM-DD.json`) capturing API fallbacks, validation/sanitization events, and DB errors. See [`documentation/10-bug-fix-and-improvement-log.md`](./documentation/10-bug-fix-and-improvement-log.md) for the Regression Guard Registry (`BF-001`–`BF-007`) and Bug-Fix Agent workflow.
+- **Adaptive Concurrency & Streaming Writes (`src/lib/Concurrency.ts`, `src/core/Scraper.ts`, `src/core/ClusterScraper.ts`)**: Multi-core OS cluster worker coordination (`npm run scrape:parallel`), dynamic rate-limit backoff on `429`/`403`, bulk `createMany` fast-path for 34k-job scale, 3-strike `NOT_FOUND` quarantine, stale job deactivation (`active = false`), real salary extraction, and streaming 100-job batch flushes.
+- **Bug-Fix Agent Telemetry (`src/lib/ErrorTracker.ts`)**: Every scrape writes `output/latest-error-report.json` (and `output/error-report_YYYY-MM-DD.json`) capturing API fallbacks, validation/sanitization events, and DB errors. See [`documentation/10-bug-fix-and-improvement-log.md`](./documentation/10-bug-fix-and-improvement-log.md) for the Regression Guard Registry (`BF-001`–`BF-010`) and Bug-Fix Agent workflow.
 
 ### Roadmap: Packaging as an Application (Next Phase)
 Once scraping and edge-case fixes are finalized via the Bug-Fix Agent loop, this toolkit can be packaged as:

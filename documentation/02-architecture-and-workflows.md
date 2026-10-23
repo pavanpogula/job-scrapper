@@ -155,7 +155,7 @@ File: [ScraperCSV.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapp
 1. Find newest `output/jobs_*.csv` (lexicographic sort works because of ISO date names).
 2. RFC-4180 quote-aware CSV parse (`parseCSV()` handles `""` escaped quotes and `\r\n` newlines).
 3. Write `JOBS.md` at repo root: header with date + total, then a table `# | Company | Job Title | Location | Department | Posted | Apply`
-   with `sanitizeMarkdownCell()` escaping `\|` pipes and newlines, plus truncation (title 40, company/location 20, department 15 chars).
+   with `sanitizeMarkdownCell()` escaping `|` pipes and newlines, plus truncation (title 40, company/location 20, department 15 chars).
 
 ---
 
