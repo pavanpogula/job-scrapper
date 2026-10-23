@@ -24,7 +24,7 @@ inside the repo (scheduling must be done externally, e.g. cron / GitHub Actions)
 | Cloud | googleapis | `^169.0.0` | Drive v3 upload (service account JWT or user OAuth) |
 | Config | dotenv | `^17.2.3` | Loaded in `src/lib/Redis.ts`; Prisma loads `.env` itself |
 | Lint | ESLint 8 + `@typescript-eslint` 6 + `eslint-plugin-jsdoc` | dev | JSDoc `@file/@summary/@tags` convention feeds the doc generator |
-| Tests | Jest 29 + ts-jest | dev | 15 test suites, 78 unit & E2E tests |
+| Tests | Jest 29 + ts-jest | dev | 16 test suites, 79 unit & E2E tests |
 
 > `@types/node`, `prisma`, `ts-node`, `typescript` are listed under `dependencies` (not `devDependencies`).
 > `google-auth-library` is imported directly in `GoogleDriveUserOAuth.ts` but is only a *transitive* dependency of `googleapis`.
@@ -99,5 +99,5 @@ job-scrapper/
 
 - `npx tsc --noEmit -p .` → **0 errors**.
 - `npm run lint` → **0 errors, 1 warning** (`no-empty` in `DbInspect.ts:56`).
-- `npm test` → **78 passed across 15 test suites (100% pass rate)**.
+- `npm test` → **79 passed across 16 test suites (100% pass rate)**.
 - No CI config, no Dockerfile.

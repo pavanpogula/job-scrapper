@@ -23,7 +23,7 @@ All scripts run through `npx ts-node` — no build required. Pass extra args aft
 | `npm run lint` / `lint:fix` | ESLint on `src/` | — | — | — | (fix: source files) |
 | `npx ts-node scripts/generate-readme.ts` | *(no npm script)* | — | — | — | `JOBS.md` |
 | `npx ts-node scripts/test-drive-upload.ts` | *(no npm script)* | — | — | Google OAuth/Drive | `apikeys/oauth-token.json`, Drive file; temp `output/test-upload.txt` |
-| `npm test` | Jest (`jest.config.js`) | — | — | — | 15 suites, 78 unit & E2E tests |
+| `npm test` | Jest (`jest.config.js`) | — | — | — | 16 suites, 79 unit & E2E tests |
 
 Prisma CLI (not wrapped): `npx prisma generate`, `npx prisma db push`, `npx prisma migrate dev` (no `migrations/` folder exists — schema is synced with `db push`).
 
@@ -73,7 +73,7 @@ Options: `1` Dashboard · `2` Jobs per company (top 15) · `3` Top salaries (top
 - ⚠️ *Note:* `README.md` describes this as "remove old jobs", but it actually purges companies with *invalid slugs* (and their foreign-key dependent jobs), not aged records.
 
 ### `npm run verify`
-- Checks database connectivity and prints row counts for `Company`, `Job`, and `Department`. (Note: omits `Location` count).
+- Audits database connectivity and prints row counts for `Company` (`ACTIVE`/`NOT_FOUND`), `Job` (`active`/`inactive`/`with salary`), `Department`, and `Location`, plus a company-by-company job breakdown, sanitization integrity audit (checking for empty titles, invalid URLs, or null-byte `jsonb` corruption), and top extracted salaries.
 
 ### `npm run docs:generate`
 - Regenerates `docs/project-explorer.html`. Scans all `.ts` and `.prisma` files and relies on JSDoc `@file`, `@summary`, `@tags` at the top of each file.

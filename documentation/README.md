@@ -51,6 +51,6 @@
 3. **Adaptive Rate Limiting:** `createLimiter()` in `src/lib/Concurrency.ts` dynamically halves concurrency and pauses the queue when `429`/`403` rate limits occur, then ramps back up after consecutive clean responses.
 4. **`GoogleDriveOAuth.ts` is misnamed** — it actually uses a *service-account JWT*, not user OAuth.
    The real user-OAuth flow lives in `GoogleDriveUserOAuth.ts`. See 07 & 09.
-5. **Some entry-point files execute on import** (`Verify.ts`, `DbMenu.ts`, `DbInspect.ts`). Don't import them from other modules.
+5. **Some entry-point files execute on import** (`DbMenu.ts`, `DbInspect.ts`). Don't import them from other modules.
 6. **Secrets live in `.env` and `apikeys/`** (both gitignored). Never print or commit their contents.
 7. **Default Change, Docs & Commit Rule (Mandatory):** Whenever you make *any* change in this repository, you must: (a) update `AGENTS.md`, `README.md`, and the matching files in `documentation/` + "Last full analysis" date, (b) regenerate `docs/project-explorer.html` (`npm run docs:generate`), (c) verify `npx tsc --noEmit -p .`, `npm run lint`, and `npm test` pass, and (d) commit all changes (`git commit`) with a detailed Conventional Commit subject and multi-line bulleted description.

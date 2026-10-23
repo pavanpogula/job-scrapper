@@ -427,6 +427,12 @@
                         <span>Seed.test.ts</span>
                         
                     </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_Verify_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Verify.test.ts</span>
+                        
+                    </div>
                 </li></ul>
                 </li></ul>
                 </li></ul>
@@ -1342,9 +1348,13 @@
     "path": "src/utils/Verify.ts",
     "icon": "📝",
     "iconClass": "blue",
-    "summary": "No description available",
+    "summary": "Verifies database connectivity, table counts (Company, Job, Department, Location), salary extraction coverage, and sanitization integrity",
     "tags": [
-      "Undocumented"
+      "Utility",
+      "Verification",
+      "Database",
+      "Integrity",
+      "Audit"
     ],
     "info": [
       {
@@ -1353,10 +1363,15 @@
       },
       {
         "label": "Functions",
-        "value": "0"
+        "value": "1"
       }
     ],
-    "functions": []
+    "functions": [
+      {
+        "name": "verifyDatabase()",
+        "desc": "Audits database row counts, company statuses, salary coverage, and job data sanitization integrity"
+      }
+    ]
   },
   "tests_e2e_DiscoveryPipeline_test_ts": {
     "name": "DiscoveryPipeline.test.ts",
@@ -1721,6 +1736,31 @@
       "Seed",
       "Memory Diff",
       "Database"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_Verify_test_ts": {
+    "name": "Verify.test.ts",
+    "path": "tests/unit/Verify.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test suite for verifyDatabase() table counts, salary audit, and sanitization integrity checks",
+    "tags": [
+      "Unit Test",
+      "Verify",
+      "Database",
+      "Integrity",
+      "Audit"
     ],
     "info": [
       {

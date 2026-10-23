@@ -48,12 +48,12 @@ Severity: 🔴 data-correctness bug · 🟠 reliability/operational risk · 🟡
 | 25 | `README.md` describes `db:clean` as "Clean database (remove old jobs)" — but `DbClean.ts` deletes companies with **invalid slugs** (and their dependent jobs), not aged jobs. |
 | 26 | `README.md` completely omits `JOBS.md` and `scripts/generate-readme.ts`, despite `JOBS.md` being a 5+ MB generated markdown table in the root directory. |
 | 27 | `scripts/GenerateDocs.ts` usage comment references `scripts/generate-docs.ts` (kebab-case old name), and its file regex matches its own source code, corrupting its entry in `project-explorer.html`. |
-| 28 | `src/utils/Verify.ts` logs counts for `Company`, `Job`, and `Department`, but omits `Location`. |
+| 28 | *(Resolved)* `src/utils/Verify.ts` (`verifyDatabase()`) now audits `Company`, `Job`, `Department`, and `Location` counts, salary coverage, and data sanitization integrity with a `require.main` guard. |
 
 - `chunk()` in `Concurrency.ts` unused.
 - `google-auth-library` imported directly but not declared in `package.json`.
 - Build/runtime tools (`typescript`, `ts-node`, `prisma`, `@types/node`) are in `dependencies`.
-- Entry modules run on import: added `require.main` guard to `ScraperCSV`, `Seed`, `DbClean`, and `generate-readme` (remaining: `Verify`, `DbMenu`, `DbInspect`).
+- Entry modules run on import: added `require.main` guard to `ScraperCSV`, `Seed`, `DbClean`, `Verify`, and `generate-readme` (remaining: `DbMenu`, `DbInspect`).
 - Multiple `new PrismaClient()` instances (one per module) — fine for CLIs, but a shared `lib/Prisma.ts` would be cleaner.
 - ESLint: 1 warning (`no-empty`, `DbInspect.ts:56`).
 - *(Resolved)* `generate-readme.ts` CSV parser now handles escaped `""` quotes and `\r\n`, and `generateMarkdownTable` escapes `|` (`\|`) and newlines in table cells.

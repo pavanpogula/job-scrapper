@@ -127,7 +127,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 
 - [Seed.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/utils/Seed.ts) — `seed()`; memory diff + `createMany`. Runs on import.
 - [ProcessCdxData.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/utils/ProcessCdxData.ts) — `export processRawCDXData(rows)`; has `require.main` guard.
-- [Verify.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/utils/Verify.ts) — `check()`; counts. Runs on import.
+- [Verify.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/utils/Verify.ts) — `export verifyDatabase()`; audits counts (`Company`, `Job`, `Department`, `Location`), salary coverage, and sanitization integrity; has `require.main` guard.
 
 ## `src/config/`
 
