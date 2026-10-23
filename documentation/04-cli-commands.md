@@ -9,7 +9,8 @@ All scripts run through `npx ts-node` — no build required. Pass extra args aft
 | `npm run seed` | `src/utils/Seed.ts` | ✅ | — | — | `Company` rows |
 | `npm run discover` | `src/discovery/CdxWorker.ts` | ✅ | — | Wayback CDX | `Company` rows |
 | `npm run process:cdx -- <file.json>` | `src/utils/ProcessCdxData.ts` | — | — | — | `extracted-slugs.json` |
-| `npm run scrape` | `src/core/Scraper.ts` | ✅ | optional | Ashby | `Job`, `Department`, `Location`, `Company.status`, Redis keys |
+| `npm run scrape` | `src/core/Scraper.ts` | ✅ | optional | Ashby | `Job`, `Department`, `Location`, `Company.status`, Redis keys, `output/latest-error-report.json` |
+| `npm run scrape:parallel [-- --workers=N]` | `src/core/ClusterScraper.ts` | ✅ | optional | Ashby | Multi-process OS worker scrape + merged `output/latest-error-report.json` |
 | `npm run scrape:csv` | `src/core/ScraperCSV.ts` | ✅ (read) | — | Ashby | `output/jobs_YYYY-MM-DD.csv` |
 | `npm run scrape:csv -- --upload-cloud` | same | ✅ (read) | — | Ashby + Drive | CSV + Drive file |
 | `npm run db:menu` | `src/database/DbMenu.ts` | ✅ | — | — | read-only (unless raw SQL mutates!) |
@@ -22,7 +23,7 @@ All scripts run through `npx ts-node` — no build required. Pass extra args aft
 | `npm run lint` / `lint:fix` | ESLint on `src/` | — | — | — | (fix: source files) |
 | `npx ts-node scripts/generate-readme.ts` | *(no npm script)* | — | — | — | `JOBS.md` |
 | `npx ts-node scripts/test-drive-upload.ts` | *(no npm script)* | — | — | Google OAuth/Drive | `apikeys/oauth-token.json`, Drive file; temp `output/test-upload.txt` |
-| `npm test` | Jest (`jest.config.js`) | — | — | — | 11 suites, 49 unit & E2E tests |
+| `npm test` | Jest (`jest.config.js`) | — | — | — | 15 suites, 78 unit & E2E tests |
 
 Prisma CLI (not wrapped): `npx prisma generate`, `npx prisma db push`, `npx prisma migrate dev` (no `migrations/` folder exists — schema is synced with `db push`).
 
@@ -30,14 +31,14 @@ Prisma CLI (not wrapped): `npx prisma generate`, `npx prisma db push`, `npx pris
 
 ## Details
 
-### `npm run seed`
-- Reads `TARGET_COMPANIES` from `src/config/Companies.ts`.
+### `npm run seed [-- --all]`
+- Reads `TARGET_COMPANIES` from `src/config/Companies.ts` by default, or all 3,072 slugs from `extracted-slugs.json` when `-- --all` is passed.
 - 1× `findMany` (existing slugs) → in-memory diff → 1× `createMany({ skipDuplicates: true })`, `name = slug`, `status = ACTIVE`.
 - Output: counts of existing / new; "No new companies to add." if nothing new.
 
-### `npm run discover`
+### `npm run discover [-- --common-crawl] [-- --enrich]`
 - See [02 → Workflow A1](./02-architecture-and-workflows.md#a1-automatic-npm-run-discover--cdxworkerts). Upserts slugs one by one, prints dots.
-- Limited to 1000 CDX rows (hard-coded).
+- Optional flags: `--common-crawl` also queries the CommonCrawl Index API; `--enrich` populates `Company.name` and `Company.logoUrl` from Ashby's `window.__appData`.
 
 ### `npm run process:cdx -- <path>`
 - Input: JSON array-of-arrays from CDX (`[["original"],["url"],...]`).
@@ -46,8 +47,12 @@ Prisma CLI (not wrapped): `npx prisma generate`, `npx prisma db push`, `npx pris
 
 ### `npm run scrape`
 - Logs: start banner (company count, concurrency 15, batch 100, Redis status), `✅ slug: N jobs (M changed)` per company with jobs,
-  progress every 100 companies, `📦 Batch writing …`, final elapsed time.
+  progress every 100 companies, `📦 Flushing remaining jobs…`, final elapsed time, and `output/latest-error-report.json`.
 - Exit code 1 on unhandled error (after Prisma disconnect).
+
+### `npm run scrape:parallel [-- --workers=N]`
+- Spawns `N` OS child processes (`child_process.fork('src/core/Scraper.ts', ['--ipc-worker'])`), defaulting to `min(4, cpuCores)`.
+- Distributes active company slugs across shards via round-robin (`partitionSlugs()`), runs all shards across CPU cores in parallel, and merges worker telemetry via `ErrorTracker.mergeReports()` into `output/latest-error-report.json`.
 
 ### `npm run scrape:csv [-- --upload-cloud]`
 - Logs per company and progress every 100 companies (with running job total).

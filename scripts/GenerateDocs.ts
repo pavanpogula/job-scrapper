@@ -1,10 +1,7 @@
 /**
- * Documentation Generator
- * 
- * Parses TypeScript files for JSDoc comments and generates
- * an interactive HTML documentation page.
- * 
- * Usage: npx ts-node scripts/generate-docs.ts
+ * @file Documentation Generator
+ * @summary Parses TypeScript and Prisma files for JSDoc metadata and generates docs/project-explorer.html
+ * @tags Documentation, Generator, HTML, JSDoc, Prisma
  */
 
 import * as fs from 'fs';
@@ -28,19 +25,20 @@ interface FileDoc {
 
 // Icon mapping based on file location/name
 function getFileIcon(filePath: string): { icon: string; iconClass: string } {
-    if (filePath.includes('scraper')) return { icon: '⭐', iconClass: 'pink' };
-    if (filePath.includes('discovery') || filePath.includes('cdx')) return { icon: '🔍', iconClass: 'yellow' };
-    if (filePath.includes('db-menu')) return { icon: '💻', iconClass: 'cyan' };
-    if (filePath.includes('clean')) return { icon: '🧹', iconClass: 'blue' };
-    if (filePath.includes('inspect')) return { icon: '🔬', iconClass: 'purple' };
-    if (filePath.includes('redis')) return { icon: '⚡', iconClass: 'pink' };
-    if (filePath.includes('config') || filePath.includes('companies')) return { icon: '📋', iconClass: 'green' };
-    if (filePath.includes('seed')) return { icon: '🌱', iconClass: 'green' };
-    if (filePath.includes('process')) return { icon: '🔧', iconClass: 'yellow' };
-    if (filePath.endsWith('.prisma')) return { icon: '🗄️', iconClass: 'purple' };
-    if (filePath.includes('lib')) return { icon: '📦', iconClass: 'blue' };
-    if (filePath.includes('scripts')) return { icon: '📜', iconClass: 'cyan' };
-    if (filePath.includes('csv')) return { icon: '📄', iconClass: 'green' };
+    const lower = filePath.toLowerCase();
+    if (lower.includes('scraper')) return { icon: '⭐', iconClass: 'pink' };
+    if (lower.includes('discovery') || lower.includes('cdx')) return { icon: '🔍', iconClass: 'yellow' };
+    if (lower.includes('dbmenu')) return { icon: '💻', iconClass: 'cyan' };
+    if (lower.includes('clean')) return { icon: '🧹', iconClass: 'blue' };
+    if (lower.includes('inspect')) return { icon: '🔬', iconClass: 'purple' };
+    if (lower.includes('redis')) return { icon: '⚡', iconClass: 'pink' };
+    if (lower.includes('config') || lower.includes('companies')) return { icon: '📋', iconClass: 'green' };
+    if (lower.includes('seed')) return { icon: '🌱', iconClass: 'green' };
+    if (lower.includes('process')) return { icon: '🔧', iconClass: 'yellow' };
+    if (lower.endsWith('.prisma')) return { icon: '🗄️', iconClass: 'purple' };
+    if (lower.includes('lib')) return { icon: '📦', iconClass: 'blue' };
+    if (lower.includes('scripts')) return { icon: '📜', iconClass: 'cyan' };
+    if (lower.includes('csv')) return { icon: '📄', iconClass: 'green' };
     return { icon: '📝', iconClass: 'blue' };
 }
 
@@ -89,8 +87,8 @@ function parseJSDoc(content: string): { fileSummary: string; fileTags: string[];
     let fileTags: string[] = [];
     const functions: FunctionDoc[] = [];
 
-    // Extract file-level JSDoc (first block starting with @file)
-    const fileDocMatch = content.match(/\/\*\*[\s\S]*?@file[\s\S]*?\*\//);
+    // Extract file-level JSDoc (first block at top of file starting with @file)
+    const fileDocMatch = content.match(/^\s*\/\*\*[\s\S]*?@file[\s\S]*?\*\//);
     if (fileDocMatch) {
         const block = fileDocMatch[0];
 
@@ -465,7 +463,7 @@ function generateTreeHTML(docs: FileDoc[]): string {
             } else if (value.__isFile) {
                 const doc = value.__doc as FileDoc;
                 const key = doc.path.replace(/[\/\.]/g, '_');
-                const isCore = doc.path.includes('scraper.ts');
+                const isCore = doc.path.includes('Scraper.ts');
                 html += `<li>
                     <div class="tree-item file" onclick="showFile('${key}')">
                         <span class="material-icons-round">description</span>

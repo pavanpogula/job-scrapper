@@ -57,31 +57,30 @@ erDiagram
 
 ### `Company`
 - `slug` is the **natural key** used everywhere (FK target for `Job.companySlug`, Ashby path param).
-- `name` is a placeholder = slug; `logoUrl` is never populated.
+- `name` defaults to `slug` on seed; `name` and `logoUrl` can be enriched from Ashby's `window.__appData` via `npm run discover -- --enrich`.
 
 ### `Department` / `Location`
-- Lookup tables keyed by unique `name` (raw string from Ashby, e.g. `"Remote"`, `"London, UK"`). Not normalized further
-  (no country/city split; `secondaryLocations`, `address`, `workplaceType` aren't modeled).
+- Lookup tables keyed by unique `name` (sanitized string from Ashby, e.g. `"Remote"`, `"London, UK"`). Upserts use an in-memory `Map` cache, in-flight `Promise` deduplication, and `findUnique` fallback for cross-process `P2002` race safety during `npm run scrape:parallel`.
 
 ### `Job`
 - `ashbyId` unique → upsert key.
-- `metadata` = full raw Ashby job object (incl. `descriptionHtml`, so rows are large). Only written on **create**.
-- `contentHash` = `md5("${title}|${location}|${department}|${compensationTier?.min}|${compensationTier?.max}")`.
-- `active` is always `true` (nothing sets it false).
+- `metadata` = recursively sanitized raw Ashby job object (`sanitizeJsonMetadata()` strips `\u0000` null bytes and lone UTF-16 surrogates; `descriptionHtml` is cleaned of `<script>`/`<style>`/`<iframe>`/inline JS and oversized base64 data URIs). Written on **create** and refreshed on **update**.
+- `contentHash` = `md5("${title}|${location}|${department}|${salary.min}|${salary.max}")`.
+- `active` is set `true` on upsert, and automatically set `false` via `deactivateStaleJobs()` when a job disappears from a company's live board.
 - Indexes: `companySlug`, `departmentId`, `locationId`, `active`.
 - No `onDelete` cascade → deleting a `Company` requires deleting its jobs first (done in `DbClean.ts`).
 
-## 3. API → DB Field Mapping (in `Scraper.ts`)
+## 3. API → DB Field Mapping (in `Scraper.ts` & `AshbyClient.ts`)
 
 | Ashby field | DB column | Notes |
 |---|---|---|
 | `id` | `Job.ashbyId` | |
 | `title` | `Job.title` | updated on change |
-| `applyUrl` | `Job.applyUrl` | create only |
-| `department` | `Department.name` → `Job.departmentId` | upsert + in-memory cache |
-| `location` | `Location.name` → `Job.locationId` | upsert + in-memory cache |
-| `compensationTier.min/max/currency` | `salaryMin/Max/Currency` | ⚠️ field doesn't exist → always NULL (see 09 #1) |
-| *(entire object)* | `Job.metadata` | create only |
+| `applyUrl` | `Job.applyUrl` | updated on change |
+| `department` | `Department.name` → `Job.departmentId` | upsert + in-memory cache + in-flight deduplication |
+| `location` | `Location.name` → `Job.locationId` | upsert + in-memory cache + in-flight deduplication |
+| `compensation.summaryComponents` (`Salary`) | `salaryMin/Max/Currency` | extracted via `extractSalary()` in `AshbyClient.ts` |
+| *(entire object)* | `Job.metadata` | updated on change |
 | — | `Job.companySlug` | from the company being scraped |
 
 ## 4. Redis Cache

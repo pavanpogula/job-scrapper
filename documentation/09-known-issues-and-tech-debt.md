@@ -4,32 +4,24 @@ Severity: 🔴 data-correctness bug · 🟠 reliability/operational risk · 🟡
 
 ## 🔴 Data-correctness bugs
 
-### #1 Salary is never captured (field-name mismatch) — **verified against live API**
-- `Scraper.ts` reads `job.compensationTier.{min,max,currency}`; Ashby returns `job.compensation.{summaryComponents, compensationTiers, …}`.
-- Effects: `salaryMin/salaryMax/salaryCurrency` always `NULL`; `db:menu` "Top Salaries" always empty; hash input has `undefined|undefined`.
-- Fix sketch:
-  ```ts
-  const salary = job.compensation?.summaryComponents?.find(c => c.compensationType === 'Salary');
-  salaryMin = salary?.minValue ?? undefined; salaryMax = salary?.maxValue ?? undefined; salaryCurrency = salary?.currencyCode;
-  ```
-  Then include those values in `generateHash` and in the upsert `update` (also `salaryCurrency`). Backfill existing rows from `metadata->'compensation'`.
+### #1 *(Resolved)* Salary extraction fixed in `AshbyClient.ts` & `Scraper.ts`
+- `extractSalary()` in `src/lib/AshbyClient.ts` now extracts `minValue`, `maxValue`, and `currencyCode` from `job.compensation.summaryComponents` (and `compensationTiers`), and `Scraper.ts` includes these in `generateHash`, `create`, and `update`.
 
-### #2 Removed postings are never deactivated
-- `active` is only ever set `true`. Jobs that disappear from Ashby stay `active = true` forever.
-- Fix: per company, `updateMany({ where: { companySlug, ashbyId: { notIn: currentIds } }, data: { active: false } })` (only when the fetch succeeded).
+### #2 *(Resolved)* Stale postings are automatically deactivated
+- `deactivateStaleJobs()` in `Scraper.ts` marks previously active jobs for a company as `active = false` when their `ashbyId` is absent from a successful live board fetch.
 
-### #3 Upsert `update` branch is incomplete
-- `metadata`, `applyUrl`, `salaryCurrency` are not updated on change → stale raw data.
+### #3 *(Resolved)* Upsert `update` branch updated
+- `metadata`, `applyUrl`, and `salaryCurrency` are now refreshed in `batchUpsertJobs` on change.
 
-### #4 Transient errors look like "0 jobs"
-- Any non-404 failure (timeout, 429, 5xx) returns `[]` silently in both scrapers — combined with #2's fix this would wrongly deactivate jobs. Distinguish "failed" from "empty" and add retry with backoff.
+### #4 *(Resolved)* Browser headers, retry/backoff, and GraphQL fallback added
+- `fetchAshbyBoardWithFallback` in `src/lib/AshbyClient.ts` sends browser `User-Agent` headers, retries with exponential backoff + jitter on `429`/`5xx`/timeout, and falls back to Ashby's hosted GraphQL API (`ApiJobBoardWithTeams`) when the external `posting-api` returns `404`/`403`/`400`.
 
 ## 🟠 Reliability / operational risks
 
 | # | Issue | Where |
 |---|---|---|
-| 5 | **Race in `getOrCreateDepartment/Location`**: two concurrent companies with a new identical name both `upsert` → possible `P2002` unique violation → rejects the limiter → whole `Promise.all` (and run) fails | `Scraper.ts` L110-147 |
-| 6 | All changed jobs held in memory and written only at the end — crash = nothing saved; memory ~ includes full `descriptionHtml` per job | `Scraper.ts` `runAll` |
+| 5 | *(Resolved)* **Race in `getOrCreateDepartment/Location`**: deduplicated with in-flight Promise maps (`departmentInFlight`, `locationInFlight`) | `Scraper.ts` |
+| 6 | *(Resolved)* Incremental streaming DB writes flush every `BATCH_SIZE = 100` jobs during the scrape instead of holding all jobs in memory until the end | `Scraper.ts` `runAll` |
 | 7 | One sequential Redis `GET` per job (~30k round trips). Use `MGET`/pipeline | `filterChangedJobs` |
 | 8 | `NOT_FOUND` is terminal — no re-check; `REDIRECTED` unused | `Scraper.ts`, schema |
 | 9 | CSV scraper doesn't mark 404 companies, so dead slugs are re-requested forever (~1k wasted calls/run) | `ScraperCSV.ts` |
@@ -64,7 +56,19 @@ Severity: 🔴 data-correctness bug · 🟠 reliability/operational risk · 🟡
 - Entry modules run on import: added `require.main` guard to `ScraperCSV`, `Seed`, `DbClean`, and `generate-readme` (remaining: `Verify`, `DbMenu`, `DbInspect`).
 - Multiple `new PrismaClient()` instances (one per module) — fine for CLIs, but a shared `lib/Prisma.ts` would be cleaner.
 - ESLint: 1 warning (`no-empty`, `DbInspect.ts:56`).
-- `generate-readme.ts` CSV parser doesn't handle escaped `""` quotes; Markdown doesn't escape `|`.
+- *(Resolved)* `generate-readme.ts` CSV parser now handles escaped `""` quotes and `\r\n`, and `generateMarkdownTable` escapes `|` (`\|`) and newlines in table cells.
+
+## 🛡️ Decision Log & Bug Fixes (2026-10-22 Update)
+
+| # | Bug / Problem Observed | Architectural Decision & Fix Implemented | Files Updated |
+|---|---|---|---|
+| **BF-1** | **Company URLs returning 404/403 in scraper while working in browser** | Companies that use Ashby's hosted board (`jobs.ashbyhq.com/<slug>`) without enabling the external `posting-api` return 404/403 on `api.ashbyhq.com`. Added `fetchAshbyBoardWithFallback()` with Chrome `BROWSER_HEADERS`, exponential backoff + jitter on `429`/`5xx`/timeouts, and automatic fallback to Ashby's hosted GraphQL API (`POST /api/non-user-graphql?op=ApiJobBoardWithTeams`). | `src/lib/AshbyClient.ts`, `src/core/Scraper.ts`, `src/core/ScraperCSV.ts` |
+| **BF-2** | **PostgreSQL `jsonb` & storage crashes on corrupt job descriptions (`descriptionHtml` / `descriptionPlain`)** | PostgreSQL `jsonb` rejects strings containing `\u0000` (null bytes) or lone UTF-16 surrogates, aborting the entire 100-job `$transaction`. Added `sanitizeJobDescriptionHtml()`, `sanitizeJobDescriptionPlain()`, and recursive `sanitizeJsonMetadata()` to strip null bytes, lone surrogates, `<script>`/`<style>`/`<iframe>` tags, inline JS handlers, and `>1KB` base64 data URIs before storage. | `src/lib/Sanitizer.ts`, `src/core/Scraper.ts` |
+| **BF-3** | **Broken, relative, or unsafe `jobUrl` / `applyUrl` job links** | Added `sanitizeJobUrl()` to validate URLs via `new URL()`, resolve relative paths against `https://jobs.ashbyhq.com`, reject unsafe protocols (`javascript:`, `data:`) or placeholder strings (`"undefined"`, `"null"`), and fall back to the canonical `https://jobs.ashbyhq.com/{slug}/{id}[/application]` URL while logging a sanitization issue. | `src/lib/Sanitizer.ts`, `src/core/Scraper.ts`, `src/core/ScraperCSV.ts` |
+| **BF-4** | **Malformed job objects & single-record DB batch poisoning** | Added `validateAndSanitizeJob()` and `sanitizeJobBatch()` to filter out non-object records, invalid/placeholder job IDs, empty titles, and duplicate IDs per company with structured `[Sanitizer]` logging. Updated `batchUpsertJobs()` in `Scraper.ts` to automatically fall back to per-job upserts (`[BatchError]` → `[JobStoreError]`) if a batch transaction ever fails, isolating the bad record without losing the other 99 jobs. | `src/lib/Sanitizer.ts`, `src/core/Scraper.ts` |
+| **BF-5** | **Discovery slug filter & CSV/Markdown table corruption** | Expanded `BLOCKLIST` in `CdxWorker.ts` (`embed`, `application`, `apply`, `graphql`, `non-user-graphql`, `posting-api`, `sitemap.xml`, `manifest.json`, `oauth`, `webhook`, etc.). Updated `escapeCSV()` for `\r` and `\x00`, `parseCSV()` for `""` escaped quotes, and `generateMarkdownTable()` to escape `\|` pipes in `JOBS.md`. | `src/discovery/CdxWorker.ts`, `src/core/ScraperCSV.ts`, `scripts/generate-readme.ts` |
+| **BF-6** | **Salary always `NULL`, stale jobs never deactivated, and concurrent upsert races** | Added `extractSalary()` for `compensation.summaryComponents`, `deactivateStaleJobs()` (`active = false`), 3-strike `NOT_FOUND` quarantine (`recordNotFoundStrike()`), in-flight Promise deduplication for `Department`/`Location` upserts, and incremental 100-job streaming DB flushes. | `src/lib/AshbyClient.ts`, `src/core/Scraper.ts`, `src/lib/Concurrency.ts` |
+| **BF-7** | **Multi-process cluster scaling & cross-process unique races** | Added `ClusterScraper.ts` (`npm run scrape:parallel [-- --workers=N]`) to fork OS worker processes via IPC, shard companies round-robin, recover cross-process `P2002` `Department`/`Location` races via `findUnique`, and merge worker telemetry via `ErrorTracker.mergeReports()`. | `src/core/ClusterScraper.ts`, `src/core/Scraper.ts`, `src/lib/ErrorTracker.ts` |
 
 ## 🗺️ Suggested Roadmap (priority order)
 

@@ -26,14 +26,18 @@ flowchart LR
     end
 
     subgraph Scraping["Scraping"]
-        S["core/Scraper.ts<br/>npm run scrape"]
+        CS["core/ClusterScraper.ts<br/>npm run scrape:parallel"]
+        S["core/Scraper.ts<br/>npm run scrape / --ipc-worker"]
         SC["core/ScraperCSV.ts<br/>npm run scrape:csv"]
     end
 
     CDX --> CW --> PG
     RAW["manually downloaded CDX JSON"] --> PCD --> SLUGS
-    SLUGS -. "manual copy" .-> CFG --> SEED --> PG
+    SLUGS -. "--all or manual copy" .-> SEED --> PG
+    CFG --> SEED
 
+    PG -- "ACTIVE companies" --> CS
+    CS -- "fork() OS shards" --> S
     PG -- "ACTIVE companies" --> S
     PG -- "ACTIVE companies" --> SC
     ASHBY --> S
@@ -119,15 +123,14 @@ sequenceDiagram
 ```
 
 **Important behaviours**
-- **Concurrency:** `CONCURRENCY_LIMIT = 15` using the home-grown `createLimiter`.
-- **Write strategy:** *all* changed jobs for *all* companies are accumulated in memory, then written at the end in
-  transactions of `BATCH_SIZE = 100`. A crash mid-run means nothing is persisted for that run.
+- **Concurrency:** `CONCURRENCY_LIMIT = 15` using the adaptive `createLimiter` (throttles concurrency and pauses on `429`/`403`, then recovers after consecutive successes).
+- **Fallback API:** Uses `fetchAshbyBoardWithFallback` (`src/lib/AshbyClient.ts`), which sends browser headers, retries transient failures (`429`/`5xx`/timeouts), and automatically falls back to Ashby's hosted GraphQL API (`ApiJobBoardWithTeams`) when the external `posting-api` returns `404`/`403`/`400`.
+- **Write strategy:** Incremental streaming batch writes — as soon as `BATCH_SIZE = 100` changed jobs accumulate in memory, they are flushed in a Prisma `$transaction` while HTTP workers continue in parallel.
 - **Change detection:** Redis key `job:<ashbyId>:hash`, TTL 7 days. Without Redis, every job is upserted every run.
-- **Upsert semantics:** `create` sets all fields; `update` only refreshes `title, departmentId, locationId, salaryMin,
-  salaryMax, contentHash, updatedAt, active=true` (does **not** update `metadata`, `applyUrl`, `salaryCurrency`).
-- **No deactivation:** jobs that disappear from Ashby are never set `active=false`.
-- **Status lifecycle:** only `ACTIVE → NOT_FOUND` (on HTTP 404). `REDIRECTED` is defined but never used; nothing
-  reactivates a company.
+- **Upsert semantics:** Both `create` and `update` refresh `title, departmentId, locationId, applyUrl, salaryMin, salaryMax, salaryCurrency, metadata, contentHash, updatedAt, active=true`.
+- **Stale job deactivation:** `deactivateStaleJobs()` sets `active=false` for any previously active job of that company whose `ashbyId` is no longer present on a successful board fetch.
+- **3-strike quarantine:** `recordNotFoundStrike()` requires 3 consecutive `notFound` strikes during `runAll()` before marking a company `status = NOT_FOUND`.
+- **Multi-Process Cluster Mode (`npm run scrape:parallel [-- --workers=N]`):** [ClusterScraper.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/core/ClusterScraper.ts) queries `ACTIVE` companies, shards slugs round-robin across `N` OS child processes (`child_process.fork('Scraper.ts', ['--ipc-worker'])`), runs shards across CPU cores in parallel (with cross-process `P2002` `findUnique` race recovery on `Department`/`Location`), and merges worker `ErrorReportDocument` payloads into `output/latest-error-report.json`.
 
 ---
 
@@ -138,9 +141,8 @@ File: [ScraperCSV.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapp
 1. `--upload-cloud` flag read from `process.argv`.
 2. Load `ACTIVE` companies from DB. If none → prints "Run: npm run seed" and exits.
 3. Ensure `output/`, open write stream `output/jobs_<UTC YYYY-MM-DD>.csv` (overwrites same-day file), write header.
-4. For each company (15 concurrent): `GET /posting-api/job-board/{slug}` (**no** `includeCompensation`).
-   Map each job → `{company, title, link: https://jobs.ashbyhq.com/{slug}/{id}, publishedDate: publishedAt[0..10], location, department}`.
-   Rows are **streamed immediately** in completion order (not sorted). Any error → `[]` (404s are *not* recorded in DB).
+4. For each company (adaptive concurrency 15): calls `fetchAshbyBoardWithFallback(slug)` (browser headers, retry/backoff, GraphQL fallback, and `sanitizeJobBatch()`).
+   Rows are **streamed immediately** in completion order and telemetry is saved to `output/latest-error-report.json`.
 5. Close stream, disconnect Prisma. If 0 jobs → delete the empty file.
 6. If `--upload-cloud`: `uploadWithOAuth(filePath, GOOGLE_DRIVE_FOLDER_ID)` from `GoogleDriveOAuth.ts`
    (**service-account JWT**, Drive scope, `supportsAllDrives: true`).
@@ -151,9 +153,9 @@ File: [ScraperCSV.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapp
 
 `npx ts-node scripts/generate-readme.ts` (no npm script):
 1. Find newest `output/jobs_*.csv` (lexicographic sort works because of ISO date names).
-2. Naive CSV parse (quote toggling; doesn't handle `""` escaped quotes or multi-line fields).
+2. RFC-4180 quote-aware CSV parse (`parseCSV()` handles `""` escaped quotes and `\r\n` newlines).
 3. Write `JOBS.md` at repo root: header with date + total, then a table `# | Company | Job Title | Location | Department | Posted | Apply`
-   with truncation (title 40, company/location 20, department 15 chars).
+   with `sanitizeMarkdownCell()` escaping `\|` pipes and newlines, plus truncation (title 40, company/location 20, department 15 chars).
 
 ---
 

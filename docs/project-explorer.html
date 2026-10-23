@@ -91,7 +91,7 @@
     <header class="header">
         <h1><span class="material-icons-round">folder_special</span> Job Scraper Project Explorer</h1>
         <p>Click any file to see details and functions</p>
-        <div class="generated">Auto-generated on 2025-12-28</div>
+        <div class="generated">Auto-generated on 2026-10-23</div>
     </header>
     <div class="main">
         <aside class="sidebar">
@@ -104,6 +104,26 @@
             <span>job-scrapper</span>
         </div>
         <ul><li class="expanded">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>__mocks__</span>
+                    </div>
+                    <ul><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>@prisma</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('__mocks___@prisma_client_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>client.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li></ul>
+                </li><li class="expanded">
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
@@ -123,9 +143,21 @@
                         <span>scripts</span>
                     </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('scripts_generate-readme_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>generate-readme.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('scripts_GenerateDocs_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GenerateDocs.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('scripts_test-drive-upload_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>test-drive-upload.ts</span>
                         
                     </div>
                 </li></ul>
@@ -155,10 +187,16 @@
                         <span>core</span>
                     </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_core_ClusterScraper_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ClusterScraper.ts</span>
+                        <span class="tree-badge">⭐ Core</span>
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_core_Scraper_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Scraper.ts</span>
-                        
+                        <span class="tree-badge">⭐ Core</span>
                     </div>
                 </li><li>
                     <div class="tree-item file" onclick="showFile('src_core_ScraperCSV_ts')">
@@ -212,15 +250,45 @@
                         <span>lib</span>
                     </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_AshbyClient_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>AshbyClient.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_lib_Concurrency_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Concurrency.ts</span>
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ErrorTracker_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ErrorTracker.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_GoogleDriveOAuth_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GoogleDriveOAuth.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_GoogleDriveUserOAuth_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GoogleDriveUserOAuth.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_lib_Redis_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Redis.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_Sanitizer_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Sanitizer.ts</span>
                         
                     </div>
                 </li></ul>
@@ -250,6 +318,117 @@
                     </div>
                 </li></ul>
                 </li></ul>
+                </li><li class="expanded">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>tests</span>
+                    </div>
+                    <ul><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>e2e</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('tests_e2e_DiscoveryPipeline_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>DiscoveryPipeline.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_e2e_ScraperPipeline_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ScraperPipeline.test.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>unit</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_AshbyClient_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>AshbyClient.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_CdxWorker_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>CdxWorker.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ClusterScraper_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ClusterScraper.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_Concurrency_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Concurrency.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_DbClean_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>DbClean.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ErrorTracker_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ErrorTracker.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_GenerateReadme_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GenerateReadme.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_GoogleDrive_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GoogleDrive.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ProcessCdxData_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ProcessCdxData.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_Sanitizer_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Sanitizer.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ScraperCore_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ScraperCore.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ScraperCSV_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ScraperCSV.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_Seed_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Seed.test.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li></ul>
                 </li></ul>
     </li>
             </ul>
@@ -257,7 +436,12 @@
         <main class="content">
             <div id="defaultView">
                 <div class="section-header"><span class="material-icons-round">apps</span><span>Select a file to view details</span></div>
-                <div class="overview-grid"><div class="overview-card" onclick="showFile('prisma_schema_prisma')">
+                <div class="overview-grid"><div class="overview-card" onclick="showFile('__mocks___@prisma_client_ts')">
+            <div class="card-icon blue">📝</div>
+            <h4>client.ts</h4>
+            <p>Global mock for @prisma/client to prevent native query-engin...</p>
+        </div>
+<div class="overview-card" onclick="showFile('prisma_schema_prisma')">
             <div class="card-icon purple">🗄️</div>
             <h4>schema.prisma</h4>
             <p>Database schema with Prisma ORM models for Company, Job, Dep...</p>
@@ -265,27 +449,22 @@
 <div class="overview-card" onclick="showFile('scripts_GenerateDocs_ts')">
             <div class="card-icon cyan">📜</div>
             <h4>GenerateDocs.ts</h4>
-            <p>if present (overrides @file)...</p>
+            <p>Parses TypeScript and Prisma files for JSDoc metadata and ge...</p>
+        </div>
+<div class="overview-card" onclick="showFile('scripts_generate-readme_ts')">
+            <div class="card-icon cyan">📜</div>
+            <h4>generate-readme.ts</h4>
+            <p>Parses the latest CSV job export with RFC-4180 quote handlin...</p>
+        </div>
+<div class="overview-card" onclick="showFile('scripts_test-drive-upload_ts')">
+            <div class="card-icon cyan">📜</div>
+            <h4>test-drive-upload.ts</h4>
+            <p>Tests the OAuth user consent flow - YOU will own the uploade...</p>
         </div>
 <div class="overview-card" onclick="showFile('src_config_Companies_ts')">
             <div class="card-icon green">📋</div>
             <h4>Companies.ts</h4>
             <p>Hardcoded list of company slugs to seed into the database...</p>
-        </div>
-<div class="overview-card" onclick="showFile('src_core_Scraper_ts')">
-            <div class="card-icon blue">📝</div>
-            <h4>Scraper.ts</h4>
-            <p>Fetches jobs from Ashby API using concurrent requests, batch...</p>
-        </div>
-<div class="overview-card" onclick="showFile('src_core_ScraperCSV_ts')">
-            <div class="card-icon blue">📝</div>
-            <h4>ScraperCSV.ts</h4>
-            <p>Scrapes jobs concurrently, streams to CSV. Optional Google D...</p>
-        </div>
-<div class="overview-card" onclick="showFile('src_database_DbClean_ts')">
-            <div class="card-icon blue">📝</div>
-            <h4>DbClean.ts</h4>
-            <p>Removes invalid company entries using isValidSlug. Deletes j...</p>
         </div></div>
             </div>
             <div id="fileDetail">
@@ -302,6 +481,29 @@
     </div>
     <script>
         const files = {
+  "__mocks___@prisma_client_ts": {
+    "name": "client.ts",
+    "path": "__mocks__/@prisma/client.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Global mock for @prisma/client to prevent native query-engine loading in Jest",
+    "tags": [
+      "Mock",
+      "Prisma",
+      "Testing"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "prisma_schema_prisma": {
     "name": "schema.prisma",
     "path": "prisma/schema.prisma",
@@ -348,9 +550,71 @@
     "path": "scripts/GenerateDocs.ts",
     "icon": "📜",
     "iconClass": "cyan",
-    "summary": "if present (overrides @file)",
+    "summary": "Parses TypeScript and Prisma files for JSDoc metadata and generates docs/project-explorer.html",
     "tags": [
-      "const tagsMatch = block.match(/@tags\\s+(.+)/);"
+      "Documentation",
+      "Generator",
+      "HTML",
+      "JSDoc",
+      "Prisma"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "scripts_generate-readme_ts": {
+    "name": "generate-readme.ts",
+    "path": "scripts/generate-readme.ts",
+    "icon": "📜",
+    "iconClass": "cyan",
+    "summary": "Parses the latest CSV job export with RFC-4180 quote handling and renders a pipe-escaped JOBS.md table",
+    "tags": [
+      "Documentation",
+      "Markdown",
+      "CSV Parser",
+      "Sanitization"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "sanitizeMarkdownCell()",
+        "desc": "Escapes Markdown table cell delimiters (pipes and newlines) so rows never break table layout"
+      },
+      {
+        "name": "parseCSV()",
+        "desc": "Parses CSV content into structured JobRow objects (handles commas and escaped \"\" quotes)"
+      },
+      {
+        "name": "generateMarkdownTable()",
+        "desc": "Formats JobRow array into Markdown table with pipe sanitization and truncation"
+      }
+    ]
+  },
+  "scripts_test-drive-upload_ts": {
+    "name": "test-drive-upload.ts",
+    "path": "scripts/test-drive-upload.ts",
+    "icon": "📜",
+    "iconClass": "cyan",
+    "summary": "Tests the OAuth user consent flow - YOU will own the uploaded files",
+    "tags": [
+      "Undocumented"
     ],
     "info": [
       {
@@ -387,12 +651,55 @@
     ],
     "functions": []
   },
+  "src_core_ClusterScraper_ts": {
+    "name": "ClusterScraper.ts",
+    "path": "src/core/ClusterScraper.ts",
+    "icon": "⭐",
+    "iconClass": "pink",
+    "summary": "Partitions active companies across multiple OS child processes (fork) for true multi-core parallel scraping and aggregates telemetry",
+    "tags": [
+      "Core",
+      "Multi-Process",
+      "Cluster",
+      "Child Process",
+      "Parallel",
+      "High-Performance"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "resolveWorkerCount()",
+        "desc": "Parses --workers=N from CLI arguments, defaulting to min(4, CPU cores)"
+      },
+      {
+        "name": "partitionSlugs()",
+        "desc": "Distributes company slugs evenly across N worker shards using round-robin partitioning"
+      },
+      {
+        "name": "runWorkerShard()",
+        "desc": "Spawns a single OS worker process for a company shard and resolves with its telemetry report"
+      },
+      {
+        "name": "runClusterScrape()",
+        "desc": "Entry point for multi-process scraping across OS worker processes"
+      }
+    ]
+  },
   "src_core_Scraper_ts": {
     "name": "Scraper.ts",
     "path": "src/core/Scraper.ts",
-    "icon": "📝",
-    "iconClass": "blue",
-    "summary": "Fetches jobs from Ashby API using concurrent requests, batch DB writes, and Redis caching",
+    "icon": "⭐",
+    "iconClass": "pink",
+    "summary": "Fetches jobs from Ashby API using adaptive concurrency, streaming batch DB writes, stale job deactivation, and Redis caching",
     "tags": [
       "Core",
       "Ashby API",
@@ -408,7 +715,7 @@
       },
       {
         "label": "Functions",
-        "value": "9"
+        "value": "11"
       }
     ],
     "functions": [
@@ -417,8 +724,16 @@
         "desc": "Initializes Redis connection"
       },
       {
+        "name": "recordNotFoundStrike()",
+        "desc": "Tracks consecutive 404 strikes for a company and marks status NOT_FOUND once threshold is reached"
+      },
+      {
+        "name": "deactivateStaleJobs()",
+        "desc": "Deactivates jobs in the database that are no longer listed on the company's live Ashby board"
+      },
+      {
         "name": "fetchJobs()",
-        "desc": "Calls Ashby API to fetch all jobs for a company"
+        "desc": "Calls Ashby API (with browser headers, retry, and GraphQL fallback) to fetch all jobs for a company"
       },
       {
         "name": "generateHash()",
@@ -426,11 +741,11 @@
       },
       {
         "name": "getOrCreateDepartment()",
-        "desc": "Gets or creates department with in-memory caching"
+        "desc": "Gets or creates department with in-memory caching and concurrent in-flight deduplication"
       },
       {
         "name": "getOrCreateLocation()",
-        "desc": "Gets or creates location with in-memory caching"
+        "desc": "Gets or creates location with in-memory caching, concurrent in-flight deduplication, and cross-process P2002 race recovery"
       },
       {
         "name": "filterChangedJobs()",
@@ -438,23 +753,23 @@
       },
       {
         "name": "batchUpsertJobs()",
-        "desc": "Processes jobs in batches using database transactions"
+        "desc": "Processes jobs in batches using database transactions with per-job fallback on error"
       },
       {
         "name": "processCompanyJobs()",
-        "desc": "Processes a single company's jobs and returns prepared job records"
+        "desc": "Processes a single company's jobs, sanitizing fields and metadata before returning prepared job records"
       },
       {
         "name": "runAll()",
-        "desc": "Entry point. Fetches companies concurrently and batch-writes to DB."
+        "desc": "Entry point. Fetches companies concurrently with adaptive rate-limiting and streams batch writes to DB."
       }
     ]
   },
   "src_core_ScraperCSV_ts": {
     "name": "ScraperCSV.ts",
     "path": "src/core/ScraperCSV.ts",
-    "icon": "📝",
-    "iconClass": "blue",
+    "icon": "⭐",
+    "iconClass": "pink",
     "summary": "Scrapes jobs concurrently, streams to CSV. Optional Google Drive upload.",
     "tags": [
       "CSV",
@@ -476,11 +791,11 @@
     "functions": [
       {
         "name": "fetchJobsForCompany()",
-        "desc": "Fetches all job postings for a company from Ashby's public API"
+        "desc": "Fetches and sanitizes all job postings for a company from Ashby's public API with GraphQL fallback"
       },
       {
         "name": "escapeCSV()",
-        "desc": "Escapes a CSV field value (handles commas, quotes, newlines)"
+        "desc": "Escapes a CSV field value (handles commas, quotes, newlines, carriage returns, and null bytes)"
       },
       {
         "name": "formatCSVRow()",
@@ -488,7 +803,7 @@
       },
       {
         "name": "uploadToGoogleDrive()",
-        "desc": "Uploads a file to Google Drive using service account credentials"
+        "desc": "Uploads a file to Google Drive using OAuth (personal accounts)"
       },
       {
         "name": "scrapeToCSV()",
@@ -499,7 +814,7 @@
   "src_database_DbClean_ts": {
     "name": "DbClean.ts",
     "path": "src/database/DbClean.ts",
-    "icon": "📝",
+    "icon": "🧹",
     "iconClass": "blue",
     "summary": "Removes invalid company entries using isValidSlug. Deletes jobs first for FK constraint.",
     "tags": [
@@ -528,8 +843,8 @@
   "src_database_DbInspect_ts": {
     "name": "DbInspect.ts",
     "path": "src/database/DbInspect.ts",
-    "icon": "📝",
-    "iconClass": "blue",
+    "icon": "🔬",
+    "iconClass": "purple",
     "summary": "Shows table names, column details (type, nullable), and row counts via raw SQL",
     "tags": [
       "Debug",
@@ -557,8 +872,8 @@
   "src_database_DbMenu_ts": {
     "name": "DbMenu.ts",
     "path": "src/database/DbMenu.ts",
-    "icon": "📝",
-    "iconClass": "blue",
+    "icon": "💻",
+    "iconClass": "cyan",
     "summary": "CLI menu for querying database. Dashboard, search, salaries, raw SQL.",
     "tags": [
       "CLI",
@@ -617,10 +932,11 @@
     "path": "src/discovery/CdxWorker.ts",
     "icon": "🔍",
     "iconClass": "yellow",
-    "summary": "Auto-discovers companies from Wayback Machine CDX API. Validates slugs with regex and blocklist.",
+    "summary": "Auto-discovers companies from Wayback Machine CDX and CommonCrawl APIs, validates slugs, and enriches organization metadata",
     "tags": [
       "Discovery",
       "Wayback Machine",
+      "CommonCrawl",
       "Validation",
       "Regex",
       "Blocklist"
@@ -632,7 +948,7 @@
       },
       {
         "label": "Functions",
-        "value": "4"
+        "value": "6"
       }
     ],
     "functions": [
@@ -645,12 +961,67 @@
         "desc": "Fetches archived Ashby URLs from Wayback Machine CDX API"
       },
       {
+        "name": "fetchCommonCrawlUrls()",
+        "desc": "Fetches archived Ashby URLs from CommonCrawl Index API (JSONL format)"
+      },
+      {
         "name": "extractCompanySlug()",
         "desc": "Parses Ashby URL and extracts company slug from path"
       },
       {
+        "name": "enrichCompanyMetadata()",
+        "desc": "Enriches a company record in DB with real display name and logoUrl from Ashby's hosted page"
+      },
+      {
         "name": "runDiscovery()",
         "desc": "Main discovery function. Fetches URLs, extracts slugs, upserts to DB."
+      }
+    ]
+  },
+  "src_lib_AshbyClient_ts": {
+    "name": "AshbyClient.ts",
+    "path": "src/lib/AshbyClient.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Fetches Ashby job boards with browser headers, retry/backoff, GraphQL fallback, and organization metadata extraction",
+    "tags": [
+      "Ashby API",
+      "GraphQL",
+      "Fallback",
+      "Retry",
+      "Rate Limiting",
+      "Anti-Bot"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "5"
+      }
+    ],
+    "functions": [
+      {
+        "name": "isRetryableError()",
+        "desc": "Determines whether an Axios error is transient and should be retried"
+      },
+      {
+        "name": "extractSalary()",
+        "desc": "Extracts normalized salary min, max, and currency from Ashby compensation structures"
+      },
+      {
+        "name": "fetchFromAshbyGraphQL()",
+        "desc": "Queries Ashby's hosted job board GraphQL API (used by browser pages when Posting API is disabled)"
+      },
+      {
+        "name": "fetchOrganizationMetadata()",
+        "desc": "Extracts organization display name and logo URL from Ashby hosted page window.__appData"
+      },
+      {
+        "name": "fetchAshbyBoardWithFallback()",
+        "desc": "Fetches jobs for a company using Ashby Posting API with retry/backoff and automatic GraphQL fallback"
       }
     ]
   },
@@ -659,11 +1030,13 @@
     "path": "src/lib/Concurrency.ts",
     "icon": "📦",
     "iconClass": "blue",
-    "summary": "Provides a CommonJS-compatible concurrency limiter for parallel processing",
+    "summary": "Provides a CommonJS-compatible adaptive concurrency limiter with dynamic rate-limit throttling and cooldown pauses",
     "tags": [
       "Utility",
       "Concurrency",
-      "Async"
+      "Async",
+      "Adaptive",
+      "Rate Limiting"
     ],
     "info": [
       {
@@ -678,15 +1051,148 @@
     "functions": [
       {
         "name": "createLimiter()",
-        "desc": "Creates a concurrency limiter for controlled parallel execution"
+        "desc": "Creates an adaptive concurrency limiter for controlled parallel execution with dynamic throttling on 429/403"
+      }
+    ]
+  },
+  "src_lib_ErrorTracker_ts": {
+    "name": "ErrorTracker.ts",
+    "path": "src/lib/ErrorTracker.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Collects API errors, sanitization/validation issues, DB errors, and run statistics into structured JSON reports for automated bug-fix agents",
+    "tags": [
+      "Telemetry",
+      "Error Tracking",
+      "Bug Fix Agent",
+      "Diagnostics",
+      "Reporting"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "7"
+      }
+    ],
+    "functions": [
+      {
+        "name": "constructor()",
+        "desc": "Initializes a new ErrorTracker instance for a scrape run"
+      },
+      {
+        "name": "recordEvent()",
+        "desc": "Records a structured event (capped at MAX_EVENTS_STORED to bound memory)"
+      },
+      {
+        "name": "recordValidationIssues()",
+        "desc": "Records validation and sanitization issues returned by Sanitizer"
+      },
+      {
+        "name": "buildReport()",
+        "desc": "Builds the complete ErrorReportDocument for the current run"
+      },
+      {
+        "name": "saveReport()",
+        "desc": "Writes the telemetry and error report to output/latest-error-report.json and dated file"
+      },
+      {
+        "name": "mergeReports()",
+        "desc": "Merges multiple worker process ErrorReportDocuments into a single aggregated telemetry report"
+      },
+      {
+        "name": "saveMergedReport()",
+        "desc": "Writes an aggregated multi-process ErrorReportDocument to output/latest-error-report.json"
+      }
+    ]
+  },
+  "src_lib_GoogleDriveOAuth_ts": {
+    "name": "GoogleDriveOAuth.ts",
+    "path": "src/lib/GoogleDriveOAuth.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "JWT authentication for Google Drive using service account credentials",
+    "tags": [
+      "Google Drive",
+      "JWT",
+      "Upload",
+      "Service Account"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "authorize()",
+        "desc": "Authorize using JWT with service account credentials"
+      },
+      {
+        "name": "uploadWithOAuth()",
+        "desc": "Uploads a file to Google Drive using JWT authentication"
+      },
+      {
+        "name": "listFiles()",
+        "desc": "Lists files in Google Drive (for debugging)"
+      }
+    ]
+  },
+  "src_lib_GoogleDriveUserOAuth_ts": {
+    "name": "GoogleDriveUserOAuth.ts",
+    "path": "src/lib/GoogleDriveUserOAuth.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "OAuth 2.0 user consent flow - files owned by YOUR account, not a service account",
+    "tags": [
+      "Undocumented"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "5"
+      }
+    ],
+    "functions": [
+      {
+        "name": "getAuthenticatedClient()",
+        "desc": "Get OAuth2 client, prompting for user consent if needed"
+      },
+      {
+        "name": "getNewToken()",
+        "desc": "Get new token by prompting user to authorize in browser"
+      },
+      {
+        "name": "askQuestion()",
+        "desc": "Helper to ask question in terminal"
+      },
+      {
+        "name": "uploadWithUserOAuth()",
+        "desc": "Upload file to Google Drive using user OAuth"
+      },
+      {
+        "name": "listUserFiles()",
+        "desc": "List files accessible by the authenticated user"
       }
     ]
   },
   "src_lib_Redis_ts": {
     "name": "Redis.ts",
     "path": "src/lib/Redis.ts",
-    "icon": "📦",
-    "iconClass": "blue",
+    "icon": "⚡",
+    "iconClass": "pink",
     "summary": "Provides Redis client for caching job content hashes. Enables change detection to avoid redundant DB writes.",
     "tags": [
       "Cache",
@@ -711,11 +1217,75 @@
       }
     ]
   },
+  "src_lib_Sanitizer_ts": {
+    "name": "Sanitizer.ts",
+    "path": "src/lib/Sanitizer.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Sanitizes and validates job descriptions, apply/job URLs, and raw JSON metadata; filters malformed job objects and logs issues",
+    "tags": [
+      "Sanitization",
+      "Validation",
+      "URL",
+      "HTML",
+      "JSONB",
+      "Filtering",
+      "Error Logging"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "9"
+      }
+    ],
+    "functions": [
+      {
+        "name": "decodeHtmlEntities()",
+        "desc": "Decodes common HTML entities in single-line text fields (title, location, department)"
+      },
+      {
+        "name": "sanitizeText()",
+        "desc": "Sanitizes single-line text fields (title, department, location) by removing null/control chars, decoding entities, and normalizing whitespace"
+      },
+      {
+        "name": "sanitizeJobDescriptionHtml()",
+        "desc": "Sanitizes HTML job descriptions by stripping null bytes, script/style/iframe tags, inline JS handlers, and oversized base64 data URIs"
+      },
+      {
+        "name": "sanitizeJobDescriptionPlain()",
+        "desc": "Sanitizes plain-text job descriptions, falling back to tag-stripped HTML when plain text is missing"
+      },
+      {
+        "name": "sanitizeJobUrl()",
+        "desc": "Validates and normalizes Ashby job/apply URLs, falling back to canonical Ashby URL if malformed or missing"
+      },
+      {
+        "name": "sanitizePublishedDate()",
+        "desc": "Normalizes ISO-8601 publishedAt date string to YYYY-MM-DD (or undefined if invalid)"
+      },
+      {
+        "name": "sanitizeJsonMetadata()",
+        "desc": "Recursively sanitizes a JSON metadata object so PostgreSQL JSONB never fails on null bytes or invalid surrogates"
+      },
+      {
+        "name": "validateAndSanitizeJob()",
+        "desc": "Validates and sanitizes a single raw AshbyJob object, returning null if unrecoverably malformed"
+      },
+      {
+        "name": "sanitizeJobBatch()",
+        "desc": "Validates and sanitizes an array of raw Ashby jobs, filtering out corrupt objects and collecting validation issues"
+      }
+    ]
+  },
   "src_utils_ProcessCdxData_ts": {
     "name": "ProcessCdxData.ts",
     "path": "src/utils/ProcessCdxData.ts",
-    "icon": "📝",
-    "iconClass": "blue",
+    "icon": "🔍",
+    "iconClass": "yellow",
     "summary": "Converts raw Wayback Machine CDX response to valid company slugs",
     "tags": [
       "Utility",
@@ -737,9 +1307,9 @@
   "src_utils_Seed_ts": {
     "name": "Seed.ts",
     "path": "src/utils/Seed.ts",
-    "icon": "📝",
-    "iconClass": "blue",
-    "summary": "Seeds database from config. Memory-efficient diff strategy for bulk inserts.",
+    "icon": "🌱",
+    "iconClass": "green",
+    "summary": "Seeds database from config or extracted-slugs.json (--all). Memory-efficient diff strategy for bulk inserts.",
     "tags": [
       "Setup",
       "Bulk Insert",
@@ -753,13 +1323,17 @@
       },
       {
         "label": "Functions",
-        "value": "1"
+        "value": "2"
       }
     ],
     "functions": [
       {
+        "name": "loadTargetSlugs()",
+        "desc": "Loads company slugs from extracted-slugs.json when --all flag is enabled"
+      },
+      {
         "name": "seed()",
-        "desc": "Compares TARGET_COMPANIES against DB, bulk inserts new entries"
+        "desc": "Compares target companies against DB, bulk inserts new entries"
       }
     ]
   },
@@ -771,6 +1345,382 @@
     "summary": "No description available",
     "tags": [
       "Undocumented"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_e2e_DiscoveryPipeline_test_ts": {
+    "name": "DiscoveryPipeline.test.ts",
+    "path": "tests/e2e/DiscoveryPipeline.test.ts",
+    "icon": "🔍",
+    "iconClass": "yellow",
+    "summary": "End-to-end integration test of CDX parsing, memory diff seeding, and clean verification",
+    "tags": [
+      "E2E",
+      "Pipeline",
+      "Discovery",
+      "Seed",
+      "CDX",
+      "Cleanup"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_e2e_ScraperPipeline_test_ts": {
+    "name": "ScraperPipeline.test.ts",
+    "path": "tests/e2e/ScraperPipeline.test.ts",
+    "icon": "⭐",
+    "iconClass": "pink",
+    "summary": "End-to-end integration test of scraping, CSV generation, and Markdown table output",
+    "tags": [
+      "E2E",
+      "Pipeline",
+      "Scraper",
+      "CSV",
+      "Markdown",
+      "Hashing"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_AshbyClient_test_ts": {
+    "name": "AshbyClient.test.ts",
+    "path": "tests/unit/AshbyClient.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test suite for Ashby API client with browser headers, retry/backoff, GraphQL fallback, and salary extraction",
+    "tags": [
+      "Unit Test",
+      "Ashby API",
+      "GraphQL",
+      "Fallback",
+      "Retry",
+      "Compensation"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_CdxWorker_test_ts": {
+    "name": "CdxWorker.test.ts",
+    "path": "tests/unit/CdxWorker.test.ts",
+    "icon": "🔍",
+    "iconClass": "yellow",
+    "summary": "Unit tests for company slug validation and Wayback Machine CDX URL discovery",
+    "tags": [
+      "Unit Test",
+      "Discovery",
+      "Validation",
+      "CDX",
+      "Regex",
+      "Blocklist"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ClusterScraper_test_ts": {
+    "name": "ClusterScraper.test.ts",
+    "path": "tests/unit/ClusterScraper.test.ts",
+    "icon": "⭐",
+    "iconClass": "pink",
+    "summary": "Unit test suite for multi-process worker count resolution, round-robin slug sharding, and multi-worker telemetry aggregation",
+    "tags": [
+      "Unit Test",
+      "Cluster",
+      "Multi-Process",
+      "Sharding",
+      "Telemetry"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_Concurrency_test_ts": {
+    "name": "Concurrency.test.ts",
+    "path": "tests/unit/Concurrency.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test suite for createLimiter and chunk helper functions",
+    "tags": [
+      "Unit Test",
+      "Concurrency",
+      "Limiter",
+      "Async"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_DbClean_test_ts": {
+    "name": "DbClean.test.ts",
+    "path": "tests/unit/DbClean.test.ts",
+    "icon": "🧹",
+    "iconClass": "blue",
+    "summary": "Unit test suite for DbClean slug validation, dry-run mode, and foreign key safe deletion",
+    "tags": [
+      "Unit Test",
+      "Database",
+      "Cleanup",
+      "Prisma",
+      "Foreign Key"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ErrorTracker_test_ts": {
+    "name": "ErrorTracker.test.ts",
+    "path": "tests/unit/ErrorTracker.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test suite for run telemetry collection, validation issue recording, and JSON report writing",
+    "tags": [
+      "Unit Test",
+      "Telemetry",
+      "ErrorTracker",
+      "Bug Fix Agent"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_GenerateReadme_test_ts": {
+    "name": "GenerateReadme.test.ts",
+    "path": "tests/unit/GenerateReadme.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test suite for CSV parsing, string truncation, and Markdown table generation",
+    "tags": [
+      "Unit Test",
+      "Markdown",
+      "CSV Parsing",
+      "Table Generator"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_GoogleDrive_test_ts": {
+    "name": "GoogleDrive.test.ts",
+    "path": "tests/unit/GoogleDrive.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test suite for Google Drive service account and user OAuth upload helpers",
+    "tags": [
+      "Unit Test",
+      "Google Drive",
+      "Upload",
+      "OAuth",
+      "JWT"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ProcessCdxData_test_ts": {
+    "name": "ProcessCdxData.test.ts",
+    "path": "tests/unit/ProcessCdxData.test.ts",
+    "icon": "🔍",
+    "iconClass": "yellow",
+    "summary": "Unit tests for raw Wayback CDX JSON data processing, filtering, and slug extraction",
+    "tags": [
+      "Unit Test",
+      "CDX",
+      "Filtering",
+      "Slug Extraction"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_Sanitizer_test_ts": {
+    "name": "Sanitizer.test.ts",
+    "path": "tests/unit/Sanitizer.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test suite for job description HTML/plain sanitization, URL validation, JSONB null-byte stripping, and malformed job filtering",
+    "tags": [
+      "Unit Test",
+      "Sanitization",
+      "Validation",
+      "URL",
+      "HTML",
+      "JSONB"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ScraperCSV_test_ts": {
+    "name": "ScraperCSV.test.ts",
+    "path": "tests/unit/ScraperCSV.test.ts",
+    "icon": "⭐",
+    "iconClass": "pink",
+    "summary": "Unit test suite for CSV escaping, row formatting, and Ashby job board fetching",
+    "tags": [
+      "Unit Test",
+      "CSV",
+      "Scraper",
+      "Escaping",
+      "Ashby"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ScraperCore_test_ts": {
+    "name": "ScraperCore.test.ts",
+    "path": "tests/unit/ScraperCore.test.ts",
+    "icon": "⭐",
+    "iconClass": "pink",
+    "summary": "Unit test suite for AshbyScraper class (hashing, caching, batching, error recovery)",
+    "tags": [
+      "Unit Test",
+      "Scraper",
+      "Core",
+      "Redis",
+      "Hashing",
+      "Batch"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_Seed_test_ts": {
+    "name": "Seed.test.ts",
+    "path": "tests/unit/Seed.test.ts",
+    "icon": "🌱",
+    "iconClass": "green",
+    "summary": "Unit test suite for memory-diff seeding strategy",
+    "tags": [
+      "Unit Test",
+      "Seed",
+      "Memory Diff",
+      "Database"
     ],
     "info": [
       {

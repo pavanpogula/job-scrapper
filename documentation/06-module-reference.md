@@ -22,6 +22,14 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 
 ## `src/core/`
 
+### [ClusterScraper.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/core/ClusterScraper.ts) — Multi-process coordinator
+| Symbol | Description |
+|---|---|
+| `resolveWorkerCount(argv, totalItems, cpuCount?)` | Parses `--workers=N` CLI flag (defaults to `min(4, cpuCores)`), capped at `totalItems` |
+| `partitionSlugs(slugs, workerCount)` | Distributes company slugs across worker shards via round-robin partitioning |
+| `runWorkerShard(workerId, slugs, perWorkerConcurrency)` | Forks `Scraper.ts` with `--ipc-worker` and collects its `ErrorReportDocument` via IPC |
+| `runClusterScrape(argv?)` | Queries `ACTIVE` companies, spawns OS worker processes in parallel, and writes merged telemetry to `output/latest-error-report.json` |
+
 ### [Scraper.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/core/Scraper.ts) — DB scraper
 | Symbol | Lines | Description |
 |---|---|---|
@@ -64,6 +72,26 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `require.main` guard | [L135-145](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/discovery/CdxWorker.ts#L135-L145) | Safe to import |
 
 ## `src/lib/`
+
+### [AshbyClient.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/AshbyClient.ts)
+- `BROWSER_HEADERS` — Browser-like `User-Agent`, `Accept`, and `Accept-Language` headers to prevent WAF/bot 403 blocks.
+- `extractSalary(job)` — Extracts `{ min, max, currency }` from `job.compensation.summaryComponents`, `compensationTiers`, or legacy `compensationTier`.
+- `fetchFromAshbyGraphQL(slug)` — Queries `POST https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams` when a company's hosted board is active in browsers (`jobs.ashbyhq.com/<slug>`) but its external `posting-api` is disabled.
+- `fetchOrganizationMetadata(slug)` — Extracts `organization.name` and `logoUrl` from Ashby's `window.__appData`.
+- `fetchAshbyBoardWithFallback(slug, options)` — Calls the Ashby Posting API with exponential backoff + jitter on 429/5xx/timeouts, falls back to `fetchFromAshbyGraphQL` on 404/403/400, and runs `sanitizeJobBatch()` on all returned jobs.
+
+### [Sanitizer.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/Sanitizer.ts)
+- `sanitizeText(value)` — Strips null bytes (`\u0000`), lone UTF-16 surrogates, and control chars; decodes HTML entities (`&amp;`, `&quot;`, `&#39;`, `&nbsp;`); collapses whitespace.
+- `sanitizeJobDescriptionHtml(html)` — Strips `\u0000`, `<script>`, `<style>`, `<iframe>`, `<object>`, `<embed>`, inline `on*=` handlers, `javascript:` URLs, and oversized (`>1KB`) inline base64 data URIs.
+- `sanitizeJobDescriptionPlain(plain, fallbackHtml?)` — Strips leaked HTML tags and control characters, or derives clean plain text from `fallbackHtml` when `descriptionPlain` is empty.
+- `sanitizeJobUrl(rawUrl, companySlug, jobId, isApplyUrl)` — Validates `http:`/`https:` URLs (resolving relative paths against `https://jobs.ashbyhq.com`) and falls back to canonical `https://jobs.ashbyhq.com/{slug}/{id}[/application]` when missing, unsafe (`javascript:`), or malformed.
+- `sanitizeJsonMetadata(value)` — Recursively strips `\u0000` null bytes and lone surrogates from raw job objects so PostgreSQL `jsonb` never throws a Unicode escape error.
+- `validateAndSanitizeJob(rawJob, companySlug, issues)` & `sanitizeJobBatch(rawJobs, companySlug)` — Filters out null/non-object entries, invalid/placeholder IDs (`null`, `undefined`, whitespace/HTML), empty titles, and duplicate IDs within a board, returning `{ validJobs, issues }`.
+
+### [ErrorTracker.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/ErrorTracker.ts)
+- `ErrorTracker` — Tracks run counts (`companiesAttempted`, `graphqlFallbacksUsed`, `jobsCollected`, `jobsSanitized`, `jobsFilteredOut`, `dbErrors`) and structured `events[]` (capped at 500).
+- `saveReport()` — Writes `output/latest-error-report.json` and `output/error-report_YYYY-MM-DD.json`.
+- `ErrorTracker.mergeReports(reports, startedAtMs)` & `ErrorTracker.saveMergedReport(report)` — Aggregates telemetry across multi-process OS worker shards.
 
 ### [Concurrency.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/Concurrency.ts)
 - `createLimiter(n)` [L13-43](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/Concurrency.ts#L13-L43) — p-limit clone (CommonJS-friendly). Returns `limit(fn)`; errors propagate (so one rejected task rejects the `Promise.all`).

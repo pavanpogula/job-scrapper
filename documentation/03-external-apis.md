@@ -5,8 +5,9 @@
 
 | # | Service | Method & URL | Auth | Used by |
 |---|---------|--------------|------|---------|
-| 1 | Ashby Posting API | `GET https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true` | none | `src/core/Scraper.ts` |
-| 2 | Ashby Posting API | `GET https://api.ashbyhq.com/posting-api/job-board/{slug}` | none | `src/core/ScraperCSV.ts` |
+| 1 | Ashby Posting API | `GET https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true` | none | `src/lib/AshbyClient.ts` (`Scraper.ts`) |
+| 2 | Ashby Posting API | `GET https://api.ashbyhq.com/posting-api/job-board/{slug}` | none | `src/lib/AshbyClient.ts` (`ScraperCSV.ts`) |
+| 2b | Ashby Hosted GraphQL API (Fallback) | `POST https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams` | none | `src/lib/AshbyClient.ts` (fallback on 404/403/400) |
 | 3 | Wayback CDX | `GET http://web.archive.org/cdx/search/cdx` | none | `src/discovery/CdxWorker.ts` (+ manual download for `process:cdx`) |
 | 4 | Google Drive v3 | `files.create` (multipart upload), `files.list` | Service-account JWT | `src/lib/GoogleDriveOAuth.ts` |
 | 5 | Google Drive v3 | `files.create`, `files.list` | User OAuth2 (Desktop app) | `src/lib/GoogleDriveUserOAuth.ts` |
@@ -24,7 +25,7 @@
 | `{JOB_BOARD_NAME}` | path | company slug, e.g. `1password`, `abridge` | both scrapers |
 | `includeCompensation` | query | `true` / omitted | `Scraper.ts` only |
 
-**Client config:** axios, `timeout: 10000` ms, no headers, no retries, no rate-limit handling.
+**Client config (`src/lib/AshbyClient.ts`):** axios, `timeout: 12000` ms, Chrome `BROWSER_HEADERS`, exponential backoff + jitter on `429`/`5xx`/timeouts, automatic fallback to `POST https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams` on `404`/`403`/`400`, and `sanitizeJobBatch()` validation on all returned jobs.
 
 ### Response (200)
 
@@ -69,12 +70,7 @@
 }
 ```
 
-> ⚠️ **Mismatch with code:** `Scraper.ts` declares `compensationTier?: { min, max, currency, interval }`. That field
-> **does not exist** in the real response, so `salaryMin/salaryMax/salaryCurrency` are always `undefined → NULL`, and the
-> content hash always contains `undefined|undefined`. Correct source: `compensation.summaryComponents.find(c => c.compensationType === 'Salary')` → `minValue`, `maxValue`, `currencyCode`. See 09 → Issue #1.
->
-> Note: because `metadata` stores the whole raw job object on **create**, the real `compensation` data *is* preserved in
-> `Job.metadata` (JSON) for newly created jobs and can be backfilled.
+> **Compensation extraction (`extractSalary` in `src/lib/AshbyClient.ts`):** Reads `compensation.summaryComponents.find(c => c.compensationType === 'Salary')` → `minValue`, `maxValue`, `currencyCode` (with fallback support for `compensationTiers` and legacy `compensationTier`), feeding `Job.salaryMin`, `Job.salaryMax`, `Job.salaryCurrency`, and `contentHash`.
 
 ### Error behaviour
 

@@ -34,8 +34,9 @@
 | 05 | [05-database-and-cache.md](./05-database-and-cache.md) | Prisma schema, relations, enums, indexes, Redis key design, field-mapping from API → DB |
 | 06 | [06-module-reference.md](./06-module-reference.md) | File-by-file, function-by-function reference with line links |
 | 07 | [07-configuration-and-setup.md](./07-configuration-and-setup.md) | Env vars, credentials, first-time setup, Google Drive auth modes |
-| 08 | [08-outputs-and-artifacts.md](./08-outputs-and-artifacts.md) | CSV format, `JOBS.md`, `extracted-slugs.json`, `project-explorer.html` |
+| 08 | [08-outputs-and-artifacts.md](./08-outputs-and-artifacts.md) | CSV format, `JOBS.md`, `extracted-slugs.json`, `project-explorer.html`, `latest-error-report.json` |
 | 09 | [09-known-issues-and-tech-debt.md](./09-known-issues-and-tech-debt.md) | **Verified bugs**, gotchas, doc/code mismatches, improvement roadmap |
+| 10 | [10-bug-fix-and-improvement-log.md](./10-bug-fix-and-improvement-log.md) | **Bug-Fix Agent Protocol**, Regression Guard Registry (`BF-001`–`BF-008`), and App Packaging Roadmap |
 
 ---
 
@@ -43,13 +44,13 @@
 
 1. **There are no REST endpoints in this repo.** "Endpoints" = the *external* APIs consumed (see 03) and the
    *CLI entry points* (see 04).
-2. **Two parallel scrapers exist** with different behaviour — don't confuse them:
-   - `src/core/Scraper.ts` → DB + Redis, requests `?includeCompensation=true`.
+2. **Core scrapers & multi-process cluster coordinator** — all use `src/lib/AshbyClient.ts` (`fetchAshbyBoardWithFallback` with browser headers, retry/backoff, and automatic GraphQL fallback):
+   - `src/core/Scraper.ts` → DB + Redis, requests `?includeCompensation=true`, extracts salary via `extractSalary()`, streams 100-job batch writes during execution, deactivates removed jobs (`active = false`), uses a 3-strike `NOT_FOUND` quarantine, and supports `--ipc-worker` mode.
+   - `src/core/ClusterScraper.ts` → (`npm run scrape:parallel [-- --workers=N]`) forks multiple OS worker processes across CPU cores, partitions active company slugs via round-robin sharding, and merges worker telemetry into `output/latest-error-report.json`.
    - `src/core/ScraperCSV.ts` → CSV stream only (reads company list from DB), no Redis, optional Drive upload.
-3. **Salary columns in the DB are currently always `NULL`** due to a field-name mismatch
-   (`compensationTier` vs. the real `compensation` object). See 09 → Issue #1 before touching salary logic.
+3. **Adaptive Rate Limiting:** `createLimiter()` in `src/lib/Concurrency.ts` dynamically halves concurrency and pauses the queue when `429`/`403` rate limits occur, then ramps back up after consecutive clean responses.
 4. **`GoogleDriveOAuth.ts` is misnamed** — it actually uses a *service-account JWT*, not user OAuth.
    The real user-OAuth flow lives in `GoogleDriveUserOAuth.ts`. See 07 & 09.
-5. **Many entry-point files execute on import** (no `require.main` guard). Don't import them from other modules.
+5. **Some entry-point files execute on import** (`Verify.ts`, `DbMenu.ts`, `DbInspect.ts`). Don't import them from other modules.
 6. **Secrets live in `.env` and `apikeys/`** (both gitignored). Never print or commit their contents.
-7. Keep this folder updated when you change behaviour — update the relevant numbered file + "Last full analysis" date.
+7. **Default Change, Docs & Commit Rule (Mandatory):** Whenever you make *any* change in this repository, you must: (a) update `AGENTS.md`, `README.md`, and the matching files in `documentation/` + "Last full analysis" date, (b) regenerate `docs/project-explorer.html` (`npm run docs:generate`), (c) verify `npx tsc --noEmit -p .`, `npm run lint`, and `npm test` pass, and (d) commit all changes (`git commit`) with a detailed Conventional Commit subject and multi-line bulleted description.
