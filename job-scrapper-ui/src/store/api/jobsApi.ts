@@ -19,8 +19,11 @@ import {
 } from '../../types/api';
 import { recordRequestTimestamp } from '../slices/rateLimitSlice';
 
+const apiHost = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const baseUrl = apiHost ? (apiHost.endsWith('/v1') ? apiHost : `${apiHost}/v1`) : '/v1';
+
 const rawBaseQuery = fetchBaseQuery({ 
-  baseUrl: '/v1',
+  baseUrl,
   prepareHeaders: (headers) => {
     headers.set('Accept', 'application/json');
     return headers;
