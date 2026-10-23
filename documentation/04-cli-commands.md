@@ -22,7 +22,7 @@ All scripts run through `npx ts-node` — no build required. Pass extra args aft
 | `npm run lint` / `lint:fix` | ESLint on `src/` | — | — | — | (fix: source files) |
 | `npx ts-node scripts/generate-readme.ts` | *(no npm script)* | — | — | — | `JOBS.md` |
 | `npx ts-node scripts/test-drive-upload.ts` | *(no npm script)* | — | — | Google OAuth/Drive | `apikeys/oauth-token.json`, Drive file; temp `output/test-upload.txt` |
-| `npm test` | placeholder | — | — | — | exits 1 |
+| `npm test` | Jest (`jest.config.js`) | — | — | — | 11 suites, 49 unit & E2E tests |
 
 Prisma CLI (not wrapped): `npx prisma generate`, `npx prisma db push`, `npx prisma migrate dev` (no `migrations/` folder exists — schema is synced with `db push`).
 

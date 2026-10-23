@@ -16,7 +16,7 @@ const prisma = new PrismaClient();
 // Configuration
 const CONCURRENCY_LIMIT = 15;  // Parallel API requests
 
-interface JobRecord {
+export interface JobRecord {
     company: string;
     title: string;
     link: string;
@@ -28,7 +28,7 @@ interface JobRecord {
 /**
  * @summary Fetches all job postings for a company from Ashby's public API
  */
-async function fetchJobsForCompany(companySlug: string): Promise<JobRecord[]> {
+export async function fetchJobsForCompany(companySlug: string): Promise<JobRecord[]> {
     const url = `https://api.ashbyhq.com/posting-api/job-board/${companySlug}`;
 
     try {
@@ -51,7 +51,7 @@ async function fetchJobsForCompany(companySlug: string): Promise<JobRecord[]> {
 /**
  * @summary Escapes a CSV field value (handles commas, quotes, newlines)
  */
-function escapeCSV(value: string): string {
+export function escapeCSV(value: string): string {
     if (value.includes(',') || value.includes('"') || value.includes('\n')) {
         return `"${value.replace(/"/g, '""')}"`;
     }
@@ -61,7 +61,7 @@ function escapeCSV(value: string): string {
 /**
  * @summary Formats a job record as a CSV line
  */
-function formatCSVRow(job: JobRecord): string {
+export function formatCSVRow(job: JobRecord): string {
     return [
         escapeCSV(job.company),
         escapeCSV(job.title),
@@ -83,7 +83,7 @@ async function uploadToGoogleDrive(filePath: string): Promise<string | null> {
 /**
  * @summary Main function - scrapes jobs concurrently and streams to CSV
  */
-async function scrapeToCSV() {
+export async function scrapeToCSV() {
     const startTime = Date.now();
     const uploadToCloud = process.argv.includes('--upload-cloud');
 
@@ -179,4 +179,6 @@ async function scrapeToCSV() {
 }
 
 // Run
-scrapeToCSV().catch(console.error);
+if (require.main === module) {
+    scrapeToCSV().catch(console.error);
+}

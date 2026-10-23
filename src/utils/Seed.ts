@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 /**
  * @summary Compares TARGET_COMPANIES against DB, bulk inserts new entries
  */
-async function seed() {
+export async function seed() {
     console.log('🌱 Starting Seed Process (Memory Diff Strategy)...');
 
     // 1. Fetch ALL existing slugs (Low cost: 1 Query)
@@ -47,6 +47,8 @@ async function seed() {
     console.log('✅ Seed complete.');
 }
 
-seed()
-    .catch(console.error)
-    .finally(() => prisma.$disconnect());
+if (require.main === module) {
+    seed()
+        .catch(console.error)
+        .finally(() => prisma.$disconnect());
+}

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-interface JobRow {
+export interface JobRow {
     company: string;
     title: string;
     link: string;
@@ -10,7 +10,10 @@ interface JobRow {
     department: string;
 }
 
-function parseCSV(content: string): JobRow[] {
+/**
+ * @summary Parses CSV content into structured JobRow objects
+ */
+export function parseCSV(content: string): JobRow[] {
     const lines = content.split('\n').filter(line => line.trim());
     const headers = lines[0].split(',');
 
@@ -43,7 +46,10 @@ function parseCSV(content: string): JobRow[] {
     });
 }
 
-function generateMarkdownTable(jobs: JobRow[]): string {
+/**
+ * @summary Formats JobRow array into Markdown table with truncation
+ */
+export function generateMarkdownTable(jobs: JobRow[]): string {
     const timestamp = new Date().toISOString().split('T')[0];
 
     let markdown = `# 🔍 Job Listings
@@ -100,4 +106,6 @@ async function main() {
     console.log(`📍 File saved to: ${jobsPath}`);
 }
 
-main().catch(console.error);
+if (require.main === module) {
+    main().catch(console.error);
+}

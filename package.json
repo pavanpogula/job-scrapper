@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "seed": "npx ts-node src/utils/Seed.ts",
     "discover": "npx ts-node src/discovery/CdxWorker.ts",
     "scrape": "npx ts-node src/core/Scraper.ts",
@@ -34,9 +34,12 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.57.1",
-    "eslint-plugin-jsdoc": "^46.10.1"
+    "eslint-plugin-jsdoc": "^46.10.1",
+    "jest": "^30.5.2",
+    "ts-jest": "^29.4.15"
   }
 }

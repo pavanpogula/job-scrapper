@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 /**
  * @summary Scans all companies, deletes invalid entries and their jobs
  */
-async function cleanDatabase() {
+export async function cleanDatabase() {
     const isDryRun = !process.argv.includes('--execute');
     console.log(`🧹 Starting Database Cleanup (${isDryRun ? 'DRY RUN' : 'EXECUTION MODE'})...`);
 
@@ -73,4 +73,6 @@ async function cleanDatabase() {
     }
 }
 
-cleanDatabase();
+if (require.main === module) {
+    cleanDatabase();
+}

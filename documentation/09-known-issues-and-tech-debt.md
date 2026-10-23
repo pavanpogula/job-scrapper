@@ -37,7 +37,7 @@ Severity: 🔴 data-correctness bug · 🟠 reliability/operational risk · 🟡
 | 11 | Service-account Drive upload fails on personal Drive (no quota); user-OAuth module exists but isn't wired in | `ScraperCSV.ts` / `GoogleDriveOAuth.ts` |
 | 12 | CSV filename uses UTC date → evening US runs get "tomorrow's" date; same-day reruns overwrite (evidence: `jobs_2025-12-28.csv` created Dec 27 local) | `ScraperCSV.ts` L113 |
 | 13 | `CdxWorker` limited to 1000 CDX rows ("for testing") | `CdxWorker.ts` L59 |
-| 14 | No tests, no CI, no rate limiting toward Ashby beyond concurrency 15 | repo |
+| 14 | *(Partially resolved)* Added comprehensive 49-test unit and E2E Jest suite; CI config and live rate-limiting still pending | repo |
 
 ## 🟡 Inconsistencies & docs drift
 
@@ -61,7 +61,7 @@ Severity: 🔴 data-correctness bug · 🟠 reliability/operational risk · 🟡
 - `chunk()` in `Concurrency.ts` unused.
 - `google-auth-library` imported directly but not declared in `package.json`.
 - Build/runtime tools (`typescript`, `ts-node`, `prisma`, `@types/node`) are in `dependencies`.
-- Entry modules run on import (no `require.main` guard): `ScraperCSV`, `Seed`, `Verify`, `DbMenu`, `DbInspect`, `DbClean`.
+- Entry modules run on import: added `require.main` guard to `ScraperCSV`, `Seed`, `DbClean`, and `generate-readme` (remaining: `Verify`, `DbMenu`, `DbInspect`).
 - Multiple `new PrismaClient()` instances (one per module) — fine for CLIs, but a shared `lib/Prisma.ts` would be cleaner.
 - ESLint: 1 warning (`no-empty`, `DbInspect.ts:56`).
 - `generate-readme.ts` CSV parser doesn't handle escaped `""` quotes; Markdown doesn't escape `|`.
