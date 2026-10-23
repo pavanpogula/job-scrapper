@@ -21,7 +21,7 @@
     "process:cdx": "npx ts-node src/utils/ProcessCdxData.ts",
     "verify": "npx ts-node src/utils/Verify.ts",
     "api:start": "npx ts-node src/api/Server.ts",
-    "build": "npx prisma generate && npm --prefix job-scrapper-ui run build"
+    "build": "npx prisma generate && npm --prefix job-scrapper-ui install && npm --prefix job-scrapper-ui run build"
   },
   "keywords": [],
   "author": "",
