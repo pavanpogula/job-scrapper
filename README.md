@@ -13,6 +13,17 @@ openings (titles, departments, locations, salary ranges, apply links) instead of
 > Full project context for humans and AI agents lives in [`documentation/`](./documentation/README.md).
 > Agent rules live in [`AGENTS.md`](./AGENTS.md).
 
+## Free Cloud Deployment (1-Click)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/pavanpogula/job-scrapper)
+
+Click the button above to deploy this entire application (Express API + React Web UI) to **Render for 100% Free**:
+1. Sign in with GitHub.
+2. Enter your `DATABASE_URL` (Neon PostgreSQL connection string).
+3. Click **Apply** — Render automatically builds and hosts your app on a free 24/7 HTTPS domain.
+
+---
+
 ## Features
 
 - 🖥️ **React Web Application (`job-scrapper-ui/`)**: React 19 + TypeScript + Vite 6 + Redux Toolkit + RTK Query + Material UI (MUI v6) supporting responsive desktop ledger and mobile drawer layouts, debounced search (400ms), in-flight promise deduplication, and zero-cost 10-minute Redux caching (`keepUnusedDataFor: 600`).
