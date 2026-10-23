@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --ground: #f3f5f8;
+    --card: #ffffff;
+    --ink-1: #111827;
+    --ink-2: #4b5563;
+    --ink-3: #9ca3af;
+    --rule: #e5e7eb;
+    --salary-hue: #1d5fbf;
+  }
+
+  .dark {
+    --ground: #0d1117;
+    --card: #161b22;
+    --ink-1: #f0f6fc;
+    --ink-2: #8b949e;
+    --ink-3: #484f58;
+    --rule: #21262d;
+    --salary-hue: #58a6ff;
+  }
+
+  body {
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--ground);
+    color: var(--ink-1);
+  }
+}
+
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.font-mono-source {
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

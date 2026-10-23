@@ -171,6 +171,19 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
+                        <span>api</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_api_Server_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Server.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
                         <span>config</span>
                     </div>
                     <ul><li>
@@ -479,10 +492,10 @@
             <h4>test-drive-upload.ts</h4>
             <p>Tests the OAuth user consent flow - YOU will own the uploade...</p>
         </div>
-<div class="overview-card" onclick="showFile('src_config_Companies_ts')">
-            <div class="card-icon green">📋</div>
-            <h4>Companies.ts</h4>
-            <p>Hardcoded list of company slugs to seed into the database...</p>
+<div class="overview-card" onclick="showFile('src_api_Server_ts')">
+            <div class="card-icon blue">📝</div>
+            <h4>Server.ts</h4>
+            <p>Serves REST API endpoints for jobs, companies, and facets qu...</p>
         </div></div>
             </div>
             <div id="fileDetail">
@@ -633,6 +646,31 @@
     "summary": "Tests the OAuth user consent flow - YOU will own the uploaded files",
     "tags": [
       "Undocumented"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "src_api_Server_ts": {
+    "name": "Server.ts",
+    "path": "src/api/Server.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Serves REST API endpoints for jobs, companies, and facets querying Prisma PostgreSQL",
+    "tags": [
+      "API",
+      "Server",
+      "Express",
+      "Jobs",
+      "REST"
     ],
     "info": [
       {

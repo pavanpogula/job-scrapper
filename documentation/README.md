@@ -3,7 +3,7 @@
 > **Purpose of this folder:** A single, authoritative source of context for humans *and AI agents*
 > working on this repository. Read this index first, then open only the file(s) relevant to your task.
 >
-> _Last full analysis: 2026-10-23 (BF-011: Structured Posting API promotion, company enrichment, and full-field change detection; regression audit and explorer regenerated)._
+> _Last full analysis: 2026-10-23 (BF-012: React UI with Redux Toolkit / RTK Query, Express REST API with dual rate limiting, debounced search, security hardening, and explorer regenerated)._
 
 ---
 

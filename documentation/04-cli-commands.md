@@ -23,6 +23,7 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run db:backfill` | `src/database/BackfillJobFields.ts` | ✅ | — | — | backfills structured `Job` columns from metadata JSONB | 1 |
 | `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force]` | `src/utils/EnrichCompanies.ts` | ✅ | — | Ashby hosted boards | updates `Company.name` & `Company.logoUrl` | 1 |
 | `npm run verify` | `src/utils/Verify.ts` | ✅ | — | — | read-only (console report) | 1 |
+| `npm run api:start` | `src/api/Server.ts` | ✅ | — | — | HTTP server on port 3001 with rate limiting and static UI serving | 1 |
 | `npm run prisma:studio` | Prisma CLI (`npx prisma studio`) | ✅ | — | — | GUI (can edit rows) | — |
 | `npm run docs:generate` | `scripts/GenerateDocs.ts` | — | — | — | `docs/project-explorer.html` | 0 (`.catch(console.error)`) |
 | `npm run lint` / `npm run lint:fix` | `npx eslint src/ --ext .ts [--fix]` | — | — | — | (`lint:fix`: rewrites `src/` files) | non-zero only on lint **errors** (warnings pass) |

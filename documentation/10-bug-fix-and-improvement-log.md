@@ -143,6 +143,19 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Guarding tests:** `tests/unit/AshbyClient.test.ts` (`extractSalary` with interval and legacy shape).
 - **Known gap:** GraphQL fallback list endpoints do not provide `publishedAt` or descriptions (only 22 jobs affected, addressable via single-posting GraphQL queries if needed).
 
+### BF-012: React UI with RTK Query and Backend REST API with Dual Rate Limiting
+- **Symptom:** No web UI or REST API existed to query the 34,000+ jobs directly; un-debounced search fired rapid-fire queries that overwhelmed rate limits; duplicate in-flight queries occurred in React StrictMode.
+- **Root cause & fix:**
+  1. Built React 19 + TypeScript + Vite 6 + Redux Toolkit + RTK Query + MUI v6 UI (`job-scrapper-ui/`) with responsive desktop ledger and mobile drawer layouts.
+  2. Built Express REST API (`src/api/Server.ts`, `npm run api:start`) connecting directly to Neon PostgreSQL with structured pagination, filtering, facets, and SPA static serving.
+  3. Enforced a dual-layer rolling rate limit of 10 requests / 60 seconds (backend sliding window middleware + frontend `rateLimitSlice` in Redux and `baseQueryWithRateLimit`).
+  4. Implemented 400ms search input debouncing on Browse and Companies pages to eliminate keystroke spam.
+  5. Implemented 10-minute Redux caching (`keepUnusedDataFor: 600`) so revisited pages consume zero rate limit quota.
+  6. Added security hardening: HTTP security headers, DoS query capping at 100 chars, trust proxy configuration, and periodic rate-limiter map pruning.
+- **Implemented in:** `src/api/Server.ts`, `job-scrapper-ui/` (`src/store/`, `src/pages/`, `src/components/`, `src/theme/`).
+- **Regression Invariant:** `baseQueryWithRateLimit` gates requests based on `state.rateLimit.timestamps`; `jobsApi` endpoints cache for 600 seconds; Express server enforces 10 req/min with `Retry-After` header.
+- **Guarding tests:** Unit tests pass (79 tests). Frontend verified via production build (`npm --prefix job-scrapper-ui run build`).
+
 ---
 
 ## 📈 Improvement Log & Future Packaging Roadmap
