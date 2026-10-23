@@ -15,6 +15,15 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.set('trust proxy', 1);
+
+// Normalize URL for serverless platforms (e.g. Vercel rewrites)
+app.use((req, _res, next) => {
+  if (req.headers['x-forwarded-uri'] && typeof req.headers['x-forwarded-uri'] === 'string') {
+    req.url = req.headers['x-forwarded-uri'];
+  }
+  next();
+});
+
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: '100kb' }));
 

@@ -127,6 +127,19 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
+                        <span>api</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('api_index_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>index.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="expanded">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
                         <span>prisma</span>
                     </div>
                     <ul><li>
@@ -460,6 +473,11 @@
             <h4>client.ts</h4>
             <p>Global mock for @prisma/client to prevent native query-engin...</p>
         </div>
+<div class="overview-card" onclick="showFile('api_index_ts')">
+            <div class="card-icon blue">📝</div>
+            <h4>index.ts</h4>
+            <p>Exports Express application for Vercel serverless runtime...</p>
+        </div>
 <div class="overview-card" onclick="showFile('prisma_schema_prisma')">
             <div class="card-icon purple">🗄️</div>
             <h4>schema.prisma</h4>
@@ -479,11 +497,6 @@
             <div class="card-icon blue">📝</div>
             <h4>Server.ts</h4>
             <p>Serves REST API endpoints for jobs, companies, and facets qu...</p>
-        </div>
-<div class="overview-card" onclick="showFile('src_config_Companies_ts')">
-            <div class="card-icon green">📋</div>
-            <h4>Companies.ts</h4>
-            <p>Hardcoded list of company slugs to seed into the database...</p>
         </div></div>
             </div>
             <div id="fileDetail">
@@ -510,6 +523,27 @@
       "Mock",
       "Prisma",
       "Testing"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "api_index_ts": {
+    "name": "index.ts",
+    "path": "api/index.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Exports Express application for Vercel serverless runtime",
+    "tags": [
+      "Undocumented"
     ],
     "info": [
       {
