@@ -26,18 +26,63 @@ interface FileDoc {
     functions: FunctionDoc[];
 }
 
-// Files to document (relative to project root)
-const FILES_TO_DOCUMENT = [
-    { path: 'src/scraper.ts', icon: '⭐', iconClass: 'pink' },
-    { path: 'src/discovery/cdx-worker.ts', icon: '🔍', iconClass: 'yellow' },
-    { path: 'src/scripts/db-menu.ts', icon: '💻', iconClass: 'cyan' },
-    { path: 'src/scripts/clean-db.ts', icon: '🧹', iconClass: 'blue' },
-    { path: 'src/scripts/db-inspect.ts', icon: '🔬', iconClass: 'purple' },
-    { path: 'src/lib/redis.ts', icon: '⚡', iconClass: 'pink' },
-    { path: 'src/config/companies.ts', icon: '📋', iconClass: 'green' },
-    { path: 'seed.ts', icon: '🌱', iconClass: 'green' },
-    { path: 'prisma/schema.prisma', icon: '🗄️', iconClass: 'purple' },
-];
+// Icon mapping based on file location/name
+function getFileIcon(filePath: string): { icon: string; iconClass: string } {
+    if (filePath.includes('scraper')) return { icon: '⭐', iconClass: 'pink' };
+    if (filePath.includes('discovery') || filePath.includes('cdx')) return { icon: '🔍', iconClass: 'yellow' };
+    if (filePath.includes('db-menu')) return { icon: '💻', iconClass: 'cyan' };
+    if (filePath.includes('clean')) return { icon: '🧹', iconClass: 'blue' };
+    if (filePath.includes('inspect')) return { icon: '🔬', iconClass: 'purple' };
+    if (filePath.includes('redis')) return { icon: '⚡', iconClass: 'pink' };
+    if (filePath.includes('config') || filePath.includes('companies')) return { icon: '📋', iconClass: 'green' };
+    if (filePath.includes('seed')) return { icon: '🌱', iconClass: 'green' };
+    if (filePath.includes('process')) return { icon: '🔧', iconClass: 'yellow' };
+    if (filePath.endsWith('.prisma')) return { icon: '🗄️', iconClass: 'purple' };
+    if (filePath.includes('lib')) return { icon: '📦', iconClass: 'blue' };
+    if (filePath.includes('scripts')) return { icon: '📜', iconClass: 'cyan' };
+    if (filePath.includes('csv')) return { icon: '📄', iconClass: 'green' };
+    return { icon: '📝', iconClass: 'blue' };
+}
+
+// Directories to exclude from scanning
+const EXCLUDED_DIRS = ['node_modules', 'dist', '.git', 'docs', 'output', '.vscode', 'apikeys'];
+
+// Auto-discover all TypeScript and Prisma files
+function discoverFiles(dir: string, baseDir: string = dir): { path: string; icon: string; iconClass: string }[] {
+    const results: { path: string; icon: string; iconClass: string }[] = [];
+
+    if (!fs.existsSync(dir)) return results;
+
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relativePath = path.relative(baseDir, fullPath);
+
+        if (entry.isDirectory()) {
+            // Skip excluded directories
+            if (EXCLUDED_DIRS.includes(entry.name)) continue;
+            // Recursively scan subdirectories
+            results.push(...discoverFiles(fullPath, baseDir));
+        } else if (entry.isFile()) {
+            // Include .ts and .prisma files (exclude .d.ts files)
+            if ((entry.name.endsWith('.ts') && !entry.name.endsWith('.d.ts')) ||
+                entry.name.endsWith('.prisma')) {
+                const iconInfo = getFileIcon(relativePath);
+                results.push({
+                    path: relativePath,
+                    ...iconInfo
+                });
+            }
+        }
+    }
+
+    return results;
+}
+
+// Get files to document (auto-discovered)
+const PROJECT_ROOT = path.resolve(__dirname, '..');
+const FILES_TO_DOCUMENT = discoverFiles(PROJECT_ROOT);
 
 function parseJSDoc(content: string): { fileSummary: string; fileTags: string[]; functions: FunctionDoc[] } {
     let fileSummary = '';

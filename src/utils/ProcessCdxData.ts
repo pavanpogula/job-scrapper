@@ -5,12 +5,15 @@
  */
 
 import * as fs from 'fs';
-import { isValidSlug } from './src/discovery/cdx-worker';
+import { isValidSlug } from '../discovery/CdxWorker';
 
 // If running with a file path argument
 const inputFile = process.argv[2];
 
 // Example: npx ts-node process-cdx-data.ts response.json
+/**
+ *
+ */
 async function processRawCDXData(rawData: string[][]) {
     console.log(`📥 Processing ${rawData.length} raw URLs...\n`);
 
@@ -36,7 +39,7 @@ async function processRawCDXData(rawData: string[][]) {
             let slug = decodeURIComponent(pathParts[0]).toLowerCase();
 
             // Clean up common junk
-            slug = slug.replace(/[\"\']/g, '').trim();
+            slug = slug.replace(/["']/g, '').trim();
 
             // Skip known invalid patterns
             if (slug.startsWith('.well-known')) {

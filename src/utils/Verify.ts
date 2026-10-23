@@ -2,6 +2,9 @@
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
+/**
+ *
+ */
 async function check() {
     const companyCount = await prisma.company.count();
     const jobCount = await prisma.job.count();

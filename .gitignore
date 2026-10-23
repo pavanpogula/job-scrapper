@@ -26,3 +26,13 @@ replay_pid*
 node_modules
 
 .env
+
+# Google Drive credentials (sensitive!)
+google-credentials.json
+
+# CSV output folder
+output/
+
+apikeys/
+/extracted-slugs*
+.DS_Store

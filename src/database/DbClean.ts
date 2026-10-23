@@ -5,7 +5,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { isValidSlug } from '../discovery/cdx-worker';
+import { isValidSlug } from '../discovery/CdxWorker';
 
 const prisma = new PrismaClient();
 

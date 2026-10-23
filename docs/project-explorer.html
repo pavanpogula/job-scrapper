@@ -91,7 +91,7 @@
     <header class="header">
         <h1><span class="material-icons-round">folder_special</span> Job Scraper Project Explorer</h1>
         <p>Click any file to see details and functions</p>
-        <div class="generated">Auto-generated on 2025-12-27</div>
+        <div class="generated">Auto-generated on 2025-12-28</div>
     </header>
     <div class="main">
         <aside class="sidebar">
@@ -120,6 +120,19 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
+                        <span>scripts</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('scripts_GenerateDocs_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GenerateDocs.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="expanded">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
                         <span>src</span>
                     </div>
                     <ul><li class="">
@@ -129,9 +142,53 @@
                         <span>config</span>
                     </div>
                     <ul><li>
-                    <div class="tree-item file" onclick="showFile('src_config_companies_ts')">
+                    <div class="tree-item file" onclick="showFile('src_config_Companies_ts')">
                         <span class="material-icons-round">description</span>
-                        <span>companies.ts</span>
+                        <span>Companies.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>core</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_core_Scraper_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Scraper.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_core_ScraperCSV_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ScraperCSV.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>database</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_database_DbClean_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>DbClean.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_database_DbInspect_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>DbInspect.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_database_DbMenu_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>DbMenu.ts</span>
                         
                     </div>
                 </li></ul>
@@ -142,9 +199,9 @@
                         <span>discovery</span>
                     </div>
                     <ul><li>
-                    <div class="tree-item file" onclick="showFile('src_discovery_cdx-worker_ts')">
+                    <div class="tree-item file" onclick="showFile('src_discovery_CdxWorker_ts')">
                         <span class="material-icons-round">description</span>
-                        <span>cdx-worker.ts</span>
+                        <span>CdxWorker.ts</span>
                         
                     </div>
                 </li></ul>
@@ -155,9 +212,15 @@
                         <span>lib</span>
                     </div>
                     <ul><li>
-                    <div class="tree-item file" onclick="showFile('src_lib_redis_ts')">
+                    <div class="tree-item file" onclick="showFile('src_lib_Concurrency_ts')">
                         <span class="material-icons-round">description</span>
-                        <span>redis.ts</span>
+                        <span>Concurrency.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_Redis_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Redis.ts</span>
                         
                     </div>
                 </li></ul>
@@ -165,40 +228,28 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
-                        <span>scripts</span>
+                        <span>utils</span>
                     </div>
                     <ul><li>
-                    <div class="tree-item file" onclick="showFile('src_scripts_clean-db_ts')">
+                    <div class="tree-item file" onclick="showFile('src_utils_ProcessCdxData_ts')">
                         <span class="material-icons-round">description</span>
-                        <span>clean-db.ts</span>
+                        <span>ProcessCdxData.ts</span>
                         
                     </div>
                 </li><li>
-                    <div class="tree-item file" onclick="showFile('src_scripts_db-inspect_ts')">
+                    <div class="tree-item file" onclick="showFile('src_utils_Seed_ts')">
                         <span class="material-icons-round">description</span>
-                        <span>db-inspect.ts</span>
+                        <span>Seed.ts</span>
                         
                     </div>
                 </li><li>
-                    <div class="tree-item file" onclick="showFile('src_scripts_db-menu_ts')">
+                    <div class="tree-item file" onclick="showFile('src_utils_Verify_ts')">
                         <span class="material-icons-round">description</span>
-                        <span>db-menu.ts</span>
+                        <span>Verify.ts</span>
                         
                     </div>
                 </li></ul>
-                </li><li>
-                    <div class="tree-item file" onclick="showFile('src_scraper_ts')">
-                        <span class="material-icons-round">description</span>
-                        <span>scraper.ts</span>
-                        <span class="tree-badge">⭐ Core</span>
-                    </div>
                 </li></ul>
-                </li><li>
-                    <div class="tree-item file" onclick="showFile('seed_ts')">
-                        <span class="material-icons-round">description</span>
-                        <span>seed.ts</span>
-                        
-                    </div>
                 </li></ul>
     </li>
             </ul>
@@ -206,35 +257,35 @@
         <main class="content">
             <div id="defaultView">
                 <div class="section-header"><span class="material-icons-round">apps</span><span>Select a file to view details</span></div>
-                <div class="overview-grid"><div class="overview-card" onclick="showFile('src_scraper_ts')">
-            <div class="card-icon pink">⭐</div>
-            <h4>scraper.ts</h4>
-            <p>Fetches jobs from Ashby API, normalizes data, and stores in ...</p>
+                <div class="overview-grid"><div class="overview-card" onclick="showFile('prisma_schema_prisma')">
+            <div class="card-icon purple">🗄️</div>
+            <h4>schema.prisma</h4>
+            <p>Database schema with Prisma ORM models for Company, Job, Dep...</p>
         </div>
-<div class="overview-card" onclick="showFile('src_discovery_cdx-worker_ts')">
-            <div class="card-icon yellow">🔍</div>
-            <h4>cdx-worker.ts</h4>
-            <p>Auto-discovers companies from Wayback Machine CDX API. Valid...</p>
+<div class="overview-card" onclick="showFile('scripts_GenerateDocs_ts')">
+            <div class="card-icon cyan">📜</div>
+            <h4>GenerateDocs.ts</h4>
+            <p>if present (overrides @file)...</p>
         </div>
-<div class="overview-card" onclick="showFile('src_scripts_db-menu_ts')">
-            <div class="card-icon cyan">💻</div>
-            <h4>db-menu.ts</h4>
-            <p>CLI menu for querying database. Dashboard, search, salaries,...</p>
+<div class="overview-card" onclick="showFile('src_config_Companies_ts')">
+            <div class="card-icon green">📋</div>
+            <h4>Companies.ts</h4>
+            <p>Hardcoded list of company slugs to seed into the database...</p>
         </div>
-<div class="overview-card" onclick="showFile('src_scripts_clean-db_ts')">
-            <div class="card-icon blue">🧹</div>
-            <h4>clean-db.ts</h4>
+<div class="overview-card" onclick="showFile('src_core_Scraper_ts')">
+            <div class="card-icon blue">📝</div>
+            <h4>Scraper.ts</h4>
+            <p>Fetches jobs from Ashby API using concurrent requests, batch...</p>
+        </div>
+<div class="overview-card" onclick="showFile('src_core_ScraperCSV_ts')">
+            <div class="card-icon blue">📝</div>
+            <h4>ScraperCSV.ts</h4>
+            <p>Scrapes jobs concurrently, streams to CSV. Optional Google D...</p>
+        </div>
+<div class="overview-card" onclick="showFile('src_database_DbClean_ts')">
+            <div class="card-icon blue">📝</div>
+            <h4>DbClean.ts</h4>
             <p>Removes invalid company entries using isValidSlug. Deletes j...</p>
-        </div>
-<div class="overview-card" onclick="showFile('src_scripts_db-inspect_ts')">
-            <div class="card-icon purple">🔬</div>
-            <h4>db-inspect.ts</h4>
-            <p>Shows table names, column details (type, nullable), and row ...</p>
-        </div>
-<div class="overview-card" onclick="showFile('src_lib_redis_ts')">
-            <div class="card-icon pink">⚡</div>
-            <h4>redis.ts</h4>
-            <p>Provides Redis client for caching job content hashes. Enable...</p>
         </div></div>
             </div>
             <div id="fileDetail">
@@ -251,73 +302,22 @@
     </div>
     <script>
         const files = {
-  "src_scraper_ts": {
-    "name": "scraper.ts",
-    "path": "src/scraper.ts",
-    "icon": "⭐",
-    "iconClass": "pink",
-    "summary": "Fetches jobs from Ashby API, normalizes data, and stores in database with Redis caching for change detection",
+  "prisma_schema_prisma": {
+    "name": "schema.prisma",
+    "path": "prisma/schema.prisma",
+    "icon": "🗄️",
+    "iconClass": "purple",
+    "summary": "Database schema with Prisma ORM models for Company, Job, Department, Location",
     "tags": [
-      "Core",
-      "Ashby API",
-      "Redis",
-      "Upsert",
-      "Change Detection"
+      "Prisma",
+      "PostgreSQL",
+      "Schema",
+      "ORM"
     ],
     "info": [
       {
         "label": "Type",
-        "value": "TypeScript"
-      },
-      {
-        "label": "Functions",
-        "value": "6"
-      }
-    ],
-    "functions": [
-      {
-        "name": "fetchJobs()",
-        "desc": "Calls Ashby API to fetch all jobs for a company. Handles 404 by marking company as NOT_FOUND."
-      },
-      {
-        "name": "generateHash()",
-        "desc": "Creates MD5 hash of job content for change detection. Avoids redundant DB writes."
-      },
-      {
-        "name": "getOrCreateDepartment()",
-        "desc": "Upserts a department record. Returns ID or null if name is empty."
-      },
-      {
-        "name": "getOrCreateLocation()",
-        "desc": "Upserts a location record. Returns ID or null if name is empty."
-      },
-      {
-        "name": "processCompany()",
-        "desc": "Processes all jobs for a company. Checks Redis cache, upserts changed jobs."
-      },
-      {
-        "name": "runAll()",
-        "desc": "Entry point. Fetches all ACTIVE companies and scrapes each one sequentially."
-      }
-    ]
-  },
-  "src_discovery_cdx-worker_ts": {
-    "name": "cdx-worker.ts",
-    "path": "src/discovery/cdx-worker.ts",
-    "icon": "🔍",
-    "iconClass": "yellow",
-    "summary": "Auto-discovers companies from Wayback Machine CDX API. Validates slugs with regex and blocklist.",
-    "tags": [
-      "Discovery",
-      "Wayback Machine",
-      "Validation",
-      "Regex",
-      "Blocklist"
-    ],
-    "info": [
-      {
-        "label": "Type",
-        "value": "TypeScript"
+        "value": "Schema"
       },
       {
         "label": "Functions",
@@ -326,28 +326,239 @@
     ],
     "functions": [
       {
-        "name": "isValidSlug()",
-        "desc": "Validates company slug against regex, length, blocklist, and numeric patterns"
+        "name": "Company",
+        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• status: CompanyStatus\\n• jobs: Job[]\\n• createdAt: DateTime"
       },
       {
-        "name": "fetchAshbyUrls()",
-        "desc": "Fetches archived Ashby URLs from Wayback Machine CDX API"
+        "name": "Department",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
       },
       {
-        "name": "extractCompanySlug()",
-        "desc": "Parses Ashby URL and extracts company slug from path"
+        "name": "Location",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
       },
       {
-        "name": "runDiscovery()",
-        "desc": "Main discovery function. Fetches URLs, extracts slugs, upserts to DB."
+        "name": "Job",
+        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• createdAt: DateTime\\n• updatedAt: DateTime"
       }
     ]
   },
-  "src_scripts_db-menu_ts": {
-    "name": "db-menu.ts",
-    "path": "src/scripts/db-menu.ts",
-    "icon": "💻",
+  "scripts_GenerateDocs_ts": {
+    "name": "GenerateDocs.ts",
+    "path": "scripts/GenerateDocs.ts",
+    "icon": "📜",
     "iconClass": "cyan",
+    "summary": "if present (overrides @file)",
+    "tags": [
+      "const tagsMatch = block.match(/@tags\\s+(.+)/);"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "src_config_Companies_ts": {
+    "name": "Companies.ts",
+    "path": "src/config/Companies.ts",
+    "icon": "📋",
+    "iconClass": "green",
+    "summary": "Hardcoded list of company slugs to seed into the database",
+    "tags": [
+      "Config",
+      "Seed Data",
+      "Company List"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "src_core_Scraper_ts": {
+    "name": "Scraper.ts",
+    "path": "src/core/Scraper.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Fetches jobs from Ashby API using concurrent requests, batch DB writes, and Redis caching",
+    "tags": [
+      "Core",
+      "Ashby API",
+      "Redis",
+      "Batch",
+      "Concurrent",
+      "High-Performance"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "9"
+      }
+    ],
+    "functions": [
+      {
+        "name": "initRedis()",
+        "desc": "Initializes Redis connection"
+      },
+      {
+        "name": "fetchJobs()",
+        "desc": "Calls Ashby API to fetch all jobs for a company"
+      },
+      {
+        "name": "generateHash()",
+        "desc": "Creates MD5 hash of job content for change detection"
+      },
+      {
+        "name": "getOrCreateDepartment()",
+        "desc": "Gets or creates department with in-memory caching"
+      },
+      {
+        "name": "getOrCreateLocation()",
+        "desc": "Gets or creates location with in-memory caching"
+      },
+      {
+        "name": "filterChangedJobs()",
+        "desc": "Checks Redis cache for job changes, returns jobs that need processing"
+      },
+      {
+        "name": "batchUpsertJobs()",
+        "desc": "Processes jobs in batches using database transactions"
+      },
+      {
+        "name": "processCompanyJobs()",
+        "desc": "Processes a single company's jobs and returns prepared job records"
+      },
+      {
+        "name": "runAll()",
+        "desc": "Entry point. Fetches companies concurrently and batch-writes to DB."
+      }
+    ]
+  },
+  "src_core_ScraperCSV_ts": {
+    "name": "ScraperCSV.ts",
+    "path": "src/core/ScraperCSV.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Scrapes jobs concurrently, streams to CSV. Optional Google Drive upload.",
+    "tags": [
+      "CSV",
+      "Export",
+      "Concurrent",
+      "Streaming",
+      "High-Performance"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "5"
+      }
+    ],
+    "functions": [
+      {
+        "name": "fetchJobsForCompany()",
+        "desc": "Fetches all job postings for a company from Ashby's public API"
+      },
+      {
+        "name": "escapeCSV()",
+        "desc": "Escapes a CSV field value (handles commas, quotes, newlines)"
+      },
+      {
+        "name": "formatCSVRow()",
+        "desc": "Formats a job record as a CSV line"
+      },
+      {
+        "name": "uploadToGoogleDrive()",
+        "desc": "Uploads a file to Google Drive using service account credentials"
+      },
+      {
+        "name": "scrapeToCSV()",
+        "desc": "Main function - scrapes jobs concurrently and streams to CSV"
+      }
+    ]
+  },
+  "src_database_DbClean_ts": {
+    "name": "DbClean.ts",
+    "path": "src/database/DbClean.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Removes invalid company entries using isValidSlug. Deletes jobs first for FK constraint.",
+    "tags": [
+      "Maintenance",
+      "Cleanup",
+      "Dry-run",
+      "--execute"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "cleanDatabase()",
+        "desc": "Scans all companies, deletes invalid entries and their jobs"
+      }
+    ]
+  },
+  "src_database_DbInspect_ts": {
+    "name": "DbInspect.ts",
+    "path": "src/database/DbInspect.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Shows table names, column details (type, nullable), and row counts via raw SQL",
+    "tags": [
+      "Debug",
+      "Schema",
+      "information_schema",
+      "Raw SQL"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "inspectDatabase()",
+        "desc": "Queries information_schema to list tables, columns, and row counts"
+      }
+    ]
+  },
+  "src_database_DbMenu_ts": {
+    "name": "DbMenu.ts",
+    "path": "src/database/DbMenu.ts",
+    "icon": "📝",
+    "iconClass": "blue",
     "summary": "CLI menu for querying database. Dashboard, search, salaries, raw SQL.",
     "tags": [
       "CLI",
@@ -401,17 +612,58 @@
       }
     ]
   },
-  "src_scripts_clean-db_ts": {
-    "name": "clean-db.ts",
-    "path": "src/scripts/clean-db.ts",
-    "icon": "🧹",
+  "src_discovery_CdxWorker_ts": {
+    "name": "CdxWorker.ts",
+    "path": "src/discovery/CdxWorker.ts",
+    "icon": "🔍",
+    "iconClass": "yellow",
+    "summary": "Auto-discovers companies from Wayback Machine CDX API. Validates slugs with regex and blocklist.",
+    "tags": [
+      "Discovery",
+      "Wayback Machine",
+      "Validation",
+      "Regex",
+      "Blocklist"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "isValidSlug()",
+        "desc": "Validates company slug against regex, length, blocklist, and numeric patterns"
+      },
+      {
+        "name": "fetchAshbyUrls()",
+        "desc": "Fetches archived Ashby URLs from Wayback Machine CDX API"
+      },
+      {
+        "name": "extractCompanySlug()",
+        "desc": "Parses Ashby URL and extracts company slug from path"
+      },
+      {
+        "name": "runDiscovery()",
+        "desc": "Main discovery function. Fetches URLs, extracts slugs, upserts to DB."
+      }
+    ]
+  },
+  "src_lib_Concurrency_ts": {
+    "name": "Concurrency.ts",
+    "path": "src/lib/Concurrency.ts",
+    "icon": "📦",
     "iconClass": "blue",
-    "summary": "Removes invalid company entries using isValidSlug. Deletes jobs first for FK constraint.",
+    "summary": "Provides a CommonJS-compatible concurrency limiter for parallel processing",
     "tags": [
-      "Maintenance",
-      "Cleanup",
-      "Dry-run",
-      "--execute"
+      "Utility",
+      "Concurrency",
+      "Async"
     ],
     "info": [
       {
@@ -425,45 +677,16 @@
     ],
     "functions": [
       {
-        "name": "cleanDatabase()",
-        "desc": "Scans all companies, deletes invalid entries and their jobs"
+        "name": "createLimiter()",
+        "desc": "Creates a concurrency limiter for controlled parallel execution"
       }
     ]
   },
-  "src_scripts_db-inspect_ts": {
-    "name": "db-inspect.ts",
-    "path": "src/scripts/db-inspect.ts",
-    "icon": "🔬",
-    "iconClass": "purple",
-    "summary": "Shows table names, column details (type, nullable), and row counts via raw SQL",
-    "tags": [
-      "Debug",
-      "Schema",
-      "information_schema",
-      "Raw SQL"
-    ],
-    "info": [
-      {
-        "label": "Type",
-        "value": "TypeScript"
-      },
-      {
-        "label": "Functions",
-        "value": "1"
-      }
-    ],
-    "functions": [
-      {
-        "name": "inspectDatabase()",
-        "desc": "Queries information_schema to list tables, columns, and row counts"
-      }
-    ]
-  },
-  "src_lib_redis_ts": {
-    "name": "redis.ts",
-    "path": "src/lib/redis.ts",
-    "icon": "⚡",
-    "iconClass": "pink",
+  "src_lib_Redis_ts": {
+    "name": "Redis.ts",
+    "path": "src/lib/Redis.ts",
+    "icon": "📦",
+    "iconClass": "blue",
     "summary": "Provides Redis client for caching job content hashes. Enables change detection to avoid redundant DB writes.",
     "tags": [
       "Cache",
@@ -488,16 +711,16 @@
       }
     ]
   },
-  "src_config_companies_ts": {
-    "name": "companies.ts",
-    "path": "src/config/companies.ts",
-    "icon": "📋",
-    "iconClass": "green",
-    "summary": "Hardcoded list of company slugs to seed into the database",
+  "src_utils_ProcessCdxData_ts": {
+    "name": "ProcessCdxData.ts",
+    "path": "src/utils/ProcessCdxData.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Converts raw Wayback Machine CDX response to valid company slugs",
     "tags": [
-      "Config",
-      "Seed Data",
-      "Company List"
+      "Utility",
+      "CDX",
+      "Data Processing"
     ],
     "info": [
       {
@@ -511,11 +734,11 @@
     ],
     "functions": []
   },
-  "seed_ts": {
-    "name": "seed.ts",
-    "path": "seed.ts",
-    "icon": "🌱",
-    "iconClass": "green",
+  "src_utils_Seed_ts": {
+    "name": "Seed.ts",
+    "path": "src/utils/Seed.ts",
+    "icon": "📝",
+    "iconClass": "blue",
     "summary": "Seeds database from config. Memory-efficient diff strategy for bulk inserts.",
     "tags": [
       "Setup",
@@ -540,46 +763,26 @@
       }
     ]
   },
-  "prisma_schema_prisma": {
-    "name": "schema.prisma",
-    "path": "prisma/schema.prisma",
-    "icon": "🗄️",
-    "iconClass": "purple",
-    "summary": "Database schema with Prisma ORM models for Company, Job, Department, Location",
+  "src_utils_Verify_ts": {
+    "name": "Verify.ts",
+    "path": "src/utils/Verify.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "No description available",
     "tags": [
-      "Prisma",
-      "PostgreSQL",
-      "Schema",
-      "ORM"
+      "Undocumented"
     ],
     "info": [
       {
         "label": "Type",
-        "value": "Schema"
+        "value": "TypeScript"
       },
       {
         "label": "Functions",
-        "value": "4"
+        "value": "0"
       }
     ],
-    "functions": [
-      {
-        "name": "Company",
-        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• status: CompanyStatus\\n• jobs: Job[]\\n• createdAt: DateTime"
-      },
-      {
-        "name": "Department",
-        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
-      },
-      {
-        "name": "Location",
-        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
-      },
-      {
-        "name": "Job",
-        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• createdAt: DateTime\\n• updatedAt: DateTime"
-      }
-    ]
+    "functions": []
   }
 };
         function toggleFolder(el) { el.parentElement.classList.toggle('expanded'); }

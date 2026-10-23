@@ -5,7 +5,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { TARGET_COMPANIES } from './src/config/companies';
+import { TARGET_COMPANIES } from '../config/Companies';
 
 const prisma = new PrismaClient();
 
