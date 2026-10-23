@@ -8,14 +8,15 @@ every known job board, and stores the results in **PostgreSQL** (via Prisma) or 
 **Who it's for:** developers, job seekers and data folks who want one up-to-date, queryable dataset of Ashby-hosted
 openings (titles, departments, locations, salary ranges, apply links) instead of browsing thousands of boards by hand.
 
-**What it is not:** there is no web server, no REST API of its own, no UI and no built-in scheduler. Every feature is an
-`npm run <script>` executed through `ts-node` (no build step). Schedule runs externally (cron, GitHub Actions, etc.).
+**What it is:** A comprehensive toolkit combining high-performance CLI scrapers, an **Express REST API**, and a modern **React + Redux Toolkit web application** to query, filter, and view over 34,000 active Ashby job listings directly from PostgreSQL.
 
 > Full project context for humans and AI agents lives in [`documentation/`](./documentation/README.md).
 > Agent rules live in [`AGENTS.md`](./AGENTS.md).
 
 ## Features
 
+- 🖥️ **React Web Application (`job-scrapper-ui/`)**: React 19 + TypeScript + Vite 6 + Redux Toolkit + RTK Query + Material UI (MUI v6) supporting responsive desktop ledger and mobile drawer layouts, debounced search (400ms), in-flight promise deduplication, and zero-cost 10-minute Redux caching (`keepUnusedDataFor: 600`).
+- ⚡ **REST API Server (`src/api/Server.ts`)**: Express 5 on port 3001 querying Prisma PostgreSQL directly. Features `/v1/jobs` (paginated, faceted, filterable), `/v1/jobs/:id` (detail), `/v1/companies` (directory), `/health`, static SPA serving (`job-scrapper-ui/dist`), HTTP security headers, and an in-memory sliding-window rate limiter (10 requests per 60 seconds per IP with `Retry-After`).
 - 🔍 **Company discovery**: finds Ashby slugs from the Wayback Machine CDX API (and the CommonCrawl index with `--common-crawl`), validates them against a regex + blocklist, and can enrich company name/logo from the hosted page (`--enrich`).
 - 🌐 **Resilient Ashby client** (`src/lib/AshbyClient.ts`): browser-like headers, exponential backoff + jitter on `429`/`5xx`/timeouts, and automatic fallback to Ashby's hosted GraphQL API when a company's public `posting-api` is disabled (`404`/`403`/`400`).
 - 🧼 **Sanitization & validation** (`src/lib/Sanitizer.ts`): strips PostgreSQL-fatal `\u0000` bytes and lone surrogates from `jsonb` metadata, removes `<script>`/`<style>`/`<iframe>`, inline JS handlers and huge base64 blobs from descriptions, normalizes job/apply URLs to canonical Ashby URLs, and drops malformed or duplicate job records.
