@@ -11,5 +11,8 @@ export const TARGET_COMPANIES = [
   "deel",
   "remote",
   "reddit",
-  "multiverse"
+  "multiverse",
+  "1password",
+  "abridge",
+  "go-augment"
 ];

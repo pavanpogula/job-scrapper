@@ -1,3 +1,9 @@
+/**
+ * @file JOBS.md Markdown Table Generator
+ * @summary Parses the latest CSV job export with RFC-4180 quote handling and renders a pipe-escaped JOBS.md table
+ * @tags Documentation, Markdown, CSV Parser, Sanitization
+ */
+
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -11,21 +17,41 @@ export interface JobRow {
 }
 
 /**
- * @summary Parses CSV content into structured JobRow objects
+ * @summary Escapes Markdown table cell delimiters (pipes and newlines) so rows never break table layout
+ */
+export function sanitizeMarkdownCell(text: string): string {
+    return (text || '')
+        .replace(/\r?\n/g, ' ')
+        .replace(/\|/g, '\\|')
+        .trim();
+}
+
+/**
+ * @summary Parses CSV content into structured JobRow objects (handles commas and escaped "" quotes)
  */
 export function parseCSV(content: string): JobRow[] {
-    const lines = content.split('\n').filter(line => line.trim());
-    const headers = lines[0].split(',');
+    const lines = content
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .split('\n')
+        .filter(line => line.trim());
+
+    if (lines.length <= 1) return [];
 
     return lines.slice(1).map(line => {
-        // Handle CSV parsing with potential commas in fields
         const values: string[] = [];
         let current = '';
         let inQuotes = false;
 
-        for (const char of line) {
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
             if (char === '"') {
-                inQuotes = !inQuotes;
+                if (inQuotes && line[i + 1] === '"') {
+                    current += '"';
+                    i++; // Skip escaped quote
+                } else {
+                    inQuotes = !inQuotes;
+                }
             } else if (char === ',' && !inQuotes) {
                 values.push(current.trim());
                 current = '';
@@ -47,7 +73,7 @@ export function parseCSV(content: string): JobRow[] {
 }
 
 /**
- * @summary Formats JobRow array into Markdown table with truncation
+ * @summary Formats JobRow array into Markdown table with pipe sanitization and truncation
  */
 export function generateMarkdownTable(jobs: JobRow[]): string {
     const timestamp = new Date().toISOString().split('T')[0];
@@ -62,11 +88,17 @@ export function generateMarkdownTable(jobs: JobRow[]): string {
 
     jobs.forEach((job, index) => {
         const id = index + 1;
-        const title = job.title.length > 40 ? job.title.substring(0, 37) + '...' : job.title;
-        const company = job.company.length > 20 ? job.company.substring(0, 17) + '...' : job.company;
-        const location = job.location.length > 20 ? job.location.substring(0, 17) + '...' : job.location;
-        const department = job.department.length > 15 ? job.department.substring(0, 12) + '...' : job.department;
-        const applyLink = `[Apply →](${job.link})`;
+        const rawTitle = job.title.length > 40 ? job.title.substring(0, 37) + '...' : job.title;
+        const rawCompany = job.company.length > 20 ? job.company.substring(0, 17) + '...' : job.company;
+        const rawLocation = job.location.length > 20 ? job.location.substring(0, 17) + '...' : job.location;
+        const rawDepartment = job.department.length > 15 ? job.department.substring(0, 12) + '...' : job.department;
+
+        const title = sanitizeMarkdownCell(rawTitle);
+        const company = sanitizeMarkdownCell(rawCompany);
+        const location = sanitizeMarkdownCell(rawLocation);
+        const department = sanitizeMarkdownCell(rawDepartment);
+        const safeLink = (job.link || '').replace(/[)\s]/g, encodeURIComponent);
+        const applyLink = `[Apply →](${safeLink})`;
 
         markdown += `| ${id} | ${company} | ${title} | ${location} | ${department} | ${job.publishedDate} | ${applyLink} |\n`;
     });

@@ -4,11 +4,13 @@
  * @tags CSV, Export, Concurrent, Streaming, High-Performance
  */
 
-import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createLimiter } from '../lib/Concurrency';
 import { uploadWithOAuth } from '../lib/GoogleDriveOAuth';
+import { fetchAshbyBoardWithFallback } from '../lib/AshbyClient';
+import { sanitizeJobUrl, sanitizePublishedDate, sanitizeText } from '../lib/Sanitizer';
+import { ErrorTracker } from '../lib/ErrorTracker';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -26,36 +28,33 @@ export interface JobRecord {
 }
 
 /**
- * @summary Fetches all job postings for a company from Ashby's public API
+ * @summary Fetches and sanitizes all job postings for a company from Ashby's public API with GraphQL fallback
  */
 export async function fetchJobsForCompany(companySlug: string): Promise<JobRecord[]> {
-    const url = `https://api.ashbyhq.com/posting-api/job-board/${companySlug}`;
+    const result = await fetchAshbyBoardWithFallback(companySlug, {
+        includeCompensation: false
+    });
 
-    try {
-        const response = await axios.get<{ jobs: any[] }>(url, { timeout: 10000 });
-        const jobs = response.data?.jobs || [];
-
-        return jobs.map(job => ({
-            company: companySlug,
-            title: job.title,
-            link: `https://jobs.ashbyhq.com/${companySlug}/${job.id}`,
-            publishedDate: job.publishedAt ? job.publishedAt.split('T')[0] : '',
-            location: job.location || '',
-            department: job.department || ''
-        }));
-    } catch {
-        return [];
-    }
+    return result.jobs.map(job => ({
+        company: sanitizeText(companySlug),
+        title: sanitizeText(job.title),
+        link: sanitizeJobUrl(job.jobUrl, companySlug, job.id, false),
+        publishedDate: sanitizePublishedDate(job.publishedAt) || '',
+        location: sanitizeText(job.location),
+        department: sanitizeText(job.department)
+    }));
 }
 
 /**
- * @summary Escapes a CSV field value (handles commas, quotes, newlines)
+ * @summary Escapes a CSV field value (handles commas, quotes, newlines, carriage returns, and null bytes)
  */
 export function escapeCSV(value: string): string {
-    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-        return `"${value.replace(/"/g, '""')}"`;
+    // eslint-disable-next-line no-control-regex
+    const clean = (value ?? '').replace(/\x00/g, '');
+    if (clean.includes(',') || clean.includes('"') || clean.includes('\n') || clean.includes('\r')) {
+        return `"${clean.replace(/"/g, '""')}"`;
     }
-    return value;
+    return clean;
 }
 
 /**
@@ -119,8 +118,10 @@ export async function scrapeToCSV() {
     const headers = 'Company,Job Title,Job Link,Published Date,Location,Department';
     writeStream.write(headers + '\n');
 
-    // Create concurrency limiter
+    // Create concurrency limiter and telemetry tracker
     const limit = createLimiter(CONCURRENCY_LIMIT);
+    const tracker = new ErrorTracker('csv_scrape');
+    tracker.companiesAttempted = companies.length;
 
     let completed = 0;
     let totalJobs = 0;
@@ -132,6 +133,8 @@ export async function scrapeToCSV() {
             completed++;
 
             if (jobs.length > 0) {
+                tracker.companiesWithJobs++;
+                tracker.jobsCollected += jobs.length;
                 totalJobs += jobs.length;
                 // Stream write each job immediately
                 for (const job of jobs) {
@@ -148,6 +151,7 @@ export async function scrapeToCSV() {
     );
 
     await Promise.all(fetchPromises);
+    tracker.saveReport(outputDir);
 
     // Close the write stream
     await new Promise<void>((resolve, reject) => {

@@ -1,28 +1,55 @@
 /**
  * @file Concurrency Utilities
- * @summary Provides a CommonJS-compatible concurrency limiter for parallel processing
- * @tags Utility, Concurrency, Async
+ * @summary Provides a CommonJS-compatible adaptive concurrency limiter with dynamic rate-limit throttling and cooldown pauses
+ * @tags Utility, Concurrency, Async, Adaptive, Rate Limiting
  */
 
+export interface AdaptiveLimiterOptions {
+    minConcurrency?: number;
+    recoveryThreshold?: number;
+    defaultCooldownMs?: number;
+}
+
+export interface AdaptiveLimiter {
+    <T>(fn: () => Promise<T>): Promise<T>;
+    onRateLimit: (cooldownMs?: number) => void;
+    onSuccess: () => void;
+    getConcurrency: () => number;
+    getActiveCount: () => number;
+}
+
 /**
- * @summary Creates a concurrency limiter for controlled parallel execution
+ * @summary Creates an adaptive concurrency limiter for controlled parallel execution with dynamic throttling on 429/403
  * @example
- * const limit = createLimiter(5);
+ * const limit = createLimiter(15);
  * await Promise.all(items.map(item => limit(() => processItem(item))));
  */
-export function createLimiter(concurrency: number) {
+export function createLimiter(
+    concurrency: number,
+    options: AdaptiveLimiterOptions = {}
+): AdaptiveLimiter {
+    const maxConcurrency = Math.max(1, concurrency);
+    const minConcurrency = Math.max(1, Math.min(options.minConcurrency ?? 2, maxConcurrency));
+    const recoveryThreshold = options.recoveryThreshold ?? 25;
+    const defaultCooldownMs = options.defaultCooldownMs ?? 2000;
+
+    let currentConcurrency = maxConcurrency;
     let activeCount = 0;
+    let consecutiveSuccesses = 0;
+    let isPaused = false;
+    let pauseTimer: ReturnType<typeof setTimeout> | null = null;
     const queue: Array<() => void> = [];
 
     const next = () => {
-        if (queue.length > 0 && activeCount < concurrency) {
+        if (isPaused) return;
+        while (queue.length > 0 && activeCount < currentConcurrency) {
             activeCount++;
             const run = queue.shift()!;
             run();
         }
     };
 
-    return async <T>(fn: () => Promise<T>): Promise<T> => {
+    const limiter = (async <T>(fn: () => Promise<T>): Promise<T> => {
         return new Promise<T>((resolve, reject) => {
             const run = async () => {
                 try {
@@ -39,7 +66,41 @@ export function createLimiter(concurrency: number) {
             queue.push(run);
             next();
         });
+    }) as AdaptiveLimiter;
+
+    limiter.onRateLimit = (cooldownMs: number = defaultCooldownMs) => {
+        consecutiveSuccesses = 0;
+        currentConcurrency = Math.max(minConcurrency, Math.floor(currentConcurrency / 2));
+
+        if (cooldownMs > 0) {
+            isPaused = true;
+            if (pauseTimer) clearTimeout(pauseTimer);
+            pauseTimer = setTimeout(() => {
+                isPaused = false;
+                pauseTimer = null;
+                next();
+            }, cooldownMs);
+            if (typeof pauseTimer.unref === 'function') {
+                pauseTimer.unref();
+            }
+        }
     };
+
+    limiter.onSuccess = () => {
+        if (currentConcurrency < maxConcurrency) {
+            consecutiveSuccesses++;
+            if (consecutiveSuccesses >= recoveryThreshold) {
+                currentConcurrency = Math.min(maxConcurrency, currentConcurrency + 1);
+                consecutiveSuccesses = 0;
+                next();
+            }
+        }
+    };
+
+    limiter.getConcurrency = () => currentConcurrency;
+    limiter.getActiveCount = () => activeCount;
+
+    return limiter;
 }
 
 /**

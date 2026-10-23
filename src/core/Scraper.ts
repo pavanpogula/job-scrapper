@@ -1,42 +1,30 @@
 /**
  * @file Core Ashby job scraper (High-Performance)
- * @summary Fetches jobs from Ashby API using concurrent requests, batch DB writes, and Redis caching
+ * @summary Fetches jobs from Ashby API using adaptive concurrency, streaming batch DB writes, stale job deactivation, and Redis caching
  * @tags Core, Ashby API, Redis, Batch, Concurrent, High-Performance
  */
 
-import axios from 'axios';
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import { createLimiter } from '../lib/Concurrency';
 import { redis } from '../lib/Redis';
+import {
+    AshbyJob,
+    extractSalary,
+    fetchAshbyBoardWithFallback
+} from '../lib/AshbyClient';
+import {
+    sanitizeJobUrl,
+    sanitizeJsonMetadata,
+    sanitizeText
+} from '../lib/Sanitizer';
+import { ErrorTracker, ErrorReportDocument } from '../lib/ErrorTracker';
 
 const prisma = new PrismaClient();
 
 // Configuration
 const CONCURRENCY_LIMIT = 15;  // Parallel API requests
 const BATCH_SIZE = 100;        // Jobs per DB transaction
-
-// Types for Ashby API Response
-interface AshbyJob {
-    id: string;
-    title: string;
-    department: string;
-    location: string;
-    employmentType: string;
-    applyUrl: string;
-    isRemote: boolean;
-    compensationTier?: {
-        min: number;
-        max: number;
-        currency: string;
-        interval: string;
-    };
-    jobUrl: string;
-}
-
-interface AshbyResponse {
-    jobs: AshbyJob[];
-}
 
 interface ProcessedJob {
     ashbyId: string;
@@ -53,11 +41,14 @@ interface ProcessedJob {
 }
 
 /**
- * @summary High-performance scraper class with concurrent requests and batch DB writes
+ * @summary High-performance scraper class with adaptive concurrency, 3-strike quarantine, stale job deactivation, and streaming batch DB writes
  */
 export class AshbyScraper {
     private departmentCache = new Map<string, string>();
+    private departmentInFlight = new Map<string, Promise<string>>();
     private locationCache = new Map<string, string>();
+    private locationInFlight = new Map<string, Promise<string>>();
+    private notFoundStrikes = new Map<string, number>();
     private isRedisConnected = false;
 
     /**
@@ -77,73 +68,173 @@ export class AshbyScraper {
     }
 
     /**
-     * @summary Calls Ashby API to fetch all jobs for a company
+     * @summary Tracks consecutive 404 strikes for a company and marks status NOT_FOUND once threshold is reached
      */
-    private async fetchJobs(companySlug: string): Promise<{ slug: string; jobs: AshbyJob[] }> {
-        try {
-            const url = `https://api.ashbyhq.com/posting-api/job-board/${companySlug}?includeCompensation=true`;
-            const { data } = await axios.get<AshbyResponse>(url, { timeout: 10000 });
-            return { slug: companySlug, jobs: data.jobs || [] };
-        } catch (e: any) {
-            if (axios.isAxiosError(e) && e.response?.status === 404) {
-                // Mark as NOT_FOUND (will be batched later)
-                await prisma.company.update({
-                    where: { slug: companySlug },
-                    data: { status: 'NOT_FOUND' }
-                }).catch(() => { }); // Ignore if company doesn't exist
-            }
-            return { slug: companySlug, jobs: [] };
+    public async recordNotFoundStrike(
+        companySlug: string,
+        maxStrikes = 3
+    ): Promise<boolean> {
+        const current = (this.notFoundStrikes.get(companySlug) ?? 0) + 1;
+        this.notFoundStrikes.set(companySlug, current);
+
+        if (current >= maxStrikes) {
+            await prisma.company.update({
+                where: { slug: companySlug },
+                data: { status: 'NOT_FOUND' }
+            }).catch(() => { }); // Ignore if company doesn't exist
+            return true;
         }
+        return false;
+    }
+
+    /**
+     * @summary Deactivates jobs in the database that are no longer listed on the company's live Ashby board
+     */
+    public async deactivateStaleJobs(
+        companySlug: string,
+        activeAshbyIds: string[]
+    ): Promise<number> {
+        const updateManyFn = (prisma.job as any)?.updateMany;
+        if (typeof updateManyFn !== 'function') return 0;
+
+        try {
+            const res = await updateManyFn({
+                where: {
+                    companySlug,
+                    active: true,
+                    ashbyId: { notIn: activeAshbyIds }
+                },
+                data: { active: false }
+            });
+            return res?.count ?? 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    /**
+     * @summary Calls Ashby API (with browser headers, retry, and GraphQL fallback) to fetch all jobs for a company
+     */
+    private async fetchJobs(
+        companySlug: string,
+        maxNotFoundStrikes = 1
+    ): Promise<{
+        slug: string;
+        jobs: AshbyJob[];
+        source?: 'rest' | 'graphql' | 'none';
+        rateLimited?: boolean;
+    }> {
+        const result = await fetchAshbyBoardWithFallback(companySlug, {
+            includeCompensation: true
+        });
+
+        if (result.notFound) {
+            await this.recordNotFoundStrike(companySlug, maxNotFoundStrikes);
+        } else if (result.source === 'rest' || result.source === 'graphql') {
+            this.notFoundStrikes.delete(companySlug);
+        }
+
+        return {
+            slug: companySlug,
+            jobs: result.jobs
+        };
     }
 
     /**
      * @summary Creates MD5 hash of job content for change detection
      */
     private generateHash(job: AshbyJob): string {
-        const content = `${job.title}|${job.location}|${job.department}|${job.compensationTier?.min}|${job.compensationTier?.max}`;
+        const salary = extractSalary(job);
+        const content = `${job.title}|${job.location}|${job.department}|${salary.min}|${salary.max}`;
         return crypto.createHash('md5').update(content).digest('hex');
     }
 
     /**
-     * @summary Gets or creates department with in-memory caching
+     * @summary Gets or creates department with in-memory caching and concurrent in-flight deduplication
      */
     private async getOrCreateDepartment(name: string): Promise<string | null> {
         if (!name) return null;
 
-        // Check cache first
+        // Check resolved cache first
         if (this.departmentCache.has(name)) {
             return this.departmentCache.get(name)!;
         }
 
-        const dept = await prisma.department.upsert({
-            where: { name },
-            update: {},
-            create: { name }
-        });
+        // Check in-flight promise to avoid concurrent P2002 upsert race
+        if (this.departmentInFlight.has(name)) {
+            return await this.departmentInFlight.get(name)!;
+        }
 
-        this.departmentCache.set(name, dept.id);
-        return dept.id;
+        const promise = (async () => {
+            try {
+                const dept = await prisma.department.upsert({
+                    where: { name },
+                    update: {},
+                    create: { name }
+                });
+                this.departmentCache.set(name, dept.id);
+                return dept.id;
+            } catch (err) {
+                const findUniqueFn = (prisma.department as any)?.findUnique;
+                if (typeof findUniqueFn === 'function') {
+                    const existing = await findUniqueFn({ where: { name } });
+                    if (existing?.id) {
+                        this.departmentCache.set(name, existing.id);
+                        return existing.id;
+                    }
+                }
+                throw err;
+            } finally {
+                this.departmentInFlight.delete(name);
+            }
+        })();
+
+        this.departmentInFlight.set(name, promise);
+        return await promise;
     }
 
     /**
-     * @summary Gets or creates location with in-memory caching
+     * @summary Gets or creates location with in-memory caching, concurrent in-flight deduplication, and cross-process P2002 race recovery
      */
     private async getOrCreateLocation(name: string): Promise<string | null> {
         if (!name) return null;
 
-        // Check cache first
+        // Check resolved cache first
         if (this.locationCache.has(name)) {
             return this.locationCache.get(name)!;
         }
 
-        const loc = await prisma.location.upsert({
-            where: { name },
-            update: {},
-            create: { name }
-        });
+        // Check in-flight promise to avoid concurrent P2002 upsert race
+        if (this.locationInFlight.has(name)) {
+            return await this.locationInFlight.get(name)!;
+        }
 
-        this.locationCache.set(name, loc.id);
-        return loc.id;
+        const promise = (async () => {
+            try {
+                const loc = await prisma.location.upsert({
+                    where: { name },
+                    update: {},
+                    create: { name }
+                });
+                this.locationCache.set(name, loc.id);
+                return loc.id;
+            } catch (err) {
+                const findUniqueFn = (prisma.location as any)?.findUnique;
+                if (typeof findUniqueFn === 'function') {
+                    const existing = await findUniqueFn({ where: { name } });
+                    if (existing?.id) {
+                        this.locationCache.set(name, existing.id);
+                        return existing.id;
+                    }
+                }
+                throw err;
+            } finally {
+                this.locationInFlight.delete(name);
+            }
+        })();
+
+        this.locationInFlight.set(name, promise);
+        return await promise;
     }
 
     /**
@@ -168,52 +259,83 @@ export class AshbyScraper {
     }
 
     /**
-     * @summary Processes jobs in batches using database transactions
+     * @summary Processes jobs in batches using database transactions with per-job fallback on error
      */
-    private async batchUpsertJobs(processedJobs: ProcessedJob[]) {
+    private async batchUpsertJobs(processedJobs: ProcessedJob[], tracker?: ErrorTracker) {
         if (processedJobs.length === 0) return;
+
+        const buildUpsertArgs = (job: ProcessedJob) => ({
+            where: { ashbyId: job.ashbyId },
+            create: {
+                ashbyId: job.ashbyId,
+                title: job.title,
+                companySlug: job.companySlug,
+                departmentId: job.departmentId,
+                locationId: job.locationId,
+                applyUrl: job.applyUrl,
+                salaryMin: job.salaryMin,
+                salaryMax: job.salaryMax,
+                salaryCurrency: job.salaryCurrency,
+                metadata: job.metadata,
+                contentHash: job.contentHash,
+                active: true
+            },
+            update: {
+                title: job.title,
+                departmentId: job.departmentId,
+                locationId: job.locationId,
+                applyUrl: job.applyUrl,
+                salaryMin: job.salaryMin,
+                salaryMax: job.salaryMax,
+                salaryCurrency: job.salaryCurrency,
+                metadata: job.metadata,
+                contentHash: job.contentHash,
+                updatedAt: new Date(),
+                active: true
+            }
+        });
 
         // Process in batches
         for (let i = 0; i < processedJobs.length; i += BATCH_SIZE) {
             const batch = processedJobs.slice(i, i + BATCH_SIZE);
+            let succeededJobs: ProcessedJob[] = batch;
 
-            // Use transaction for batch upsert
-            await prisma.$transaction(
-                batch.map(job =>
-                    prisma.job.upsert({
-                        where: { ashbyId: job.ashbyId },
-                        create: {
-                            ashbyId: job.ashbyId,
-                            title: job.title,
-                            companySlug: job.companySlug,
-                            departmentId: job.departmentId,
-                            locationId: job.locationId,
-                            applyUrl: job.applyUrl,
-                            salaryMin: job.salaryMin,
-                            salaryMax: job.salaryMax,
-                            salaryCurrency: job.salaryCurrency,
-                            metadata: job.metadata,
-                            contentHash: job.contentHash,
-                            active: true
-                        },
-                        update: {
-                            title: job.title,
-                            departmentId: job.departmentId,
-                            locationId: job.locationId,
-                            salaryMin: job.salaryMin,
-                            salaryMax: job.salaryMax,
-                            contentHash: job.contentHash,
-                            updatedAt: new Date(),
-                            active: true
+            try {
+                // Use transaction for batch upsert
+                await prisma.$transaction(
+                    batch.map(job => prisma.job.upsert(buildUpsertArgs(job)))
+                );
+            } catch (batchErr: any) {
+                console.warn(
+                    `  ⚠️ [BatchError] Transaction failed for batch starting at index ${i} (${batchErr?.message || 'Unknown error'}). Falling back to per-job upsert...`
+                );
+                succeededJobs = [];
+                for (const job of batch) {
+                    try {
+                        await prisma.job.upsert(buildUpsertArgs(job));
+                        succeededJobs.push(job);
+                    } catch (jobErr: any) {
+                        if (tracker) {
+                            tracker.dbErrors++;
+                            tracker.recordEvent({
+                                category: 'db_error',
+                                companySlug: job.companySlug,
+                                jobId: job.ashbyId,
+                                message: jobErr?.message || String(jobErr),
+                                actionTaken: 'skipped_corrupt_job_in_fallback'
+                            });
                         }
-                    })
-                )
-            );
+                        console.error(
+                            `  ❌ [JobStoreError] Failed to store job ${job.ashbyId} (${job.companySlug}): ${jobErr?.message || jobErr}`
+                        );
+                    }
+                }
+            }
 
-            // Update Redis cache
-            if (this.isRedisConnected) {
+            // Update Redis cache for succeeded jobs
+            if (this.isRedisConnected && succeededJobs.length > 0) {
                 const pipeline = redis.pipeline();
-                batch.forEach(job => {
+                succeededJobs.forEach(job => {
                     pipeline.set(`job:${job.ashbyId}:hash`, job.contentHash, 'EX', 60 * 60 * 24 * 7);
                 });
                 await pipeline.exec();
@@ -222,7 +344,7 @@ export class AshbyScraper {
     }
 
     /**
-     * @summary Processes a single company's jobs and returns prepared job records
+     * @summary Processes a single company's jobs, sanitizing fields and metadata before returning prepared job records
      */
     private async processCompanyJobs(
         companySlug: string,
@@ -234,20 +356,31 @@ export class AshbyScraper {
         const processedJobs: ProcessedJob[] = [];
 
         for (const { job, hash } of changedJobs) {
-            const departmentId = await this.getOrCreateDepartment(job.department);
-            const locationId = await this.getOrCreateLocation(job.location);
+            const cleanTitle = sanitizeText(job.title);
+            if (!cleanTitle || !job.id) {
+                console.warn(`  ⚠️ [ValidationFilter] Skipping malformed job in ${companySlug} (id=${job.id})`);
+                continue;
+            }
+
+            const cleanDept = sanitizeText(job.department);
+            const cleanLoc = sanitizeText(job.location);
+            const departmentId = await this.getOrCreateDepartment(cleanDept);
+            const locationId = await this.getOrCreateLocation(cleanLoc);
+            const salary = extractSalary(job);
+            const cleanApplyUrl = sanitizeJobUrl(job.applyUrl, companySlug, job.id, true);
+            const cleanMetadata = sanitizeJsonMetadata(job);
 
             processedJobs.push({
                 ashbyId: job.id,
-                title: job.title,
+                title: cleanTitle,
                 companySlug,
                 departmentId,
                 locationId,
-                applyUrl: job.applyUrl,
-                salaryMin: job.compensationTier?.min,
-                salaryMax: job.compensationTier?.max,
-                salaryCurrency: job.compensationTier?.currency,
-                metadata: job,
+                applyUrl: cleanApplyUrl,
+                salaryMin: salary.min,
+                salaryMax: salary.max,
+                salaryCurrency: salary.currency,
+                metadata: cleanMetadata,
                 contentHash: hash
             });
         }
@@ -256,68 +389,173 @@ export class AshbyScraper {
     }
 
     /**
-     * @summary Entry point. Fetches companies concurrently and batch-writes to DB.
+     * @summary Entry point. Fetches companies concurrently with adaptive rate-limiting and streams batch writes to DB.
      */
-    public async runAll() {
+    public async runAll(options: {
+        slugs?: string[];
+        workerId?: number;
+        concurrency?: number;
+        saveTelemetry?: boolean;
+    } = {}): Promise<ErrorReportDocument> {
         const startTime = Date.now();
+        const workerPrefix = options.workerId !== undefined ? `[Worker #${options.workerId} | PID ${process.pid}] ` : '';
+        const concurrencyLimit = options.concurrency ?? CONCURRENCY_LIMIT;
+        const shouldSaveTelemetry = options.saveTelemetry ?? (options.workerId === undefined);
 
         await this.initRedis();
 
-        const companies = await prisma.company.findMany({
-            where: { status: 'ACTIVE' },
-            select: { slug: true }
-        });
+        const companies = options.slugs
+            ? options.slugs.map(slug => ({ slug }))
+            : await prisma.company.findMany({
+                where: { status: 'ACTIVE' },
+                select: { slug: true }
+            });
 
-        console.log(`🚀 Starting HIGH-PERFORMANCE scrape for ${companies.length} companies`);
-        console.log(`   Concurrency: ${CONCURRENCY_LIMIT} | Batch Size: ${BATCH_SIZE}`);
-        console.log(`   Redis: ${this.isRedisConnected ? '✅ Connected' : '⚠️ Disabled'}\n`);
+        console.log(`🚀 ${workerPrefix}Starting HIGH-PERFORMANCE scrape for ${companies.length} companies`);
+        console.log(`   ${workerPrefix}Concurrency: ${concurrencyLimit} | Batch Size: ${BATCH_SIZE}`);
+        console.log(`   ${workerPrefix}Redis: ${this.isRedisConnected ? '✅ Connected' : '⚠️ Disabled'}\n`);
 
-        // Create concurrency limiter
-        const limit = createLimiter(CONCURRENCY_LIMIT);
+        // Create adaptive concurrency limiter and telemetry tracker
+        const limit = createLimiter(concurrencyLimit);
+        const tracker = new ErrorTracker('db_scrape');
+        tracker.companiesAttempted = companies.length;
 
-        // Fetch all companies concurrently
         let completed = 0;
-        const allJobs: ProcessedJob[] = [];
+        let totalProcessed = 0;
+        const pendingJobs: ProcessedJob[] = [];
+        let flushChain = Promise.resolve();
+
+        const enqueueFlushIfNeeded = (force = false) => {
+            while (pendingJobs.length >= BATCH_SIZE || (force && pendingJobs.length > 0)) {
+                const chunkToWrite = pendingJobs.splice(0, BATCH_SIZE);
+                flushChain = flushChain.then(async () => {
+                    await this.batchUpsertJobs(chunkToWrite, tracker);
+                });
+            }
+        };
 
         const fetchPromises = companies.map(company =>
             limit(async () => {
-                const result = await this.fetchJobs(company.slug);
+                const boardResult = await fetchAshbyBoardWithFallback(company.slug, {
+                    includeCompensation: true
+                });
                 completed++;
 
-                if (result.jobs.length > 0) {
-                    const processed = await this.processCompanyJobs(result.slug, result.jobs);
-                    allJobs.push(...processed);
-                    console.log(`  ✅ ${result.slug}: ${result.jobs.length} jobs (${processed.length} changed)`);
+                if (boardResult.rateLimited) {
+                    tracker.rateLimitsEncountered++;
+                    limit.onRateLimit();
+                } else {
+                    limit.onSuccess();
+                }
+
+                if (boardResult.source === 'graphql') {
+                    tracker.graphqlFallbacksUsed++;
+                    tracker.recordEvent({
+                        category: 'graphql_fallback',
+                        companySlug: company.slug,
+                        message: 'Posting API returned 404/403; recovered board via Ashby hosted GraphQL API',
+                        actionTaken: `recovered_${boardResult.jobs.length}_jobs`
+                    });
+                }
+
+                if (boardResult.notFound) {
+                    tracker.companiesNotFound++;
+                    await this.recordNotFoundStrike(company.slug, 3);
+                } else if (boardResult.source === 'rest' || boardResult.source === 'graphql') {
+                    this.notFoundStrikes.delete(company.slug);
+                    const activeIds = boardResult.jobs.map(j => j.id);
+                    await this.deactivateStaleJobs(company.slug, activeIds);
+                }
+
+                if (boardResult.validationIssues && boardResult.validationIssues.length > 0) {
+                    tracker.recordValidationIssues(boardResult.validationIssues);
+                    const filteredCount = boardResult.validationIssues.filter(i => i.action === 'filtered').length;
+                    if (filteredCount > 0) {
+                        console.warn(
+                            `  ⚠️ ${workerPrefix}[Sanitizer] ${boardResult.slug}: filtered ${filteredCount} malformed job record(s)`
+                        );
+                    }
+                }
+
+                if (boardResult.jobs.length > 0) {
+                    tracker.companiesWithJobs++;
+                    tracker.jobsCollected += boardResult.jobs.length;
+                    const processed = await this.processCompanyJobs(boardResult.slug, boardResult.jobs);
+                    totalProcessed += processed.length;
+                    pendingJobs.push(...processed);
+                    enqueueFlushIfNeeded(false);
+                    console.log(`  ✅ ${workerPrefix}${boardResult.slug}: ${boardResult.jobs.length} jobs (${processed.length} changed)`);
                 }
 
                 // Progress indicator every 100 companies
                 if (completed % 100 === 0) {
-                    console.log(`📊 Progress: ${completed}/${companies.length} companies`);
+                    console.log(
+                        `📊 ${workerPrefix}Progress: ${completed}/${companies.length} companies (concurrency: ${limit.getConcurrency()})`
+                    );
                 }
             })
         );
 
         await Promise.all(fetchPromises);
 
-        console.log(`\n📦 Batch writing ${allJobs.length} jobs to database...`);
-        await this.batchUpsertJobs(allJobs);
+        console.log(`\n📦 ${workerPrefix}Flushing remaining jobs to database...`);
+        enqueueFlushIfNeeded(true);
+        await flushChain;
 
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`\n✅ Scrape complete in ${elapsed}s`);
-        console.log(`   Companies: ${companies.length} | Jobs processed: ${allJobs.length}`);
+        const report = tracker.buildReport();
+        if (shouldSaveTelemetry) {
+            const reportPath = tracker.saveReport();
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`\n✅ ${workerPrefix}Scrape complete in ${elapsed}s`);
+            console.log(`   ${workerPrefix}Companies: ${companies.length} | Jobs processed: ${totalProcessed}`);
+            if (reportPath) {
+                console.log(`   📋 Telemetry & Error Report: ${reportPath}`);
+            }
+        } else {
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`✅ ${workerPrefix}Shard complete in ${elapsed}s (${totalProcessed} jobs processed)`);
+        }
+
+        return report;
     }
 }
 
 if (require.main === module) {
-    const scraper = new AshbyScraper();
-    scraper.runAll()
-        .then(async () => {
-            await prisma.$disconnect();
-            if (redis.status === 'ready') await redis.quit();
-        })
-        .catch(async (e) => {
-            console.error(e);
-            await prisma.$disconnect();
-            process.exit(1);
+    if (process.argv.includes('--ipc-worker')) {
+        process.once('message', async (msg: { workerId: number; slugs: string[]; concurrency?: number }) => {
+            const scraper = new AshbyScraper();
+            try {
+                const report = await scraper.runAll({
+                    slugs: msg.slugs,
+                    workerId: msg.workerId,
+                    concurrency: msg.concurrency,
+                    saveTelemetry: false
+                });
+                if (process.send) {
+                    process.send({ type: 'worker_done', workerId: msg.workerId, report });
+                }
+                await prisma.$disconnect();
+                if (redis.status === 'ready') await redis.quit();
+                process.exit(0);
+            } catch (err: any) {
+                if (process.send) {
+                    process.send({ type: 'worker_error', workerId: msg.workerId, error: err?.message || String(err) });
+                }
+                await prisma.$disconnect();
+                process.exit(1);
+            }
         });
+    } else {
+        const scraper = new AshbyScraper();
+        scraper.runAll()
+            .then(async () => {
+                await prisma.$disconnect();
+                if (redis.status === 'ready') await redis.quit();
+            })
+            .catch(async (e) => {
+                console.error(e);
+                await prisma.$disconnect();
+                process.exit(1);
+            });
+    }
 }
