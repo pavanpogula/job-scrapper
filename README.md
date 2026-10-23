@@ -13,13 +13,11 @@ openings (titles, departments, locations, salary ranges, apply links) instead of
 > Full project context for humans and AI agents lives in [`documentation/`](./documentation/README.md).
 > Agent rules live in [`AGENTS.md`](./AGENTS.md).
 
-## Cloud Deployment
+## Live Application
 
-Deploy the frontend React application directly on **Vercel**:
-1. Import `pavanpogula/job-scrapper` on Vercel.
-2. Select Root Directory: `job-scrapper-ui`.
-3. Framework Preset: `Vite`.
-4. Click **Deploy**.
+👉 **[https://job-scrapper-ui.vercel.app/](https://job-scrapper-ui.vercel.app/)**
+
+The application is deployed full-stack on **Vercel** with a serverless Express REST API connected to Neon PostgreSQL (34,000+ active jobs) and a high-performance React 19 SPA frontend.
 
 ---
 
