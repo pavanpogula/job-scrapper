@@ -14,7 +14,9 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 const mockCompanyFindMany = jest.fn();
 const mockCompanyUpdate = jest.fn();
 const mockDeptUpsert = jest.fn();
+const mockDeptFindUnique = jest.fn();
 const mockLocUpsert = jest.fn();
+const mockLocFindUnique = jest.fn();
 const mockJobUpsert = jest.fn();
 const mockTransaction = jest.fn();
 const mockDisconnect = jest.fn();
@@ -27,10 +29,12 @@ jest.mock('@prisma/client', () => {
         update: (...args: any[]) => mockCompanyUpdate(...args)
       },
       department: {
-        upsert: (...args: any[]) => mockDeptUpsert(...args)
+        upsert: (...args: any[]) => mockDeptUpsert(...args),
+        findUnique: (...args: any[]) => mockDeptFindUnique(...args)
       },
       location: {
-        upsert: (...args: any[]) => mockLocUpsert(...args)
+        upsert: (...args: any[]) => mockLocUpsert(...args),
+        findUnique: (...args: any[]) => mockLocFindUnique(...args)
       },
       job: {
         upsert: (...args: any[]) => mockJobUpsert(...args)
@@ -114,6 +118,15 @@ describe('AshbyScraper Unit Tests', () => {
       expect(locId).toBeNull();
       expect(mockDeptUpsert).not.toHaveBeenCalled();
       expect(mockLocUpsert).not.toHaveBeenCalled();
+    });
+
+    it('should recover from cross-process P2002 unique constraint race via findUnique fallback', async () => {
+      mockDeptUpsert.mockRejectedValueOnce(new Error('Unique constraint failed on the fields: (`name`)'));
+      mockDeptFindUnique.mockResolvedValueOnce({ id: 'dept-race-ok', name: 'Platform' });
+
+      const deptId = await (scraper as any).getOrCreateDepartment('Platform');
+      expect(deptId).toBe('dept-race-ok');
+      expect(mockDeptFindUnique).toHaveBeenCalledWith({ where: { name: 'Platform' } });
     });
   });
 
@@ -203,6 +216,73 @@ describe('AshbyScraper Unit Tests', () => {
       // 150 jobs with BATCH_SIZE 100 -> 2 batches
       expect(mockTransaction).toHaveBeenCalledTimes(2);
       expect(redis.pipeline).toHaveBeenCalledTimes(2);
+    });
+
+    it('should fall back to per-job upserts and isolate failing job when a batch transaction throws', async () => {
+      (scraper as any).isRedisConnected = true;
+      const mockJobs = [
+        {
+          ashbyId: 'good-job-1',
+          title: 'Good Job 1',
+          companySlug: '1password',
+          departmentId: 'd1',
+          locationId: 'l1',
+          applyUrl: 'https://jobs.ashbyhq.com/1password/good-job-1/application',
+          metadata: {},
+          contentHash: 'h1'
+        },
+        {
+          ashbyId: 'corrupt-job-2',
+          title: 'Corrupt Job 2',
+          companySlug: '1password',
+          departmentId: 'd1',
+          locationId: 'l1',
+          applyUrl: 'https://jobs.ashbyhq.com/1password/corrupt-job-2/application',
+          metadata: {},
+          contentHash: 'h2'
+        }
+      ];
+
+      mockTransaction.mockRejectedValueOnce(new Error('invalid byte sequence for encoding "UTF8": 0x00'));
+      // First 2 calls are inside batch.map() before $transaction; next 2 calls are in the per-job fallback loop
+      mockJobUpsert
+        .mockReturnValueOnce(Promise.resolve({}))
+        .mockReturnValueOnce(Promise.resolve({}))
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error('JSONB Unicode escape error'));
+
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      await (scraper as any).batchUpsertJobs(mockJobs);
+
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      // Called twice during batch map construction + twice during per-job fallback = 4
+      expect(mockJobUpsert).toHaveBeenCalledTimes(4);
+      expect(warnSpy).toHaveBeenCalled();
+      expect(errSpy).toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+      errSpy.mockRestore();
+    });
+  });
+
+  describe('three-strike NOT_FOUND quarantine', () => {
+    it('should only mark company NOT_FOUND on the 3rd strike when maxStrikes is 3', async () => {
+      mockCompanyUpdate.mockResolvedValue({});
+
+      const strike1 = await scraper.recordNotFoundStrike('flaky-board', 3);
+      const strike2 = await scraper.recordNotFoundStrike('flaky-board', 3);
+      expect(strike1).toBe(false);
+      expect(strike2).toBe(false);
+      expect(mockCompanyUpdate).not.toHaveBeenCalled();
+
+      const strike3 = await scraper.recordNotFoundStrike('flaky-board', 3);
+      expect(strike3).toBe(true);
+      expect(mockCompanyUpdate).toHaveBeenCalledWith({
+        where: { slug: 'flaky-board' },
+        data: { status: 'NOT_FOUND' }
+      });
     });
   });
 });

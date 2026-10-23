@@ -58,6 +58,29 @@ describe('Concurrency Utilities', () => {
       await expect(task3).resolves.toBe('success3');
       expect(results).toEqual(['task1', 'task3']);
     });
+
+    it('should dynamically throttle concurrency on rate limit and recover after consecutive successes', () => {
+      const limit = createLimiter(10, {
+        minConcurrency: 2,
+        recoveryThreshold: 3,
+        defaultCooldownMs: 0
+      });
+
+      expect(limit.getConcurrency()).toBe(10);
+
+      // Rate limit halves concurrency (10 -> 5 -> 2)
+      limit.onRateLimit(0);
+      expect(limit.getConcurrency()).toBe(5);
+      limit.onRateLimit(0);
+      expect(limit.getConcurrency()).toBe(2);
+
+      // 3 consecutive successes step concurrency up by 1
+      limit.onSuccess();
+      limit.onSuccess();
+      expect(limit.getConcurrency()).toBe(2);
+      limit.onSuccess();
+      expect(limit.getConcurrency()).toBe(3);
+    });
   });
 
   describe('chunk', () => {

@@ -16,6 +16,7 @@ export const mockCompany = {
 export const mockJob = {
   findMany: jest.fn().mockResolvedValue([]),
   deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+  updateMany: jest.fn().mockResolvedValue({ count: 0 }),
   upsert: jest.fn().mockResolvedValue({}),
   count: jest.fn().mockResolvedValue(0),
   groupBy: jest.fn().mockResolvedValue([])

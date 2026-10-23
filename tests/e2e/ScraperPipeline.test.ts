@@ -10,6 +10,8 @@ import {
   formatCSVRow,
   JobRecord
 } from '../../src/core/ScraperCSV';
+import { fetchAshbyBoardWithFallback } from '../../src/lib/AshbyClient';
+import { ErrorTracker } from '../../src/lib/ErrorTracker';
 import { parseCSV, generateMarkdownTable } from '../../scripts/generate-readme';
 
 jest.mock('axios');
@@ -69,5 +71,65 @@ describe('E2E: Scraper to CSV to Markdown Pipeline', () => {
     expect(markdown).toContain('| # | Company | Job Title | Location | Department | Posted | Apply |');
     expect(markdown).toContain('| 1 | 1password | Staff Security Engineer | Toronto, ON | Security | 2026-03-01 | [Apply →](https://jobs.ashbyhq.com/1password/job-uuid-1) |');
     expect(markdown).toContain('| 2 | 1password | Senior Frontend Developer, Core Web | Remote - US | Frontend Eng... | 2026-03-02 | [Apply →](https://jobs.ashbyhq.com/1password/job-uuid-2) |');
+  });
+
+  it('should execute E2E fallback, data sanitization, and ErrorTracker telemetry for bug-fix agent', async () => {
+    // 1. Posting API returns 404, triggering GraphQL fallback
+    mockedAxios.get.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 404 }
+    });
+    mockedAxios.isAxiosError.mockReturnValueOnce(true);
+
+    // 2. GraphQL returns 1 valid job with HTML entities/pipes and 1 invalid placeholder job
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        data: {
+          jobBoard: {
+            teams: [{ id: 'team-eng', name: 'Core &amp; Platform' }],
+            jobPostings: [
+              {
+                id: 'undefined',
+                title: 'Corrupt Job Should Be Filtered'
+              },
+              {
+                id: 'aug-101',
+                title: 'AI Engineer | Agents\u0000',
+                teamId: 'team-eng',
+                locationName: 'San Francisco, CA',
+                workplaceType: 'Hybrid',
+                employmentType: 'FullTime'
+              }
+            ]
+          }
+        }
+      }
+    });
+
+    const tracker = new ErrorTracker('db_scrape');
+    tracker.companiesAttempted = 1;
+
+    const boardResult = await fetchAshbyBoardWithFallback('go-augment', {
+      includeCompensation: true
+    });
+
+    expect(boardResult.source).toBe('graphql');
+    expect(boardResult.jobs).toHaveLength(1);
+    expect(boardResult.jobs[0].title).toBe('AI Engineer | Agents');
+    expect(boardResult.jobs[0].department).toBe('Core & Platform');
+
+    if (boardResult.source === 'graphql') {
+      tracker.graphqlFallbacksUsed++;
+      tracker.recordEvent({
+        category: 'graphql_fallback',
+        companySlug: 'go-augment',
+        message: 'Recovered via GraphQL',
+        actionTaken: 'recovered_1_jobs'
+      });
+    }
+
+    const report = tracker.buildReport();
+    expect(report.summary.graphqlFallbacksUsed).toBe(1);
+    expect(report.events[0].companySlug).toBe('go-augment');
   });
 });

@@ -8,6 +8,7 @@
     "seed": "npx ts-node src/utils/Seed.ts",
     "discover": "npx ts-node src/discovery/CdxWorker.ts",
     "scrape": "npx ts-node src/core/Scraper.ts",
+    "scrape:parallel": "npx ts-node src/core/ClusterScraper.ts",
     "scrape:csv": "npx ts-node src/core/ScraperCSV.ts",
     "db:clean": "npx ts-node src/database/DbClean.ts",
     "db:inspect": "npx ts-node src/database/DbInspect.ts",

@@ -101,5 +101,17 @@ deel,Frontend Engineer,https://jobs.ashbyhq.com/deel/2,2026-01-02,Remote,Product
       // Department > 15 -> 12 + '...'
       expect(md).toContain('Product Plat...');
     });
+
+    it('should unescape doubled quotes in CSV and escape pipe characters in Markdown cells', () => {
+      const csv = `Company,Job Title,Job Link,Published Date,Location,Department
+1password,"Lead ""Staff"" | Security Engineer",https://jobs.ashbyhq.com/1password/9,2026-02-01,"Remote | US",Security`;
+
+      const rows = parseCSV(csv);
+      expect(rows[0].title).toBe('Lead "Staff" | Security Engineer');
+
+      const md = generateMarkdownTable(rows);
+      expect(md).toContain('Lead "Staff" \\| Security Engineer');
+      expect(md).toContain('Remote \\| US');
+    });
   });
 });
