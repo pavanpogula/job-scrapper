@@ -24,6 +24,10 @@ app.use((_req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https:;"
+  );
   next();
 });
 
@@ -58,14 +62,8 @@ const rateLimiterMiddleware = (req: Request, res: Response, next: any) => {
   // Allow health check to pass without rate limiting
   if (req.path === '/health') return next();
 
-  // Resolve client IP (supporting Cloudflare cf-connecting-ip or standard forwarded)
-  const cfIp = req.headers['cf-connecting-ip'];
-  const forwarded = req.headers['x-forwarded-for'];
-  const ip = (typeof cfIp === 'string' ? cfIp : '') 
-    || (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : '') 
-    || req.ip 
-    || req.socket.remoteAddress 
-    || 'client';
+  // Express trust proxy parses client IP securely
+  const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
   const now = Date.now();
 
   let record = rateLimits.get(ip);
@@ -114,7 +112,10 @@ app.get('/v1/jobs', async (req: Request, res: Response) => {
       workplaceType,
       employmentType,
       country,
+      isRemote,
       hasSalary,
+      salaryMin,
+      salaryInterval,
       page = '1',
       pageSize = '25',
       sortBy = 'publishedAt',
@@ -129,13 +130,17 @@ app.get('/v1/jobs', async (req: Request, res: Response) => {
       isListed: true,
     };
 
+    const andConditions: Prisma.JobWhereInput[] = [];
+
     if (search && typeof search === 'string' && search.trim()) {
       const q = search.trim().slice(0, 100);
-      where.OR = [
-        { title: { contains: q, mode: 'insensitive' } },
-        { companySlug: { contains: q, mode: 'insensitive' } },
-        { company: { name: { contains: q, mode: 'insensitive' } } },
-      ];
+      andConditions.push({
+        OR: [
+          { title: { contains: q, mode: 'insensitive' } },
+          { companySlug: { contains: q, mode: 'insensitive' } },
+          { company: { name: { contains: q, mode: 'insensitive' } } },
+        ],
+      });
     }
 
     if (workplaceType && typeof workplaceType === 'string') {
@@ -150,11 +155,32 @@ app.get('/v1/jobs', async (req: Request, res: Response) => {
       where.country = country;
     }
 
+    if (isRemote === 'true' || isRemote === '1') {
+      where.isRemote = true;
+    }
+
     if (hasSalary === 'true' || hasSalary === '1') {
-      where.OR = [
-        { salaryMin: { not: null } },
-        { salaryMax: { not: null } },
-      ];
+      andConditions.push({
+        OR: [
+          { salaryMin: { not: null } },
+          { salaryMax: { not: null } },
+        ],
+      });
+    }
+
+    if (salaryMin) {
+      const minVal = parseFloat(salaryMin as string);
+      if (!isNaN(minVal)) {
+        where.salaryMin = { gte: minVal };
+      }
+    }
+
+    if (salaryInterval && typeof salaryInterval === 'string') {
+      where.salaryInterval = salaryInterval;
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     let orderBy: Prisma.JobOrderByWithRelationInput | Prisma.JobOrderByWithRelationInput[] = [
@@ -308,6 +334,55 @@ app.get('/v1/jobs/:id', async (req: Request, res: Response) => {
   }
 });
 
+// GET /v1/facets - Aggregate filter facets
+app.get('/v1/facets', async (_req: Request, res: Response) => {
+  try {
+    const [workplaceGroups, employmentGroups, countryGroups, withSalaryCount, totalActive] = await Promise.all([
+      prisma.job.groupBy({
+        by: ['workplaceType'],
+        where: { active: true, isListed: true, workplaceType: { not: null } },
+        _count: { _all: true },
+        orderBy: { _count: { workplaceType: 'desc' } },
+      }),
+      prisma.job.groupBy({
+        by: ['employmentType'],
+        where: { active: true, isListed: true, employmentType: { not: null } },
+        _count: { _all: true },
+        orderBy: { _count: { employmentType: 'desc' } },
+      }),
+      prisma.job.groupBy({
+        by: ['country'],
+        where: { active: true, isListed: true, country: { not: null } },
+        _count: { _all: true },
+        orderBy: { _count: { country: 'desc' } },
+        take: 20,
+      }),
+      prisma.job.count({
+        where: {
+          active: true,
+          isListed: true,
+          OR: [{ salaryMin: { not: null } }, { salaryMax: { not: null } }],
+        },
+      }),
+      prisma.job.count({ where: { active: true, isListed: true } }),
+    ]);
+
+    res.json({
+      workplaceTypes: workplaceGroups.map((g) => ({ value: g.workplaceType!, count: g._count._all })),
+      employmentTypes: employmentGroups.map((g) => ({ value: g.employmentType!, count: g._count._all })),
+      countries: countryGroups.map((g) => ({ value: g.country!, count: g._count._all })),
+      departments: [],
+      hasSalary: {
+        yes: withSalaryCount,
+        no: Math.max(0, totalActive - withSalaryCount),
+      },
+    });
+  } catch (err: any) {
+    console.error('Error fetching facets:', err);
+    res.status(500).json({ error: 'Failed to fetch facets' });
+  }
+});
+
 // GET /v1/companies - List active companies
 app.get('/v1/companies', async (req: Request, res: Response) => {
   try {
@@ -367,7 +442,7 @@ const distPath = path.resolve(__dirname, '../../job-scrapper-ui/dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
   app.use((req: Request, res: Response, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/v1') && req.path !== '/health') {
+    if ((req.method === 'GET' || req.method === 'HEAD') && !req.path.startsWith('/v1') && req.path !== '/health' && req.accepts('html')) {
       return res.sendFile(path.join(distPath, 'index.html'));
     }
     next();

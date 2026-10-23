@@ -1,4 +1,5 @@
 import React from 'react';
+import DOMPurify from 'dompurify';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import {
   Container,
@@ -205,7 +206,7 @@ export const JobDetailPage: React.FC = () => {
                     fontWeight: 600,
                   },
                 }}
-                dangerouslySetInnerHTML={{ __html: job.descriptionHtml }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(job.descriptionHtml) }}
               />
             ) : job.descriptionPlain ? (
               <Typography variant="body2" sx={{ whiteSpace: 'pre-line', lineHeight: 1.7 }}>

@@ -156,6 +156,19 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Regression Invariant:** `baseQueryWithRateLimit` gates requests based on `state.rateLimit.timestamps`; `jobsApi` endpoints cache for 600 seconds; Express server enforces 10 req/min with `Retry-After` header.
 - **Guarding tests:** Unit tests pass (79 tests). Frontend verified via production build (`npm --prefix job-scrapper-ui run build`).
 
+### BF-013: Security hardening, facets API implementation, and filter OR-clobber fix
+- **Symptom:** Combining `search` with `hasSalary` clobbered the Prisma `where.OR` clause, returning broken search results; `/v1/facets` was defined in types and API contract but not implemented in Express; client IP resolution was vulnerable to header spoofing; `descriptionHtml` lacked client-side DOMPurify sanitization.
+- **Root cause & fix:**
+  1. Refactored `src/api/Server.ts` query builder to accumulate conditions in `where.AND = andConditions`, preserving both multi-field search and `hasSalary` filters simultaneously.
+  2. Implemented `GET /v1/facets` using Prisma `groupBy` across workplace types, employment types, top 20 countries, and salary counts.
+  3. Installed `dompurify` in `job-scrapper-ui` and wrapped all HTML description injection in `DOMPurify.sanitize()` for defense-in-depth against Stored XSS.
+  4. Added Content-Security-Policy (CSP) headers to Express responses.
+  5. Fixed SPA routing fallback in Express to support `HEAD` requests and check `req.accepts('html')`.
+  6. Corrected client IP resolution to prioritize `req.ip` under `trust proxy` to prevent client header spoofing.
+- **Implemented in:** `src/api/Server.ts`, `job-scrapper-ui/src/pages/JobDetailPage.tsx`, `job-scrapper-ui/package.json`.
+- **Regression Invariant:** Combined search + salary filters use `where.AND` and do not clobber; `/v1/facets` returns workplaceTypes, employmentTypes, countries, and hasSalary; `JobDetailPage` sanitizes HTML via DOMPurify.
+- **Guarding tests:** Verified via Jest unit suites (79 tests) and live API endpoint verification.
+
 ---
 
 ## 📈 Improvement Log & Future Packaging Roadmap
