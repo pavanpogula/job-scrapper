@@ -3,7 +3,7 @@
 > **Purpose of this folder:** A single, authoritative source of context for humans *and AI agents*
 > working on this repository. Read this index first, then open only the file(s) relevant to your task.
 >
-> _Last full analysis: 2026-10-22 (full code-vs-docs audit at HEAD `89a1fd2`: every doc re-verified against `src/`, `scripts/`, `tests/`; testing guide added as 11)._
+> _Last full analysis: 2026-10-23 (BF-011: Structured Posting API promotion, company enrichment, and full-field change detection; regression audit and explorer regenerated)._
 
 ---
 

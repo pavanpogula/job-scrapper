@@ -20,6 +20,8 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run db:inspect` | `src/database/DbInspect.ts` | ✅ | — | — | read-only | 0 (errors caught & logged) |
 | `npm run db:clean` | `src/database/DbClean.ts` | ✅ | — | — | nothing (dry run) | 0 (errors caught & logged) |
 | `npm run db:clean -- --execute` | same | ✅ | — | — | **deletes** `Job` + `Company` rows with invalid slugs | 0 |
+| `npm run db:backfill` | `src/database/BackfillJobFields.ts` | ✅ | — | — | backfills structured `Job` columns from metadata JSONB | 1 |
+| `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force]` | `src/utils/EnrichCompanies.ts` | ✅ | — | Ashby hosted boards | updates `Company.name` & `Company.logoUrl` | 1 |
 | `npm run verify` | `src/utils/Verify.ts` | ✅ | — | — | read-only (console report) | 1 |
 | `npm run prisma:studio` | Prisma CLI (`npx prisma studio`) | ✅ | — | — | GUI (can edit rows) | — |
 | `npm run docs:generate` | `scripts/GenerateDocs.ts` | — | — | — | `docs/project-explorer.html` | 0 (`.catch(console.error)`) |

@@ -42,12 +42,13 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 - `deactivateStaleJobs()` sets `active = false` in Postgres but leaves the Redis key `job:<ashbyId>:hash` (7-day TTL). If the job reappears with the same content, `filterChangedJobs()` sees the cached hash and skips it. The job never reaches `batchUpsertJobs()`, so the bulk path's `!prev.active` check cannot reactivate it.
 - Fix direction: delete the Redis hash keys for jobs you deactivate, or include `active` in the cache value.
 
-### #31 The change-detection hash ignores most stored fields
-- `generateHash()` hashes only `title|location|department|salary.min|salary.max`. Changes to `applyUrl`, `salaryCurrency`, descriptions, `employmentType` or other `metadata` produce the same hash. Redis then skips the job, and without Redis the bulk path puts it in neither `toCreate` nor `toUpdate`, so those changes are never saved.
-- `generateHash()` also hashes the raw `job.location` / `job.department`. These are already sanitized by `validateAndSanitizeJob()`, so this is fine today, but it depends on that ordering.
+### #31 The change-detection hash ignores most stored fields — [RESOLVED in BF-011]
+- `generateHash()` previously hashed only `title|location|department|salary.min|salary.max`.
+- **Resolved in BF-011:** `generateHash()` now hashes `title|location|department|salary.min|salary.max|salary.currency|salary.interval|isRemote|workplaceType|employmentType|publishedAt|applyUrl|isListed|country|region|city`. Any change to compensation, URLs, workplace policies, or addresses now properly breaks cache and updates the database row.
 
-### #32 GraphQL-fallback jobs have less data
-- `fetchFromAshbyGraphQL()` (`src/lib/AshbyClient.ts`) does not request `publishedAt`, descriptions or numeric compensation. Those jobs get `salaryMin/Max = NULL`, a blank CSV "Published Date", and only `compensation.compensationTierSummary` (a string) in `metadata`.
+### #32 GraphQL-fallback jobs have less data — [PARTIALLY RESOLVED in BF-011]
+- `fetchFromAshbyGraphQL()` (`src/lib/AshbyClient.ts`) now preserves `workplaceType`, `secondaryLocations`, and returns any GraphQL `validationIssues` from Ashby's response.
+- Note: Out of 34,037 active jobs, only 22 jobs (across 2 companies, `withcherry` and `go-augment`) currently use GraphQL fallback. These 22 roles still lack `publishedAt` and descriptions on the list endpoint (obtainable via single-posting GraphQL query `ApiJobPosting` if needed).
 - Its `sanitizeJobBatch()` issues are thrown away (`const { validJobs } = …`), so `validationIssues` is never set when `source === 'graphql'`. Jobs filtered on that path never reach telemetry.
 - The telemetry message says "Posting API returned 404/403", but `400` also triggers the fallback.
 

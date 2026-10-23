@@ -33,6 +33,28 @@ export interface AshbyJob {
     employmentType: string;
     applyUrl: string;
     isRemote: boolean;
+    workplaceType?: string;
+    isListed?: boolean;
+    address?: {
+        postalAddress?: {
+            addressLocality?: string;
+            addressRegion?: string;
+            addressCountry?: string;
+        };
+    };
+    secondaryLocations?: Array<{
+        location?: string;
+        locationId?: string;
+        locationName?: string;
+        address?: {
+            addressLocality?: string;
+            addressRegion?: string;
+            addressCountry?: string;
+        };
+    }>;
+    team?: string;
+    descriptionHtml?: string;
+    descriptionPlain?: string;
     publishedAt?: string | null;
     compensationTier?: {
         min: number;
@@ -110,12 +132,13 @@ export function isRetryableError(error: any): boolean {
 }
 
 /**
- * @summary Extracts normalized salary min, max, and currency from Ashby compensation structures
+ * @summary Extracts normalized salary min, max, currency, and interval from Ashby compensation structures
  */
 export function extractSalary(job: AshbyJob): {
     min?: number;
     max?: number;
     currency?: string;
+    interval?: string;
 } {
     // 1. Live Ashby Posting API shape: job.compensation.summaryComponents
     const summarySalary = job.compensation?.summaryComponents?.find(
@@ -125,7 +148,8 @@ export function extractSalary(job: AshbyJob): {
         return {
             min: summarySalary.minValue ?? undefined,
             max: summarySalary.maxValue ?? undefined,
-            currency: summarySalary.currencyCode ?? undefined
+            currency: summarySalary.currencyCode ?? undefined,
+            interval: summarySalary.interval ?? undefined
         };
     }
 
@@ -139,7 +163,8 @@ export function extractSalary(job: AshbyJob): {
                 return {
                     min: comp.minValue ?? undefined,
                     max: comp.maxValue ?? undefined,
-                    currency: comp.currencyCode ?? undefined
+                    currency: comp.currencyCode ?? undefined,
+                    interval: comp.interval ?? undefined
                 };
             }
         }
@@ -150,7 +175,8 @@ export function extractSalary(job: AshbyJob): {
         return {
             min: job.compensationTier.min,
             max: job.compensationTier.max,
-            currency: job.compensationTier.currency
+            currency: job.compensationTier.currency,
+            interval: job.compensationTier.interval
         };
     }
 
@@ -163,6 +189,7 @@ export function extractSalary(job: AshbyJob): {
 export async function fetchFromAshbyGraphQL(companySlug: string): Promise<{
     boardExists: boolean;
     jobs: AshbyJob[];
+    validationIssues?: ValidationIssue[];
 }> {
     try {
         const response = await axios.post(
@@ -206,13 +233,15 @@ export async function fetchFromAshbyGraphQL(companySlug: string): Promise<{
             applyUrl: `https://jobs.ashbyhq.com/${companySlug}/${posting.id}/application`,
             jobUrl: `https://jobs.ashbyhq.com/${companySlug}/${posting.id}`,
             isRemote: posting.workplaceType === 'Remote',
+            workplaceType: posting.workplaceType || undefined,
+            secondaryLocations: Array.isArray(posting.secondaryLocations) ? posting.secondaryLocations : [],
             compensation: posting.compensationTierSummary
                 ? { compensationTierSummary: posting.compensationTierSummary }
                 : undefined
         }));
 
-        const { validJobs } = sanitizeJobBatch(rawJobs, companySlug);
-        return { boardExists: true, jobs: validJobs };
+        const { validJobs, issues } = sanitizeJobBatch(rawJobs, companySlug);
+        return { boardExists: true, jobs: validJobs, validationIssues: issues };
     } catch {
         return { boardExists: false, jobs: [] };
     }
@@ -308,7 +337,8 @@ export async function fetchAshbyBoardWithFallback(
                 jobs: gqlResult.jobs,
                 notFound: false,
                 rateLimited: sawRateLimit,
-                source: 'graphql'
+                source: 'graphql',
+                validationIssues: gqlResult.validationIssues
             };
         }
 

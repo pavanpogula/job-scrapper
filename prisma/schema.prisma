@@ -58,6 +58,20 @@ model Job {
   salaryMin      Float?
   salaryMax      Float?
   salaryCurrency String?
+  salaryInterval String?
+
+  // Workplace & Employment
+  isRemote       Boolean   @default(false)
+  workplaceType  String?   // "Remote", "Hybrid", "OnSite"
+  employmentType String?   // "FullTime", "PartTime", "Contract", "Intern", "Temporary"
+  publishedAt    DateTime?
+  isListed       Boolean   @default(true)
+
+  // Structured Address
+  country        String?
+  region         String?
+  city           String?
+  postalAddress  Json?
 
   // Raw Data & Metadata
   metadata    Json
@@ -72,4 +86,10 @@ model Job {
   @@index([departmentId])
   @@index([locationId])
   @@index([active])
+  @@index([isRemote])
+  @@index([workplaceType])
+  @@index([employmentType])
+  @@index([country])
+  @@index([city])
+  @@index([publishedAt])
 }

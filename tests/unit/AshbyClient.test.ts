@@ -48,7 +48,8 @@ describe('AshbyClient Unit Tests', () => {
             expect(extractSalary(job)).toEqual({
                 min: 180000,
                 max: 240000,
-                currency: 'USD'
+                currency: 'USD',
+                interval: '1 YEAR'
             });
         });
 
@@ -94,7 +95,8 @@ describe('AshbyClient Unit Tests', () => {
             expect(extractSalary(job)).toEqual({
                 min: 150000,
                 max: 200000,
-                currency: 'USD'
+                currency: 'USD',
+                interval: 'YEAR'
             });
         });
 

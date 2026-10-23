@@ -47,6 +47,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 | BF-008 | `f872356`, `2cce729` | Multi-process cluster scraper | ⚠️ (IPC/`saveTelemetry` untested) |
 | BF-009 | `747d8d1`, `635e69d` | CSV-mode telemetry parity, `verify` auditor | ⚠️ (forwarding untested, Verify counts only) |
 | BF-010 | `627dfae` | Bulk `createMany` fast path, cache pre-warming | ❌ none, see 11-testing-guide.md |
+| BF-011 | HEAD | Structured field promotion, GraphQL preservation, company enrichment, and full-field hash (#31) | ✅ (`extractSalary` interval, unit tests) |
 
 ### BF-001: Posting API 404/403 for boards that are live in the browser
 - **Symptom:** Companies return `404`/`403` from `api.ashbyhq.com/posting-api/job-board/<slug>` but show live jobs at `jobs.ashbyhq.com/<slug>`.
@@ -127,7 +128,20 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Implemented in:** `src/core/Scraper.ts` (`batchUpsertJobs`, `runAll` pre-warm), `src/core/ClusterScraper.ts` (`perWorkerConcurrency`).
 - **Regression Invariant:** When `prisma.job.findMany` and `prisma.job.createMany` exist, new IDs go through `createMany` and only changed or inactive existing rows are upserted. Unchanged rows cause no write. The `catch` per-job fallback (BF-004) still wraps both paths.
 - **Guarding tests:** ❌ none (see 11-testing-guide.md §6). The `ScraperCore.test.ts` Prisma factory has no `job.findMany`/`createMany` and the global mock (`__mocks__/@prisma/client.ts`) has no `job.createMany`, so every `batchUpsertJobs` test takes the legacy `$transaction` path. *(Correction: the previously listed `ScraperCore.test.ts` / `ClusterScraper.test.ts` do not exercise this code.)*
-- **Known gap:** because the hash covers only five fields, "unchanged" can hide real changes (09 #31).
+- **Known gap:** because the hash covers only five fields, "unchanged" can hide real changes (09 #31; resolved in BF-011).
+
+### BF-011: Promotion of structured Posting API fields, GraphQL field preservation, company enrichment, and full change detection
+- **Symptom:** Salary filters could not distinguish between hourly ($60/hr) and yearly ($150,000/yr) rates; `isRemote`, `workplaceType`, `country`, `city`, and `publishedAt` were trapped in JSONB without first-class database columns or indexes; GraphQL fallback dropped `workplaceType` and `secondaryLocations`; `generateHash()` ignored 11 stored fields (#31); and active hiring companies had unpopulated `name` (= slug) and null `logoUrl`.
+- **Root cause & fix:**
+  1. Extended `prisma/schema.prisma` with indexed columns `salaryInterval`, `isRemote`, `workplaceType`, `employmentType`, `publishedAt`, `isListed`, `country`, `region`, `city`, `postalAddress` and ran `npx prisma db push`.
+  2. Promoted `extractSalary()` in `src/lib/AshbyClient.ts` to parse interval (`1 YEAR`, `1 HOUR`, etc.); updated `fetchFromAshbyGraphQL()` to map `workplaceType`, `secondaryLocations`, and return GraphQL `validationIssues`.
+  3. Extended `generateHash()` in `src/core/Scraper.ts` across all 16 fields, resolving known issue #31.
+  4. Wrote and executed `BackfillJobFields.ts` (`npm run db:backfill`) which backfilled all 34,037 active jobs in Postgres with structured columns.
+  5. Built and executed `EnrichCompanies.ts` (`npm run enrich:companies`) which concurrently enriched 1,729 / 1,747 active hiring companies (99.0%) with real names and logos in 30.77s.
+- **Implemented in:** `prisma/schema.prisma`, `src/lib/AshbyClient.ts`, `src/lib/Sanitizer.ts`, `src/core/Scraper.ts`, `src/database/BackfillJobFields.ts`, `src/utils/EnrichCompanies.ts`.
+- **Regression Invariant:** `extractSalary()` returns `interval` whenever present; `generateHash()` hashes all 16 fields; `validateAndSanitizeJob()` preserves `workplaceType` and defaults `isListed` to true; `fetchFromAshbyGraphQL()` preserves `workplaceType` and `secondaryLocations`.
+- **Guarding tests:** `tests/unit/AshbyClient.test.ts` (`extractSalary` with interval and legacy shape).
+- **Known gap:** GraphQL fallback list endpoints do not provide `publishedAt` or descriptions (only 22 jobs affected, addressable via single-posting GraphQL queries if needed).
 
 ---
 

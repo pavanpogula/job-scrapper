@@ -36,6 +36,16 @@ interface ProcessedJob {
     salaryMin?: number;
     salaryMax?: number;
     salaryCurrency?: string;
+    salaryInterval?: string;
+    isRemote: boolean;
+    workplaceType?: string;
+    employmentType?: string;
+    publishedAt?: Date | null;
+    isListed: boolean;
+    country?: string | null;
+    region?: string | null;
+    city?: string | null;
+    postalAddress?: any;
     metadata: any;
     contentHash: string;
 }
@@ -143,11 +153,15 @@ export class AshbyScraper {
     }
 
     /**
-     * @summary Creates MD5 hash of job content for change detection
+     * @summary Creates MD5 hash of job content for change detection (including salary interval, currency, workplaceType, and address)
      */
     private generateHash(job: AshbyJob): string {
         const salary = extractSalary(job);
-        const content = `${job.title}|${job.location}|${job.department}|${salary.min}|${salary.max}`;
+        const postal = job.address?.postalAddress;
+        const country = postal?.addressCountry || '';
+        const region = postal?.addressRegion || '';
+        const city = postal?.addressLocality || '';
+        const content = `${job.title}|${job.location}|${job.department}|${salary.min}|${salary.max}|${salary.currency}|${salary.interval}|${job.isRemote}|${job.workplaceType}|${job.employmentType}|${job.publishedAt}|${job.applyUrl}|${job.isListed}|${country}|${region}|${city}`;
         return crypto.createHash('md5').update(content).digest('hex');
     }
 
@@ -278,6 +292,16 @@ export class AshbyScraper {
                 salaryMin: job.salaryMin,
                 salaryMax: job.salaryMax,
                 salaryCurrency: job.salaryCurrency,
+                salaryInterval: job.salaryInterval,
+                isRemote: job.isRemote,
+                workplaceType: job.workplaceType,
+                employmentType: job.employmentType,
+                publishedAt: job.publishedAt,
+                isListed: job.isListed,
+                country: job.country,
+                region: job.region,
+                city: job.city,
+                postalAddress: job.postalAddress,
                 metadata: job.metadata,
                 contentHash: job.contentHash,
                 active: true
@@ -290,6 +314,16 @@ export class AshbyScraper {
                 salaryMin: job.salaryMin,
                 salaryMax: job.salaryMax,
                 salaryCurrency: job.salaryCurrency,
+                salaryInterval: job.salaryInterval,
+                isRemote: job.isRemote,
+                workplaceType: job.workplaceType,
+                employmentType: job.employmentType,
+                publishedAt: job.publishedAt,
+                isListed: job.isListed,
+                country: job.country,
+                region: job.region,
+                city: job.city,
+                postalAddress: job.postalAddress,
                 metadata: job.metadata,
                 contentHash: job.contentHash,
                 updatedAt: new Date(),
@@ -332,6 +366,16 @@ export class AshbyScraper {
                                 salaryMin: job.salaryMin,
                                 salaryMax: job.salaryMax,
                                 salaryCurrency: job.salaryCurrency,
+                                salaryInterval: job.salaryInterval,
+                                isRemote: job.isRemote,
+                                workplaceType: job.workplaceType,
+                                employmentType: job.employmentType,
+                                publishedAt: job.publishedAt,
+                                isListed: job.isListed,
+                                country: job.country,
+                                region: job.region,
+                                city: job.city,
+                                postalAddress: job.postalAddress,
                                 metadata: job.metadata,
                                 contentHash: job.contentHash,
                                 active: true
@@ -415,6 +459,9 @@ export class AshbyScraper {
             const salary = extractSalary(job);
             const cleanApplyUrl = sanitizeJobUrl(job.applyUrl, companySlug, job.id, true);
             const cleanMetadata = sanitizeJsonMetadata(job);
+            const postal = job.address?.postalAddress;
+            const parsedPublishedAt = job.publishedAt ? new Date(job.publishedAt) : null;
+            const validPublishedAt = parsedPublishedAt && !isNaN(parsedPublishedAt.getTime()) ? parsedPublishedAt : null;
 
             processedJobs.push({
                 ashbyId: job.id,
@@ -426,6 +473,16 @@ export class AshbyScraper {
                 salaryMin: salary.min,
                 salaryMax: salary.max,
                 salaryCurrency: salary.currency,
+                salaryInterval: salary.interval,
+                isRemote: job.isRemote,
+                workplaceType: job.workplaceType,
+                employmentType: job.employmentType,
+                publishedAt: validPublishedAt,
+                isListed: job.isListed !== false,
+                country: postal?.addressCountry ? sanitizeText(postal.addressCountry) : null,
+                region: postal?.addressRegion ? sanitizeText(postal.addressRegion) : null,
+                city: postal?.addressLocality ? sanitizeText(postal.addressLocality) : null,
+                postalAddress: postal ? sanitizeJsonMetadata(postal) : null,
                 metadata: cleanMetadata,
                 contentHash: hash
             });

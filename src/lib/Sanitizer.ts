@@ -304,6 +304,8 @@ export function validateAndSanitizeJob(
         jobUrl: cleanJobUrl,
         applyUrl: cleanApplyUrl,
         isRemote: Boolean(rawJob.isRemote) || cleanLocation.toLowerCase().includes('remote'),
+        workplaceType: typeof rawJob.workplaceType === 'string' ? sanitizeText(rawJob.workplaceType) : undefined,
+        isListed: rawJob.isListed !== false,
         publishedAt: rawJob.publishedAt ?? undefined
     };
 }

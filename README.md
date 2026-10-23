@@ -19,7 +19,7 @@ openings (titles, departments, locations, salary ranges, apply links) instead of
 - 🔍 **Company discovery**: finds Ashby slugs from the Wayback Machine CDX API (and the CommonCrawl index with `--common-crawl`), validates them against a regex + blocklist, and can enrich company name/logo from the hosted page (`--enrich`).
 - 🌐 **Resilient Ashby client** (`src/lib/AshbyClient.ts`): browser-like headers, exponential backoff + jitter on `429`/`5xx`/timeouts, and automatic fallback to Ashby's hosted GraphQL API when a company's public `posting-api` is disabled (`404`/`403`/`400`).
 - 🧼 **Sanitization & validation** (`src/lib/Sanitizer.ts`): strips PostgreSQL-fatal `\u0000` bytes and lone surrogates from `jsonb` metadata, removes `<script>`/`<style>`/`<iframe>`, inline JS handlers and huge base64 blobs from descriptions, normalizes job/apply URLs to canonical Ashby URLs, and drops malformed or duplicate job records.
-- 📊 **PostgreSQL storage** (Prisma 5): normalized `Company` / `Job` / `Department` / `Location` schema, real salary extraction (`salaryMin` / `salaryMax` / `salaryCurrency`), streaming 100-job batch writes, a bulk `createMany` fast path for new jobs, per-job fallback when a batch fails, and deactivation (`active = false`) of jobs that disappear from a board.
+- 📊 **PostgreSQL storage** (Prisma 5): normalized `Company` / `Job` / `Department` / `Location` schema, real salary extraction with intervals (`salaryMin` / `salaryMax` / `salaryCurrency` / `salaryInterval`), first-class indexed columns (`isRemote`, `workplaceType`, `employmentType`, `publishedAt`, `country`, `city`, `isListed`), streaming 100-job batch writes, a bulk `createMany` fast path for new jobs, per-job fallback when a batch fails, and deactivation (`active = false`) of jobs that disappear from a board.
 - ⚡ **Parallel scraping**: an adaptive concurrency limiter (halves concurrency and pauses on `429`/`403`, then ramps back up) inside each process, plus a multi-process cluster mode (`npm run scrape:parallel`) that shards companies across OS worker processes.
 - 🗃️ **Optional Redis change detection**: an MD5 hash per job (7-day TTL) skips unchanged jobs. If Redis is unreachable the scraper keeps running without it.
 - 📄 **CSV export**: streams `output/jobs_YYYY-MM-DD.csv`, with optional Google Drive upload (`--upload-cloud`).
@@ -108,6 +108,8 @@ GOOGLE_DRIVE_FOLDER_ID="your_folder_id"
 | `npm run db:menu` | Interactive database explorer (dashboard, search, salaries, raw SQL) |
 | `npm run db:inspect` | Dump tables, columns and row counts via `information_schema` |
 | `npm run db:clean` | Dry-run listing of companies with invalid slugs; `-- --execute` deletes them and their jobs |
+| `npm run db:backfill` | Backfill structured `Job` columns (`salaryInterval`, `isRemote`, `workplaceType`, `country`, `publishedAt`, etc.) from metadata JSONB |
+| `npm run enrich:companies` | Concurrently enrich active hiring companies with real display names and hosted logos from Ashby |
 | `npm run prisma:studio` | Open Prisma Studio |
 | `npm run docs:generate` | Regenerate `docs/project-explorer.html` from JSDoc `@file`/`@summary`/`@tags` blocks and the Prisma schema |
 | `npm test` | Jest unit + E2E suite (16 suites, 79 tests) |

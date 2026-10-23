@@ -212,6 +212,12 @@
                         <span>database</span>
                     </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_database_BackfillJobFields_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>BackfillJobFields.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_database_DbClean_ts')">
                         <span class="material-icons-round">description</span>
                         <span>DbClean.ts</span>
@@ -299,6 +305,12 @@
                         <span>utils</span>
                     </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_utils_EnrichCompanies_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>EnrichCompanies.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_utils_ProcessCdxData_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ProcessCdxData.ts</span>
@@ -547,7 +559,7 @@
       },
       {
         "name": "Job",
-        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• createdAt: DateTime\\n• updatedAt: DateTime"
+        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• createdAt: DateTime\\n• updatedAt: DateTime"
       }
     ]
   },
@@ -743,7 +755,7 @@
       },
       {
         "name": "generateHash()",
-        "desc": "Creates MD5 hash of job content for change detection"
+        "desc": "Creates MD5 hash of job content for change detection (including salary interval, currency, workplaceType, and address)"
       },
       {
         "name": "getOrCreateDepartment()",
@@ -814,6 +826,36 @@
       {
         "name": "scrapeToCSV()",
         "desc": "Main function - scrapes jobs concurrently and streams to CSV"
+      }
+    ]
+  },
+  "src_database_BackfillJobFields_ts": {
+    "name": "BackfillJobFields.ts",
+    "path": "src/database/BackfillJobFields.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Backfills structured columns on Job (salaryInterval, isRemote, workplaceType, employmentType, publishedAt, isListed, country, region, city, postalAddress) from metadata JSONB",
+    "tags": [
+      "Database",
+      "Migration",
+      "Backfill",
+      "PostgreSQL",
+      "JSONB"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "backfillJobFields()",
+        "desc": "Backfills structured fields for all active jobs in PostgreSQL from their metadata JSONB"
       }
     ]
   },
@@ -1015,7 +1057,7 @@
       },
       {
         "name": "extractSalary()",
-        "desc": "Extracts normalized salary min, max, and currency from Ashby compensation structures"
+        "desc": "Extracts normalized salary min, max, currency, and interval from Ashby compensation structures"
       },
       {
         "name": "fetchFromAshbyGraphQL()",
@@ -1284,6 +1326,37 @@
       {
         "name": "sanitizeJobBatch()",
         "desc": "Validates and sanitizes an array of raw Ashby jobs, filtering out corrupt objects and collecting validation issues"
+      }
+    ]
+  },
+  "src_utils_EnrichCompanies_ts": {
+    "name": "EnrichCompanies.ts",
+    "path": "src/utils/EnrichCompanies.ts",
+    "icon": "📋",
+    "iconClass": "green",
+    "summary": "Concurrently enriches active hiring companies with real display names and logo URLs from Ashby hosted boards",
+    "tags": [
+      "Company",
+      "Enrichment",
+      "Logo",
+      "Organization",
+      "Metadata",
+      "Concurrency"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "enrichActiveCompanies()",
+        "desc": "Enriches active hiring companies that lack a display name or logo URL using adaptive concurrency"
       }
     ]
   },

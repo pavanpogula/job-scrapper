@@ -42,8 +42,18 @@ erDiagram
         Float salaryMin "nullable"
         Float salaryMax "nullable"
         String salaryCurrency "nullable"
+        String salaryInterval "nullable ('1 YEAR', '1 HOUR', etc.)"
+        Boolean isRemote "default false"
+        String workplaceType "nullable ('Remote', 'OnSite', 'Hybrid')"
+        String employmentType "nullable ('FullTime', 'Contract', etc.)"
+        DateTime publishedAt "nullable (indexed)"
+        Boolean isListed "default true"
+        String country "nullable (indexed)"
+        String region "nullable"
+        String city "nullable (indexed)"
+        Json postalAddress "nullable jsonb"
         Json metadata "sanitized raw Ashby job"
-        String contentHash "md5"
+        String contentHash "md5 across 16 fields"
         Boolean active "default true"
         DateTime createdAt "default now()"
         DateTime updatedAt "@updatedAt"
@@ -102,14 +112,25 @@ Empty names (`""`) are not stored → `departmentId`/`locationId = null`.
 | `locationId` | `String?` | FK → `Location.id` (relation `location`) |
 | `salaryMin` / `salaryMax` | `Float?` | from `extractSalary()` |
 | `salaryCurrency` | `String?` | from `extractSalary()` (`currencyCode`) |
+| `salaryInterval` | `String?` | from `extractSalary()` (`interval`: `'1 YEAR'`, `'1 HOUR'`, `'1 MONTH'`, etc.) |
+| `isRemote` | `Boolean` | `@default(false)` — from `job.isRemote` or sanitized remote detection |
+| `workplaceType` | `String?` | `'Remote'`, `'OnSite'`, `'Hybrid'` (from Ashby `workplaceType`) |
+| `employmentType` | `String?` | `'FullTime'`, `'Contract'`, `'PartTime'`, `'Intern'`, `'Temporary'` |
+| `publishedAt` | `DateTime?` | when the job was published (99.94% coverage; indexed) |
+| `isListed` | `Boolean` | `@default(true)` — `false` means reachable only by direct link |
+| `country` | `String?` | ISO country code from `job.address.postalAddress.addressCountry` (indexed) |
+| `region` | `String?` | State/region code from `addressRegion` |
+| `city` | `String?` | Locality from `addressLocality` (indexed) |
+| `postalAddress` | `Json?` | Full normalized postal address object |
 | `metadata` | `Json` (Postgres `jsonb`) | `sanitizeJsonMetadata(job)` — whole sanitized Ashby job object |
-| `contentHash` | `String` | `md5("${title}\|${location}\|${department}\|${salary.min}\|${salary.max}")` (values as returned by `sanitizeJobBatch()` in `AshbyClient.ts`) |
+| `contentHash` | `String` | `md5` across 16 fields (`title`, `location`, `department`, `salary.min`, `salary.max`, `salary.currency`, `salary.interval`, `isRemote`, `workplaceType`, `employmentType`, `publishedAt`, `applyUrl`, `isListed`, `country`, `region`, `city`) |
 | `active` | `Boolean` | `@default(true)`; `true` on every create/update, `false` via `deactivateStaleJobs()` |
 | `createdAt` | `DateTime` | `@default(now())` |
 | `updatedAt` | `DateTime` | `@updatedAt` (also set explicitly to `new Date()` on update) |
 
 **Indexes:** unique `ashbyId`; `@@index([companySlug])`, `@@index([departmentId])`, `@@index([locationId])`,
-`@@index([active])`. (Plus the unique indexes on `Company.slug`, `Department.name`, `Location.name`.)
+`@@index([active])`, `@@index([isRemote])`, `@@index([workplaceType])`, `@@index([employmentType])`,
+`@@index([country])`, `@@index([city])`, `@@index([publishedAt])`. (Plus unique indexes on `Company.slug`, `Department.name`, `Location.name`.)
 
 **Relations / referential actions:** none declared, so Prisma defaults apply — `Job.company` (required):
 `onDelete: Restrict`; `Job.department` / `Job.location` (optional): `onDelete: SetNull`; all `onUpdate: Cascade`.
