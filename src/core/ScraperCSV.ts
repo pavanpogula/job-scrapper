@@ -30,10 +30,40 @@ export interface JobRecord {
 /**
  * @summary Fetches and sanitizes all job postings for a company from Ashby's public API with GraphQL fallback
  */
-export async function fetchJobsForCompany(companySlug: string): Promise<JobRecord[]> {
+export async function fetchJobsForCompany(
+    companySlug: string,
+    tracker?: ErrorTracker,
+    onRateLimit?: () => void,
+    onSuccess?: () => void
+): Promise<JobRecord[]> {
     const result = await fetchAshbyBoardWithFallback(companySlug, {
         includeCompensation: false
     });
+
+    if (result.rateLimited) {
+        if (tracker) tracker.rateLimitsEncountered++;
+        if (onRateLimit) onRateLimit();
+    } else if (onSuccess) {
+        onSuccess();
+    }
+
+    if (result.source === 'graphql' && tracker) {
+        tracker.graphqlFallbacksUsed++;
+        tracker.recordEvent({
+            category: 'graphql_fallback',
+            companySlug,
+            message: 'Posting API returned 404/403; recovered board via Ashby hosted GraphQL API',
+            actionTaken: `recovered_${result.jobs.length}_jobs`
+        });
+    }
+
+    if (result.notFound && tracker) {
+        tracker.companiesNotFound++;
+    }
+
+    if (result.validationIssues && result.validationIssues.length > 0 && tracker) {
+        tracker.recordValidationIssues(result.validationIssues);
+    }
 
     return result.jobs.map(job => ({
         company: sanitizeText(companySlug),
@@ -129,7 +159,12 @@ export async function scrapeToCSV() {
     // Fetch all companies concurrently
     const fetchPromises = companies.map(company =>
         limit(async () => {
-            const jobs = await fetchJobsForCompany(company.slug);
+            const jobs = await fetchJobsForCompany(
+                company.slug,
+                tracker,
+                () => limit.onRateLimit(),
+                () => limit.onSuccess()
+            );
             completed++;
 
             if (jobs.length > 0) {
