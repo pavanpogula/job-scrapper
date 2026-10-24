@@ -7,7 +7,7 @@ The **Ashby Job Scraper** is a batch TypeScript CLI scraper feeding Neon Postgre
 2. **Scrape:** `npm run scrape:parallel [-- --workers=N]` scrapes active boards with adaptive concurrency, retry/backoff, and GraphQL fallback. (Scheduled daily GitHub Actions planned: P3).
 3. **Persist:** Writes companies, departments, locations, and jobs to PostgreSQL (Prisma). Cache publishing to Upstash Redis (`jc:v1:*`) is planned: P2.
 4. **API:** Express 5 server in `src/api/Server.ts` (invoked via `api/index.ts` on Vercel) serves `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, and `/health`.
-5. **UI:** React 19 + TypeScript + Vite + Redux Toolkit application in `job-scrapper-ui/` queries the API. See system flows in `documentation/15-system-architecture-and-flows.md` (planned: P1-T22).
+5. **UI:** React 19 + TypeScript + Vite + Redux Toolkit application in `job-scrapper-ui/` queries the API. See system flows in `documentation/15-system-architecture-and-flows.md`.
 
 ## Hard Rules
 - **Secrets & Outputs:** Never read, print, stage, or commit `.env`, `apikeys/`, or `output/` values.
@@ -29,7 +29,7 @@ Full details in `documentation/agents/roster.md` (planned: P4-T04):
 | `docs-release-keeper` | Maintains documentation integrity, stamps, and release docs. |
 
 ## Self-Healing Loop
-Every scrape writes an error report (`output/latest-error-report.json`, v2 format planned: P1-T10). Actionable issues trigger automated investigation, a regression-guarded fix on a branch, documentation of decisions in `documentation/decisions/` (planned: P4-T01), and release notes in `CHANGELOG.md` (planned: P4-T02). See `documentation/16-self-healing-loop.md` (planned: P4-T03).
+Every scrape writes a v2 error report partitioned by month (`output/reports/<YYYY-MM>/<runId>.json`) and updated to `output/latest-<mode>.json`. Actionable issues trigger automated investigation, a regression-guarded fix on a branch, documentation of decisions in `documentation/decisions/` (planned: P4-T01), and release notes in `CHANGELOG.md` (planned: P4-T02). See `documentation/16-self-healing-loop.md` (planned: P4-T03).
 
 ## Documentation Map
 | Topic | Document |

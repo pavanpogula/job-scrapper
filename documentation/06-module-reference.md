@@ -27,7 +27,6 @@ flowchart TD
     Seed["utils/Seed.ts"] --> Companies["config/Companies.ts"]
     DbClean["database/DbClean.ts"] --> Cdx
     ProcessCdx["utils/ProcessCdxData.ts"] --> Cdx
-    TestDrive["scripts/test-drive-upload.ts"] --> GDU["lib/GoogleDriveUserOAuth.ts"]
 ```
 
 Every file that touches the DB creates its **own** `new PrismaClient()` at module scope (`Scraper`, `ClusterScraper`,
@@ -37,7 +36,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 
 ## `src/core/`
 
-### [Scraper.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/core/Scraper.ts) — DB scraper (`npm run scrape`, cluster worker)
+### [Scraper.ts](src/core/Scraper.ts) — DB scraper (`npm run scrape`, cluster worker)
 | Symbol | Line | Description |
 |---|---|---|
 | `CONCURRENCY_LIMIT = 15`, `BATCH_SIZE = 100` *(private)* | L26-27 | Default HTTP concurrency; jobs per DB write batch |
@@ -56,7 +55,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `runAll({ slugs?, workerId?, concurrency?, saveTelemetry? })` | L440 | Orchestrator: pre-warm caches, adaptive limiter, streaming flush chain, telemetry; returns `ErrorReportDocument` |
 | `require.main` guard | L594 | `--ipc-worker`: wait for one IPC message, run shard, reply `worker_done` / `worker_error`; otherwise `runAll()` |
 
-### [ClusterScraper.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/core/ClusterScraper.ts) — Multi-process coordinator (`npm run scrape:parallel`)
+### [ClusterScraper.ts](src/core/ClusterScraper.ts) — Multi-process coordinator (`npm run scrape:parallel`)
 | Symbol | Line | Description |
 |---|---|---|
 | `resolveWorkerCount(argv, totalItems, cpuCount = os.cpus().length)` | L18 | `--workers=N` (N ≥ 1) or default `min(4, max(2, cpuCount))`; capped at `totalItems` (min 1) |
@@ -65,7 +64,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `runClusterScrape(argv = process.argv)` | L101 | Loads ACTIVE slugs, per-worker concurrency `12` (>100 companies) else `max(5, ceil(20/shards))`, runs shards in parallel, `mergeReports` + `saveMergedReport`; returns merged report or `null` |
 | `require.main` guard | L148 | Exit 1 on failure |
 
-### [ScraperCSV.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/core/ScraperCSV.ts) — CSV scraper (`npm run scrape:csv`)
+### [ScraperCSV.ts](src/core/ScraperCSV.ts) — CSV scraper (`npm run scrape:csv`)
 | Symbol | Line | Description |
 |---|---|---|
 | `CONCURRENCY_LIMIT = 15` *(private)* | L19 | Adaptive limiter start value |
@@ -79,7 +78,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 
 ## `src/discovery/`
 
-### [CdxWorker.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/discovery/CdxWorker.ts) — `npm run discover`
+### [CdxWorker.ts](src/discovery/CdxWorker.ts) — `npm run discover`
 | Symbol | Line | Description |
 |---|---|---|
 | `CDX_API_URL`, `COMMON_CRAWL_INDEX_URL` *(private)* | L13-14 | `http://web.archive.org/cdx/search/cdx`; `https://index.commoncrawl.org/CC-MAIN-2024-51-index` |
@@ -94,7 +93,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 
 ## `src/lib/`
 
-### [AshbyClient.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/AshbyClient.ts)
+### [AshbyClient.ts](src/lib/AshbyClient.ts)
 | Symbol | Line | Description |
 |---|---|---|
 | `BROWSER_HEADERS` | L13 | Chrome 131 `User-Agent`, `Accept`, `Accept-Language` to avoid WAF/bot 403s |
@@ -109,7 +108,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `fetchOrganizationMetadata(slug)` | L224 | GET hosted board HTML, parses `window.__appData.organization` → name + wordmark/square logo; `null` on failure |
 | `fetchAshbyBoardWithFallback(slug, { includeCompensation = false, maxRetries = 2, baseDelayMs = 300 })` | L258 | REST GET (10 s) with backoff+jitter retries, `sanitizeJobBatch()`, GraphQL fallback on 404/403/400 |
 
-### [Sanitizer.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/Sanitizer.ts)
+### [Sanitizer.ts](src/lib/Sanitizer.ts)
 | Symbol | Line | Description |
 |---|---|---|
 | `interface ValidationIssue` | L9 | `{ companySlug, jobId, field, reason, action: 'filtered'\|'sanitized' }` |
@@ -125,7 +124,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `validateAndSanitizeJob(rawJob, slug, issues = [])` | L212 | Filters non-objects, bad ids (empty, >128 chars, placeholder, forbidden chars), empty/placeholder titles; sanitizes fields/URLs/metadata; `isRemote` also true when location contains "remote" |
 | `sanitizeJobBatch(rawJobs, slug)` | L314 | Non-array → issue; filters duplicate ids; returns `{ validJobs, issues }` |
 
-### [ErrorTracker.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/ErrorTracker.ts)
+### [ErrorTracker.ts](src/lib/ErrorTracker.ts)
 | Symbol | Line | Description |
 |---|---|---|
 | `interface RecordedErrorEvent` | L11 | `{ timestamp, category: 'api_error'\|'graphql_fallback'\|'validation_issue'\|'db_error', companySlug, jobId?, field?, message, actionTaken, samplePayload? }` (`api_error` is currently never emitted) |
@@ -140,7 +139,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `static mergeReports(reports, startedAtMs, mode = 'db_scrape')` | L162 | Sums counters across worker reports, concatenates events (≤500), `runId: cluster_run_<ms>` |
 | `static saveMergedReport(report, outputDir?)` | L216 | Same file outputs as `saveReport` for a merged report |
 
-### [Concurrency.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/Concurrency.ts)
+### [Concurrency.ts](src/lib/Concurrency.ts)
 | Symbol | Line | Description |
 |---|---|---|
 | `interface AdaptiveLimiterOptions` | L7 | `minConcurrency?` (default 2), `recoveryThreshold?` (default 25), `defaultCooldownMs?` (default 2000) |
@@ -148,14 +147,14 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `createLimiter(concurrency, options?)` | L27 | p-limit-style queue (CommonJS-friendly); `onRateLimit` halves concurrency (≥ min) and pauses dispatch for the cooldown (timer `unref`'d); `onSuccess` +1 after N consecutive successes; task errors propagate to the caller |
 | `chunk(array, size)` | L109 | Splits an array into fixed-size chunks — **unused** in `src/` (tested only) |
 
-### [Redis.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/Redis.ts)
+### [Redis.ts](src/lib/Redis.ts)
 | Symbol | Line | Description |
 |---|---|---|
 | `redisUrl` *(private)* | L26 | `REDIS_URL` or `redis://localhost:6379` (module calls `dotenv.config()`) |
 | `redis` | L52 | ioredis client, `lazyConnect: true`; `retryStrategy` returns `min(times*50, 2000)` ms (linear 50/100/150) and gives up after 3 retries |
 | `error` handler | L80 | Silences `ECONNREFUSED`, logs other errors |
 
-### [GoogleDriveOAuth.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/GoogleDriveOAuth.ts) (service account)
+### [GoogleDriveOAuth.ts](src/lib/GoogleDriveOAuth.ts) (service account)
 | Symbol | Line | Description |
 |---|---|---|
 | `SCOPES`, `CREDENTIALS_PATH` *(private)* | L12-13 | `…/auth/drive`; `apikeys/google-credentials.json` |
@@ -163,7 +162,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `uploadWithOAuth(filePath, folderId?)` | L49 | `files.create` as `text/csv`, `supportsAllDrives`; returns link or `null` (quota hint on failure); throws if JWT `authorize()` fails |
 | `listFiles()` | L107 | Logs first 10 files (debug) |
 
-### [GoogleDriveUserOAuth.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/GoogleDriveUserOAuth.ts) (user OAuth2)
+### [GoogleDriveUserOAuth.ts](src/lib/GoogleDriveUserOAuth.ts) (user OAuth2)
 | Symbol | Line | Description |
 |---|---|---|
 | `SCOPES`, `CREDENTIALS_PATH`, `TOKEN_PATH` *(private)* | L21-23 | `…/auth/drive.file`; `apikeys/oauth-credentials.json`; `apikeys/oauth-token.json` |
@@ -175,15 +174,15 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 
 ## `src/database/`
 
-### [DbMenu.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/database/DbMenu.ts) — `npm run db:menu`
+### [DbMenu.ts](src/database/DbMenu.ts) — `npm run db:menu`
 No exports; **runs on import** (L244-245). *(private)* `MENU` (L16), `showDashboard` (L34), `showJobsPerCompany` (L51, top 15),
 `showTopSalaries` (L70, top 10), `searchJobs` (L97, 10 rows, case-insensitive), `showLocations` (L133, top 10),
 `showGhostCompanies` (L161), `runSqlQuery` (L184, `$queryRawUnsafe`, 50 rows shown), `prompt` (L214, menu loop, option 8 exits).
 
-### [DbInspect.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/database/DbInspect.ts) — `npm run db:inspect`
+### [DbInspect.ts](src/database/DbInspect.ts) — `npm run db:inspect`
 No exports; **runs on import** (L66). *(private)* `inspectDatabase()` (L14) — `information_schema` tables/columns + `COUNT(*)` (skips `_`-prefixed tables).
 
-### [DbClean.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/database/DbClean.ts) — `npm run db:clean`
+### [DbClean.ts](src/database/DbClean.ts) — `npm run db:clean`
 | Symbol | Line | Description |
 |---|---|---|
 | `cleanDatabase()` | L15 | Finds companies failing `isValidSlug`; dry-run unless `--execute`, then deletes their jobs, then the companies |
@@ -193,25 +192,25 @@ No exports; **runs on import** (L66). *(private)* `inspectDatabase()` (L14) — 
 
 | File | Symbol | Line | Description |
 |---|---|---|---|
-| [Seed.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/utils/Seed.ts) | `loadTargetSlugs(useExtractedFile = false)` | L17 | `extracted-slugs.json` (cwd) when flag set and file is an array, else `TARGET_COMPANIES` |
+| [Seed.ts](src/utils/Seed.ts) | `loadTargetSlugs(useExtractedFile = false)` | L17 | `extracted-slugs.json` (cwd) when flag set and file is an array, else `TARGET_COMPANIES` |
 | | `seed({ useExtractedSlugs? })` | L33 | Memory diff vs existing slugs, then `company.createMany({ status: 'ACTIVE' }, skipDuplicates)` |
 | | `require.main` guard | L70 | Reads `--all` |
-| [ProcessCdxData.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/utils/ProcessCdxData.ts) | `processRawCDXData(rows)` (exported at L131) | L17 | Filters raw CDX rows to valid slugs, prints `TARGET_COMPANIES` block, writes `extracted-slugs.json`, returns sorted slugs |
+| [ProcessCdxData.ts](src/utils/ProcessCdxData.ts) | `processRawCDXData(rows)` (exported at L131) | L17 | Filters raw CDX rows to valid slugs, prints `TARGET_COMPANIES` block, writes `extracted-slugs.json`, returns sorted slugs |
 | | `inputFile` *(private)* | L11 | `process.argv[2]`, read at module load |
 | | `require.main` guard | L119 | Reads/parses the input file, or prints usage |
-| [Verify.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/utils/Verify.ts) | `interface DbVerificationReport` | L11 | 12 count/integrity fields |
+| [Verify.ts](src/utils/Verify.ts) | `interface DbVerificationReport` | L11 | 12 count/integrity fields |
 | | `verifyDatabase()` | L29 | Table/status counts, top-15 companies, 500-job integrity sample, top-5 USD salaries → report |
 | | `require.main` guard | L132 | Exit 1 on error |
 
 ## `src/config/`
 
-- [Companies.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/config/Companies.ts) — `TARGET_COMPANIES: string[]` (L10): `deel`, `remote`, `reddit`, `multiverse`, `1password`, `abridge`, `go-augment` (`go-augment` exercises the GraphQL fallback). Note: at time of analysis `remote` returned 404 and `deel`/`reddit` returned 0 jobs from Ashby.
+- [Companies.ts](src/config/Companies.ts) — `TARGET_COMPANIES: string[]` (L10): `deel`, `remote`, `reddit`, `multiverse`, `1password`, `abridge`, `go-augment` (`go-augment` exercises the GraphQL fallback). Note: at time of analysis `remote` returned 404 and `deel`/`reddit` returned 0 jobs from Ashby.
 
 ## `scripts/`
 
 | File | Symbol | Line | Description |
 |---|---|---|---|
-| [GenerateDocs.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/scripts/GenerateDocs.ts) (`npm run docs:generate`) | `FunctionDoc`, `FileDoc` *(private interfaces)* | L10-16 | Parsed doc shapes |
+| [GenerateDocs.ts](scripts/GenerateDocs.ts) (`npm run docs:generate`) | `FunctionDoc`, `FileDoc` *(private interfaces)* | L10-16 | Parsed doc shapes |
 | | `getFileIcon(path)` | L27 | Icon/colour by path keyword |
 | | `EXCLUDED_DIRS` | L46 | `node_modules, dist, .git, docs, output, .vscode, apikeys` |
 | | `discoverFiles(dir)` | L49 | Recursive `.ts` (non-`.d.ts`) / `.prisma` file finder |
@@ -219,19 +218,17 @@ No exports; **runs on import** (L66). *(private)* `inspectDatabase()` (L14) — 
 | | `parsePrismaSchema(content)` | L177 | Models + fields |
 | | `generateHTML(docs)` / `generateTreeHTML(docs)` | L225 / L423 | Builds the explorer page and file tree |
 | | `main()` | L491 | Writes `docs/project-explorer.html`; **runs on import** (L545), no exports |
-| [generate-readme.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/scripts/generate-readme.ts) (no npm script) | `interface JobRow` | L10 | Parsed CSV row |
+| [generate-readme.ts](scripts/generate-readme.ts) (no npm script) | `interface JobRow` | L10 | Parsed CSV row |
 | | `sanitizeMarkdownCell(text)` | L22 | Newlines → space, `\|` → `\\|` (backslash-escaped pipe) |
 | | `parseCSV(content)` | L32 | Quote-aware CSV parser (skips header/blank lines) |
 | | `generateMarkdownTable(jobs)` | L78 | `JOBS.md` table with truncation and safe links |
 | | `main()` *(private)* | L109 | Newest `output/jobs_*.csv` → `JOBS.md`; `require.main` guard L141 |
-| [test-drive-upload.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/scripts/test-drive-upload.ts) (no npm script) | `main()` *(private)* | L10 | Writes `output/test-upload.txt`, `uploadWithUserOAuth`, `listUserFiles`, deletes temp file; **runs on import** |
 
 ## Coding Conventions
 
-- PascalCase file names for modules (`Scraper.ts`, `DbMenu.ts`); kebab-case for some scripts (`generate-readme.ts`, `test-drive-upload.ts`).
-- Every file starts with a JSDoc block: `@file`, `@summary`, `@tags` (consumed by `GenerateDocs.ts`). Exceptions today:
-  `GoogleDriveUserOAuth.ts` and `scripts/test-drive-upload.ts` have no `@tags`, and their functions (and
-  `processRawCDXData`) lack `@summary`.
+- PascalCase file names for modules (`Scraper.ts`, `DbMenu.ts`); kebab-case for some scripts (`generate-readme.ts`).
+- Every file starts with a JSDoc block: `@file`, `@summary`, `@tags` (consumed by `GenerateDocs.ts`). Exception:
+  `GoogleDriveUserOAuth.ts` has no `@tags`, and its functions (and `processRawCDXData`) lack `@summary`.
 - Every function/method/class gets a JSDoc `@summary` (ESLint `jsdoc/require-jsdoc` warns otherwise; ESLint only lints `src/`).
 - Emoji-rich console logging; no logging library.
 - `any` is allowed (`@typescript-eslint/no-explicit-any: off`); unused vars prefixed `_` are ignored.

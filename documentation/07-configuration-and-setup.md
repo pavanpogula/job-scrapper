@@ -7,7 +7,7 @@ These are the **only** environment variables read anywhere in `src/`, `scripts/`
 
 | Variable | Required | Read by | Default / Fallback | Example |
 |---|---|---|---|---|
-| `DATABASE_URL` | ✅ for every DB command (`seed`, `discover`, `scrape`, `scrape:parallel`, `scrape:csv`, `db:*`, `verify`, `prisma:studio`). Not needed by `process:cdx`, `docs:generate`, `generate-readme.ts`, `test-drive-upload.ts`, `lint`, `test` | Prisma (`prisma/schema.prisma` → `env("DATABASE_URL")`) | none — Prisma throws on first query | `postgresql://user:pass@host:5432/jobscraper` (Neon works; add `?sslmode=require`) |
+| `DATABASE_URL` | ✅ for every DB command (`seed`, `discover`, `scrape`, `scrape:parallel`, `scrape:csv`, `db:*`, `verify`, `prisma:studio`). Not needed by `process:cdx`, `docs:generate`, `generate-readme.ts`, `lint`, `test` | Prisma (`prisma/schema.prisma` → `env("DATABASE_URL")`) | none — Prisma throws on first query | `postgresql://user:pass@host:5432/jobscraper` (Neon works; add `?sslmode=require`) |
 | `REDIS_URL` | optional (`.env.example` and `README.md` label it "Required"; code treats it as optional) | `src/lib/Redis.ts` (used only by `Scraper.ts`) | `redis://localhost:6379`; if unreachable, cache disabled for the run | `rediss://default:xxx@xxx.upstash.io:6379` |
 | `GOOGLE_DRIVE_FOLDER_ID` | optional; only with `scrape:csv -- --upload-cloud` | `src/core/ScraperCSV.ts` → `uploadToGoogleDrive()` | `undefined` → file goes to the service account's own My Drive root (not visible to you) | ID from `drive.google.com/drive/folders/<ID>` |
 
@@ -28,7 +28,7 @@ No other tunables are environment-driven: concurrency (`CONCURRENCY_LIMIT = 15` 
 | File | Kind | Required for | Read/written by | Created by |
 |---|---|---|---|---|
 | `apikeys/google-credentials.json` | Service-account key (`client_email`, `private_key`) | `scrape:csv -- --upload-cloud` | `src/lib/GoogleDriveOAuth.ts` (`CREDENTIALS_PATH = <cwd>/apikeys/google-credentials.json`) | GCP IAM → Service Accounts → Keys |
-| `apikeys/oauth-credentials.json` | OAuth client (Desktop app; `installed` or `web` block) | `scripts/test-drive-upload.ts` / `uploadWithUserOAuth()` | `src/lib/GoogleDriveUserOAuth.ts` | GCP → Credentials → OAuth client ID |
+| `apikeys/oauth-credentials.json` | OAuth client (Desktop app; `installed` or `web` block) | `uploadWithUserOAuth()` | `src/lib/GoogleDriveUserOAuth.ts` | GCP → Credentials → OAuth client ID |
 | `apikeys/oauth-token.json` | Access + refresh token | same | written by `GoogleDriveUserOAuth.ts` after consent / refresh; deleted if refresh fails | auto |
 
 All three paths are resolved relative to `process.cwd()`, so run commands from the repo root.
@@ -74,7 +74,7 @@ Verify the toolchain: `npx tsc --noEmit -p . && npm run lint && npm test`.
 
 | | Service account (`GoogleDriveOAuth.ts`, `uploadWithOAuth`) | User OAuth (`GoogleDriveUserOAuth.ts`, `uploadWithUserOAuth`) |
 |---|---|---|
-| Wired into `scrape:csv`? | ✅ yes (`--upload-cloud`) | ❌ no (only `scripts/test-drive-upload.ts`) |
+| Wired into `scrape:csv`? | ✅ yes (`--upload-cloud`) | ❌ no (alternative implementation) |
 | Auth | JWT from `client_email` + `private_key` | OAuth2 installed-app flow, token cached in `apikeys/oauth-token.json` |
 | Interactive? | No — good for cron/CI | First run: open URL, approve, paste code |
 | Storage | **No quota on personal Drive** → use a Shared Drive (`supportsAllDrives: true` is set) | User's own quota ✅ |
@@ -83,7 +83,7 @@ Verify the toolchain: `npx tsc --noEmit -p . && npm run lint && npm test`.
 
 ### 5.2 Service Account Mode (used by `npm run scrape:csv -- --upload-cloud`)
 
-Step-by-step instructions live in [docs/GOOGLE_DRIVE_SETUP.md](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/docs/GOOGLE_DRIVE_SETUP.md). Summary:
+Step-by-step instructions live in [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md). Summary:
 
 1. Create a GCP project and enable the **Google Drive API**.
 2. Create a service account → **Keys** → **Add Key** → JSON.
@@ -116,7 +116,7 @@ Step-by-step instructions live in [docs/GOOGLE_DRIVE_SETUP.md](file:///Users/pav
 1. GCP Console → **APIs & Services** → **OAuth consent screen**: configure it (External, add yourself as a test user).
 2. **Credentials** → **Create Credentials** → **OAuth client ID** → Application type **Desktop app**.
 3. Download JSON and save as `apikeys/oauth-credentials.json`.
-4. Run `npx ts-node scripts/test-drive-upload.ts`.
+4. Configure your script or scraper to call `uploadWithUserOAuth`.
 5. Open the printed consent URL, approve access. The browser is redirected to the client's first `redirect_uris` entry
    (`http://localhost` for Desktop clients), which will not load — copy the `code=` query parameter from the address bar
    and paste it into the terminal.

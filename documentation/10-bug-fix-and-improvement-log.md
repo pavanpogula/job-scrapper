@@ -47,8 +47,12 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 | BF-008 | `f872356`, `2cce729`, HEAD | Multi-process cluster scraper (watchdog, allSettled, report saved on worker failure) | ✅ |
 | BF-009 | `747d8d1`, `635e69d` | CSV-mode telemetry parity, `verify` auditor | ⚠️ (forwarding untested, Verify counts only) |
 | BF-010 | `627dfae` | Bulk `createMany` fast path, cache pre-warming | ❌ none, see 11-testing-guide.md |
-| BF-011 | HEAD | Structured field promotion, GraphQL preservation, company enrichment, and full-field hash (#31) | ✅ (`ContentHash.test.ts` 17 cases, `extractSalary` interval, unit tests) |
-| BF-014 | HEAD | Limiter pause timer event loop retention (SCR-09) | ✅ |
+| BF-011 | `2cdced2` | Structured field promotion, GraphQL preservation, company enrichment, and full-field hash (#31) | ✅ (`ContentHash.test.ts` 17 cases, `extractSalary` interval, unit tests) |
+| BF-012 | `831ae95` | React UI with RTK Query and Backend REST API with Dual Rate Limiting | ✅ (`tests/unit/ApiServer.test.ts`, rate limit and security headers) |
+| BF-013 | `632c83c` | Security hardening, facets API implementation, and filter OR-clobber fix | ✅ (`tests/unit/ApiServer.test.ts`; DOMPurify XSS tests in P5-T07) |
+| BF-014 | `55465a0` | Limiter pause timer event loop retention (SCR-09) | ✅ (`tests/unit/ConcurrencyExit.test.ts`) |
+| BF-015 | `8895d95` | Posting API failure classification, 429 rate limit scoping, and Retry-After header honoring (SCR-11/12) | ✅ (`tests/unit/AshbyClient.test.ts`, `ScraperRunAll.test.ts`) |
+| BF-016 | `38f4f01` | GraphQL source preservation against REST overwrite and empty board deactivation deferral (SCR-16/17) | ✅ (`tests/unit/ScraperRunAll.test.ts`) |
 
 ### BF-001: Posting API 404/403 for boards that are live in the browser
 - **Symptom:** Companies return `404`/`403` from `api.ashbyhq.com/posting-api/job-board/<slug>` but show live jobs at `jobs.ashbyhq.com/<slug>`.
@@ -135,9 +139,9 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
   1. Extended `prisma/schema.prisma` with indexed columns `salaryInterval`, `isRemote`, `workplaceType`, `employmentType`, `publishedAt`, `isListed`, `country`, `region`, `city`, `postalAddress` and ran `npx prisma db push`.
   2. Promoted `extractSalary()` in `src/lib/AshbyClient.ts` to parse interval (`1 YEAR`, `1 HOUR`, etc.); updated `fetchFromAshbyGraphQL()` to map `workplaceType`, `secondaryLocations`, and return GraphQL `validationIssues`.
   3. Extended `generateHash()` in `src/core/Scraper.ts` across all 16 fields, resolving known issue #31.
-  4. Wrote and executed `BackfillJobFields.ts` (`npm run db:backfill`) which backfilled all 34,037 active jobs in Postgres with structured columns.
+  4. Backfilled active jobs in Postgres with structured columns.
   5. Built and executed `EnrichCompanies.ts` (`npm run enrich:companies`) which concurrently enriched 1,729 / 1,747 active hiring companies (99.0%) with real names and logos in 30.77s.
-- **Implemented in:** `prisma/schema.prisma`, `src/lib/AshbyClient.ts`, `src/lib/Sanitizer.ts`, `src/core/Scraper.ts`, `src/database/BackfillJobFields.ts`, `src/utils/EnrichCompanies.ts`.
+- **Implemented in:** `prisma/schema.prisma`, `src/lib/AshbyClient.ts`, `src/lib/Sanitizer.ts`, `src/core/Scraper.ts`, `src/utils/EnrichCompanies.ts`.
 - **Regression Invariant:** `extractSalary()` returns `interval` whenever present; `generateHash()` hashes all 16 fields; `validateAndSanitizeJob()` preserves `workplaceType` and defaults `isListed` to true; `fetchFromAshbyGraphQL()` preserves `workplaceType` and `secondaryLocations`.
 - **Guarding tests:** `tests/unit/AshbyClient.test.ts` (`extractSalary` with interval and legacy shape).
 - **Known gap:** GraphQL fallback list endpoints do not provide `publishedAt` or descriptions (only 22 jobs affected, addressable via single-posting GraphQL queries if needed).

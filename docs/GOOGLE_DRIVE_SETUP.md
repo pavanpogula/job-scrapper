@@ -118,18 +118,10 @@ The upload runs after the CSV is complete, uses MIME type `text/csv`, keeps the 
 ## Alternative: Upload as Your Own Account (User OAuth)
 
 `src/lib/GoogleDriveUserOAuth.ts` (`uploadWithUserOAuth()`, scope `drive.file`) uploads with your own storage quota.
-It is **not** wired into `scrape:csv`; it is exercised by `scripts/test-drive-upload.ts`.
+It is an alternative user OAuth implementation (`uploadWithUserOAuth`).
 
 1. **APIs & Services** → **OAuth consent screen**: configure it and add yourself as a test user.
 2. **Credentials** → **Create Credentials** → **OAuth client ID** → Application type **Desktop app**.
 3. Download the JSON and save it as `apikeys/oauth-credentials.json`.
-4. Run:
-   ```bash
-   npx ts-node scripts/test-drive-upload.ts
-   ```
-5. Open the printed URL and approve. The browser is redirected to `http://localhost/?code=...` (the page will not load);
-   copy the `code` value and paste it into the terminal.
-6. The token is saved to `apikeys/oauth-token.json` and refreshed automatically when it expires. The test script
-   uploads `output/test-upload.txt` to your My Drive root, lists your 10 most recent files and deletes the local file.
-7. To use it for CSV uploads, change the import in `src/core/ScraperCSV.ts` from `uploadWithOAuth`
+4. To use it for CSV uploads, change the import in `src/core/ScraperCSV.ts` from `uploadWithOAuth`
    (`../lib/GoogleDriveOAuth`) to `uploadWithUserOAuth` (`../lib/GoogleDriveUserOAuth`); the signature is the same.

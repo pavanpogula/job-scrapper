@@ -64,7 +64,7 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 | 7 | [RESOLVED in P1-T04] One sequential Redis `GET` per job (~34k round trips per run). Removed Redis change detection from `Scraper.ts` (D-06) | `Scraper.ts` |
 | 8 | [RESOLVED in P1-T07] `NOT_FOUND` was terminal. Sunday/`--recheck-not-found` recheck queries `NOT_FOUND` companies and restores to `ACTIVE` on success | `Scraper.ts`, `ClusterScraper.ts` |
 | 9 | The CSV scraper counts `companiesNotFound` but never quarantines them, so dead slugs are requested on every run | `ScraperCSV.ts` `fetchJobsForCompany()` |
-| 10 | Exit code 0 on failure: `seed().catch(console.error)`, `GenerateDocs`/`generate-readme`/`test-drive-upload` `main().catch(console.error)`, and `cleanDatabase()` / `inspectDatabase()` catch their own errors. `npm run verify` exits 0 even when its integrity audit finds defects. These now exit 1 on a thrown error: `ScraperCSV` [RESOLVED in P1-T14], `Scraper` (`runAll` catch), `ClusterScraper`, `Verify`, `CdxWorker` | `ScraperCSV.ts`, `Seed.ts`, `DbClean.ts`, `DbInspect.ts`, `Verify.ts`, `scripts/*.ts` |
+| 10 | Exit code 0 on failure: `seed().catch(console.error)`, `GenerateDocs`/`generate-readme` `main().catch(console.error)`, and `cleanDatabase()` / `inspectDatabase()` catch their own errors. `npm run verify` exits 0 even when its integrity audit finds defects. These now exit 1 on a thrown error: `ScraperCSV` [RESOLVED in P1-T14], `Scraper` (`runAll` catch), `ClusterScraper`, `Verify`, `CdxWorker` | `ScraperCSV.ts`, `Seed.ts`, `DbClean.ts`, `DbInspect.ts`, `Verify.ts`, `scripts/*.ts` |
 | 11 | The service-account Drive upload fails on a personal Drive (no quota). The user-OAuth module (`uploadWithUserOAuth`) exists but `ScraperCSV.uploadToGoogleDrive()` doesn't use it | `ScraperCSV.ts`, `GoogleDriveOAuth.ts` |
 | 12 | [RESOLVED in P1-T14] The CSV filename uses `jobs_${tracker.runId}.csv` avoiding same-day overwrite collisions | `ScraperCSV.ts` |
 | 13 | Wayback CDX is capped at 1,000 rows (`fetchAshbyUrls(limit = 1000)`) | `CdxWorker.ts` L55 |
@@ -87,7 +87,7 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 | 20 | `extracted-slugs.json` is tracked in git although `.gitignore` has `/extracted-slugs*`. |
 | 21 | `.gitignore` still contains Java boilerplate (`*.class`, `*.jar`, …). |
 | 23 | `Companies.ts` has only **7** sample slugs (`deel`, `remote`, `reddit`, `multiverse`, `1password`, `abridge`, `go-augment`). Some of them are dead or empty boards, so fresh setups scrape very little until you run `seed -- --all`. |
-| 24 | `scripts/generate-readme.ts` and `scripts/test-drive-upload.ts` have no npm scripts. |
+| 24 | `scripts/generate-readme.ts` has no npm script. |
 | 27 | *(Partially resolved)* The stale `generate-docs.ts` usage comment is gone. Whether `GenerateDocs.ts`'s regexes mis-parse its own source in `project-explorer.html` has not been re-verified. |
 | 40 | Version drift: README / `10` call the current state "v1.1.0", but `package.json` `version` is `1.0.0` and there are no git tags. `package.json` also has an empty `description`/`author` and a stale `"main": "index.js"` (the file doesn't exist). |
 | 41 | `JOBS.md` is **committed** (~5.4 MB). It is a stale snapshot from 2026-01-05 (29,911 table rows rendered from the 29,910-record `jobs_2025-12-29.csv`; the extra row is the #42 newline split), while the DB now has ~34k jobs. Regenerating it makes huge diffs. Consider gitignoring it or publishing it elsewhere. |
@@ -104,10 +104,10 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 | 47 | [RESOLVED in P1-T07] Private `AshbyScraper.fetchJobs()` and `notFoundStrikes` dead code deleted from `Scraper.ts` | `Scraper.ts` |
 | 48 | The Redis `retryStrategy` comment says "Exponential backoff: 50ms, 100ms, 150ms" but `Math.min(times * 50, 2000)` is linear. | `src/lib/Redis.ts` |
 | 49 | `ProcessCdxData.ts` reads `process.argv[2]` at module load, and `processRawCDXData()` has an empty JSDoc block (no `@summary`). | `src/utils/ProcessCdxData.ts` |
-| 50 | Missing JSDoc `@tags` in the file header of `src/lib/GoogleDriveUserOAuth.ts` (it has `@file` and `@summary`) and of `scripts/test-drive-upload.ts`. `generate-readme.ts` `main()` has no JSDoc. | `src/lib/GoogleDriveUserOAuth.ts`, `scripts/` |
+| 50 | Missing JSDoc `@tags` in the file header of `src/lib/GoogleDriveUserOAuth.ts` (it has `@file` and `@summary`). `generate-readme.ts` `main()` has no JSDoc. | `src/lib/GoogleDriveUserOAuth.ts`, `scripts/` |
 | 51 | `Verify.ts` integrity audit: it checks only an unordered 500-row sample. The `\u0000` metadata check can never fire, because Postgres rejects `\u0000` in `jsonb` on write. It does not exit non-zero when the audit fails. | `src/utils/Verify.ts` |
 | 52 | [RESOLVED in P1-T10] ErrorTracker v2 tracks `jobsSanitized` and `jobsFilteredOut` by distinct `jobId` deduplication and splits `validation_issue` into `validation_filtered` and `validation_sanitized` | `src/lib/ErrorTracker.ts` |
-| 53 | `scripts/test-drive-upload.ts` and `scripts/GenerateDocs.ts` call `main()` at module load (no `require.main` guard). | `scripts/` |
+| 53 | `scripts/GenerateDocs.ts` calls `main()` at module load (no `require.main` guard). | `scripts/` |
 | 54 | `process:cdx` writes `extracted-slugs.json` relative to the **current working directory** (`outputPath = 'extracted-slugs.json'`), while `seed -- --all` reads `path.join(process.cwd(), …)`. Running from another directory splits them. | `src/utils/ProcessCdxData.ts`, `src/utils/Seed.ts` |
 | 55 | `docs:generate` walks the whole repo and only skips `node_modules`, `dist`, `.git`, `docs`, `output`, `.vscode`, `apikeys` (`EXCLUDED_DIRS`). Any `.ts` file added under `.agents/` or `.claude/` (or other tool folders) would show up in `project-explorer.html`. | `scripts/GenerateDocs.ts` |
 | 56 | `coverage/` (from `npx jest --coverage`) is not in `.gitignore`. | `.gitignore` |
@@ -115,7 +115,7 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 | — | `chunk()` in `Concurrency.ts` is used only by tests. | `src/lib/Concurrency.ts` |
 | — | `google-auth-library` (installed 10.5.0, transitive via `googleapis`) is imported directly in `GoogleDriveUserOAuth.ts` but not declared in `package.json`. | `package.json` |
 | — | Build/runtime tools (`typescript`, `ts-node`, `prisma`, `@types/node`) are in `dependencies`, not `devDependencies`. | `package.json` |
-| — | Modules that run on import (no `require.main` guard): `src/database/DbMenu.ts`, `src/database/DbInspect.ts`, `scripts/GenerateDocs.ts` (L545) and `scripts/test-drive-upload.ts` (L47), see also #53. All other entry points have a guard. | `src/database/`, `scripts/` |
+| — | Modules that run on import (no `require.main` guard): `src/database/DbMenu.ts`, `src/database/DbInspect.ts`, and `scripts/GenerateDocs.ts` (L545), see also #53. All other entry points have a guard. | `src/database/`, `scripts/` |
 | — | A separate `new PrismaClient()` in every module. Fine for CLIs, but a shared `lib/Prisma.ts` would be cleaner. | several |
 
 ---

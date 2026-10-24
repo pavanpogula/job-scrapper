@@ -23,7 +23,7 @@ The application is deployed full-stack on **Vercel** with a serverless Express R
 
 ## Features
 
-- 🖥️ **React Web Application (`job-scrapper-ui/`)**: React 19 + TypeScript + Vite 6 + Redux Toolkit + RTK Query + Material UI (MUI v6) supporting responsive desktop ledger and mobile drawer layouts, debounced search (400ms), in-flight promise deduplication, and zero-cost 10-minute Redux caching (`keepUnusedDataFor: 600`).
+- 🖥️ **React Web Application (`job-scrapper-ui/`)**: React 19 + TypeScript + Vite 6 + Redux Toolkit + RTK Query + Material UI (MUI 9) supporting responsive desktop ledger and mobile drawer layouts, debounced search (400ms), in-flight promise deduplication, and zero-cost 10-minute Redux caching (`keepUnusedDataFor: 600`).
 - ⚡ **REST API Server (`src/api/Server.ts`)**: Express 5 on port 3001 querying Prisma PostgreSQL directly. Features `/v1/jobs` (paginated, faceted, filterable), `/v1/jobs/:id` (detail), `/v1/companies` (directory), `/health`, static SPA serving (`job-scrapper-ui/dist`), HTTP security headers, and an in-memory sliding-window rate limiter (10 requests per 60 seconds per IP with `Retry-After`).
 - 🔍 **Company discovery**: finds Ashby slugs from the Wayback Machine CDX API (and the CommonCrawl index with `--common-crawl`), validates them against a regex + blocklist, and can enrich company name/logo from the hosted page (`--enrich`).
 - 🌐 **Resilient Ashby client** (`src/lib/AshbyClient.ts`): browser-like headers, exponential backoff + jitter on `429`/`5xx`/timeouts, and automatic fallback to Ashby's hosted GraphQL API when a company's public `posting-api` is disabled (`404`/`403`/`400`).
@@ -150,11 +150,11 @@ Company (slug PK-like, unique) 1 ──→ N Job N ──→ 0..1 Department
 | Model | Key fields |
 |-------|------------|
 | `Company` | `slug` (unique), `name`, `logoUrl`, `status` (`ACTIVE` / `NOT_FOUND` / `REDIRECTED`) |
-| `Job` | `ashbyId` (unique), `title`, `applyUrl`, `companySlug`, `departmentId`, `locationId`, `salaryMin`, `salaryMax`, `salaryCurrency`, `metadata` (sanitized raw job JSON, `jsonb`), `contentHash`, `active` |
+| `Job` | `ashbyId` (unique), `title`, `applyUrl`, `companySlug`, `departmentId`, `locationId`, `salaryMin`, `salaryMax`, `salaryCurrency`, `salaryInterval`, `isRemote`, `workplaceType`, `employmentType`, `publishedAt`, `country`, `region`, `city`, `postalAddress`, `metadata` (sanitized raw job JSON, `jsonb`), `contentHash`, `active`, `lastSeenAt` |
 | `Department` | `name` (unique) |
 | `Location` | `name` (unique) |
 
-Employment type, remote flag, descriptions and publish date are not columns. They are kept inside `Job.metadata`.
+Employment type, remote flag, publish date, workplace type, and normalized country are structured first-class columns. Full raw payload is kept in `Job.metadata`.
 
 ## Performance
 
@@ -172,8 +172,7 @@ A full run with 3,072 seeded slugs and 8 workers (`npm run scrape:parallel -- --
 4. Run `npm run scrape:csv -- --upload-cloud`.
 
 Service accounts have no storage quota on personal Drives, so uploads to a personal "My Drive" folder can fail. A
-user-OAuth uploader (`src/lib/GoogleDriveUserOAuth.ts`, credentials in `apikeys/oauth-credentials.json`) exists and can be
-tested with `scripts/test-drive-upload.ts`, but it is not yet wired into `scrape:csv`.
+user-OAuth uploader (`src/lib/GoogleDriveUserOAuth.ts`, credentials in `apikeys/oauth-credentials.json`) exists as an alternative implementation.
 
 ## Data Sources
 
@@ -212,8 +211,7 @@ job-scrapper/
 │       └── Verify.ts               # Database health & integrity auditor
 ├── scripts/
 │   ├── GenerateDocs.ts             # → docs/project-explorer.html
-│   ├── generate-readme.ts          # newest CSV → JOBS.md
-│   └── test-drive-upload.ts        # user-OAuth upload smoke test
+│   └── generate-readme.ts          # newest CSV → JOBS.md
 ├── tests/
 │   ├── unit/                       # 14 unit suites
 │   ├── e2e/                        # 2 pipeline suites

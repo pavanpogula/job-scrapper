@@ -9,8 +9,7 @@ Every file written by the code (verified by grepping `writeFile*`, `createWriteS
 | `output/reports/<YYYY-MM>/<runId>.md` | Markdown | `classifyReport()` / `ReportClassifier.ts` | `npm run report:classify` | ❌ | Human-readable run summary |
 | `output/latest-<mode>.json` | JSON | `ErrorTracker.saveReport()` / `saveMergedReport()` | `npm run scrape`, `scrape:parallel`, `scrape:csv` | ❌ | Copy of the newest report for that mode (`cluster`, `single`, `csv`) |
 | `output/latest-error-report.json` | JSON | `ErrorTracker.saveReport()` / `saveMergedReport()` | `npm run scrape`, `scrape:parallel` | ❌ | Copy of newest DB-mode run, kept for compatibility (CSV runs do not overwrite) |
-| `output/test-upload.txt` | text | `main()` in `scripts/test-drive-upload.ts` | `npx ts-node scripts/test-drive-upload.ts` | ❌ | Deleted at the end of the script; left behind if the script throws before cleanup (a leftover exists locally) |
-| `apikeys/oauth-token.json` | JSON (Google OAuth tokens) | `src/lib/GoogleDriveUserOAuth.ts` | `test-drive-upload.ts` | ❌ (`apikeys/` ignored) | Secret — never print or commit |
+| `apikeys/oauth-token.json` | JSON (Google OAuth tokens) | `src/lib/GoogleDriveUserOAuth.ts` | `GoogleDriveUserOAuth.ts` | ❌ (`apikeys/` ignored) | Secret — never print or commit |
 | `extracted-slugs.json` (CWD) | JSON array | `processRawCDXData()` in `src/utils/ProcessCdxData.ts` | `npm run process:cdx -- <file>` | ✅ tracked (despite `/extracted-slugs*` in `.gitignore`) | 3,072 slugs; read by `npm run seed -- --all` |
 | `JOBS.md` (repo root) | Markdown | `scripts/generate-readme.ts` | `npx ts-node scripts/generate-readme.ts` | ✅ tracked | ~5.4 MB, 29,911-row table (last generated 2026-01-05 UTC from `jobs_2025-12-29.csv`) |
 | `docs/project-explorer.html` | HTML | `scripts/GenerateDocs.ts` | `npm run docs:generate` | ✅ tracked | Interactive file/function explorer |
@@ -18,8 +17,8 @@ Every file written by the code (verified by grepping `writeFile*`, `createWriteS
 | PostgreSQL tables | — | Prisma | `seed`, `discover`, `scrape`, `scrape:parallel`, `db:clean -- --execute` | — | see [05](./05-database-and-cache.md) |
 | Redis keys `job:{ashbyId}:hash` | string | `Scraper.ts` | `scrape`, `scrape:parallel` | — | 7-day TTL, see [05 §4](./05-database-and-cache.md#4-redis-cache) |
 
-`output/` is created on demand (`mkdirSync({ recursive: true })`) relative to `process.cwd()` by `ScraperCSV.ts`,
-`ErrorTracker` and `test-drive-upload.ts`; `generate-readme.ts` resolves it relative to the script (`<repo>/output`).
+`output/` is created on demand (`mkdirSync({ recursive: true })`) relative to `process.cwd()` by `ScraperCSV.ts` and
+`ErrorTracker`; `generate-readme.ts` resolves it relative to the script (`<repo>/output`).
 Nothing writes a log file — all logs go to stdout/stderr.
 
 ## 1. CSV Format

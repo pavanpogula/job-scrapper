@@ -89,7 +89,7 @@ which always runs `sanitizeJobBatch()` (`src/lib/Sanitizer.ts`) on the REST resp
 
 <a id="workflow-a1"></a>
 
-### A1. Automatic: `npm run discover [-- --common-crawl] [-- --enrich]` → [CdxWorker.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/discovery/CdxWorker.ts)
+### A1. Automatic: `npm run discover [-- --common-crawl] [-- --enrich]` → [CdxWorker.ts](src/discovery/CdxWorker.ts)
 
 Entry: `runDiscovery({ includeCommonCrawl, enrichMetadata })`. Flags are read from `process.argv` inside the
 `require.main` guard (`--common-crawl` → `includeCommonCrawl`, `--enrich` → `enrichMetadata`).
@@ -113,16 +113,16 @@ Entry: `runDiscovery({ includeCommonCrawl, enrichMetadata })`. Flags are read fr
 ### A2. Manual / bulk: download CDX JSON → `npm run process:cdx -- <file.json>` → `npm run seed -- --all`
 
 1. User downloads the full CDX JSON (array-of-arrays) manually from the Wayback CDX endpoint (no limit).
-2. [ProcessCdxData.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/utils/ProcessCdxData.ts)
+2. [ProcessCdxData.ts](src/utils/ProcessCdxData.ts)
    `processRawCDXData(rows)` skips the `original` header row and bare `https://jobs.ashbyhq.com/` roots, then rejects
    `.well-known*`, `$`/`%` prefixes, wildcards (`*`), pure numbers, UUIDs, ≥20-char hex strings, CSS units
    (`px|em|rem|vh|vw|ms|s|%`), and < 2 chars, before finally applying `isValidSlug()`. Unparseable URLs are silently skipped.
 3. Prints a ready-to-paste `export const TARGET_COMPANIES = [...]` block and writes **`extracted-slugs.json`** (sorted)
    in the current working directory. With no file argument it only prints usage.
-4. [Seed.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/utils/Seed.ts) `seed({ useExtractedSlugs })`:
+4. [Seed.ts](src/utils/Seed.ts) `seed({ useExtractedSlugs })`:
    - `loadTargetSlugs(useExtractedFile)` — with `--all`, reads `<cwd>/extracted-slugs.json` if it exists and is an array;
      otherwise (or without `--all`) returns `TARGET_COMPANIES` from
-     [Companies.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/config/Companies.ts)
+     [Companies.ts](src/config/Companies.ts)
      (currently 7 slugs: `deel, remote, reddit, multiverse, 1password, abridge, go-augment`).
    - Loads all existing slugs (1 query), diffs in memory, then `company.createMany({ data: [{ slug, name: slug, status: 'ACTIVE' }], skipDuplicates: true })`
      for new ones (1 query). Skips the insert entirely when nothing is new.
@@ -133,7 +133,7 @@ Entry: `runDiscovery({ includeCommonCrawl, enrichMetadata })`. Flags are read fr
 
 ## 3. Workflow B — Scrape to Database: `npm run scrape`
 
-File: [Scraper.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/core/Scraper.ts) — class `AshbyScraper`, entry `runAll(options?)`.
+File: [Scraper.ts](src/core/Scraper.ts) — class `AshbyScraper`, entry `runAll(options?)`.
 
 ```mermaid
 sequenceDiagram
@@ -239,7 +239,7 @@ sequenceDiagram
 
 ## 4. Workflow B2 — Multi-Process Scrape: `npm run scrape:parallel [-- --workers=N]`
 
-File: [ClusterScraper.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/core/ClusterScraper.ts), entry `runClusterScrape(argv)`.
+File: [ClusterScraper.ts](src/core/ClusterScraper.ts), entry `runClusterScrape(argv)`.
 
 1. Query `ACTIVE` companies, then `prisma.$disconnect()` (the coordinator never touches the DB again). If none → prints
    "Run: npm run seed" and returns `null`.
@@ -266,7 +266,7 @@ File: [ClusterScraper.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-sc
 
 ## 5. Workflow C — Scrape to CSV: `npm run scrape:csv [-- --upload-cloud]`
 
-File: [ScraperCSV.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/core/ScraperCSV.ts), entry `scrapeToCSV()`.
+File: [ScraperCSV.ts](src/core/ScraperCSV.ts), entry `scrapeToCSV()`.
 
 1. `--upload-cloud` flag read from `process.argv`.
 2. Load `ACTIVE` companies from DB. If none → prints "Run: npm run seed", disconnects and returns.
@@ -312,7 +312,7 @@ File: [ScraperCSV.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapp
 
 ## 8. Workflow F — Docs Generation: `npm run docs:generate`
 
-[GenerateDocs.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/scripts/GenerateDocs.ts) recursively walks the
+[GenerateDocs.ts](scripts/GenerateDocs.ts) recursively walks the
 repo root (`discoverFiles()`, excluding directories named `node_modules, dist, .git, docs, output, .vscode, apikeys`) and
 collects every `.ts` (not `.d.ts`) and `.prisma` file — this includes `tests/`, `__mocks__/` and `scripts/`.
 `parseJSDoc()` reads the `@file` block at the very top of the file (`@summary` overrides `@file`, `@tags` comma-split)

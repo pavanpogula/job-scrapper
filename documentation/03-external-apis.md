@@ -191,7 +191,7 @@ File: `src/lib/GoogleDriveOAuth.ts` (despite the name, this is **JWT/service-acc
 **Known limitation:** service accounts have **no storage quota** on personal ("My Drive") accounts → upload fails with
 a "storage quota" error unless the target is a **Shared Drive**. Code prints the service-account email as a hint.
 
-## 5–6. Google Drive v3 — User OAuth2 (used only by `scripts/test-drive-upload.ts`)
+## 5–6. Google Drive v3 — User OAuth2 (alternative user OAuth flow)
 
 File: `src/lib/GoogleDriveUserOAuth.ts`.
 

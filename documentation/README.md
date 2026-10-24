@@ -3,7 +3,7 @@
 > **Purpose of this folder:** A single, authoritative source of context for humans *and AI agents*
 > working on this repository. Read this index first, then open only the file(s) relevant to your task.
 >
-> _Last full analysis: 2026-10-23 (P1-T07: Persisted company health, 3-strike quarantine, weekly Sunday recheck; deleted dead fetchJobs)._
+> _Last full analysis: 2026-10-24 (P1 completion: Phase 1 correctness across scraper, database, API, UI, and documentation)._
 
 ---
 
@@ -39,7 +39,7 @@
 | 12 | 12-backend-api.md *(planned: P2-T09)* | Backend REST API contract and cache read path |
 | 13 | 13-frontend-ui.md *(planned: P5-T09)* | Frontend routes, state, and UI component architecture |
 | 14 | 14-deployment-and-operations.md *(planned: P3-T04)* | Vercel, GitHub Actions, Neon, Upstash operations & runbook |
-| 15 | 15-system-architecture-and-flows.md *(planned: P1-T22)* | End-to-end Mermaid architecture and sequence flows |
+| 15 | [15-system-architecture-and-flows.md](./15-system-architecture-and-flows.md) | End-to-end Mermaid architecture and sequence flows |
 | 16 | 16-self-healing-loop.md *(planned: P4-T03)* | The automated error report, triage, fix, and release loop |
 | plan | [plan/00-README.md](./plan/00-README.md) | Phased enhancement plan (P0–P5 roadmap) |
 

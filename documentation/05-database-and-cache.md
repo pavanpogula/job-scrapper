@@ -1,6 +1,6 @@
 # 05 · Database & Cache
 
-Schema file: [prisma/schema.prisma](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/prisma/schema.prisma) ·
+Schema file: [prisma/schema.prisma](prisma/schema.prisma) ·
 Provider: **PostgreSQL** (`url = env("DATABASE_URL")`) · Generator: `prisma-client-js` (Prisma 5.22) ·
 Sync method: `npx prisma db push` (no `prisma/migrations/` folder).
 
@@ -170,7 +170,7 @@ Deleting a `Company` therefore requires deleting its jobs first (done in `DbClea
 
 ## 4. Redis Cache
 
-Client: [src/lib/Redis.ts](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/src/lib/Redis.ts) (shared `ioredis` singleton; also calls `dotenv.config()`).
+Client: [src/lib/Redis.ts](src/lib/Redis.ts) (shared `ioredis` singleton; also calls `dotenv.config()`).
 
 | Setting | Value |
 |---|---|
