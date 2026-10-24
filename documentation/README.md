@@ -38,7 +38,7 @@
 | 11 | [11-testing-guide.md](./11-testing-guide.md) | Testing strategy, mocking, invariant guard status |
 | 12 | [12-backend-api.md](./12-backend-api.md) | Backend REST API contract and cache read path |
 | 13 | 13-frontend-ui.md *(planned: P5-T09)* | Frontend routes, state, and UI component architecture |
-| 14 | 14-deployment-and-operations.md *(planned: P3-T04)* | Vercel, GitHub Actions, Neon, Upstash operations & runbook |
+| 14 | [14-deployment-and-operations.md](./14-deployment-and-operations.md) | Vercel, GitHub Actions, Neon, Upstash operations & runbook |
 | 15 | [15-system-architecture-and-flows.md](./15-system-architecture-and-flows.md) | End-to-end Mermaid architecture and sequence flows |
 | 16 | 16-self-healing-loop.md *(planned: P4-T03)* | The automated error report, triage, fix, and release loop |
 | plan | [plan/00-README.md](./plan/00-README.md) | Phased enhancement plan (P0–P5 roadmap) |
