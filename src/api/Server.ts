@@ -8,21 +8,19 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import {
+  queryJobs,
+  queryJobDetail,
+  computeFacets,
+  queryCompanies,
+} from './db/queries';
 
 const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.set('trust proxy', 1);
-
-// Normalize URL for serverless platforms (e.g. Vercel rewrites)
-app.use((req, _res, next) => {
-  if (req.headers['x-forwarded-uri'] && typeof req.headers['x-forwarded-uri'] === 'string') {
-    req.url = req.headers['x-forwarded-uri'];
-  }
-  next();
-});
 
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: '100kb' }));
@@ -103,11 +101,22 @@ const rateLimiterMiddleware = (req: Request, res: Response, next: any) => {
 
 app.use(rateLimiterMiddleware);
 
+// Cached active jobs count for health check (10 min TTL - GAP-API-04)
+let cachedHealthActiveJobs: number | null = null;
+let lastHealthCheckTime = 0;
+const HEALTH_CACHE_TTL_MS = 10 * 60 * 1000;
+
 // Health check
 app.get('/health', async (_req: Request, res: Response) => {
   try {
-    const jobCount = await prisma.job.count({ where: { active: true } });
-    res.json({ status: 'ok', activeJobs: jobCount });
+    const now = Date.now();
+    if (cachedHealthActiveJobs === null || now - lastHealthCheckTime >= HEALTH_CACHE_TTL_MS) {
+      cachedHealthActiveJobs = await prisma.job.count({
+        where: { active: true, isListed: true },
+      });
+      lastHealthCheckTime = now;
+    }
+    res.json({ status: 'ok', activeJobs: cachedHealthActiveJobs });
   } catch (err: any) {
     res.status(500).json({ status: 'error', error: err.message });
   }
@@ -116,160 +125,8 @@ app.get('/health', async (_req: Request, res: Response) => {
 // GET /v1/jobs - Paginated jobs query
 app.get('/v1/jobs', async (req: Request, res: Response) => {
   try {
-    const {
-      search,
-      workplaceType,
-      employmentType,
-      country,
-      isRemote,
-      hasSalary,
-      salaryMin,
-      salaryInterval,
-      page = '1',
-      pageSize = '25',
-      sortBy = 'publishedAt',
-      sortOrder = 'desc',
-    } = req.query;
-
-    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(pageSize as string, 10) || 25));
-
-    const where: Prisma.JobWhereInput = {
-      active: true,
-      isListed: true,
-    };
-
-    const andConditions: Prisma.JobWhereInput[] = [];
-
-    if (search && typeof search === 'string' && search.trim()) {
-      const q = search.trim().slice(0, 100);
-      andConditions.push({
-        OR: [
-          { title: { contains: q, mode: 'insensitive' } },
-          { companySlug: { contains: q, mode: 'insensitive' } },
-          { company: { name: { contains: q, mode: 'insensitive' } } },
-        ],
-      });
-    }
-
-    if (workplaceType && typeof workplaceType === 'string') {
-      where.workplaceType = workplaceType;
-    }
-
-    if (employmentType && typeof employmentType === 'string') {
-      where.employmentType = employmentType;
-    }
-
-    if (country && typeof country === 'string') {
-      where.country = country;
-    }
-
-    if (isRemote === 'true' || isRemote === '1') {
-      where.isRemote = true;
-    }
-
-    if (hasSalary === 'true' || hasSalary === '1') {
-      andConditions.push({
-        OR: [
-          { salaryMin: { not: null } },
-          { salaryMax: { not: null } },
-        ],
-      });
-    }
-
-    if (salaryMin) {
-      const minVal = parseFloat(salaryMin as string);
-      if (!isNaN(minVal)) {
-        where.salaryMin = { gte: minVal };
-      }
-    }
-
-    if (salaryInterval && typeof salaryInterval === 'string') {
-      where.salaryInterval = salaryInterval;
-    }
-
-    if (andConditions.length > 0) {
-      where.AND = andConditions;
-    }
-
-    let orderBy: Prisma.JobOrderByWithRelationInput | Prisma.JobOrderByWithRelationInput[] = [
-      { publishedAt: 'desc' },
-      { createdAt: 'desc' },
-    ];
-
-    const order = (sortOrder === 'asc' ? 'asc' : 'desc') as Prisma.SortOrder;
-    if (sortBy === 'salary') {
-      orderBy = { salaryMin: order };
-    } else if (sortBy === 'title') {
-      orderBy = { title: order };
-    } else if (sortBy === 'publishedAt') {
-      orderBy = [{ publishedAt: order }, { createdAt: order }];
-    }
-
-    const [total, jobs] = await Promise.all([
-      prisma.job.count({ where }),
-      prisma.job.findMany({
-        where,
-        skip: (pageNum - 1) * limit,
-        take: limit,
-        orderBy,
-        include: {
-          company: {
-            select: {
-              slug: true,
-              name: true,
-              logoUrl: true,
-            },
-          },
-          department: {
-            select: { name: true },
-          },
-          location: {
-            select: { name: true },
-          },
-        },
-      }),
-    ]);
-
-    const mapped = jobs.map((j) => ({
-      id: j.id,
-      ashbyId: j.ashbyId,
-      title: j.title,
-      applyUrl: j.applyUrl,
-      companySlug: j.companySlug,
-      companyName: j.company?.name || j.companySlug,
-      companyLogoUrl: j.company?.logoUrl,
-      department: j.department?.name,
-      location: j.location?.name,
-      country: j.country,
-      region: j.region,
-      city: j.city,
-      isRemote: j.isRemote,
-      workplaceType: j.workplaceType,
-      employmentType: j.employmentType,
-      publishedAt: j.publishedAt?.toISOString(),
-      salaryMin: j.salaryMin,
-      salaryMax: j.salaryMax,
-      salaryCurrency: j.salaryCurrency,
-      salaryInterval: j.salaryInterval,
-      isListed: j.isListed,
-      createdAt: j.createdAt.toISOString(),
-      updatedAt: j.updatedAt.toISOString(),
-    }));
-
-    const totalPages = Math.max(1, Math.ceil(total / limit));
-
-    res.json({
-      data: mapped,
-      meta: {
-        total,
-        page: pageNum,
-        pageSize: limit,
-        totalPages,
-        hasNext: pageNum < totalPages,
-        hasPrev: pageNum > 1,
-      },
-    });
+    const result = await queryJobs(prisma, req.query as any);
+    res.json(result);
   } catch (err: any) {
     console.error('Error fetching jobs:', err);
     res.status(500).json({ error: 'Failed to fetch jobs' });
@@ -279,64 +136,11 @@ app.get('/v1/jobs', async (req: Request, res: Response) => {
 // GET /v1/jobs/:id - Single job detail
 app.get('/v1/jobs/:id', async (req: Request, res: Response) => {
   try {
-    const id = String(req.params.id);
-    const job = await prisma.job.findFirst({
-      where: {
-        OR: [{ id }, { ashbyId: id }],
-      },
-      include: {
-        company: true,
-        department: true,
-        location: true,
-      },
-    });
-
+    const job = await queryJobDetail(prisma, String(req.params.id));
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
     }
-
-    const meta = (job.metadata as any) || {};
-
-    const jobCount = await prisma.job.count({
-      where: { companySlug: job.companySlug, active: true },
-    });
-
-    res.json({
-      id: job.id,
-      ashbyId: job.ashbyId,
-      title: job.title,
-      applyUrl: job.applyUrl,
-      jobUrl: meta.jobUrl || `https://jobs.ashbyhq.com/${job.companySlug}/${job.ashbyId}`,
-      companySlug: job.companySlug,
-      companyName: job.company?.name || job.companySlug,
-      companyLogoUrl: job.company?.logoUrl,
-      department: job.department?.name,
-      location: job.location?.name,
-      country: job.country,
-      region: job.region,
-      city: job.city,
-      isRemote: job.isRemote,
-      workplaceType: job.workplaceType,
-      employmentType: job.employmentType,
-      publishedAt: job.publishedAt?.toISOString(),
-      salaryMin: job.salaryMin,
-      salaryMax: job.salaryMax,
-      salaryCurrency: job.salaryCurrency,
-      salaryInterval: job.salaryInterval,
-      isListed: job.isListed,
-      team: meta.team,
-      descriptionHtml: meta.descriptionHtml,
-      descriptionPlain: meta.descriptionPlain,
-      postalAddress: job.postalAddress,
-      createdAt: job.createdAt.toISOString(),
-      updatedAt: job.updatedAt.toISOString(),
-      company: {
-        slug: job.company?.slug || job.companySlug,
-        name: job.company?.name || job.companySlug,
-        logoUrl: job.company?.logoUrl,
-        jobCount,
-      },
-    });
+    res.json(job);
   } catch (err: any) {
     console.error('Error fetching job detail:', err);
     res.status(500).json({ error: 'Failed to fetch job detail' });
@@ -346,46 +150,8 @@ app.get('/v1/jobs/:id', async (req: Request, res: Response) => {
 // GET /v1/facets - Aggregate filter facets
 app.get('/v1/facets', async (_req: Request, res: Response) => {
   try {
-    const [workplaceGroups, employmentGroups, countryGroups, withSalaryCount, totalActive] = await Promise.all([
-      prisma.job.groupBy({
-        by: ['workplaceType'],
-        where: { active: true, isListed: true, workplaceType: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { workplaceType: 'desc' } },
-      }),
-      prisma.job.groupBy({
-        by: ['employmentType'],
-        where: { active: true, isListed: true, employmentType: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { employmentType: 'desc' } },
-      }),
-      prisma.job.groupBy({
-        by: ['country'],
-        where: { active: true, isListed: true, country: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { country: 'desc' } },
-        take: 20,
-      }),
-      prisma.job.count({
-        where: {
-          active: true,
-          isListed: true,
-          OR: [{ salaryMin: { not: null } }, { salaryMax: { not: null } }],
-        },
-      }),
-      prisma.job.count({ where: { active: true, isListed: true } }),
-    ]);
-
-    res.json({
-      workplaceTypes: workplaceGroups.map((g) => ({ value: g.workplaceType!, count: g._count._all })),
-      employmentTypes: employmentGroups.map((g) => ({ value: g.employmentType!, count: g._count._all })),
-      countries: countryGroups.map((g) => ({ value: g.country!, count: g._count._all })),
-      departments: [],
-      hasSalary: {
-        yes: withSalaryCount,
-        no: Math.max(0, totalActive - withSalaryCount),
-      },
-    });
+    const facets = await computeFacets(prisma);
+    res.json(facets);
   } catch (err: any) {
     console.error('Error fetching facets:', err);
     res.status(500).json({ error: 'Failed to fetch facets' });
@@ -395,51 +161,8 @@ app.get('/v1/facets', async (_req: Request, res: Response) => {
 // GET /v1/companies - List active companies
 app.get('/v1/companies', async (req: Request, res: Response) => {
   try {
-    const { search, page = '1', pageSize = '30' } = req.query;
-    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(pageSize as string, 10) || 30));
-
-    const where: Prisma.CompanyWhereInput = {
-      jobs: { some: { active: true } },
-    };
-
-    if (search && typeof search === 'string' && search.trim()) {
-      const q = search.trim().slice(0, 100);
-      where.OR = [
-        { name: { contains: q, mode: 'insensitive' } },
-        { slug: { contains: q, mode: 'insensitive' } },
-      ];
-    }
-
-    const [total, companies] = await Promise.all([
-      prisma.company.count({ where }),
-      prisma.company.findMany({
-        where,
-        skip: (pageNum - 1) * limit,
-        take: limit,
-        orderBy: [{ name: 'asc' }],
-        include: {
-          _count: {
-            select: { jobs: { where: { active: true } } },
-          },
-        },
-      }),
-    ]);
-
-    const mapped = companies.map((c) => ({
-      slug: c.slug,
-      name: c.name || c.slug,
-      logoUrl: c.logoUrl,
-      jobCount: c._count.jobs,
-    }));
-
-    res.json({
-      data: mapped,
-      total,
-      page: pageNum,
-      pageSize: limit,
-      totalPages: Math.ceil(total / limit),
-    });
+    const companies = await queryCompanies(prisma, req.query as any);
+    res.json(companies);
   } catch (err: any) {
     console.error('Error fetching companies:', err);
     res.status(500).json({ error: 'Failed to fetch companies' });

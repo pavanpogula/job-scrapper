@@ -6,7 +6,7 @@
 
 import request from 'supertest';
 import app from '../../src/api/Server';
-import { mockJob, mockCompany } from '../../__mocks__/@prisma/client';
+import { mockJob, mockCompany, mockDepartment } from '../../__mocks__/@prisma/client';
 import sampleJob from '../fixtures/api/sample-job.json';
 import sampleCompany from '../fixtures/api/sample-company.json';
 
@@ -26,17 +26,40 @@ describe('API Server Contract & Snapshot Tests', () => {
   });
 
   describe('GET /health', () => {
-    it('returns 200 with status ok and active jobs count', async () => {
-      mockJob.count.mockResolvedValueOnce(34035);
+    it('returns 200 with status ok, counts active AND isListed, and caches for 10 minutes', async () => {
+      mockJob.count.mockResolvedValue(34035);
 
+      const res1 = await request(app)
+        .get('/health')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res1.status).toBe(200);
+      expect(res1.body.status).toBe('ok');
+      expect(res1.body.activeJobs).toBe(34035);
+      expect(mockJob.count).toHaveBeenCalledTimes(1);
+      expect(mockJob.count).toHaveBeenCalledWith({
+        where: { active: true, isListed: true },
+      });
+
+      // Second request within cache window makes 0 additional DB calls
+      const res2 = await request(app)
+        .get('/health')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res2.status).toBe(200);
+      expect(res2.body.activeJobs).toBe(34035);
+      expect(mockJob.count).toHaveBeenCalledTimes(1);
+      expect(res1.body).toMatchSnapshot();
+    });
+
+    it('ignores client-supplied X-Forwarded-Uri header', async () => {
       const res = await request(app)
         .get('/health')
+        .set('X-Forwarded-Uri', '/v1/jobs')
         .set('X-Forwarded-For', getNextIp());
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('ok');
-      expect(res.body.activeJobs).toBe(34035);
-      expect(res.body).toMatchSnapshot();
     });
   });
 
@@ -140,20 +163,77 @@ describe('API Server Contract & Snapshot Tests', () => {
       );
     });
 
-    it('applies hasSalary and salaryInterval filter', async () => {
+    it('ignores salaryInterval alone when salaryMin is absent', async () => {
       mockJob.findMany.mockResolvedValueOnce([]);
       mockJob.count.mockResolvedValueOnce(0);
 
       const res = await request(app)
-        .get('/v1/jobs?hasSalary=true&salaryInterval=1%20YEAR')
+        .get('/v1/jobs?salaryInterval=1%20YEAR')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(200);
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            active: true,
+            isListed: true,
+          },
+        })
+      );
+    });
+
+    it('applies salaryInterval when salaryMin is a valid number', async () => {
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      const res = await request(app)
+        .get('/v1/jobs?salaryMin=100000&salaryInterval=1%20YEAR')
         .set('X-Forwarded-For', getNextIp());
 
       expect(res.status).toBe(200);
       expect(mockJob.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            salaryInterval: '1 YEAR',
+            AND: expect.arrayContaining([
+              { salaryMin: { gte: 100000 } },
+              { salaryInterval: '1 YEAR' },
+            ]),
           }),
+        })
+      );
+    });
+
+    it('findMany args have select with no metadata and orderBy ends with id asc and nulls last', async () => {
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      await request(app)
+        .get('/v1/jobs')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.not.objectContaining({ metadata: true, postalAddress: true }),
+          orderBy: [
+            { publishedAt: { sort: 'desc', nulls: 'last' } },
+            { createdAt: 'desc' },
+            { id: 'asc' },
+          ],
+        })
+      );
+    });
+
+    it('supports sortBy=company and appends id asc tie-breaker', async () => {
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      await request(app)
+        .get('/v1/jobs?sortBy=company&sortOrder=asc')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: [{ companySlug: 'asc' }, { id: 'asc' }],
         })
       );
     });
@@ -182,7 +262,6 @@ describe('API Server Contract & Snapshot Tests', () => {
   describe('GET /v1/jobs/:id', () => {
     it('returns 200 with job details when found by id and matches snapshot', async () => {
       mockJob.findFirst.mockResolvedValueOnce(testJob);
-      mockJob.count.mockResolvedValueOnce(42);
 
       const res = await request(app)
         .get(`/v1/jobs/${testJob.id}`)
@@ -192,12 +271,13 @@ describe('API Server Contract & Snapshot Tests', () => {
       expect(res.body.id).toBe(testJob.id);
       expect(res.body.title).toBe(testJob.title);
       expect(res.body.companyName).toBe(testJob.company.name);
+      expect(res.body.active).toBe(true);
+      expect(res.body.secondaryLocations).toEqual(['New York, US']);
       expect(res.body).toMatchSnapshot();
     });
 
     it('returns 200 with job details when found by ashbyId fallback', async () => {
       mockJob.findFirst.mockResolvedValueOnce(testJob);
-      mockJob.count.mockResolvedValueOnce(42);
 
       const res = await request(app)
         .get(`/v1/jobs/${testJob.ashbyId}`)
@@ -214,7 +294,7 @@ describe('API Server Contract & Snapshot Tests', () => {
       );
     });
 
-    it('returns 404 when job does not exist', async () => {
+    it('returns 404 when job does not exist in database', async () => {
       mockJob.findFirst.mockResolvedValueOnce(null);
 
       const res = await request(app)
@@ -223,6 +303,17 @@ describe('API Server Contract & Snapshot Tests', () => {
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Job not found' });
+      expect(mockJob.findFirst).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns 404 immediately for non-UUID id without calling database', async () => {
+      const res = await request(app)
+        .get('/v1/jobs/invalid-not-a-uuid')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Job not found' });
+      expect(mockJob.findFirst).not.toHaveBeenCalled();
     });
   });
 
@@ -232,6 +323,11 @@ describe('API Server Contract & Snapshot Tests', () => {
         .mockResolvedValueOnce([{ workplaceType: 'Remote', _count: { _all: 10 } }])
         .mockResolvedValueOnce([{ employmentType: 'FullTime', _count: { _all: 8 } }])
         .mockResolvedValueOnce([{ country: 'US', _count: { _all: 15 } }]);
+
+      mockDepartment.findMany.mockResolvedValueOnce([
+        { name: 'Engineering', _count: { jobs: 25 } },
+        { name: 'Design', _count: { jobs: 10 } },
+      ]);
 
       mockJob.count
         .mockResolvedValueOnce(12)
@@ -245,6 +341,10 @@ describe('API Server Contract & Snapshot Tests', () => {
       expect(res.body.workplaceTypes).toEqual([{ value: 'Remote', count: 10 }]);
       expect(res.body.employmentTypes).toEqual([{ value: 'FullTime', count: 8 }]);
       expect(res.body.countries).toEqual([{ value: 'US', count: 15 }]);
+      expect(res.body.departments).toEqual([
+        { value: 'Engineering', count: 25 },
+        { value: 'Design', count: 10 },
+      ]);
       expect(res.body.hasSalary).toEqual({ yes: 12, no: 3 });
       expect(res.body).toMatchSnapshot();
     });

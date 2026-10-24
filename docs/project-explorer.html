@@ -180,7 +180,26 @@
                         <span class="material-icons-round folder-icon">folder</span>
                         <span>api</span>
                     </div>
+                    <ul><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>db</span>
+                    </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_api_db_queries_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>queries.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_api_contract_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>contract.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_api_Server_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Server.ts</span>
@@ -788,6 +807,86 @@
       }
     ],
     "functions": []
+  },
+  "src_api_contract_ts": {
+    "name": "contract.ts",
+    "path": "src/api/contract.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Single source of truth for API field selection, response formatting, and ID validation",
+    "tags": [
+      "API",
+      "Contract",
+      "Types",
+      "Validation",
+      "Normalization"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "isValidId()",
+        "desc": "Validates whether an ID string is a valid UUID"
+      },
+      {
+        "name": "toJobListItem()",
+        "desc": "Maps a database job row to the public API list item contract"
+      },
+      {
+        "name": "toJobDetail()",
+        "desc": "Maps a database job row to the public API detail contract"
+      }
+    ]
+  },
+  "src_api_db_queries_ts": {
+    "name": "queries.ts",
+    "path": "src/api/db/queries.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Centralized Prisma query functions for jobs, detail, facets, and companies with deterministic sorting and filtering",
+    "tags": [
+      "Database",
+      "Queries",
+      "Prisma",
+      "API",
+      "Jobs"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "queryJobs()",
+        "desc": "Queries paginated jobs matching filters with deterministic sort tie-breakers"
+      },
+      {
+        "name": "queryJobDetail()",
+        "desc": "Queries a single job by id or ashbyId with company count"
+      },
+      {
+        "name": "computeFacets()",
+        "desc": "Computes faceted counts for filters with deterministic ordering"
+      },
+      {
+        "name": "queryCompanies()",
+        "desc": "Queries active companies with job counts"
+      }
+    ]
   },
   "src_config_Companies_ts": {
     "name": "Companies.ts",
