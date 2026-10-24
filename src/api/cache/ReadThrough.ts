@@ -515,6 +515,114 @@ export class ReadThroughService {
     res.setHeader('Server-Timing', `redis;dur=${redisDur}`);
     return detailData;
   }
+
+  /**
+   * Retrieves cache state and metadata for shallow /health inspection.
+   * Leverages in-process LRU cache for 0 Redis commands when warm.
+   */
+  public async getHealthInfo(): Promise<{
+    configured: boolean;
+    state: 'ok' | 'not_configured' | 'unreachable' | 'no_generation' | 'missing_generation' | 'circuit_open' | 'budget_exhausted';
+    generation: string | null;
+    builtAt: string | null;
+    latencyMs: number;
+    mode: string | null;
+    activeJobs: number | null;
+    lastScrapeAt: string | null;
+  }> {
+    const start = Date.now();
+    const redis = this.getClient();
+    if (!redis) {
+      return {
+        configured: false,
+        state: 'not_configured',
+        generation: null,
+        builtAt: null,
+        latencyMs: 0,
+        mode: null,
+        activeJobs: null,
+        lastScrapeAt: null,
+      };
+    }
+
+    if (this.breaker.isBudgetExhausted()) {
+      return {
+        configured: true,
+        state: 'budget_exhausted',
+        generation: this.pointerCache?.gen || null,
+        builtAt: null,
+        latencyMs: 0,
+        mode: null,
+        activeJobs: null,
+        lastScrapeAt: this.pointerCache?.lastScrapeAt || null,
+      };
+    }
+
+    if (!this.breaker.canAttempt()) {
+      return {
+        configured: true,
+        state: 'circuit_open',
+        generation: this.pointerCache?.gen || null,
+        builtAt: null,
+        latencyMs: 0,
+        mode: null,
+        activeJobs: null,
+        lastScrapeAt: this.pointerCache?.lastScrapeAt || null,
+      };
+    }
+
+    try {
+      const { gen, lastScrapeAt } = await this.getPointer();
+      if (!gen) {
+        return {
+          configured: true,
+          state: 'no_generation',
+          generation: null,
+          builtAt: null,
+          latencyMs: Date.now() - start,
+          mode: null,
+          activeJobs: null,
+          lastScrapeAt: lastScrapeAt || null,
+        };
+      }
+
+      const manifest = await this.getManifest(gen);
+      if (!manifest) {
+        return {
+          configured: true,
+          state: 'missing_generation',
+          generation: gen,
+          builtAt: null,
+          latencyMs: Date.now() - start,
+          mode: null,
+          activeJobs: null,
+          lastScrapeAt: lastScrapeAt || null,
+        };
+      }
+
+      return {
+        configured: true,
+        state: 'ok',
+        generation: gen,
+        builtAt: manifest.builtAt || null,
+        latencyMs: Date.now() - start,
+        mode: manifest.mode || 'double_buffer',
+        activeJobs: manifest.details?.count ?? manifest.views?.default?.total ?? null,
+        lastScrapeAt: lastScrapeAt || manifest.scrapeFinishedAt || manifest.builtAt || null,
+      };
+    } catch {
+      return {
+        configured: true,
+        state: 'unreachable',
+        generation: null,
+        builtAt: null,
+        latencyMs: Date.now() - start,
+        mode: null,
+        activeJobs: null,
+        lastScrapeAt: null,
+      };
+    }
+  }
 }
 
 export const readThroughService = new ReadThroughService();

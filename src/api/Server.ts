@@ -109,19 +109,91 @@ let cachedHealthActiveJobs: number | null = null;
 let lastHealthCheckTime = 0;
 const HEALTH_CACHE_TTL_MS = 10 * 60 * 1000;
 
-// Health check
-app.get('/health', async (_req: Request, res: Response) => {
+/**
+ * Resets the in-memory health activeJobs fallback cache (for testing).
+ */
+export function resetHealthCache(): void {
+  cachedHealthActiveJobs = null;
+  lastHealthCheckTime = 0;
+}
+
+// Health check v2 (P2-T07, API-04, CACHE-04; 04 §5)
+app.get('/health', async (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store');
   try {
-    const now = Date.now();
-    if (cachedHealthActiveJobs === null || now - lastHealthCheckTime >= HEALTH_CACHE_TTL_MS) {
-      cachedHealthActiveJobs = await prisma.job.count({
-        where: { active: true, isListed: true },
-      });
-      lastHealthCheckTime = now;
+    const cacheInfo = await readThroughService.getHealthInfo();
+
+    let activeJobs: number | null = cacheInfo.activeJobs;
+    let status: 'ok' | 'degraded' = 'ok';
+
+    if (cacheInfo.state !== 'ok' || activeJobs === null) {
+      status = 'degraded';
+      const now = Date.now();
+      if (cachedHealthActiveJobs === null || now - lastHealthCheckTime >= HEALTH_CACHE_TTL_MS) {
+        cachedHealthActiveJobs = await prisma.job.count({
+          where: { active: true, isListed: true },
+        });
+        lastHealthCheckTime = now;
+      }
+      activeJobs = cachedHealthActiveJobs;
     }
-    res.json({ status: 'ok', activeJobs: cachedHealthActiveJobs });
+
+    let ageHours: number | null = null;
+    let fresh = false;
+    let stale = false;
+    if (cacheInfo.lastScrapeAt) {
+      const scrapeMs = new Date(cacheInfo.lastScrapeAt).getTime();
+      if (!isNaN(scrapeMs)) {
+        ageHours = Number(((Date.now() - scrapeMs) / (3600 * 1000)).toFixed(2));
+        fresh = ageHours <= 26;
+        stale = ageHours > 36;
+      }
+    }
+
+    const isDeep = req.query.deep === '1';
+    const hasValidToken = Boolean(
+      process.env.HEALTH_TOKEN && req.headers['x-health-token'] === process.env.HEALTH_TOKEN
+    );
+
+    let dbStatus: { checked: boolean; status?: string; error?: string } = { checked: false };
+    if (isDeep && hasValidToken) {
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+        dbStatus = { checked: true, status: 'ok' };
+      } catch (err: any) {
+        dbStatus = { checked: true, status: 'error', error: err.message };
+      }
+    }
+
+    const payload = {
+      status,
+      activeJobs: activeJobs ?? 0,
+      version: process.env.VERCEL_GIT_COMMIT_SHA || 'dev',
+      time: new Date().toISOString(),
+      cache: {
+        configured: cacheInfo.configured,
+        state: cacheInfo.state,
+        generation: cacheInfo.generation,
+        builtAt: cacheInfo.builtAt,
+        latencyMs: cacheInfo.latencyMs,
+        mode: cacheInfo.mode,
+      },
+      data: {
+        lastScrapeAt: cacheInfo.lastScrapeAt,
+        ageHours,
+        fresh,
+        stale,
+      },
+      db: dbStatus,
+    };
+
+    if (isDeep && hasValidToken && dbStatus.status === 'error' && cacheInfo.state !== 'ok') {
+      return res.status(503).json(payload);
+    }
+
+    return res.status(200).json(payload);
   } catch (err: any) {
-    res.status(500).json({ status: 'error', error: err.message });
+    return res.status(500).json({ status: 'error', error: err.message });
   }
 });
 

@@ -617,6 +617,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_HealthMeta_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>HealthMeta.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_ProcessCdxData_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ProcessCdxData.test.ts</span>
@@ -903,10 +909,15 @@
       },
       {
         "label": "Functions",
-        "value": "0"
+        "value": "1"
       }
     ],
-    "functions": []
+    "functions": [
+      {
+        "name": "resetHealthCache()",
+        "desc": "Resets the in-memory health activeJobs fallback cache (for testing)."
+      }
+    ]
   },
   "src_api_cache_Breaker_ts": {
     "name": "Breaker.ts",
@@ -985,7 +996,7 @@
       },
       {
         "label": "Functions",
-        "value": "8"
+        "value": "9"
       }
     ],
     "functions": [
@@ -1020,6 +1031,10 @@
       {
         "name": "serveDetail()",
         "desc": "Serves a job detail query through shard hash, negative 404 LRU, or DB fallback"
+      },
+      {
+        "name": "getHealthInfo()",
+        "desc": "Retrieves cache state and metadata for shallow /health inspection."
       }
     ]
   },
@@ -2714,6 +2729,31 @@
       "Upload",
       "OAuth",
       "JWT"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_HealthMeta_test_ts": {
+    "name": "HealthMeta.test.ts",
+    "path": "tests/unit/HealthMeta.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates shallow /health inspection, 0-command warm execution, and /v1/meta endpoint",
+    "tags": [
+      "Testing",
+      "Health",
+      "Meta",
+      "ShallowHealth",
+      "ReadThrough"
     ],
     "info": [
       {

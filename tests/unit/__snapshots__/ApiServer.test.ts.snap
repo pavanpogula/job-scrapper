@@ -1,9 +1,28 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`API Server Contract & Snapshot Tests GET /health returns 200 with status ok, counts active AND isListed, and caches for 10 minutes 1`] = `
+exports[`API Server Contract & Snapshot Tests GET /health returns 200 with status degraded when cache is not configured, counts active AND isListed, and caches for 10 minutes 1`] = `
 {
   "activeJobs": 34035,
-  "status": "ok",
+  "cache": {
+    "builtAt": null,
+    "configured": false,
+    "generation": null,
+    "latencyMs": 0,
+    "mode": null,
+    "state": "not_configured",
+  },
+  "data": {
+    "ageHours": null,
+    "fresh": false,
+    "lastScrapeAt": null,
+    "stale": false,
+  },
+  "db": {
+    "checked": false,
+  },
+  "status": "degraded",
+  "time": Any<String>,
+  "version": "dev",
 }
 `;
 

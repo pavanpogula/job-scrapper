@@ -26,7 +26,7 @@ describe('API Server Contract & Snapshot Tests', () => {
   });
 
   describe('GET /health', () => {
-    it('returns 200 with status ok, counts active AND isListed, and caches for 10 minutes', async () => {
+    it('returns 200 with status degraded when cache is not configured, counts active AND isListed, and caches for 10 minutes', async () => {
       mockJob.count.mockResolvedValue(34035);
 
       const res1 = await request(app)
@@ -34,8 +34,9 @@ describe('API Server Contract & Snapshot Tests', () => {
         .set('X-Forwarded-For', getNextIp());
 
       expect(res1.status).toBe(200);
-      expect(res1.body.status).toBe('ok');
+      expect(res1.body.status).toBe('degraded');
       expect(res1.body.activeJobs).toBe(34035);
+      expect(res1.body.cache.state).toBe('not_configured');
       expect(mockJob.count).toHaveBeenCalledTimes(1);
       expect(mockJob.count).toHaveBeenCalledWith({
         where: { active: true, isListed: true },
@@ -49,7 +50,9 @@ describe('API Server Contract & Snapshot Tests', () => {
       expect(res2.status).toBe(200);
       expect(res2.body.activeJobs).toBe(34035);
       expect(mockJob.count).toHaveBeenCalledTimes(1);
-      expect(res1.body).toMatchSnapshot();
+      expect(res1.body).toMatchSnapshot({
+        time: expect.any(String),
+      });
     });
 
     it('ignores client-supplied X-Forwarded-Uri header', async () => {
@@ -59,7 +62,7 @@ describe('API Server Contract & Snapshot Tests', () => {
         .set('X-Forwarded-For', getNextIp());
 
       expect(res.status).toBe(200);
-      expect(res.body.status).toBe('ok');
+      expect(res.body.status).toBe('degraded');
     });
   });
 
