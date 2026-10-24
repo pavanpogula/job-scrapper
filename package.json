@@ -19,6 +19,7 @@
     "lint": "npx eslint src/ --ext .ts",
     "lint:fix": "npx eslint src/ --ext .ts --fix",
     "process:cdx": "npx ts-node src/utils/ProcessCdxData.ts",
+    "db:normalize-countries": "npx ts-node src/database/NormalizeCountries.ts",
     "verify": "npx ts-node src/utils/Verify.ts",
     "api:start": "npx ts-node src/api/Server.ts",
     "build": "npx prisma generate && npm --prefix job-scrapper-ui install && npm --prefix job-scrapper-ui run build"

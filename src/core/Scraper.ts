@@ -17,6 +17,7 @@ import {
     sanitizeJsonMetadata,
     sanitizeText
 } from '../lib/Sanitizer';
+import { toIsoCountry } from '../lib/Country';
 import { ErrorTracker, ErrorReportDocument } from '../lib/ErrorTracker';
 
 const prisma = new PrismaClient();
@@ -208,7 +209,7 @@ export class AshbyScraper {
             publishedAt: ashbyJob.publishedAt ? new Date(ashbyJob.publishedAt).toISOString() : null,
             applyUrl: ashbyJob.applyUrl || '',
             isListed: ashbyJob.isListed !== false,
-            country: postal?.addressCountry ? sanitizeText(postal.addressCountry) : null,
+            country: toIsoCountry(postal?.addressCountry),
             region: postal?.addressRegion ? sanitizeText(postal.addressRegion) : null,
             city: postal?.addressLocality ? sanitizeText(postal.addressLocality) : null,
             descriptionHtml: ashbyJob.descriptionHtml || (ashbyJob as any).metadata?.descriptionHtml || '',
@@ -488,7 +489,7 @@ export class AshbyScraper {
             const postal = job.address?.postalAddress;
             const parsedPublishedAt = job.publishedAt ? new Date(job.publishedAt) : null;
             const validPublishedAt = parsedPublishedAt && !isNaN(parsedPublishedAt.getTime()) ? parsedPublishedAt : null;
-            const cleanCountry = postal?.addressCountry ? sanitizeText(postal.addressCountry) : null;
+            const cleanCountry = toIsoCountry(postal?.addressCountry);
             const cleanRegion = postal?.addressRegion ? sanitizeText(postal.addressRegion) : null;
             const cleanCity = postal?.addressLocality ? sanitizeText(postal.addressLocality) : null;
 
@@ -534,7 +535,7 @@ export class AshbyScraper {
                 employmentType: job.employmentType ?? null,
                 publishedAt: validPublishedAt,
                 isListed: job.isListed !== false,
-                country: postal?.addressCountry ? sanitizeText(postal.addressCountry) : null,
+                country: cleanCountry,
                 region: postal?.addressRegion ? sanitizeText(postal.addressRegion) : null,
                 city: postal?.addressLocality ? sanitizeText(postal.addressLocality) : null,
                 postalAddress: postal ? (sanitizeJsonMetadata(postal) ?? Prisma.DbNull) : Prisma.DbNull,

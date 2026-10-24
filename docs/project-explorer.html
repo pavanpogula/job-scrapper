@@ -249,6 +249,12 @@
                         <span>DbMenu.ts</span>
                         
                     </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_database_NormalizeCountries_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>NormalizeCountries.ts</span>
+                        
+                    </div>
                 </li></ul>
                 </li><li class="">
                     <div class="tree-item folder" onclick="toggleFolder(this)">
@@ -279,6 +285,12 @@
                     <div class="tree-item file" onclick="showFile('src_lib_Concurrency_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Concurrency.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_Country_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Country.ts</span>
                         
                     </div>
                 </li><li>
@@ -428,6 +440,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_ContentHash_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ContentHash.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_Country_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Country.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1012,6 +1030,40 @@
       }
     ]
   },
+  "src_database_NormalizeCountries_ts": {
+    "name": "NormalizeCountries.ts",
+    "path": "src/database/NormalizeCountries.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Backfills and normalizes country strings on existing Job records to 2-letter uppercase ISO codes and updates contentHash",
+    "tags": [
+      "Database",
+      "CLI",
+      "Normalization",
+      "Country",
+      "Backfill"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "2"
+      }
+    ],
+    "functions": [
+      {
+        "name": "normalizeCountries()",
+        "desc": "Paginates all jobs with non-null country and standardizes country code to ISO-3166 alpha-2"
+      },
+      {
+        "name": "main()",
+        "desc": "CLI entry point for country normalization"
+      }
+    ]
+  },
   "src_discovery_CdxWorker_ts": {
     "name": "CdxWorker.ts",
     "path": "src/discovery/CdxWorker.ts",
@@ -1137,6 +1189,35 @@
       {
         "name": "createLimiter()",
         "desc": "Creates an adaptive concurrency limiter for controlled parallel execution with dynamic throttling on 429/403"
+      }
+    ]
+  },
+  "src_lib_Country_ts": {
+    "name": "Country.ts",
+    "path": "src/lib/Country.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Normalizes country names, aliases, and ISO codes to standard 2-letter uppercase codes",
+    "tags": [
+      "Country",
+      "ISO-3166",
+      "Normalization",
+      "Sanitization"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "toIsoCountry()",
+        "desc": "Converts raw country name, abbreviation, or ISO code into standard ISO-3166 alpha-2 code"
       }
     ]
   },
@@ -1721,6 +1802,30 @@
       "Scraper",
       "Hashing",
       "Invariants"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_Country_test_ts": {
+    "name": "Country.test.ts",
+    "path": "tests/unit/Country.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Tests ISO-3166 alpha-2 country code resolution, aliases, punctuation stripping, case-insensitivity, and unknown handling",
+    "tags": [
+      "Unit Test",
+      "Country",
+      "ISO-3166",
+      "Normalization"
     ],
     "info": [
       {

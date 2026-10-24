@@ -118,7 +118,7 @@ Empty names (`""`) are not stored → `departmentId`/`locationId = null`.
 | `employmentType` | `String?` | `'FullTime'`, `'Contract'`, `'PartTime'`, `'Intern'`, `'Temporary'` |
 | `publishedAt` | `DateTime?` | when the job was published (99.94% coverage; indexed) |
 | `isListed` | `Boolean` | `@default(true)` — `false` means reachable only by direct link |
-| `country` | `String?` | ISO country code from `job.address.postalAddress.addressCountry` (indexed) |
+| `country` | `String?` | ISO-3166-1 alpha-2 2-letter uppercase code normalized from `job.address.postalAddress.addressCountry` via `toIsoCountry()` (indexed; `null` if unresolvable) |
 | `region` | `String?` | State/region code from `addressRegion` |
 | `city` | `String?` | Locality from `addressLocality` (indexed) |
 | `postalAddress` | `Json?` | Full normalized postal address object |
