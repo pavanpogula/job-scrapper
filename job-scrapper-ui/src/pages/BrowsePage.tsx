@@ -39,8 +39,16 @@ import {
   setPage,
   resetFilters,
 } from '../store/slices/filterSlice';
-import { useGetJobsQuery } from '../store/api/jobsApi';
+import { useGetJobsQuery, useGetFacetsQuery } from '../store/api/jobsApi';
 import { WorkplaceType, EmploymentType } from '../types/api';
+
+export function formatCountryOption(code: string): string {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) || code;
+  } catch {
+    return code;
+  }
+}
 
 export const BrowsePage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -50,6 +58,7 @@ export const BrowsePage: React.FC = () => {
 
   const filters = useAppSelector((state) => state.filters);
   const { data, isLoading, isFetching, error } = useGetJobsQuery(filters);
+  const { data: facetsData } = useGetFacetsQuery();
 
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -148,11 +157,16 @@ export const BrowsePage: React.FC = () => {
           onChange={(e) => dispatch(setCountry(e.target.value))}
         >
           <MenuItem value="">All Countries</MenuItem>
-          <MenuItem value="US">United States (US)</MenuItem>
-          <MenuItem value="GB">United Kingdom (GB)</MenuItem>
-          <MenuItem value="CA">Canada (CA)</MenuItem>
-          <MenuItem value="DE">Germany (DE)</MenuItem>
-          <MenuItem value="FR">France (FR)</MenuItem>
+          {filters.country && !facetsData?.countries?.some((c) => c.value === filters.country) && (
+            <MenuItem value={filters.country}>
+              {formatCountryOption(filters.country)}
+            </MenuItem>
+          )}
+          {facetsData?.countries?.map((c) => (
+            <MenuItem key={c.value} value={c.value}>
+              {formatCountryOption(c.value)}
+            </MenuItem>
+          ))}
         </Select>
       </FormControl>
 
