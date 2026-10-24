@@ -419,6 +419,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ContentHash_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ContentHash.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_DbClean_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>DbClean.test.ts</span>
@@ -796,10 +802,18 @@
       },
       {
         "label": "Functions",
-        "value": "9"
+        "value": "11"
       }
     ],
     "functions": [
+      {
+        "name": "stableStringify()",
+        "desc": "Deterministic JSON stringifier sorting object keys alphabetically"
+      },
+      {
+        "name": "computeJobContentHash()",
+        "desc": "Computes 32-character MD5 content hash over explicit fields after sanitization"
+      },
       {
         "name": "recordNotFoundStrike()",
         "desc": "Tracks consecutive 404 strikes for a company and marks status NOT_FOUND once threshold is reached"
@@ -814,7 +828,7 @@
       },
       {
         "name": "generateHash()",
-        "desc": "Creates MD5 hash of job content for change detection (including salary interval, currency, workplaceType, and address)"
+        "desc": "Creates MD5 hash of job content for change detection over explicit sanitized fields"
       },
       {
         "name": "getOrCreateDepartment()",
@@ -1659,6 +1673,31 @@
       "Concurrency",
       "Limiter",
       "Async"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ContentHash_test_ts": {
+    "name": "ContentHash.test.ts",
+    "path": "tests/unit/ContentHash.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test suite verifying deterministic content hashing over explicit field list after sanitization",
+    "tags": [
+      "Unit Test",
+      "ContentHash",
+      "Scraper",
+      "Hashing",
+      "Invariants"
     ],
     "info": [
       {

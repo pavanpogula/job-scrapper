@@ -3,7 +3,7 @@
 > **Purpose of this folder:** A single, authoritative source of context for humans *and AI agents*
 > working on this repository. Read this index first, then open only the file(s) relevant to your task.
 >
-> _Last full analysis: 2026-10-23 (P1-T05: Null-clearing and Prisma.DbNull for postalAddress; surrogate tests)._
+> _Last full analysis: 2026-10-23 (P1-T06: Content hash over explicit field list after sanitize; ContentHash.test.ts 17 cases)._
 
 ---
 

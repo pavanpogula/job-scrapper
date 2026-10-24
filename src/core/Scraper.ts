@@ -25,6 +25,103 @@ const prisma = new PrismaClient();
 const CONCURRENCY_LIMIT = 15;  // Parallel API requests
 const BATCH_SIZE = 100;        // Jobs per DB transaction
 
+export interface ContentHashFields {
+    title: string;
+    location?: string | null;
+    department?: string | null;
+    salary?: {
+        min?: number | null;
+        max?: number | null;
+        currency?: string | null;
+        interval?: string | null;
+    } | null;
+    isRemote?: boolean;
+    workplaceType?: string | null;
+    employmentType?: string | null;
+    publishedAt?: string | Date | null;
+    applyUrl: string;
+    isListed?: boolean;
+    country?: string | null;
+    region?: string | null;
+    city?: string | null;
+    descriptionHtml?: string | null;
+    descriptionPlain?: string | null;
+    team?: string | null;
+    secondaryLocations?: Array<{ location: string } | string> | null;
+}
+
+/**
+ * @summary Deterministic JSON stringifier sorting object keys alphabetically
+ */
+export function stableStringify(val: any): string {
+    if (val === null || typeof val !== 'object') {
+        return JSON.stringify(val);
+    }
+    if (Array.isArray(val)) {
+        return '[' + val.map(v => (v === undefined ? 'null' : stableStringify(v))).join(',') + ']';
+    }
+    const keys = Object.keys(val).sort();
+    const parts: string[] = [];
+    for (const key of keys) {
+        const v = val[key];
+        if (v !== undefined) {
+            parts.push(`${JSON.stringify(key)}:${stableStringify(v)}`);
+        }
+    }
+    return '{' + parts.join(',') + '}';
+}
+
+/**
+ * @summary Computes 32-character MD5 content hash over explicit fields after sanitization
+ */
+export function computeJobContentHash(fields: ContentHashFields): string {
+    const salaryMin = fields.salary?.min ?? null;
+    const salaryMax = fields.salary?.max ?? null;
+    const salaryCurrency = fields.salary?.currency ?? null;
+    const salaryInterval = fields.salary?.interval ?? null;
+
+    const secondary = Array.isArray(fields.secondaryLocations)
+        ? fields.secondaryLocations
+            .map(loc => (typeof loc === 'string' ? loc : loc?.location))
+            .filter((loc): loc is string => Boolean(loc))
+            .sort()
+        : [];
+
+    let publishedAtStr: string | null = null;
+    if (fields.publishedAt instanceof Date) {
+        publishedAtStr = fields.publishedAt.toISOString();
+    } else if (typeof fields.publishedAt === 'string') {
+        publishedAtStr = fields.publishedAt;
+    }
+
+    const canonical = {
+        applyUrl: fields.applyUrl || '',
+        city: fields.city ?? null,
+        country: fields.country ?? null,
+        department: fields.department ?? null,
+        descriptionHtml: fields.descriptionHtml || '',
+        descriptionPlain: fields.descriptionPlain || '',
+        employmentType: fields.employmentType ?? null,
+        isListed: fields.isListed !== false,
+        isRemote: Boolean(fields.isRemote),
+        location: fields.location ?? null,
+        publishedAt: publishedAtStr,
+        region: fields.region ?? null,
+        salary: {
+            currency: salaryCurrency,
+            interval: salaryInterval,
+            max: salaryMax,
+            min: salaryMin
+        },
+        secondaryLocations: secondary,
+        team: fields.team ?? null,
+        title: fields.title || '',
+        workplaceType: fields.workplaceType ?? null
+    };
+
+    return crypto.createHash('md5').update(stableStringify(canonical)).digest('hex');
+}
+
 interface ProcessedJob {
     ashbyId: string;
     title: string;
@@ -135,16 +232,39 @@ export class AshbyScraper {
     }
 
     /**
-     * @summary Creates MD5 hash of job content for change detection (including salary interval, currency, workplaceType, and address)
+     * @summary Creates MD5 hash of job content for change detection over explicit sanitized fields
      */
-    private generateHash(job: AshbyJob): string {
-        const salary = extractSalary(job);
-        const postal = job.address?.postalAddress;
-        const country = postal?.addressCountry || '';
-        const region = postal?.addressRegion || '';
-        const city = postal?.addressLocality || '';
-        const content = `${job.title}|${job.location}|${job.department}|${salary.min}|${salary.max}|${salary.currency}|${salary.interval}|${job.isRemote}|${job.workplaceType}|${job.employmentType}|${job.publishedAt}|${job.applyUrl}|${job.isListed}|${country}|${region}|${city}`;
-        return crypto.createHash('md5').update(content).digest('hex');
+    public generateHash(job: AshbyJob | ContentHashFields): string {
+        if ('salary' in job && typeof (job as any).salary === 'object' && ('min' in (job as any).salary || 'max' in (job as any).salary)) {
+            return computeJobContentHash(job as ContentHashFields);
+        }
+        const ashbyJob = job as AshbyJob;
+        const salary = extractSalary(ashbyJob);
+        const postal = ashbyJob.address?.postalAddress;
+        return computeJobContentHash({
+            title: sanitizeText(ashbyJob.title),
+            location: sanitizeText(ashbyJob.location) || null,
+            department: sanitizeText(ashbyJob.department) || null,
+            salary: {
+                min: salary.min ?? null,
+                max: salary.max ?? null,
+                currency: salary.currency ?? null,
+                interval: salary.interval ?? null
+            },
+            isRemote: Boolean(ashbyJob.isRemote),
+            workplaceType: ashbyJob.workplaceType ?? null,
+            employmentType: ashbyJob.employmentType ?? null,
+            publishedAt: ashbyJob.publishedAt ? new Date(ashbyJob.publishedAt).toISOString() : null,
+            applyUrl: ashbyJob.applyUrl || '',
+            isListed: ashbyJob.isListed !== false,
+            country: postal?.addressCountry ? sanitizeText(postal.addressCountry) : null,
+            region: postal?.addressRegion ? sanitizeText(postal.addressRegion) : null,
+            city: postal?.addressLocality ? sanitizeText(postal.addressLocality) : null,
+            descriptionHtml: ashbyJob.descriptionHtml || (ashbyJob as any).metadata?.descriptionHtml || '',
+            descriptionPlain: ashbyJob.descriptionPlain || (ashbyJob as any).metadata?.descriptionPlain || '',
+            team: ashbyJob.team || (ashbyJob as any).metadata?.team || null,
+            secondaryLocations: ashbyJob.secondaryLocations || (ashbyJob as any).metadata?.secondaryLocations || []
+        });
     }
 
     /**
@@ -413,7 +533,35 @@ export class AshbyScraper {
             const postal = job.address?.postalAddress;
             const parsedPublishedAt = job.publishedAt ? new Date(job.publishedAt) : null;
             const validPublishedAt = parsedPublishedAt && !isNaN(parsedPublishedAt.getTime()) ? parsedPublishedAt : null;
-            const hash = this.generateHash(job);
+            const cleanCountry = postal?.addressCountry ? sanitizeText(postal.addressCountry) : null;
+            const cleanRegion = postal?.addressRegion ? sanitizeText(postal.addressRegion) : null;
+            const cleanCity = postal?.addressLocality ? sanitizeText(postal.addressLocality) : null;
+
+            // Generate contentHash AFTER sanitization over explicit field list
+            const hash = computeJobContentHash({
+                title: cleanTitle,
+                location: cleanLoc || null,
+                department: cleanDept || null,
+                salary: {
+                    min: salary.min ?? null,
+                    max: salary.max ?? null,
+                    currency: salary.currency ?? null,
+                    interval: salary.interval ?? null
+                },
+                isRemote: Boolean(job.isRemote),
+                workplaceType: job.workplaceType ?? null,
+                employmentType: job.employmentType ?? null,
+                publishedAt: validPublishedAt ? validPublishedAt.toISOString() : null,
+                applyUrl: cleanApplyUrl,
+                isListed: job.isListed !== false,
+                country: cleanCountry,
+                region: cleanRegion,
+                city: cleanCity,
+                descriptionHtml: cleanMetadata?.descriptionHtml || job.descriptionHtml || '',
+                descriptionPlain: cleanMetadata?.descriptionPlain || job.descriptionPlain || '',
+                team: cleanMetadata?.team || job.team || null,
+                secondaryLocations: job.secondaryLocations || cleanMetadata?.secondaryLocations || []
+            });
 
             processedJobs.push({
                 ashbyId: job.id,

@@ -47,7 +47,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 | BF-008 | `f872356`, `2cce729` | Multi-process cluster scraper | ⚠️ (IPC/`saveTelemetry` untested) |
 | BF-009 | `747d8d1`, `635e69d` | CSV-mode telemetry parity, `verify` auditor | ⚠️ (forwarding untested, Verify counts only) |
 | BF-010 | `627dfae` | Bulk `createMany` fast path, cache pre-warming | ❌ none, see 11-testing-guide.md |
-| BF-011 | HEAD | Structured field promotion, GraphQL preservation, company enrichment, and full-field hash (#31) | ✅ (`extractSalary` interval, unit tests) |
+| BF-011 | HEAD | Structured field promotion, GraphQL preservation, company enrichment, and full-field hash (#31) | ✅ (`ContentHash.test.ts` 17 cases, `extractSalary` interval, unit tests) |
 
 ### BF-001: Posting API 404/403 for boards that are live in the browser
 - **Symptom:** Companies return `404`/`403` from `api.ashbyhq.com/posting-api/job-board/<slug>` but show live jobs at `jobs.ashbyhq.com/<slug>`.
