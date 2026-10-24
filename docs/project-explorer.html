@@ -184,6 +184,19 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
+                        <span>cache</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_api_cache_Breaker_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Breaker.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
                         <span>db</span>
                     </div>
                     <ul><li>
@@ -304,6 +317,12 @@
                     <div class="tree-item file" onclick="showFile('src_lib_cache_keys_ts')">
                         <span class="material-icons-round">description</span>
                         <span>keys.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_cache_RedisClient_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>RedisClient.ts</span>
                         
                     </div>
                 </li></ul>
@@ -476,6 +495,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_Breaker_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Breaker.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_CacheKeys_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>CacheKeys.test.ts</span>
@@ -557,6 +582,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_ProcessCdxData_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ProcessCdxData.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_RedisClient_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>RedisClient.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -826,6 +857,59 @@
       }
     ],
     "functions": []
+  },
+  "src_api_cache_Breaker_ts": {
+    "name": "Breaker.ts",
+    "path": "src/api/cache/Breaker.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Per-instance circuit breaker protecting API against Redis outages and Upstash rate limits",
+    "tags": [
+      "cache",
+      "redis",
+      "circuit-breaker",
+      "budget"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "7"
+      }
+    ],
+    "functions": [
+      {
+        "name": "isBudgetExhausted()",
+        "desc": "Checks whether the Upstash daily/monthly budget is exhausted."
+      },
+      {
+        "name": "isOpen()",
+        "desc": "Checks whether the breaker is currently open (blocking Redis queries)."
+      },
+      {
+        "name": "allowProbe()",
+        "desc": "In HALF_OPEN state, allows a single probe request through to test Redis."
+      },
+      {
+        "name": "recordSuccess()",
+        "desc": "Records a successful Redis interaction."
+      },
+      {
+        "name": "recordFailure()",
+        "desc": "Records a failed Redis interaction."
+      },
+      {
+        "name": "getState()",
+        "desc": "Returns current health state of the cache client."
+      },
+      {
+        "name": "reset()",
+        "desc": "Resets breaker to pristine closed state."
+      }
+    ]
   },
   "src_api_contract_ts": {
     "name": "contract.ts",
@@ -1540,12 +1624,11 @@
     "path": "src/lib/Redis.ts",
     "icon": "⚡",
     "iconClass": "pink",
-    "summary": "Provides Redis client for caching job content hashes. Enables change detection to avoid redundant DB writes.",
+    "summary": "Compatibility shim delegating to RedisClient factory",
     "tags": [
       "Cache",
       "ioredis",
-      "Change Detection",
-      "Performance"
+      "Compatibility"
     ],
     "info": [
       {
@@ -1554,15 +1637,10 @@
       },
       {
         "label": "Functions",
-        "value": "1"
+        "value": "0"
       }
     ],
-    "functions": [
-      {
-        "name": "retryStrategy()",
-        "desc": "Retry strategy for connection failures"
-      }
-    ]
+    "functions": []
   },
   "src_lib_ReportClassifier_ts": {
     "name": "ReportClassifier.ts",
@@ -1663,6 +1741,43 @@
       {
         "name": "sanitizeJobBatch()",
         "desc": "Validates and sanitizes an array of raw Ashby jobs, filtering out corrupt objects and collecting validation issues"
+      }
+    ]
+  },
+  "src_lib_cache_RedisClient_ts": {
+    "name": "RedisClient.ts",
+    "path": "src/lib/cache/RedisClient.ts",
+    "icon": "⚡",
+    "iconClass": "pink",
+    "summary": "Configures role-based ioredis instances for API and publisher with adaptive retries",
+    "tags": [
+      "cache",
+      "redis",
+      "client",
+      "connection"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "calculateRetryDelay()",
+        "desc": "Calculates retry delay with linear backoff capped at 2000ms."
+      },
+      {
+        "name": "createRedis()",
+        "desc": "Creates an ioredis client configured for the given role, or returns null if unconfigured."
+      },
+      {
+        "name": "getRedisClient()",
+        "desc": "Returns or initializes a shared singleton Redis client for the specified role."
       }
     ]
   },
@@ -2042,6 +2157,27 @@
     ],
     "functions": []
   },
+  "tests_unit_Breaker_test_ts": {
+    "name": "Breaker.test.ts",
+    "path": "tests/unit/Breaker.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates breaker state transitions, probe behavior, and budget limit detection (P2-T02)",
+    "tags": [
+      "Undocumented"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_unit_CacheKeys_test_ts": {
     "name": "CacheKeys.test.ts",
     "path": "tests/unit/CacheKeys.test.ts",
@@ -2369,6 +2505,27 @@
       "CDX",
       "Filtering",
       "Slug Extraction"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_RedisClient_test_ts": {
+    "name": "RedisClient.test.ts",
+    "path": "tests/unit/RedisClient.test.ts",
+    "icon": "⚡",
+    "iconClass": "pink",
+    "summary": "Validates createRedis configuration for API and publisher roles (P2-T02)",
+    "tags": [
+      "Undocumented"
     ],
     "info": [
       {
