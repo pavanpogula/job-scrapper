@@ -6,6 +6,7 @@
 
 import { createStatefulPrisma } from '../helpers/prismaFactory';
 import { FakeRedis } from '../helpers/fakeRedis';
+import { Prisma } from '@prisma/client';
 
 const statefulPrisma = createStatefulPrisma({
     companies: [{ slug: 'acme-corp', status: 'ACTIVE' }],
@@ -23,9 +24,13 @@ const statefulPrisma = createStatefulPrisma({
 
 const fakeRedis = new FakeRedis();
 
-jest.mock('@prisma/client', () => ({
-    PrismaClient: jest.fn(() => statefulPrisma)
-}));
+jest.mock('@prisma/client', () => {
+    const actual = jest.requireActual('@prisma/client');
+    return {
+        ...actual,
+        PrismaClient: jest.fn(() => statefulPrisma)
+    };
+});
 
 jest.mock('../../src/lib/Redis', () => ({
     redis: fakeRedis
@@ -33,12 +38,17 @@ jest.mock('../../src/lib/Redis', () => ({
 
 jest.mock('../../src/lib/AshbyClient', () => ({
     fetchAshbyBoardWithFallback: jest.fn(),
-    extractSalary: jest.fn(() => ({
-        salaryMin: 120000,
-        salaryMax: 160000,
-        salaryCurrency: 'USD',
-        salaryInterval: '1 YEAR'
-    }))
+    extractSalary: jest.fn((job: any) => {
+        if (job.compensation) {
+            return {
+                min: 120000,
+                max: 160000,
+                currency: 'USD',
+                interval: '1 YEAR'
+            };
+        }
+        return {};
+    })
 }));
 
 import { AshbyScraper } from '../../src/core/Scraper';
@@ -185,5 +195,60 @@ describe('AshbyScraper runAll() Harness (P1-T03)', () => {
 
         const stored = statefulPrisma._data.jobs.get('returning-job');
         expect(stored.active).toBe(true);
+    });
+
+    test('clears removed salary and sets postalAddress to Prisma.DbNull', async () => {
+        // existing job has salary and address
+        statefulPrisma._data.jobs.set('job-dropped-salary', {
+            ashbyId: 'job-dropped-salary',
+            title: 'Engineer',
+            companySlug: 'acme-corp',
+            active: true,
+            isListed: true,
+            salaryMin: 150000,
+            salaryMax: 180000,
+            salaryCurrency: 'USD',
+            salaryInterval: '1 YEAR',
+            workplaceType: 'Hybrid',
+            postalAddress: { addressCountry: 'US' },
+            contentHash: 'hash-with-salary'
+        });
+
+        // live job has no compensation, no address, no workplaceType
+        const liveJobPayload = {
+            id: 'job-dropped-salary',
+            title: 'Engineer',
+            department: 'Engineering',
+            location: 'Remote',
+            jobUrl: 'https://jobs.ashbyhq.com/acme-corp/job-dropped-salary',
+            applyUrl: 'https://jobs.ashbyhq.com/acme-corp/job-dropped-salary/application',
+            isListed: true
+        };
+
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: [liveJobPayload],
+            source: 'rest',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        const scraper = new AshbyScraper();
+        await scraper.runAll({
+            slugs: ['acme-corp'],
+            concurrency: 1,
+            saveTelemetry: false
+        });
+
+        const upsertCalls = statefulPrisma._calls.job.upsert;
+        const lastCall = upsertCalls.find((c: any) => c.where.ashbyId === 'job-dropped-salary');
+        expect(lastCall).toBeDefined();
+        expect(lastCall.update.salaryMin).toBeNull();
+        expect(lastCall.update.salaryMax).toBeNull();
+        expect(lastCall.update.salaryCurrency).toBeNull();
+        expect(lastCall.update.salaryInterval).toBeNull();
+        expect(lastCall.update.workplaceType).toBeNull();
+        expect(lastCall.update.postalAddress).toBe(Prisma.DbNull);
     });
 });

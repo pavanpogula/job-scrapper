@@ -26,6 +26,13 @@ describe('Sanitizer & Validator Unit Tests', () => {
             );
             expect(sanitizeText(null)).toBe('');
         });
+
+        it('should strip lone UTF-16 surrogates without affecting valid emoji pairs', () => {
+            // \uD800 without low surrogate and \uDC00 without high surrogate
+            expect(sanitizeText('Lead \uD800 Engineer \uDC00')).toBe('Lead Engineer');
+            // Valid surrogate pair (rocket emoji 🚀 is \uD83D\uDE80)
+            expect(sanitizeText('Rocket \uD83D\uDE80 Engineer')).toBe('Rocket 🚀 Engineer');
+        });
     });
 
     describe('sanitizeJobDescriptionHtml', () => {

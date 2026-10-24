@@ -38,10 +38,10 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 | ID | Commit | Summary | Guard status |
 |---|---|---|---|
 | BF-001 | `f872356` | REST 404/403/400 → GraphQL fallback, browser headers | ⚠️ (404 only, headers unchecked) |
-| BF-002 | `f872356` | `\u0000` / surrogate / script stripping before `jsonb` | ⚠️ (surrogates untested) |
+| BF-002 | `f872356` | `\u0000` / surrogate / script stripping before `jsonb` | ✅ |
 | BF-003 | `f872356` | URL validation + canonical fallback | ✅ |
 | BF-004 | `f872356` | Validation pre-filter + per-job batch fallback | ⚠️ (legacy branch only) |
-| BF-005 | `f872356` | Real salary extraction | ⚠️ (hash/upsert payload untested) |
+| BF-005 | `f872356` | Real salary extraction, null-clearing on removal | ✅ |
 | BF-006 | `f872356` | Dept/location dedupe, streaming flushes, stale-job deactivation | ❌ (only the strike counter is tested) |
 | BF-007 | `f872356` | CSV / Markdown escaping | ⚠️ (newline/CRLF untested) |
 | BF-008 | `f872356`, `2cce729` | Multi-process cluster scraper | ⚠️ (IPC/`saveTelemetry` untested) |
@@ -63,7 +63,8 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Root cause & fix:** Postgres `jsonb` rejects those code points. Added recursive `sanitizeJsonMetadata()`, `sanitizeJobDescriptionHtml()` and `sanitizeJobDescriptionPlain()`, plus `sanitizeText()` for single-line fields.
 - **Implemented in:** `src/lib/Sanitizer.ts`. Applied in `validateAndSanitizeJob()` (inside `sanitizeJobBatch()`, called by `AshbyClient`) and again in `Scraper.processCompanyJobs()` (`sanitizeJsonMetadata(job)`).
 - **Regression Invariant:** Every string anywhere in `Job.metadata` has `\u0000` and lone surrogates removed. The `descriptionHtml` value additionally has `<script>`/`<style>`/`<iframe>`/`<object>`/`<embed>`, inline `on*=` handlers, `javascript:`/`vbscript:` `href`/`src`, and base64 data URIs of 1 KB or more stripped. `descriptionPlain` falls back to tag-stripped HTML. `title`/`department`/`location`/`employmentType` go through `sanitizeText()` (control chars removed, entities decoded, whitespace collapsed). *(Correction: the earlier wording said script/style stripping applied to "every string". It applies only to the two description keys.)*
-- **Guarding tests:** `tests/unit/Sanitizer.test.ts` (null bytes, tags, handlers, base64, nested descriptions). ⚠️ **Lone-surrogate stripping has no test**, and nothing checks that `processCompanyJobs()` sanitizes metadata before the write.
+- **Guarding tests:** `tests/unit/Sanitizer.test.ts` (null bytes, lone surrogates, tags, handlers, base64, nested descriptions) ✅.
+- **Regression Invariant:** When a source posting removes compensation or workplaceType fields, `batchUpsertJobs` explicitly sets them to `null` (not `undefined`) so Prisma clears the database columns. `postalAddress` uses `Prisma.DbNull` to write SQL NULL.
 
 ### BF-003: Broken / relative / unsafe `jobUrl` and `applyUrl`
 - **Symptom:** Missing, relative, placeholder (`"undefined"`, `"null"`) or `javascript:` URLs.
@@ -84,7 +85,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Root cause & fix:** The scraper read a non-existent `job.compensationTier`. Added `extractSalary()`, which tries `compensation.summaryComponents`, then `compensation.compensationTiers[].components`, then the legacy `compensationTier`. REST requests use `?includeCompensation=true` in DB mode.
 - **Implemented in:** `src/lib/AshbyClient.ts` `extractSalary()`. Used by `Scraper.generateHash()` and `Scraper.processCompanyJobs()` → `buildUpsertArgs` / `createMany` data.
 - **Regression Invariant:** `extractSalary()` supports all 3 shapes and uses only components with `compensationType === 'Salary'` and a non-null min or max. Its `min`/`max` go into `generateHash()`, and `min`/`max`/`currency` go into `create`, `update` and `createMany`. *(Correction: `salaryCurrency` is written but is **not** part of the hash, see 09 #31.)*
-- **Guarding tests:** `tests/unit/AshbyClient.test.ts` (all 3 shapes + empty) ✅. ⚠️ **Salary in the hash: no test.** The `generateHash` test only compares identical payloads, and the upsert/`createMany` salary arguments are never inspected.
+- **Guarding tests:** `tests/unit/AshbyClient.test.ts` (all 3 shapes + empty) ✅; `tests/unit/ScraperRunAll.test.ts` (guards explicit `salaryMin === null` payload when source removes salary) ✅.
 
 ### BF-006: Dept/Location upsert races, unbounded memory, stale jobs left active
 - **Symptom:** Concurrent `P2002` crashes on `Department`/`Location`, all ~30k jobs buffered until the end of the run, and closed jobs staying `active = true`.

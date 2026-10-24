@@ -35,6 +35,12 @@ export const mockLocation = {
   count: jest.fn().mockResolvedValue(0)
 };
 
+export const Prisma = {
+  DbNull: Object.freeze({ [Symbol.for('prisma.dbNull')]: true }) as any,
+  JsonNull: Object.freeze({ [Symbol.for('prisma.jsonNull')]: true }) as any,
+  AnyNull: Object.freeze({ [Symbol.for('prisma.anyNull')]: true }) as any
+};
+
 export class PrismaClient {
   company = mockCompany;
   job = mockJob;

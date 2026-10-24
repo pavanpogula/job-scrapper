@@ -22,6 +22,11 @@ const mockDisconnect = jest.fn();
 
 jest.mock('@prisma/client', () => {
   return {
+    Prisma: {
+      DbNull: Object.freeze({ [Symbol.for('prisma.dbNull')]: true }),
+      JsonNull: Object.freeze({ [Symbol.for('prisma.jsonNull')]: true }),
+      AnyNull: Object.freeze({ [Symbol.for('prisma.anyNull')]: true })
+    },
     PrismaClient: jest.fn().mockImplementation(() => ({
       company: {
         findMany: (...args: any[]) => mockCompanyFindMany(...args),

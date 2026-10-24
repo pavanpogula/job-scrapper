@@ -3,7 +3,7 @@
 > **Purpose of this folder:** A single, authoritative source of context for humans *and AI agents*
 > working on this repository. Read this index first, then open only the file(s) relevant to your task.
 >
-> _Last full analysis: 2026-10-23 (P1-T04: Redis change detection removed from scraper per D-06)._
+> _Last full analysis: 2026-10-23 (P1-T05: Null-clearing and Prisma.DbNull for postalAddress; surrogate tests)._
 
 ---
 

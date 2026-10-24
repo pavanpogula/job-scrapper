@@ -4,7 +4,7 @@
  * @tags Core, Ashby API, Batch, Concurrent, High-Performance
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import crypto from 'crypto';
 import { createLimiter } from '../lib/Concurrency';
 import {
@@ -32,19 +32,19 @@ interface ProcessedJob {
     departmentId: string | null;
     locationId: string | null;
     applyUrl: string;
-    salaryMin?: number;
-    salaryMax?: number;
-    salaryCurrency?: string;
-    salaryInterval?: string;
+    salaryMin: number | null;
+    salaryMax: number | null;
+    salaryCurrency: string | null;
+    salaryInterval: string | null;
     isRemote: boolean;
-    workplaceType?: string;
-    employmentType?: string;
-    publishedAt?: Date | null;
+    workplaceType: string | null;
+    employmentType: string | null;
+    publishedAt: Date | null;
     isListed: boolean;
-    country?: string | null;
-    region?: string | null;
-    city?: string | null;
-    postalAddress?: any;
+    country: string | null;
+    region: string | null;
+    city: string | null;
+    postalAddress: any;
     metadata: any;
     contentHash: string;
 }
@@ -247,44 +247,44 @@ export class AshbyScraper {
                 ashbyId: job.ashbyId,
                 title: job.title,
                 companySlug: job.companySlug,
-                departmentId: job.departmentId,
-                locationId: job.locationId,
+                departmentId: job.departmentId ?? null,
+                locationId: job.locationId ?? null,
                 applyUrl: job.applyUrl,
-                salaryMin: job.salaryMin,
-                salaryMax: job.salaryMax,
-                salaryCurrency: job.salaryCurrency,
-                salaryInterval: job.salaryInterval,
+                salaryMin: job.salaryMin ?? null,
+                salaryMax: job.salaryMax ?? null,
+                salaryCurrency: job.salaryCurrency ?? null,
+                salaryInterval: job.salaryInterval ?? null,
                 isRemote: job.isRemote,
-                workplaceType: job.workplaceType,
-                employmentType: job.employmentType,
-                publishedAt: job.publishedAt,
+                workplaceType: job.workplaceType ?? null,
+                employmentType: job.employmentType ?? null,
+                publishedAt: job.publishedAt ?? null,
                 isListed: job.isListed,
-                country: job.country,
-                region: job.region,
-                city: job.city,
-                postalAddress: job.postalAddress,
+                country: job.country ?? null,
+                region: job.region ?? null,
+                city: job.city ?? null,
+                postalAddress: job.postalAddress ?? Prisma.DbNull,
                 metadata: job.metadata,
                 contentHash: job.contentHash,
                 active: true
             },
             update: {
                 title: job.title,
-                departmentId: job.departmentId,
-                locationId: job.locationId,
+                departmentId: job.departmentId ?? null,
+                locationId: job.locationId ?? null,
                 applyUrl: job.applyUrl,
-                salaryMin: job.salaryMin,
-                salaryMax: job.salaryMax,
-                salaryCurrency: job.salaryCurrency,
-                salaryInterval: job.salaryInterval,
+                salaryMin: job.salaryMin ?? null,
+                salaryMax: job.salaryMax ?? null,
+                salaryCurrency: job.salaryCurrency ?? null,
+                salaryInterval: job.salaryInterval ?? null,
                 isRemote: job.isRemote,
-                workplaceType: job.workplaceType,
-                employmentType: job.employmentType,
-                publishedAt: job.publishedAt,
+                workplaceType: job.workplaceType ?? null,
+                employmentType: job.employmentType ?? null,
+                publishedAt: job.publishedAt ?? null,
                 isListed: job.isListed,
-                country: job.country,
-                region: job.region,
-                city: job.city,
-                postalAddress: job.postalAddress,
+                country: job.country ?? null,
+                region: job.region ?? null,
+                city: job.city ?? null,
+                postalAddress: job.postalAddress ?? Prisma.DbNull,
                 metadata: job.metadata,
                 contentHash: job.contentHash,
                 updatedAt: new Date(),
@@ -321,22 +321,22 @@ export class AshbyScraper {
                                 ashbyId: job.ashbyId,
                                 title: job.title,
                                 companySlug: job.companySlug,
-                                departmentId: job.departmentId,
-                                locationId: job.locationId,
+                                departmentId: job.departmentId ?? null,
+                                locationId: job.locationId ?? null,
                                 applyUrl: job.applyUrl,
-                                salaryMin: job.salaryMin,
-                                salaryMax: job.salaryMax,
-                                salaryCurrency: job.salaryCurrency,
-                                salaryInterval: job.salaryInterval,
+                                salaryMin: job.salaryMin ?? null,
+                                salaryMax: job.salaryMax ?? null,
+                                salaryCurrency: job.salaryCurrency ?? null,
+                                salaryInterval: job.salaryInterval ?? null,
                                 isRemote: job.isRemote,
-                                workplaceType: job.workplaceType,
-                                employmentType: job.employmentType,
-                                publishedAt: job.publishedAt,
+                                workplaceType: job.workplaceType ?? null,
+                                employmentType: job.employmentType ?? null,
+                                publishedAt: job.publishedAt ?? null,
                                 isListed: job.isListed,
-                                country: job.country,
-                                region: job.region,
-                                city: job.city,
-                                postalAddress: job.postalAddress,
+                                country: job.country ?? null,
+                                region: job.region ?? null,
+                                city: job.city ?? null,
+                                postalAddress: job.postalAddress ?? Prisma.DbNull,
                                 metadata: job.metadata,
                                 contentHash: job.contentHash,
                                 active: true
@@ -422,19 +422,19 @@ export class AshbyScraper {
                 departmentId,
                 locationId,
                 applyUrl: cleanApplyUrl,
-                salaryMin: salary.min,
-                salaryMax: salary.max,
-                salaryCurrency: salary.currency,
-                salaryInterval: salary.interval,
+                salaryMin: salary.min ?? null,
+                salaryMax: salary.max ?? null,
+                salaryCurrency: salary.currency ?? null,
+                salaryInterval: salary.interval ?? null,
                 isRemote: job.isRemote,
-                workplaceType: job.workplaceType,
-                employmentType: job.employmentType,
+                workplaceType: job.workplaceType ?? null,
+                employmentType: job.employmentType ?? null,
                 publishedAt: validPublishedAt,
                 isListed: job.isListed !== false,
                 country: postal?.addressCountry ? sanitizeText(postal.addressCountry) : null,
                 region: postal?.addressRegion ? sanitizeText(postal.addressRegion) : null,
                 city: postal?.addressLocality ? sanitizeText(postal.addressLocality) : null,
-                postalAddress: postal ? sanitizeJsonMetadata(postal) : null,
+                postalAddress: postal ? (sanitizeJsonMetadata(postal) ?? Prisma.DbNull) : Prisma.DbNull,
                 metadata: cleanMetadata,
                 contentHash: hash
             });
