@@ -61,6 +61,15 @@ export class CircuitBreaker {
   }
 
   /**
+   * Determines whether a cache read can be attempted.
+   */
+  public canAttempt(): boolean {
+    if (this.isBudgetExhausted()) return false;
+    if (!this.isOpen()) return true;
+    return this.allowProbe();
+  }
+
+  /**
    * In HALF_OPEN state, allows a single probe request through to test Redis.
    */
   public allowProbe(): boolean {

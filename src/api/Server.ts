@@ -15,6 +15,9 @@ import {
   computeFacets,
   queryCompanies,
 } from './db/queries';
+import { readThroughService } from './cache/ReadThrough';
+import { canonicalJobsKey, isCacheableView } from '../lib/cache/keys';
+import { isValidId } from './contract';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -125,9 +128,36 @@ app.get('/health', async (_req: Request, res: Response) => {
 // GET /v1/jobs - Paginated jobs query
 app.get('/v1/jobs', async (req: Request, res: Response) => {
   try {
-    const result = await queryJobs(prisma, req.query as any);
+    const canonKey = canonicalJobsKey(req.query as any);
+    const cacheable = isCacheableView(canonKey);
+    const page = Math.max(1, Math.min(5000, parseInt(String(req.query.page || '1'), 10) || 1));
+
+    let viewName: string | undefined = undefined;
+    if (!canonKey.includes('&') && canonKey.includes('page=')) {
+      viewName = 'default';
+    } else if (canonKey.includes('&') && canonKey.split('&').length === 2) {
+      const parts = canonKey.replace('jobs?', '').split('&');
+      const filterPart = parts.find((p) => !p.startsWith('page='));
+      if (filterPart) viewName = filterPart;
+    }
+
+    const result = await readThroughService.serveView(
+      canonKey,
+      cacheable,
+      res,
+      () => queryJobs(prisma, req.query as any),
+      { viewName, page }
+    );
     res.json(result);
   } catch (err: any) {
+    if (err.status === 503) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
+      return res.status(503).json({
+        error: err.message,
+        code: err.code || 'UPSTREAM_UNAVAILABLE',
+        retryAfterSeconds: err.retryAfterSeconds || 5,
+      });
+    }
     console.error('Error fetching jobs:', err);
     res.status(500).json({ error: 'Failed to fetch jobs' });
   }
@@ -136,12 +166,28 @@ app.get('/v1/jobs', async (req: Request, res: Response) => {
 // GET /v1/jobs/:id - Single job detail
 app.get('/v1/jobs/:id', async (req: Request, res: Response) => {
   try {
-    const job = await queryJobDetail(prisma, String(req.params.id));
+    const id = String(req.params.id);
+    if (!isValidId(id)) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    const job = await readThroughService.serveDetail(
+      id,
+      res,
+      () => queryJobDetail(prisma, id)
+    );
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
     }
     res.json(job);
   } catch (err: any) {
+    if (err.status === 503) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
+      return res.status(503).json({
+        error: err.message,
+        code: err.code || 'UPSTREAM_UNAVAILABLE',
+        retryAfterSeconds: err.retryAfterSeconds || 5,
+      });
+    }
     console.error('Error fetching job detail:', err);
     res.status(500).json({ error: 'Failed to fetch job detail' });
   }
@@ -150,9 +196,22 @@ app.get('/v1/jobs/:id', async (req: Request, res: Response) => {
 // GET /v1/facets - Aggregate filter facets
 app.get('/v1/facets', async (_req: Request, res: Response) => {
   try {
-    const facets = await computeFacets(prisma);
+    const facets = await readThroughService.serveView(
+      'facets',
+      true,
+      res,
+      () => computeFacets(prisma)
+    );
     res.json(facets);
   } catch (err: any) {
+    if (err.status === 503) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
+      return res.status(503).json({
+        error: err.message,
+        code: err.code || 'UPSTREAM_UNAVAILABLE',
+        retryAfterSeconds: err.retryAfterSeconds || 5,
+      });
+    }
     console.error('Error fetching facets:', err);
     res.status(500).json({ error: 'Failed to fetch facets' });
   }
@@ -161,11 +220,68 @@ app.get('/v1/facets', async (_req: Request, res: Response) => {
 // GET /v1/companies - List active companies
 app.get('/v1/companies', async (req: Request, res: Response) => {
   try {
-    const companies = await queryCompanies(prisma, req.query as any);
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query.pageSize || '30'), 10) || 30));
+    const hasSearch = Boolean(req.query.search);
+    const isCacheable = !hasSearch && pageSize === 30;
+    const canonKey = `companies?page=${page}`;
+
+    const companies = await readThroughService.serveView(
+      canonKey,
+      isCacheable,
+      res,
+      () => queryCompanies(prisma, req.query as any),
+      { page }
+    );
     res.json(companies);
   } catch (err: any) {
+    if (err.status === 503) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
+      return res.status(503).json({
+        error: err.message,
+        code: err.code || 'UPSTREAM_UNAVAILABLE',
+        retryAfterSeconds: err.retryAfterSeconds || 5,
+      });
+    }
     console.error('Error fetching companies:', err);
     res.status(500).json({ error: 'Failed to fetch companies' });
+  }
+});
+
+// GET /v1/meta - Overall metadata
+app.get('/v1/meta', async (_req: Request, res: Response) => {
+  try {
+    const meta = await readThroughService.serveView(
+      'meta',
+      true,
+      res,
+      async () => {
+        const [activeJobs, hiringCompanies, facets] = await Promise.all([
+          prisma.job.count({ where: { active: true, isListed: true } }),
+          prisma.company.count({ where: { status: 'ACTIVE', jobs: { some: { active: true } } } }),
+          computeFacets(prisma),
+        ]);
+        return {
+          activeJobs,
+          hiringCompanies,
+          withSalary: facets.hasSalary.yes,
+          lastScrapeAt: new Date().toISOString(),
+          generation: 'live_db',
+        };
+      }
+    );
+    res.json(meta);
+  } catch (err: any) {
+    if (err.status === 503) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
+      return res.status(503).json({
+        error: err.message,
+        code: err.code || 'UPSTREAM_UNAVAILABLE',
+        retryAfterSeconds: err.retryAfterSeconds || 5,
+      });
+    }
+    console.error('Error fetching meta:', err);
+    res.status(500).json({ error: 'Failed to fetch meta' });
   }
 });
 

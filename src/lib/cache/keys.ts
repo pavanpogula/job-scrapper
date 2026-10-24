@@ -182,10 +182,23 @@ export function canonicalJobsKey(query: Record<string, any>): string {
 /**
  * Determines whether a query can be served from the pre-rendered cache.
  * Must be either the default view or a single allowed filter, with default pagination & sorting.
- * @param query Raw query object
+ * @param query Raw query object or canonical string
  */
-export function isCacheableView(query: Record<string, any>): boolean {
-  const normalized = parseJobsQuery(query);
+export function isCacheableView(query: Record<string, any> | string): boolean {
+  let parsedQuery: Record<string, any>;
+  if (typeof query === 'string') {
+    parsedQuery = {};
+    const qs = query.includes('?') ? query.slice(query.indexOf('?') + 1) : query;
+    for (const part of qs.split('&')) {
+      if (!part) continue;
+      const [k, v] = part.split('=');
+      parsedQuery[decodeURIComponent(k)] = v ? decodeURIComponent(v) : '';
+    }
+  } else {
+    parsedQuery = query;
+  }
+
+  const normalized = parseJobsQuery(parsedQuery);
 
   // Must not have search, salaryMin, or custom sort/pagination
   if (normalized.search) return false;

@@ -192,6 +192,12 @@
                         <span>Breaker.ts</span>
                         
                     </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_api_cache_ReadThrough_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ReadThrough.ts</span>
+                        
+                    </div>
                 </li></ul>
                 </li><li class="">
                     <div class="tree-item folder" onclick="toggleFolder(this)">
@@ -203,6 +209,19 @@
                     <div class="tree-item file" onclick="showFile('src_api_db_queries_ts')">
                         <span class="material-icons-round">description</span>
                         <span>queries.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>middleware</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_api_middleware_dbGuard_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>dbGuard.ts</span>
                         
                     </div>
                 </li></ul>
@@ -610,6 +629,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ReadThrough_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ReadThrough.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_RedisClient_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>RedisClient.test.ts</span>
@@ -902,7 +927,7 @@
       },
       {
         "label": "Functions",
-        "value": "7"
+        "value": "8"
       }
     ],
     "functions": [
@@ -913,6 +938,10 @@
       {
         "name": "isOpen()",
         "desc": "Checks whether the breaker is currently open (blocking Redis queries)."
+      },
+      {
+        "name": "canAttempt()",
+        "desc": "Determines whether a cache read can be attempted."
       },
       {
         "name": "allowProbe()",
@@ -933,6 +962,64 @@
       {
         "name": "reset()",
         "desc": "Resets breaker to pristine closed state."
+      }
+    ]
+  },
+  "src_api_cache_ReadThrough_ts": {
+    "name": "ReadThrough.ts",
+    "path": "src/api/cache/ReadThrough.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "High-performance read-through layer querying Upstash Redis with in-memory LRU, circuit breaker, and automatic PostgreSQL fallback",
+    "tags": [
+      "Cache",
+      "ReadThrough",
+      "Redis",
+      "Resilience",
+      "API"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "8"
+      }
+    ],
+    "functions": [
+      {
+        "name": "getCircuitBreaker()",
+        "desc": "Returns the underlying circuit breaker instance."
+      },
+      {
+        "name": "setRedisClient()",
+        "desc": "Injects a custom Redis client for testing."
+      },
+      {
+        "name": "resetCaches()",
+        "desc": "Resets in-process caches and circuit breaker state."
+      },
+      {
+        "name": "getClient()",
+        "desc": "Resolves the active Redis client."
+      },
+      {
+        "name": "getPointer()",
+        "desc": "Fetches current generation ID and last scrape timestamp with 300s TTL."
+      },
+      {
+        "name": "getManifest()",
+        "desc": "Fetches generation manifest from Redis or in-process cache."
+      },
+      {
+        "name": "serveView()",
+        "desc": "Serves a list, facets, companies, or meta query through cache or DB fallback"
+      },
+      {
+        "name": "serveDetail()",
+        "desc": "Serves a job detail query through shard hash or DB fallback"
       }
     ]
   },
@@ -1017,6 +1104,44 @@
       {
         "name": "queryCompanies()",
         "desc": "Queries active companies with job counts"
+      }
+    ]
+  },
+  "src_api_middleware_dbGuard_ts": {
+    "name": "dbGuard.ts",
+    "path": "src/api/middleware/dbGuard.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Protects PostgreSQL connection pool with concurrency limits (max 3), queuing (max 10), and single-flight deduplication",
+    "tags": [
+      "Database",
+      "Concurrency",
+      "Guard",
+      "Backpressure",
+      "Resilience"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "acquire()",
+        "desc": "Acquires a concurrency slot or enqueues until one is available."
+      },
+      {
+        "name": "release()",
+        "desc": "Releases an active slot and dequeues the next waiting task."
+      },
+      {
+        "name": "getStatus()",
+        "desc": "Returns current active and queue status."
       }
     ]
   },
@@ -2638,6 +2763,31 @@
       "Publisher",
       "Redis",
       "SanityGate"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ReadThrough_test_ts": {
+    "name": "ReadThrough.test.ts",
+    "path": "tests/unit/ReadThrough.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates cache HIT, MISS, BYPASS, circuit breaker fallback, dbGuard queueing/rejection, and single-flight deduplication",
+    "tags": [
+      "Testing",
+      "Cache",
+      "ReadThrough",
+      "Supertest",
+      "DbGuard"
     ],
     "info": [
       {
