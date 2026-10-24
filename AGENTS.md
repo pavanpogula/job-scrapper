@@ -1,35 +1,47 @@
 # AGENTS.md
 
-This repo is the **Ashby Job Scraper**, a TypeScript CLI toolkit, backend REST API, and React frontend web application.
+The **Ashby Job Scraper** is a batch TypeScript CLI scraper feeding Neon PostgreSQL and Upstash Redis (planned: P2; today Redis is optional for job hash change detection), an Express REST API deployed on Vercel (planned: P2 cache-first; today queries PostgreSQL directly), and a React 19 web application in `job-scrapper-ui/` for browsing public Ashby job postings. Users only browse and click Apply (no logins).
 
-**Before you do any work, read [`documentation/README.md`](./documentation/README.md).** It holds the full project context
-(architecture, workflows, external API endpoints, CLI commands, DB/Redis schema, module reference, setup, and known issues).
+## Flow
+1. **Discover & Seed:** `npm run discover` / `npm run seed [-- --all]` populates `Company` rows from Ashby ATS slugs.
+2. **Scrape:** `npm run scrape:parallel [-- --workers=N]` scrapes active boards with adaptive concurrency, retry/backoff, and GraphQL fallback. (Scheduled daily GitHub Actions planned: P3).
+3. **Persist:** Writes companies, departments, locations, and jobs to PostgreSQL (Prisma). Cache publishing to Upstash Redis (`jc:v1:*`) is planned: P2.
+4. **API:** Express 5 server in `src/api/Server.ts` (invoked via `api/index.ts` on Vercel) serves `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, and `/health`.
+5. **UI:** React 19 + TypeScript + Vite + Redux Toolkit application in `job-scrapper-ui/` queries the API. See system flows in `documentation/15-system-architecture-and-flows.md` (planned: P1-T22).
 
-Key Architecture Notes:
-- **Ashby API Client (`src/lib/AshbyClient.ts`):** All job-board fetches go through `fetchAshbyBoardWithFallback()`, which sends browser headers (`BROWSER_HEADERS`), retries transient `429`/`5xx`/timeouts with exponential backoff + jitter, and automatically falls back to Ashby's hosted GraphQL API (`POST https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams`) when a company's external `posting-api` is disabled (`404`/`403`/`400`). `fetchFromAshbyGraphQL()` maps and preserves `workplaceType` and `secondaryLocations` and returns GraphQL `validationIssues`. `extractSalary()` extracts numeric bounds, currency code, and structured interval (`1 YEAR`, `1 HOUR`, etc.). Company metadata enrichment is performed via `fetchOrganizationMetadata()` (`npm run enrich:companies`).
-- **Data Sanitization & Error-Driven Filtering (`src/lib/Sanitizer.ts`):** All incoming job records are validated and sanitized via `sanitizeJobBatch()` / `validateAndSanitizeJob()` before DB or CSV storage—stripping PostgreSQL-fatal `\u0000` null bytes and lone UTF-16 surrogates from `metadata` (`jsonb`), stripping `<script>`/`<style>`/`<iframe>`/inline JS and oversized base64 strings from `descriptionHtml`, normalizing `jobUrl`/`applyUrl` with canonical fallback, preserving `workplaceType` and `isListed`, and filtering corrupt/duplicate job IDs.
-- **Adaptive Concurrency (`src/lib/Concurrency.ts`):** `createLimiter()` dynamically throttles concurrency and pauses on rate limits (`429`/`403`), recovering after consecutive successes.
-- **Core Scrapers:** `src/core/Scraper.ts` (DB + optional Redis, incremental streaming 100-job batch writes with a `createMany` fast-path for new jobs, full 16-field hash change detection across compensation/workplace/dates/locations, stale job deactivation, cross-process `P2002` race recovery, and structured column population on `Job`), `src/core/ClusterScraper.ts` (`npm run scrape:parallel [-- --workers=N]`, default `min(4, max(2, cpus))` workers; multi-process OS worker coordinator using `child_process.fork()` and IPC telemetry merging), and `src/core/ScraperCSV.ts` (streaming CSV export + optional Google Drive upload).
-- **Backend REST API (`src/api/Server.ts`, `npm run api:start`):** Express 5 server on port 3001 querying Prisma PostgreSQL directly. Features `/v1/jobs` (paginated, faceted, filterable), `/v1/jobs/:id` (detail), `/v1/companies` (directory), `/health`, static SPA serving (`job-scrapper-ui/dist`), HTTP security headers, and an in-memory sliding-window rate limiter (10 requests per 60 seconds per IP with `Retry-After`).
-- **Frontend Web UI (`job-scrapper-ui/`):** React 19 + TypeScript + Vite 6 + Redux Toolkit + RTK Query + Material UI (MUI v6). Responsive desktop ledger and mobile drawer layouts, debounced search (400ms), in-flight promise deduplication, and zero-cost 10-minute Redux caching (`keepUnusedDataFor: 600`) with client-side rate gating.
-- **Tests (`tests/unit/`, `tests/e2e/`, guide in [`documentation/11-testing-guide.md`](./documentation/11-testing-guide.md)):** Jest + ts-jest (transpile-only), global Prisma manual mock in `__mocks__/@prisma/client.ts`; no real DB/Redis/network. "E2E" suites chain real functions in-process with mocked I/O. `tsc` and `lint` cover `src/` only.
-- **Discovery & Seeding:** `npm run seed` seeds `TARGET_COMPANIES` (or all 3,072 slugs from `extracted-slugs.json` via `npm run seed -- --all`); `npm run discover` supports `-- --common-crawl` and `-- --enrich`.
-- **Telemetry & Bug-Fix Agent Loop (`src/lib/ErrorTracker.ts` & [`documentation/10-bug-fix-and-improvement-log.md`](./documentation/10-bug-fix-and-improvement-log.md)):** Every scrape run writes structured telemetry, sanitization issues, and errors to `output/latest-error-report.json` (plus a dated `error-report_YYYY-MM-DD.json`). Caveats: transient `5xx`/timeout/network failures that exhaust retries are **not** recorded (`api_error` is declared but never emitted, `09` #33), and DB and CSV runs write the same file, so each run overwrites the previous report (`09` #36).
+## Hard Rules
+- **Secrets & Outputs:** Never read, print, stage, or commit `.env`, `apikeys/`, or `output/` values.
+- **Git Safety:** Agents never push to `main` and never merge. Work on task/phase branches only.
+- **Mandatory Checks:** Every change must pass `npx tsc --noEmit -p . && npm run lint && npm test` (plus `npm run verify:ui` once P1-T19 lands).
+- **Explorer Sync:** Every change must run `npm run docs:generate` to regenerate `docs/project-explorer.html`.
+- **JSDoc Headers:** Every new file and function gets a JSDoc `@file` / `@summary` / `@tags` block.
+- **Conventional Commits:** Commit with conventional prefix (`feat:`, `fix:`, `chore:`, `docs:`) and a multi-line bulleted body explaining root cause, changes, tests, and docs.
 
-Bug-Fix Agent Protocol (Mandatory when fixing bugs or improving scraping):
-1. Read `output/latest-error-report.json` and [`documentation/10-bug-fix-and-improvement-log.md`](./documentation/10-bug-fix-and-improvement-log.md).
-2. Verify your planned fix does **not** violate any existing `BF-*` Regression Invariant in `10-bug-fix-and-improvement-log.md` (check each invariant's guard status there and in `11-testing-guide.md` §6 — some have no guarding test, so a green `npm test` alone does not prove them).
-3. Implement the fix, add/update unit tests (`tests/unit/`) and E2E tests (`tests/e2e/`), and verify with `npx tsc --noEmit -p . && npm run lint && npm test`.
-4. Append the new `BF-XXX` entry and its Regression Invariant to `documentation/10-bug-fix-and-improvement-log.md`, update `documentation/09-known-issues-and-tech-debt.md`, and regenerate `docs/project-explorer.html` (`npm run docs:generate`).
+## Agent Roles (Roster)
+Full details in `documentation/agents/roster.md` (planned: P4-T04):
+| Role | Purpose |
+|---|---|
+| `scraper-architect` | Explains architecture and writes plans; never edits code. |
+| `run-reviewer` | Triages error reports: actionable vs noise. |
+| `scraper-bugfixer` | Implements bug fixes following the self-healing protocol. |
+| `api-cache` | Owns Express API, cache layers, Vercel config, and API contracts. |
+| `frontend` | Owns `job-scrapper-ui/**` web application and UI tests. |
+| `docs-release-keeper` | Maintains documentation integrity, stamps, and release docs. |
 
-Default Change, Documentation & Git Commit Rule (Mandatory on EVERY Change):
-- Whenever ANY code, config, test, or workflow change is made, you **MUST** before finishing:
-  1. **Sync All Documentation & Agent Files:** Update `AGENTS.md`, `README.md`, and every affected numbered file in `documentation/` (including `documentation/README.md` "Last full analysis" date, `09-known-issues-and-tech-debt.md`, and `10-bug-fix-and-improvement-log.md`).
-  2. **Regenerate Explorer Docs:** Run `npm run docs:generate` to keep `docs/project-explorer.html` in sync with JSDoc `@file` / `@summary` / `@tags` blocks and Prisma models.
-  3. **Verify Zero Regressions:** Run `npx tsc --noEmit -p .`, `npm run lint`, and `npm test` — all must pass with `0` errors. (Note: `tsc` and `lint` cover `src/` only; `tests/` and `scripts/` are exercised only by `npm test`.)
-  4. **Commit All Changes with Detailed Descriptions:** Stage all modified/new tracked files and create a `git commit` using a clear Conventional Commit subject (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`) followed by a detailed multi-line bulleted body covering root causes, architectural changes, new/updated tests, and documentation/agent updates.
+## Self-Healing Loop
+Every scrape writes an error report (`output/latest-error-report.json`, v2 format planned: P1-T10). Actionable issues trigger automated investigation, a regression-guarded fix on a branch, documentation of decisions in `documentation/decisions/` (planned: P4-T01), and release notes in `CHANGELOG.md` (planned: P4-T02). See `documentation/16-self-healing-loop.md` (planned: P4-T03).
 
-Rules:
-- Run things with `npm run <script>` (ts-node, so there's no build step). Type-check with `npx tsc --noEmit -p .`. Lint with `npm run lint`. Run tests with `npm test`.
-- Never print, stage, or commit `.env`, `output/`, or anything in `apikeys/`.
-- Every new file and function needs a JSDoc `@file` / `@summary` / `@tags` block (`npm run docs:generate` parses it to build `docs/project-explorer.html`; ESLint's `jsdoc/require-jsdoc` only warns, so this is a convention you must follow, not something lint will catch).
+## Documentation Map
+| Topic | Document |
+|---|---|
+| Architecture & workflows | `documentation/02-architecture-and-workflows.md` |
+| External APIs (Ashby, CDX, Drive) | `documentation/03-external-apis.md` |
+| CLI commands & scripts | `documentation/04-cli-commands.md` |
+| Database & cache schema | `documentation/05-database-and-cache.md` |
+| Module reference | `documentation/06-module-reference.md` |
+| Setup & configuration | `documentation/07-configuration-and-setup.md` |
+| Outputs & reports | `documentation/08-outputs-and-artifacts.md` |
+| Known issues & debt | `documentation/09-known-issues-and-tech-debt.md` |
+| Bug fix log & invariants | `documentation/10-bug-fix-and-improvement-log.md` |
+| Testing guide & invariant guards | `documentation/11-testing-guide.md` |
+| Enhancement plan (roadmap) | `documentation/plan/00-README.md` |
