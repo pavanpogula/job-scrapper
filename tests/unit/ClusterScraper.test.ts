@@ -4,8 +4,24 @@
  * @tags Unit Test, Cluster, Multi-Process, Sharding, Telemetry
  */
 
-import { partitionSlugs, resolveWorkerCount } from '../../src/core/ClusterScraper';
+import { EventEmitter } from 'events';
+import * as child_process from 'child_process';
+import { partitionSlugs, resolveWorkerCount, runClusterScrape, runWorkerShard } from '../../src/core/ClusterScraper';
 import { ErrorReportDocument, ErrorTracker } from '../../src/lib/ErrorTracker';
+
+class MockChildProcess extends EventEmitter {
+    public pid = 1234;
+    public send = jest.fn();
+    public kill = jest.fn();
+}
+
+jest.mock('child_process', () => {
+    const actual = jest.requireActual('child_process');
+    return {
+        ...actual,
+        fork: jest.fn()
+    };
+});
 
 describe('ClusterScraper Unit Tests', () => {
     describe('resolveWorkerCount', () => {
@@ -93,6 +109,105 @@ describe('ClusterScraper Unit Tests', () => {
             expect(merged.summary.jobsSanitized).toBe(2);
             expect(merged.summary.jobsFilteredOut).toBe(1);
             expect(merged.events).toHaveLength(1);
+        });
+    });
+
+    describe('P1-T11 Fault Tolerance and Watchdog Tests', () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        test('1 of 2 fails → report saved, exit 1', async () => {
+            const child1 = new MockChildProcess();
+            const child2 = new MockChildProcess();
+
+            (child1.send as jest.Mock).mockImplementation(() => {
+                setImmediate(() => {
+                    child1.emit('message', {
+                        type: 'worker_done',
+                        report: {
+                            schemaVersion: '2.0',
+                            run: { runId: 'w1-report', mode: 'cluster' },
+                            summary: {
+                                runId: 'w1-report',
+                                mode: 'db_scrape',
+                                startedAt: new Date().toISOString(),
+                                completedAt: new Date().toISOString(),
+                                durationSeconds: 2,
+                                companiesAttempted: 1,
+                                companiesWithJobs: 1,
+                                companiesNotFound: 0,
+                                companiesFailed: 0,
+                                graphqlFallbacksUsed: 0,
+                                rateLimitsEncountered: 0,
+                                jobsCollected: 25,
+                                jobsSanitized: 0,
+                                jobsFilteredOut: 0,
+                                dbErrors: 0
+                            },
+                            events: []
+                        }
+                    });
+                    child1.emit('exit', 0, null);
+                });
+            });
+
+            (child2.send as jest.Mock).mockImplementation(() => {
+                setImmediate(() => {
+                    child2.emit('message', {
+                        type: 'worker_error',
+                        error: 'Prisma cluster connection lost'
+                    });
+                    child2.emit('exit', 1, null);
+                });
+            });
+
+            (child_process.fork as jest.Mock)
+                .mockReturnValueOnce(child1)
+                .mockReturnValueOnce(child2);
+
+            const { PrismaClient } = require('@prisma/client');
+            const mockPrisma = new PrismaClient();
+            mockPrisma.company.findMany.mockResolvedValueOnce([
+                { slug: 'company-1' },
+                { slug: 'company-2' }
+            ]);
+
+            const report = await runClusterScrape(['node', 'ClusterScraper.ts', '--workers=2']);
+
+            expect(report).not.toBeNull();
+            expect(report?.run.outcome).toBe('failed');
+            expect(report?.run.exitCode).toBe(1);
+            expect(report?.workers).toHaveLength(2);
+            expect(report?.workers?.[0].status).toBe('ok');
+            expect(report?.workers?.[1].status).toBe('failed');
+            expect(report?.categories['worker_failed']?.count).toBe(1);
+        });
+
+        test('timeout → SIGTERM then SIGKILL', async () => {
+            const child = new MockChildProcess();
+            (child_process.fork as jest.Mock).mockReturnValueOnce(child);
+
+            // Do not emit message or exit immediately, trigger timeout
+            const shardPromise = runWorkerShard(1, ['timeout-corp'], 5, {
+                workerTimeoutMs: 30,
+                killGracePeriodMs: 30
+            });
+
+            // Wait 40ms to trigger SIGTERM
+            await new Promise(r => setTimeout(r, 40));
+            expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+
+            // Wait another 40ms to trigger SIGKILL
+            await new Promise(r => setTimeout(r, 40));
+            expect(child.kill).toHaveBeenCalledWith('SIGKILL');
+
+            // Child terminates under SIGKILL
+            child.emit('exit', null, 'SIGKILL');
+
+            const result = await shardPromise;
+            expect(result.status).toBe('timeout');
+            expect(result.error).toContain('Worker timed out');
         });
     });
 });

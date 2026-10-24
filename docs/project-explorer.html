@@ -811,14 +811,15 @@
     "path": "src/core/ClusterScraper.ts",
     "icon": "⭐",
     "iconClass": "pink",
-    "summary": "Partitions active companies across multiple OS child processes (fork) for true multi-core parallel scraping and aggregates telemetry",
+    "summary": "Partitions active companies across multiple OS child processes (fork) with watchdog timeouts, signal forwarding, and telemetry aggregation",
     "tags": [
       "Core",
       "Multi-Process",
       "Cluster",
       "Child Process",
       "Parallel",
-      "High-Performance"
+      "High-Performance",
+      "Watchdog"
     ],
     "info": [
       {
@@ -841,11 +842,11 @@
       },
       {
         "name": "runWorkerShard()",
-        "desc": "Spawns a single OS worker process for a company shard and resolves with its telemetry report"
+        "desc": "Spawns a single OS worker process with watchdog timeout and resolves with WorkerResult"
       },
       {
         "name": "runClusterScrape()",
-        "desc": "Entry point for multi-process scraping across OS worker processes"
+        "desc": "Entry point for multi-process scraping across OS worker processes with signal forwarding and fault tolerance"
       }
     ]
   },

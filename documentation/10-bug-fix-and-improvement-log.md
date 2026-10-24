@@ -44,7 +44,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 | BF-005 | `f872356` | Real salary extraction, null-clearing on removal | ✅ |
 | BF-006 | `f872356` | Dept/location dedupe, streaming flushes, stale-job deactivation, 3-strike quarantine | ✅ |
 | BF-007 | `f872356` | CSV / Markdown escaping | ⚠️ (newline/CRLF untested) |
-| BF-008 | `f872356`, `2cce729` | Multi-process cluster scraper | ⚠️ (IPC/`saveTelemetry` untested) |
+| BF-008 | `f872356`, `2cce729`, HEAD | Multi-process cluster scraper (watchdog, allSettled, report saved on worker failure) | ✅ |
 | BF-009 | `747d8d1`, `635e69d` | CSV-mode telemetry parity, `verify` auditor | ⚠️ (forwarding untested, Verify counts only) |
 | BF-010 | `627dfae` | Bulk `createMany` fast path, cache pre-warming | ❌ none, see 11-testing-guide.md |
 | BF-011 | HEAD | Structured field promotion, GraphQL preservation, company enrichment, and full-field hash (#31) | ✅ (`ContentHash.test.ts` 17 cases, `extractSalary` interval, unit tests) |
@@ -110,9 +110,8 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Symptom:** One Node event loop limited throughput, and multiple processes raced on `Department`/`Location` inserts.
 - **Root cause & fix:** `ClusterScraper.ts` (`npm run scrape:parallel [-- --workers=N]`, default `min(4, max(2, cpus))`) forks `Scraper.ts --ipc-worker` children, shards slugs round-robin with `partitionSlugs()`, and merges results with `ErrorTracker.mergeReports()` + `saveMergedReport()`. `getOrCreateDepartment/Location` catch the upsert error and recover with `findUnique`.
 - **Implemented in:** `src/core/ClusterScraper.ts` (`resolveWorkerCount`, `partitionSlugs`, `runWorkerShard`, `runClusterScrape`; added in `2cce729`), `src/core/Scraper.ts` (`--ipc-worker` handler, `runAll({ saveTelemetry })`, `findUnique` P2002 recovery; these landed earlier in `f872356`, and `2cce729` did not touch `Scraper.ts`), `src/lib/ErrorTracker.ts` (`mergeReports`/`saveMergedReport`, also from `f872356`).
-- **Regression Invariant:** Workers run with `saveTelemetry: false` (also the default when `workerId` is set) and send `{ type: 'worker_done', report }` over IPC. Only `ClusterScraper` writes `latest-error-report.json`. A cross-process `P2002` on `Department`/`Location` is recovered via `findUnique`.
-- **Guarding tests:** `tests/unit/ClusterScraper.test.ts` (`resolveWorkerCount`, `partitionSlugs`, `mergeReports`), `tests/unit/ScraperCore.test.ts` (P2002 recovery).
-- **⚠️ Unguarded:** the `saveTelemetry: false` / IPC `worker_done`/`worker_error` contract, the single `saveMergedReport` write, and `Location` P2002 recovery (only `Department` is tested) have no test. If one worker fails, `Promise.all` rejects and the merged report is lost (09 #35).
+- **Regression Invariant:** Workers run with `saveTelemetry: false` (also the default when `workerId` is set) and send `{ type: 'worker_done', report }` or `{ type: 'worker_error' }` over IPC. `runClusterScrape` coordinates via `Promise.allSettled`, watchdog timeout sends `SIGTERM` then `SIGKILL`, signal handlers forward to children, and a partial or failed merged report is always saved with exit code 1 on worker failure.
+- **Guarding tests:** `tests/unit/ClusterScraper.test.ts` (`resolveWorkerCount`, `partitionSlugs`, `mergeReports`, `1 of 2 fails → report saved, exit 1`, `timeout → SIGTERM then SIGKILL`), `tests/unit/ScraperCore.test.ts` (P2002 recovery).
 
 ### BF-009: CSV-mode telemetry under-reported fallbacks; `verify` incomplete
 - **Symptom:** `csv_scrape` reports showed `graphqlFallbacksUsed: 0` even when boards (e.g. `go-augment`) were recovered via GraphQL, and `Verify.ts` skipped `Location`.
