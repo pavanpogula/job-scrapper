@@ -20,10 +20,11 @@ export function genKey(gen: string): string {
 }
 
 /**
- * Returns the Redis key for a details shard hash (0..7).
- * @param shard Shard index
+ * Returns the Redis key for a details shard hash (0..7), accepting either a shard number or job ID.
+ * @param shardOrId Shard index (0..7) or job UUID
  */
-export function detailsShardKey(shard: number): string {
+export function detailsShardKey(shardOrId: number | string): string {
+  const shard = typeof shardOrId === 'string' ? detailsShard(shardOrId) : shardOrId;
   return `jc:v1:details:${shard}`;
 }
 

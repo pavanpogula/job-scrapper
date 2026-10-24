@@ -192,14 +192,34 @@ export class FakeRedis {
         return '# Memory\nused_memory:1048576\nused_memory_human:1M\n';
     }
 
-    async scan(cursor: string | number, ..._args: any[]): Promise<[string, string[]]> {
+    async scan(cursor: string | number, ...args: any[]): Promise<[string, string[]]> {
         this.commandCount++;
-        const allKeys = Array.from(new Set([...this.data.keys(), ...this.hashes.keys()]));
+        let matchPattern: string | null = null;
+        for (let i = 0; i < args.length; i++) {
+            if (typeof args[i] === 'string' && args[i].toUpperCase() === 'MATCH' && i + 1 < args.length) {
+                matchPattern = args[++i];
+            }
+        }
+        let allKeys = Array.from(new Set([...this.data.keys(), ...this.hashes.keys()]));
+        if (matchPattern) {
+            const regex = new RegExp('^' + matchPattern.replace(/\*/g, '.*') + '$');
+            allKeys = allKeys.filter(k => regex.test(k));
+        }
         return ['0', allKeys];
     }
 
-    async eval(_script: string, _numKeys: number, ..._args: any[]): Promise<any> {
+    async eval(script: string, _numKeys: number, ...args: any[]): Promise<any> {
         this.commandCount += 2;
+        if (script.includes('redis.call("del", KEYS[1])')) {
+            const key = args[0];
+            const expectedVal = args[1];
+            const currentVal = this.data.get(key);
+            if (currentVal === expectedVal) {
+                this.data.delete(key);
+                return 1;
+            }
+            return 0;
+        }
         return 1;
     }
 

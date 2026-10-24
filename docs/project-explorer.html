@@ -223,6 +223,25 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
+                        <span>cache</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_cache_CacheCli_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>CacheCli.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_cache_Publisher_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Publisher.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
                         <span>config</span>
                     </div>
                     <ul><li>
@@ -585,6 +604,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_Publisher_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Publisher.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_RedisClient_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>RedisClient.test.ts</span>
@@ -931,7 +956,7 @@
       },
       {
         "label": "Functions",
-        "value": "3"
+        "value": "4"
       }
     ],
     "functions": [
@@ -946,6 +971,10 @@
       {
         "name": "toJobDetail()",
         "desc": "Maps a database job row to the public API detail contract"
+      },
+      {
+        "name": "matchesFilter()",
+        "desc": "Evaluates whether a job item matches a single filter criteria"
       }
     ]
   },
@@ -988,6 +1017,85 @@
       {
         "name": "queryCompanies()",
         "desc": "Queries active companies with job counts"
+      }
+    ]
+  },
+  "src_cache_CacheCli_ts": {
+    "name": "CacheCli.ts",
+    "path": "src/cache/CacheCli.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Command line entry points for cache:publish, cache:status, and cache:purge-legacy",
+    "tags": [
+      "CLI",
+      "Cache",
+      "Redis",
+      "Maintenance"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "main()",
+        "desc": "Parses CLI args and runs the requested cache command"
+      }
+    ]
+  },
+  "src_cache_Publisher_ts": {
+    "name": "Publisher.ts",
+    "path": "src/cache/Publisher.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Builds, compresses, and atomically publishes PostgreSQL snapshots to Upstash Redis with sanity gating and detail diffing",
+    "tags": [
+      "Cache",
+      "Redis",
+      "Publisher",
+      "SanityGate",
+      "Upstash"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "6"
+      }
+    ],
+    "functions": [
+      {
+        "name": "formatGenId()",
+        "desc": "Formats generation ID following g<UTC yyyyMMddTHHmmssZ>-<sha1(runId).slice(0, 4)>"
+      },
+      {
+        "name": "releaseLock()",
+        "desc": "Releases the publish lock via compare-and-delete Lua script"
+      },
+      {
+        "name": "recordScrapeFinished()",
+        "desc": "Records the scrape finished timestamp to meta:lastScrapeAt"
+      },
+      {
+        "name": "publishCacheGeneration()",
+        "desc": "Builds, compresses, and atomically publishes cache generation"
+      },
+      {
+        "name": "runCacheStatus()",
+        "desc": "Runs cache:status inspection and formats human-readable report"
+      },
+      {
+        "name": "runCachePurgeLegacy()",
+        "desc": "Runs cache:purge-legacy scanning and removing job:*:hash keys"
       }
     ]
   },
@@ -1810,7 +1918,7 @@
       },
       {
         "name": "detailsShardKey()",
-        "desc": "Returns the Redis key for a details shard hash (0..7)."
+        "desc": "Returns the Redis key for a details shard hash (0..7), accepting either a shard number or job ID."
       },
       {
         "name": "crc32()",
@@ -2505,6 +2613,31 @@
       "CDX",
       "Filtering",
       "Slug Extraction"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_Publisher_test_ts": {
+    "name": "Publisher.test.ts",
+    "path": "tests/unit/Publisher.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates publishCacheGeneration, sanity gate, detail diffing, atomic swap, and CLI utilities",
+    "tags": [
+      "Testing",
+      "Cache",
+      "Publisher",
+      "Redis",
+      "SanityGate"
     ],
     "info": [
       {

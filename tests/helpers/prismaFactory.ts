@@ -67,6 +67,10 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
                     const set = new Set(w.ashbyId.in);
                     result = result.filter(j => set.has(j.ashbyId));
                 }
+                if (w.id?.in) {
+                    const set = new Set(w.id.in);
+                    result = result.filter(j => set.has(j.id));
+                }
                 if (w.ashbyId?.notIn) {
                     const set = new Set(w.ashbyId.notIn);
                     result = result.filter(j => !set.has(j.ashbyId));
@@ -251,7 +255,8 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
             }
             return existing;
         }),
-        findUnique: jest.fn(async (args: any) => departments.get(args.where.name) || null)
+        findUnique: jest.fn(async (args: any) => departments.get(args.where.name) || null),
+        findMany: jest.fn(async (_args?: any) => Array.from(departments.values())),
     };
 
     const location = {
@@ -308,6 +313,12 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
         $executeRaw,
         $queryRaw,
         $disconnect,
+        seed: (type: 'company' | 'job' | 'department' | 'location', item: any) => {
+            if (type === 'company') companies.set(item.slug || item.id, { ...item });
+            if (type === 'job') jobs.set(item.ashbyId || item.id, { ...item });
+            if (type === 'department') departments.set(item.name || item.id, { ...item });
+            if (type === 'location') locations.set(item.name || item.id, { ...item });
+        },
         // Inspections
         _data: {
             companies,

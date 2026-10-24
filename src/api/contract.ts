@@ -191,3 +191,30 @@ export function toJobDetail(job: any) {
       : null,
   };
 }
+
+export interface SingleFilter {
+  workplaceType?: string;
+  employmentType?: string;
+  country?: string;
+  hasSalary?: boolean | string;
+}
+
+/**
+ * @summary Evaluates whether a job item matches a single filter criteria
+ */
+export function matchesFilter(item: any, filter: SingleFilter): boolean {
+  if (filter.workplaceType && item.workplaceType !== filter.workplaceType) {
+    return false;
+  }
+  if (filter.employmentType && item.employmentType !== filter.employmentType) {
+    return false;
+  }
+  if (filter.country && item.country !== filter.country) {
+    return false;
+  }
+  if (filter.hasSalary) {
+    const has = item.salaryMin !== null || item.salaryMax !== null;
+    if (!has) return false;
+  }
+  return true;
+}

@@ -266,7 +266,7 @@ export async function queryCompanies(
       slug: c.slug,
       name: c.name,
       logoUrl: c.logoUrl,
-      jobCount: c._count.jobs,
+      jobCount: c._count?.jobs ?? 0,
     })),
     total,
     page: pageNum,
