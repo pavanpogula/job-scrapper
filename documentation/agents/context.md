@@ -1,27 +1,30 @@
 # Agent Context
 
-Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (P1 completion).
+Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (P2 completion).
 
 ## Components & Entry Points
 - **Scraper:** `src/core/Scraper.ts` (single process / IPC worker), `src/core/ClusterScraper.ts` (parallel OS worker coordinator), `src/core/ScraperCSV.ts` (streaming CSV exporter).
-- **Cache Publisher:** `src/cache/Publisher.ts` (planned: P2).
-- **Backend API:** `src/api/Server.ts` (Express 5 REST API), `src/api/contract.ts`, `src/api/db/queries.ts`, `api/index.ts` (Vercel serverless entry point).
+- **Cache Publisher:** `src/cache/Publisher.ts` (atomic generation swap, sanity gating, details diffing), `src/cache/CacheCli.ts`.
+- **Backend API:** `src/api/Server.ts` (Express 5 REST API), `src/api/contract.ts`, `src/api/db/queries.ts`, `src/api/cache/ReadThrough.ts` (LRU + Redis read-through), `src/api/middleware/dbGuard.ts` (concurrency guard & deduplication), `src/api/middleware/cacheControl.ts` (CDN caching headers), `api/index.ts` (Vercel serverless entry point).
 - **Frontend UI:** `job-scrapper-ui/` (React 19, TypeScript, Vite, Redux Toolkit, MUI 9).
 
 ## CLI Commands
-- `npm run scrape:parallel [-- --workers=N]`: Multi-worker parallel scrape into PostgreSQL.
+- `npm run scrape:parallel [-- --workers=N]`: Multi-worker parallel scrape into PostgreSQL with automatic cache publish.
 - `npm run scrape`: Single-process scrape.
 - `npm run scrape:csv`: Stream active jobs to dated CSV in `output/`.
 - `npm run api:start`: Run Express REST API server locally on port 3001.
 - `npm run verify`: Audit database counts, active/inactive ratios, and sample data integrity.
-- `npm run cache:publish` (planned: P2): Publish pre-rendered cache generation to Redis.
+- `npm run cache:publish [--dry-run] [--force]`: Publish pre-rendered cache generation to Redis.
+- `npm run cache:status`: Inspect active generation, last scrape, and last publish telemetry.
+- `npm run cache:purge-legacy`: Clean up un-namespaced historical keys.
 - `npm run report:classify`: Classify scrape report into actionable vs noise.
 - `npm run verify:ui`: Run UI typecheck, lint, and tests.
 
 ## Data & Cache Facts
 - **Change Detection:** PostgreSQL `contentHash` comparison over 17 explicit fields in `batchUpsertJobs` (Redis change detection removed in P1-T04 per D-06).
-- **Cache Generations:** Today there is no `jc:v1` cache; the API queries PostgreSQL directly. Cache-first architecture using Upstash Redis `jc:v1:*` keys is planned: P2.
-- **REST Endpoints:** `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, `/health`. (`/v1/meta` is planned: P2).
+- **Cache Generations:** Upstash Redis `jc:v1:*` keys. Double-buffered atomic generation swap via MULTI/EXEC. Detail rows sharded across 8 hashes (`CRC32(id) % 8`).
+- **REST Endpoints:** `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, `/v1/meta`, `/health` (v2 shallow inspection; 0 DB/Redis calls when warm).
+- **Backpressure & Concurrency:** `DbGuard` limits active database queries to 3 with queue size 10 (returns 503 + Retry-After on backpressure). Coalesces concurrent identical DB queries via `singleFlight`.
 - **Telemetry:** Each run writes `output/reports/<YYYY-MM>/<runId>.json` (ErrorTracker v2) and `output/latest-<mode>.json`.
 
 ## Regression Invariants (doc 10)
@@ -41,9 +44,11 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (P1 c
 - **BF-014:** Limiter pause timer retains event loop (guarded: `ConcurrencyExit.test.ts`).
 - **BF-015:** 429 rate limit scoping, Retry-After header, api_error forwarding (guarded: `AshbyClient.test.ts`, `ScraperRunAll.test.ts`).
 - **BF-016:** GraphQL source preservation against REST overwrite and empty board deferral (guarded: `ScraperRunAll.test.ts`).
+- **BF-017:** Cache publishing orchestration, worker failure isolation, and exit code contract (guarded: `ClusterScraper.test.ts`, `Publisher.test.ts`, `ScraperRunAll.test.ts`).
+- **BF-018:** API cache read-through parity, detail sharding, negative 404 LRU cache (guarded: `ReadThrough.test.ts`, `Hardening.test.ts`, `HealthMeta.test.ts`).
 
 ## Top Gotchas
 1. **Modules executing on import:** `DbMenu.ts`, `DbInspect.ts`, `GenerateDocs.ts` run on import—never import them into other modules.
-2. **Typecheck & lint scope:** `tsc -p .` and `npm run lint` cover `src/` only today (expansion planned: P3-T01).
-3. **Exit codes:** Scrapers exit 0 on success, 1 on hard failure (exit 2 for publish failure/gate planned: P2-T04).
+2. **Typecheck & lint scope:** `tsc -p .` and `npm run lint` cover `src/` and `api/`.
+3. **Exit codes:** Scrapers exit 0 on clean success, 1 on hard failure, 2 on scrape success with cache publication failure or sanity gate tripping.
 4. **`JOBS.md`:** 5 MB committed snapshot—never read entirely into memory.

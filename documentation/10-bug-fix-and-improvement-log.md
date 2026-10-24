@@ -213,6 +213,18 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Regression Invariant:** Cache publishing is never attempted if any worker fails; cache publication failure or sanity gate tripping yields exit code 2; `--skip-publish` records scrape timestamp and yields exit code 0.
 - **Guarding tests:** `tests/unit/ClusterScraper.test.ts` (all ok -> publish once exit 0; 1 worker fails -> publish skipped exit 1; publish fails -> exit 2; skip-publish -> exit 0), `tests/unit/ScraperRunAll.test.ts` (`-t "standalone runAll honors publish: true and skipPublish"`).
 
+### BF-018: API cache read-through parity, detail sharding, and negative 404 LRU cache
+- **Symptom:** Direct PostgreSQL queries on every API request risked exhausting serverless connection pools and Neon compute quotas. Uncached detail lookups on nonexistent IDs triggered repetitive database queries.
+- **Root cause & fix:**
+  1. Implemented `ReadThroughService` (`src/api/cache/ReadThrough.ts`) serving lists, facets, companies, and meta through Upstash Redis generations with in-process LRU cache.
+  2. Implemented detail shard lookup querying `jc:v1:details:<shard>` (8 shards via `CRC32(id) % 8`) and `jc:v1:details:index` fallback.
+  3. Added 10-minute in-process negative LRU cache for confirmed 404 lookups.
+  4. Non-UUID IDs return 404 immediately with zero database and zero Redis operations.
+  5. Backpressure protection via `DbGuard` (max 3 concurrent active DB queries, 10 queue, 503 backpressure) and `singleFlight` deduplication.
+- **Implemented in:** `src/api/cache/ReadThrough.ts`, `src/api/middleware/dbGuard.ts`, `src/api/middleware/cacheControl.ts`, `src/api/Server.ts`.
+- **Regression Invariant:** All cacheable views return identical payload contract to direct DB queries; detail queries lookup CRC32 shard hashes; confirmed 404s are negatively cached for 10 minutes; non-UUID IDs execute zero I/O; concurrent DB queries are capped at 3 with single-flight deduplication.
+- **Guarding tests:** `tests/unit/ReadThrough.test.ts`, `tests/unit/Hardening.test.ts`, `tests/unit/HealthMeta.test.ts`, `tests/unit/ApiServer.test.ts`.
+
 ---
 
 ## 📈 Improvement Log & Future Packaging Roadmap
