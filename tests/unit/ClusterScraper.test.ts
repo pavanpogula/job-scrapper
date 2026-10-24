@@ -63,8 +63,8 @@ describe('ClusterScraper Unit Tests', () => {
 
     describe('ErrorTracker.mergeReports', () => {
         it('should aggregate metrics and events across multiple OS worker reports', () => {
-            const report1: ErrorReportDocument = {
-                schemaVersion: '1.0',
+            const report1: any = {
+                schemaVersion: '2.0',
                 summary: {
                     runId: 'r1',
                     mode: 'db_scrape',
@@ -74,6 +74,7 @@ describe('ClusterScraper Unit Tests', () => {
                     companiesAttempted: 3,
                     companiesWithJobs: 2,
                     companiesNotFound: 0,
+                    companiesFailed: 0,
                     graphqlFallbacksUsed: 1,
                     rateLimitsEncountered: 0,
                     jobsCollected: 45,
@@ -92,8 +93,8 @@ describe('ClusterScraper Unit Tests', () => {
                 ]
             };
 
-            const report2: ErrorReportDocument = {
-                schemaVersion: '1.0',
+            const report2: any = {
+                schemaVersion: '2.0',
                 summary: {
                     runId: 'r2',
                     mode: 'db_scrape',
@@ -103,6 +104,7 @@ describe('ClusterScraper Unit Tests', () => {
                     companiesAttempted: 3,
                     companiesWithJobs: 2,
                     companiesNotFound: 0,
+                    companiesFailed: 0,
                     graphqlFallbacksUsed: 0,
                     rateLimitsEncountered: 1,
                     jobsCollected: 115,

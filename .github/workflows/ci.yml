@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'plan/**'
+  push:
+    branches:
+      - main
+      - 'plan/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify & Test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install UI dependencies
+        run: npm ci --prefix job-scrapper-ui
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Type-check root and API
+        run: npx tsc --noEmit -p .
+
+      - name: Type-check tests
+        run: npx tsc --noEmit -p tsconfig.test.json
+
+      - name: Lint root and API
+        run: npm run lint
+
+      - name: Run root unit and contract tests
+        run: npm test
+
+      - name: Verify UI (typecheck, lint, test)
+        run: npm run verify:ui
+
+      - name: Build application
+        run: npm run build
+
+      - name: Verify docs generation
+        run: npm run docs:generate

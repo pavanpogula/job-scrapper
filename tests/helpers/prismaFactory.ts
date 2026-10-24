@@ -47,7 +47,7 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
         count: [] as any[]
     };
 
-    const job = {
+    const job: any = {
         findMany: jest.fn(async (args?: any) => {
             jobCalls.findMany.push(args);
             let result = Array.from(jobs.values());
@@ -180,7 +180,7 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
         })
     };
 
-    const company = {
+    const company: any = {
         findMany: jest.fn(async (args?: any) => {
             companyCalls.findMany.push(args);
             let result = Array.from(companies.values());
