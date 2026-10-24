@@ -294,7 +294,20 @@
                         <span class="material-icons-round folder-icon">folder</span>
                         <span>lib</span>
                     </div>
+                    <ul><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>cache</span>
+                    </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_cache_keys_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>keys.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_lib_AshbyClient_ts')">
                         <span class="material-icons-round">description</span>
                         <span>AshbyClient.ts</span>
@@ -460,6 +473,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_AshbyClient_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>AshbyClient.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_CacheKeys_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>CacheKeys.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1647,6 +1666,59 @@
       }
     ]
   },
+  "src_lib_cache_keys_ts": {
+    "name": "keys.ts",
+    "path": "src/lib/cache/keys.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Standard keys for Upstash Redis jc:v1:* cache and canonical query builder",
+    "tags": [
+      "cache",
+      "redis",
+      "keys",
+      "canonicalizer"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "7"
+      }
+    ],
+    "functions": [
+      {
+        "name": "genKey()",
+        "desc": "Returns the Redis key for a generation hash."
+      },
+      {
+        "name": "detailsShardKey()",
+        "desc": "Returns the Redis key for a details shard hash (0..7)."
+      },
+      {
+        "name": "crc32()",
+        "desc": "Computes the IEEE 802.3 standard CRC32 checksum for a string."
+      },
+      {
+        "name": "detailsShard()",
+        "desc": "Calculates the details shard index (0..7) for a given job UUID."
+      },
+      {
+        "name": "parseJobsQuery()",
+        "desc": "Parses and normalizes query parameters into canonical forms."
+      },
+      {
+        "name": "canonicalJobsKey()",
+        "desc": "Builds the canonical cache key for a jobs listing query."
+      },
+      {
+        "name": "isCacheableView()",
+        "desc": "Determines whether a query can be served from the pre-rendered cache."
+      }
+    ]
+  },
   "src_utils_EnrichCompanies_ts": {
     "name": "EnrichCompanies.ts",
     "path": "src/utils/EnrichCompanies.ts",
@@ -1957,6 +2029,27 @@
       "Fallback",
       "Retry",
       "Compensation"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_CacheKeys_test_ts": {
+    "name": "CacheKeys.test.ts",
+    "path": "tests/unit/CacheKeys.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates canonicalJobsKey, isCacheableView, detailsShard, and key constants (P2-T01)",
+    "tags": [
+      "Undocumented"
     ],
     "info": [
       {
