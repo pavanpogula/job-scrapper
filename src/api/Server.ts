@@ -18,6 +18,7 @@ import {
 import { readThroughService } from './cache/ReadThrough';
 import { canonicalJobsKey, isCacheableView } from '../lib/cache/keys';
 import { isValidId } from './contract';
+import { cacheControlMiddleware } from './middleware/cacheControl';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -25,8 +26,36 @@ const PORT = process.env.PORT || 3001;
 
 app.set('trust proxy', 1);
 
-app.use(cors({ origin: true }));
+const DEFAULT_CORS_ORIGINS = ['https://job-scrapper-ui.vercel.app', 'http://localhost:3000'];
+const configuredOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
+  : DEFAULT_CORS_ORIGINS;
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or same-origin)
+      if (!origin) return callback(null, true);
+      if (configuredOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    methods: ['GET', 'HEAD', 'OPTIONS'],
+    exposedHeaders: [
+      'X-Cache',
+      'X-Cache-Reason',
+      'X-Cache-Generation',
+      'X-Data-Updated-At',
+      'Retry-After',
+      'X-Request-Id',
+    ],
+  })
+);
 app.use(express.json({ limit: '100kb' }));
+
+// Cache-Control & CDN Header Middleware (04 §6)
+app.use(cacheControlMiddleware);
 
 // Security Headers Middleware
 app.use((_req, res, next) => {
@@ -36,7 +65,7 @@ app.use((_req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https:;"
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https:;"
   );
   next();
 });
@@ -48,61 +77,6 @@ app.use((req, _res, next) => {
   }
   next();
 });
-
-// In-Memory Rate Limiter: 10 requests per 1 minute window
-interface ClientRateRecord {
-  timestamps: number[];
-}
-const rateLimits = new Map<string, ClientRateRecord>();
-const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 10;              // 10 requests per 1 minute
-
-// Periodic cleanup to prevent unbounded memory growth from stale IPs
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, record] of rateLimits.entries()) {
-    record.timestamps = record.timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-    if (record.timestamps.length === 0) {
-      rateLimits.delete(ip);
-    }
-  }
-}, 5 * 60 * 1000).unref();
-
-const rateLimiterMiddleware = (req: Request, res: Response, next: any) => {
-  // Allow health check to pass without rate limiting
-  if (req.path === '/health') return next();
-
-  // Express trust proxy parses client IP securely
-  const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
-  const now = Date.now();
-
-  let record = rateLimits.get(ip);
-  if (!record) {
-    record = { timestamps: [] };
-    rateLimits.set(ip, record);
-  }
-
-  // Filter out timestamps older than the 1-minute window
-  record.timestamps = record.timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-
-  if (record.timestamps.length >= RATE_LIMIT_MAX) {
-    const oldest = record.timestamps[0];
-    const retryAfter = Math.max(1, Math.ceil((oldest + RATE_LIMIT_WINDOW_MS - now) / 1000));
-    res.setHeader('Retry-After', retryAfter);
-    return res.status(429).json({
-      error: 'Too Many Requests',
-      message: 'Rate limit exceeded: maximum 10 requests per 1 minute allowed.',
-      retryAfterSeconds: retryAfter,
-    });
-  }
-
-  record.timestamps.push(now);
-  res.setHeader('X-RateLimit-Limit', RATE_LIMIT_MAX);
-  res.setHeader('X-RateLimit-Remaining', RATE_LIMIT_MAX - record.timestamps.length);
-  next();
-};
-
-app.use(rateLimiterMiddleware);
 
 // Cached active jobs count for health check (10 min TTL - GAP-API-04)
 let cachedHealthActiveJobs: number | null = null;

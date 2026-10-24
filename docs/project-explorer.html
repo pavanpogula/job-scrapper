@@ -219,6 +219,12 @@
                         <span>middleware</span>
                     </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_api_middleware_cacheControl_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>cacheControl.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_api_middleware_dbGuard_ts')">
                         <span class="material-icons-round">description</span>
                         <span>dbGuard.ts</span>
@@ -614,6 +620,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_GoogleDrive_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GoogleDrive.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_Hardening_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Hardening.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1119,6 +1131,35 @@
       {
         "name": "queryCompanies()",
         "desc": "Queries active companies with job counts"
+      }
+    ]
+  },
+  "src_api_middleware_cacheControl_ts": {
+    "name": "cacheControl.ts",
+    "path": "src/api/middleware/cacheControl.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Applies Cache-Control and Vercel-Cache-Tag headers based on route, status code, and cache status",
+    "tags": [
+      "Middleware",
+      "Cache",
+      "CDN",
+      "Vercel"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "cacheControlMiddleware()",
+        "desc": "Cache-Control middleware implementing the CDN and Edge caching matrix (04 §6)."
       }
     ]
   },
@@ -2729,6 +2770,31 @@
       "Upload",
       "OAuth",
       "JWT"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_Hardening_test_ts": {
+    "name": "Hardening.test.ts",
+    "path": "tests/unit/Hardening.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates CORS origin filtering, Cache-Control header propagation, and in-memory limiter removal",
+    "tags": [
+      "Testing",
+      "Hardening",
+      "CORS",
+      "CacheControl",
+      "P2-T08"
     ],
     "info": [
       {

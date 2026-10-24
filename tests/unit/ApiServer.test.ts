@@ -412,7 +412,7 @@ describe('API Server Contract & Snapshot Tests', () => {
   });
 
   describe('Middleware & Error Handling', () => {
-    it('enforces rate limiter and returns 429 when IP exceeds 10 requests', async () => {
+    it('allows more than 10 requests from one IP as in-memory limiter is removed (P2-T08)', async () => {
       const rateLimitedIp = '10.99.99.1';
       mockJob.findMany.mockResolvedValue([]);
       mockJob.count.mockResolvedValue(0);
@@ -424,14 +424,12 @@ describe('API Server Contract & Snapshot Tests', () => {
         expect(res.status).toBe(200);
       }
 
-      // 11th request must receive 429
-      const throttledRes = await request(app)
+      // 11th request must succeed without 429 (handled upstream by Vercel WAF)
+      const res11 = await request(app)
         .get('/v1/jobs')
         .set('X-Forwarded-For', rateLimitedIp);
 
-      expect(throttledRes.status).toBe(429);
-      expect(throttledRes.body.error).toBe('Too Many Requests');
-      expect(throttledRes.headers['retry-after']).toBeDefined();
+      expect(res11.status).toBe(200);
     });
 
     it('sets standard security headers on responses', async () => {
