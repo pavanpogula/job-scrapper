@@ -29,16 +29,17 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 | 17/18 *(README part only)* | README said Redis is "Required" and that Job has a "type" column, and it advertised "Hourly Scraping". All corrected in README | 2026-10-22 docs sync. `.env.example` is still stale, so #17 stays open below |
 | 7 | One sequential Redis `GET` per job (~34k round trips per run). Removed Redis change detection from `Scraper.ts` (D-06) | P1-T04 |
 | 30 | Jobs that come back after deactivation stayed `active = false`. Removed Redis change detection so DB `!prev.active` reactivates jobs | P1-T04 |
+| 8 | `NOT_FOUND` was terminal. Sunday/`--recheck-not-found` recheck queries `NOT_FOUND` companies and restores to `ACTIVE` on success | P1-T07 |
+| 29 | 3-strike quarantine never fired. Persisted `consecutiveNotFound` on `Company`; marks `NOT_FOUND` at 3 strikes and deactivates jobs | P1-T07 |
+| 47 | Private `fetchJobs()` and `notFoundStrikes` dead code deleted from `Scraper.ts` | P1-T07 |
 
 ---
 
 ## 🔴 Data-correctness bugs (open)
 
-### #29 The 3-strike `NOT_FOUND` quarantine never fires in production
-- `AshbyScraper.notFoundStrikes` is an in-memory `Map` on each instance (`src/core/Scraper.ts`). `runAll()` fetches each company **once** per run and calls `recordNotFoundStrike(slug, 3)`, so the count never reaches 3 before the process exits. Neither `npm run scrape` nor `scrape:parallel` (which runs a fresh process per shard) ever marks a company `NOT_FOUND`.
-- The latest run shows the result: 1,109 dead slugs were requested again, and each one also triggered a GraphQL fallback request.
-- The private `fetchJobs()` uses threshold `1` and does mark `NOT_FOUND`, but nothing calls it except `tests/unit/ScraperCore.test.ts`, so the tests pass while the production path is broken.
-- Fix direction: persist strikes (a `Company.notFoundStrikes` column or a Redis counter `company:<slug>:404`), or treat a REST 404 that GraphQL confirms as a strike that survives across runs.
+### #29 The 3-strike `NOT_FOUND` quarantine never fires in production — [RESOLVED in P1-T07]
+- Previously `AshbyScraper.notFoundStrikes` was an in-memory `Map` lost on process exit.
+- **Resolved in P1-T07 (D-10):** Added `consecutiveNotFound` and `consecutiveFailures` to `Company` in `schema.prisma`. When `consecutiveNotFound >= 3`, company status becomes `NOT_FOUND`, its active jobs are deactivated via `job.updateMany`, and a `company_quarantined` event is recorded. Success resets counters to 0 and restores `ACTIVE`, verified by `tests/unit/CompanyHealth.test.ts`.
 
 ### #30 Jobs that come back after deactivation stay `active = false` — [RESOLVED in P1-T04]
 - Previously, `deactivateStaleJobs()` set `active = false` in Postgres but left the Redis key `job:<ashbyId>:hash` (7-day TTL). If the job reappeared with the same content, `filterChangedJobs()` saw the cached hash and skipped it. The job never reached `batchUpsertJobs()`, so the bulk path's `!prev.active` check could not reactivate it.
@@ -61,7 +62,7 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 | # | Issue | Where |
 |---|---|---|
 | 7 | [RESOLVED in P1-T04] One sequential Redis `GET` per job (~34k round trips per run). Removed Redis change detection from `Scraper.ts` (D-06) | `Scraper.ts` |
-| 8 | `NOT_FOUND` is terminal: nothing re-checks those companies (`runAll()` only loads `ACTIVE`). `REDIRECTED` is never set. Today this only matters for slugs marked by hand or by `fetchJobs()`, because of #29 | `Scraper.ts`, `schema.prisma` |
+| 8 | [RESOLVED in P1-T07] `NOT_FOUND` was terminal. Sunday/`--recheck-not-found` recheck queries `NOT_FOUND` companies and restores to `ACTIVE` on success | `Scraper.ts`, `ClusterScraper.ts` |
 | 9 | The CSV scraper counts `companiesNotFound` but never quarantines them, so dead slugs are requested on every run | `ScraperCSV.ts` `fetchJobsForCompany()` |
 | 10 | Exit code 0 on failure: `scrapeToCSV().catch(console.error)`, `seed().catch(console.error)`, `GenerateDocs`/`generate-readme`/`test-drive-upload` `main().catch(console.error)`, and `cleanDatabase()` / `inspectDatabase()` catch their own errors. `npm run verify` exits 0 even when its integrity audit finds defects. These now exit 1 on a thrown error: `Scraper` (`runAll` catch), `ClusterScraper`, `Verify`, `CdxWorker` | `ScraperCSV.ts`, `Seed.ts`, `DbClean.ts`, `DbInspect.ts`, `Verify.ts`, `scripts/*.ts` |
 | 11 | The service-account Drive upload fails on a personal Drive (no quota). The user-OAuth module (`uploadWithUserOAuth`) exists but `ScraperCSV.uploadToGoogleDrive()` doesn't use it | `ScraperCSV.ts`, `GoogleDriveOAuth.ts` |
@@ -100,7 +101,7 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 | 44 | `npm run lint` covers only `src/` (`.eslintrc.json` `ignorePatterns` excludes `scripts/`, and `tests/` is never passed). `tsconfig.json` `include` is `src/**/*` only, and ts-jest runs with `isolatedModules: true` (transpile only), so **`scripts/` and `tests/` are never type-checked**. Also, `jsdoc/require-jsdoc` and `jsdoc/check-tag-names` are set to `"warn"` and nothing requires `@file`/`@summary`/`@tags`, so a missing or empty JSDoc block never fails lint (see `ProcessCdxData.ts`, #49). | `package.json`, `.eslintrc.json`, `tsconfig.json`, `jest.config.js` |
 | 45 | `npm test` prints a ts-jest deprecation warning once per suite: the `isolatedModules` ts-jest option will be removed in v30. Move it to `tsconfig` (`"isolatedModules": true`). The major versions also differ: **jest `30.5.2`** with **ts-jest `29.4.15`** and `@types/jest` 30. Older docs said "Jest 29". | `jest.config.js`, `package.json` |
 | 46 | ESLint: 1 warning (`no-empty`, `DbInspect.ts:56`, the empty `catch (e) { }` around the row count). | `src/database/DbInspect.ts` |
-| 47 | Private `AshbyScraper.fetchJobs()` is dead code. `runAll()` calls `fetchAshbyBoardWithFallback()` directly, and the unit tests named "fetchJobs error handling" exercise only this unused path. | `src/core/Scraper.ts` |
+| 47 | [RESOLVED in P1-T07] Private `AshbyScraper.fetchJobs()` and `notFoundStrikes` dead code deleted from `Scraper.ts` | `Scraper.ts` |
 | 48 | The Redis `retryStrategy` comment says "Exponential backoff: 50ms, 100ms, 150ms" but `Math.min(times * 50, 2000)` is linear. | `src/lib/Redis.ts` |
 | 49 | `ProcessCdxData.ts` reads `process.argv[2]` at module load, and `processRawCDXData()` has an empty JSDoc block (no `@summary`). | `src/utils/ProcessCdxData.ts` |
 | 50 | Missing JSDoc `@tags` in the file header of `src/lib/GoogleDriveUserOAuth.ts` (it has `@file` and `@summary`) and of `scripts/test-drive-upload.ts`. `generate-readme.ts` `main()` has no JSDoc. | `src/lib/GoogleDriveUserOAuth.ts`, `scripts/` |

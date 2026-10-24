@@ -42,7 +42,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 | BF-003 | `f872356` | URL validation + canonical fallback | ✅ |
 | BF-004 | `f872356` | Validation pre-filter + per-job batch fallback | ⚠️ (legacy branch only) |
 | BF-005 | `f872356` | Real salary extraction, null-clearing on removal | ✅ |
-| BF-006 | `f872356` | Dept/location dedupe, streaming flushes, stale-job deactivation | ❌ (only the strike counter is tested) |
+| BF-006 | `f872356` | Dept/location dedupe, streaming flushes, stale-job deactivation, 3-strike quarantine | ✅ |
 | BF-007 | `f872356` | CSV / Markdown escaping | ⚠️ (newline/CRLF untested) |
 | BF-008 | `f872356`, `2cce729` | Multi-process cluster scraper | ⚠️ (IPC/`saveTelemetry` untested) |
 | BF-009 | `747d8d1`, `635e69d` | CSV-mode telemetry parity, `verify` auditor | ⚠️ (forwarding untested, Verify counts only) |
@@ -92,10 +92,10 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Root cause & fix:** Added `departmentInFlight` / `locationInFlight` Promise maps in front of `departmentCache` / `locationCache`. Added streaming flushes (`enqueueFlushIfNeeded()` chunks of `BATCH_SIZE = 100`, serialized through `flushChain`), `deactivateStaleJobs()` after every successful `rest`/`graphql` fetch, and `recordNotFoundStrike()` (3-strike `NOT_FOUND`).
 - **Implemented in:** `src/core/Scraper.ts` (`getOrCreateDepartment`, `getOrCreateLocation`, `runAll`, `deactivateStaleJobs`, `recordNotFoundStrike`).
 - **Regression Invariant:** Concurrent `getOrCreateDepartment`/`getOrCreateLocation` calls for the same name share one in-flight Promise. Pending jobs are flushed every 100 and at the end. Jobs are deactivated **only** after a successful board fetch (never on `source: 'none'`).
-- **Guarding tests:** `tests/unit/ScraperRunAll.test.ts` (guards 100-job streaming flush, `deactivateStaleJobs()` stale job deactivation, and reactivation of inactive jobs with identical hash); `tests/unit/ScraperCore.test.ts` (cache hit, empty names, and `recordNotFoundStrike()` called directly).
+- **Guarding tests:** `tests/unit/CompanyHealth.test.ts` (guards 3-strike quarantine, weekly Sunday recheck, success reset counters) ✅; `tests/unit/ScraperRunAll.test.ts` (guards 100-job streaming flush and `deactivateStaleJobs()` stale job deactivation) ✅.
 - **⚠️ Unguarded / known broken:**
   - Concurrent in-flight dedupe has no test (no `Promise.all([get(x), get(x)])` → 1 upsert check).
-  - **The 3-strike quarantine never triggers in production.** Strikes live in an in-memory `Map` per instance and `runAll()` fetches each company once per run (09 #29; the latest run had 1,109 `companiesNotFound`). The only test calls `recordNotFoundStrike()` three times directly.
+  - *(Resolved in P1-T07)* 3-strike quarantine persisted on `Company.consecutiveNotFound` and rechecks on Sunday.
   - *(Resolved in P1-T04 / D-06)* Jobs that reappear after deactivation are now reactivated properly; Redis change detection was removed so the DB `!prev.active` check reactivates returning jobs cleanly.
 
 ### BF-007: CSV / `JOBS.md` corruption from quotes, CRLF and pipes

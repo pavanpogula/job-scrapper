@@ -413,6 +413,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_CompanyHealth_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>CompanyHealth.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_Concurrency_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Concurrency.test.ts</span>
@@ -613,7 +619,7 @@
     "functions": [
       {
         "name": "Company",
-        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• status: CompanyStatus\\n• jobs: Job[]\\n• createdAt: DateTime"
+        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• status: CompanyStatus\\n• consecutiveNotFound: Int\\n• consecutiveFailures: Int\\n• lastSuccessAt: DateTime\\n• lastCheckedAt: DateTime\\n• jobs: Job[]\\n• createdAt: DateTime"
       },
       {
         "name": "Department",
@@ -625,7 +631,7 @@
       },
       {
         "name": "Job",
-        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• createdAt: DateTime\\n• updatedAt: DateTime"
+        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• lastSeenAt: DateTime\\n• createdAt: DateTime\\n• updatedAt: DateTime"
       }
     ]
   },
@@ -802,7 +808,7 @@
       },
       {
         "label": "Functions",
-        "value": "11"
+        "value": "9"
       }
     ],
     "functions": [
@@ -815,16 +821,8 @@
         "desc": "Computes 32-character MD5 content hash over explicit fields after sanitization"
       },
       {
-        "name": "recordNotFoundStrike()",
-        "desc": "Tracks consecutive 404 strikes for a company and marks status NOT_FOUND once threshold is reached"
-      },
-      {
         "name": "deactivateStaleJobs()",
         "desc": "Deactivates jobs in the database that are no longer listed on the company's live Ashby board"
-      },
-      {
-        "name": "fetchJobs()",
-        "desc": "Calls Ashby API (with browser headers, retry, and GraphQL fallback) to fetch all jobs for a company"
       },
       {
         "name": "generateHash()",
@@ -1649,6 +1647,31 @@
       "Multi-Process",
       "Sharding",
       "Telemetry"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_CompanyHealth_test_ts": {
+    "name": "CompanyHealth.test.ts",
+    "path": "tests/unit/CompanyHealth.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test suite for company health tracking, 3-strike quarantine, weekly NOT_FOUND rechecks, and failure isolation",
+    "tags": [
+      "Unit Test",
+      "CompanyHealth",
+      "Quarantine",
+      "Scraper",
+      "Resilience"
     ],
     "info": [
       {

@@ -4,11 +4,7 @@
  * @tags Unit Test, Scraper, Core, Redis, Hashing, Batch
  */
 
-import axios from 'axios';
 import { AshbyScraper } from '../../src/core/Scraper';
-
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 const mockCompanyFindMany = jest.fn();
 const mockCompanyUpdate = jest.fn();
@@ -55,36 +51,6 @@ describe('AshbyScraper Unit Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     scraper = new AshbyScraper();
-  });
-
-  describe('fetchJobs error handling', () => {
-    it('should mark company status as NOT_FOUND when Ashby returns HTTP 404', async () => {
-      mockedAxios.get.mockRejectedValueOnce({
-        isAxiosError: true,
-        response: { status: 404 }
-      });
-      mockedAxios.isAxiosError.mockReturnValueOnce(true);
-      mockCompanyUpdate.mockResolvedValueOnce({});
-
-      // Access private method via any
-      const result = await (scraper as any).fetchJobs('dead-slug');
-
-      expect(result).toEqual({ slug: 'dead-slug', jobs: [] });
-      expect(mockCompanyUpdate).toHaveBeenCalledWith({
-        where: { slug: 'dead-slug' },
-        data: { status: 'NOT_FOUND' }
-      });
-    });
-
-    it('should return empty jobs array on general network failure without altering company status', async () => {
-      mockedAxios.get.mockRejectedValueOnce(new Error('Connection timeout'));
-      mockedAxios.isAxiosError.mockReturnValueOnce(false);
-
-      const result = await (scraper as any).fetchJobs('timeout-slug');
-
-      expect(result).toEqual({ slug: 'timeout-slug', jobs: [] });
-      expect(mockCompanyUpdate).not.toHaveBeenCalled();
-    });
   });
 
   describe('getOrCreateDepartment and getOrCreateLocation in-memory caching', () => {
@@ -204,25 +170,6 @@ describe('AshbyScraper Unit Tests', () => {
 
       warnSpy.mockRestore();
       errSpy.mockRestore();
-    });
-  });
-
-  describe('three-strike NOT_FOUND quarantine', () => {
-    it('should only mark company NOT_FOUND on the 3rd strike when maxStrikes is 3', async () => {
-      mockCompanyUpdate.mockResolvedValue({});
-
-      const strike1 = await scraper.recordNotFoundStrike('flaky-board', 3);
-      const strike2 = await scraper.recordNotFoundStrike('flaky-board', 3);
-      expect(strike1).toBe(false);
-      expect(strike2).toBe(false);
-      expect(mockCompanyUpdate).not.toHaveBeenCalled();
-
-      const strike3 = await scraper.recordNotFoundStrike('flaky-board', 3);
-      expect(strike3).toBe(true);
-      expect(mockCompanyUpdate).toHaveBeenCalledWith({
-        where: { slug: 'flaky-board' },
-        data: { status: 'NOT_FOUND' }
-      });
     });
   });
 });

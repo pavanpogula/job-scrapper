@@ -3,7 +3,7 @@
 > **Purpose of this folder:** A single, authoritative source of context for humans *and AI agents*
 > working on this repository. Read this index first, then open only the file(s) relevant to your task.
 >
-> _Last full analysis: 2026-10-23 (P1-T06: Content hash over explicit field list after sanitize; ContentHash.test.ts 17 cases)._
+> _Last full analysis: 2026-10-23 (P1-T07: Persisted company health, 3-strike quarantine, weekly Sunday recheck; deleted dead fetchJobs)._
 
 ---
 

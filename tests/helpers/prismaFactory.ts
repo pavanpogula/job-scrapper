@@ -188,8 +188,22 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
                     result = result.filter(c => set.has(c.status));
                 }
             }
-            if (args?.select?.slug) {
-                return result.map(c => ({ slug: c.slug }));
+            if (args?.where?.slug) {
+                if (typeof args.where.slug === 'string') {
+                    result = result.filter(c => c.slug === args.where.slug);
+                } else if (args.where.slug?.in) {
+                    const set = new Set(args.where.slug.in);
+                    result = result.filter(c => set.has(c.slug));
+                }
+            }
+            if (args?.select) {
+                return result.map(c => {
+                    const item: any = {};
+                    for (const k of Object.keys(args.select)) {
+                        if (args.select[k]) item[k] = c[k];
+                    }
+                    return item;
+                });
             }
             return result;
         }),

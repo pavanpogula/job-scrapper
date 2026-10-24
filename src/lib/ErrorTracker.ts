@@ -10,7 +10,18 @@ import { ValidationIssue } from './Sanitizer';
 
 export interface RecordedErrorEvent {
     timestamp: string;
-    category: 'api_error' | 'graphql_fallback' | 'validation_issue' | 'db_error';
+    category:
+        | 'api_error'
+        | 'graphql_fallback'
+        | 'validation_issue'
+        | 'validation_filtered'
+        | 'validation_sanitized'
+        | 'db_error'
+        | 'company_quarantined'
+        | 'company_unreachable'
+        | 'company_error'
+        | 'rate_limited'
+        | 'suspicious_empty_board';
     companySlug: string;
     jobId?: string;
     field?: string;

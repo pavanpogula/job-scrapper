@@ -101,8 +101,12 @@ function runWorkerShard(
 export async function runClusterScrape(argv: string[] = process.argv): Promise<ErrorReportDocument | null> {
     const startedAtMs = Date.now();
 
+    const isSundayUtc = new Date().getUTCDay() === 0;
+    const recheckNotFound = argv.includes('--recheck-not-found') || isSundayUtc;
+    const statusFilter = recheckNotFound ? { in: ['ACTIVE', 'NOT_FOUND'] as any } : 'ACTIVE';
+
     const companies = await prisma.company.findMany({
-        where: { status: 'ACTIVE' },
+        where: { status: statusFilter },
         select: { slug: true }
     });
     await prisma.$disconnect();

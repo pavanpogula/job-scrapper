@@ -18,13 +18,17 @@ enum CompanyStatus {
 }
 
 model Company {
-  id        String        @id @default(uuid())
-  slug      String        @unique // e.g. "deel"
-  name      String?
-  logoUrl   String?
-  status    CompanyStatus @default(ACTIVE)
-  jobs      Job[]
-  createdAt DateTime      @default(now())
+  id                  String        @id @default(uuid())
+  slug                String        @unique // e.g. "deel"
+  name                String?
+  logoUrl             String?
+  status              CompanyStatus @default(ACTIVE)
+  consecutiveNotFound Int           @default(0)
+  consecutiveFailures Int           @default(0)
+  lastSuccessAt       DateTime?
+  lastCheckedAt       DateTime?
+  jobs                Job[]
+  createdAt           DateTime      @default(now())
 }
 
 model Department {
@@ -78,15 +82,17 @@ model Job {
   metadata    Json
   contentHash String   
   
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  active     Boolean   @default(true)
+  lastSeenAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   
   // Index for efficient filtering
   @@index([companySlug])
   @@index([departmentId])
   @@index([locationId])
   @@index([active])
+  @@index([active, lastSeenAt])
   @@index([isRemote])
   @@index([workplaceType])
   @@index([employmentType])
