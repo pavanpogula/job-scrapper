@@ -48,6 +48,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 | BF-009 | `747d8d1`, `635e69d` | CSV-mode telemetry parity, `verify` auditor | ⚠️ (forwarding untested, Verify counts only) |
 | BF-010 | `627dfae` | Bulk `createMany` fast path, cache pre-warming | ❌ none, see 11-testing-guide.md |
 | BF-011 | HEAD | Structured field promotion, GraphQL preservation, company enrichment, and full-field hash (#31) | ✅ (`ContentHash.test.ts` 17 cases, `extractSalary` interval, unit tests) |
+| BF-014 | HEAD | Limiter pause timer event loop retention (SCR-09) | ✅ |
 
 ### BF-001: Posting API 404/403 for boards that are live in the browser
 - **Symptom:** Companies return `404`/`403` from `api.ashbyhq.com/posting-api/job-board/<slug>` but show live jobs at `jobs.ashbyhq.com/<slug>`.
@@ -167,6 +168,13 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Implemented in:** `src/api/Server.ts`, `job-scrapper-ui/src/pages/JobDetailPage.tsx`, `job-scrapper-ui/package.json`.
 - **Regression Invariant:** Combined search + salary filters use `where.AND` and do not clobber; `/v1/facets` returns workplaceTypes, employmentTypes, countries, and hasSalary; `JobDetailPage` sanitizes HTML via DOMPurify.
 - **Guarding tests:** Verified via Jest unit suites (79 tests) and live API endpoint verification.
+
+### BF-014: Limiter unref pause timer premature process exit
+- **Symptom:** Limiter rate-limit cooldown paused execution with `pauseTimer.unref()`, causing Node.js to see no active handles and exit prematurely with remaining queued tasks unexecuted (e.g. `tasksDone=2/4`).
+- **Root cause & fix:** Removed `pauseTimer.unref()` from `src/lib/Concurrency.ts`. The cooldown timer now properly maintains active reference in the Node.js event loop until cooldown completes and queued tasks resume.
+- **Implemented in:** `src/lib/Concurrency.ts`.
+- **Regression Invariant:** Rate limit cooldown timer must retain the Node.js event loop so in-flight and queued tasks are never abandoned by early process exit.
+- **Guarding tests:** `tests/unit/ConcurrencyExit.test.ts` running `tests/fixtures/limiter-exit.ts` (asserts `tasksDone=4/4` and exit code 0).
 
 ---
 

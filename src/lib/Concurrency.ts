@@ -80,9 +80,6 @@ export function createLimiter(
                 pauseTimer = null;
                 next();
             }, cooldownMs);
-            if (typeof pauseTimer.unref === 'function') {
-                pauseTimer.unref();
-            }
         }
     };
 

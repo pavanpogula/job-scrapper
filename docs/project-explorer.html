@@ -385,6 +385,19 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
+                        <span>fixtures</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('tests_fixtures_limiter-exit_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>limiter-exit.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
                         <span>helpers</span>
                     </div>
                     <ul><li>
@@ -434,6 +447,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_Concurrency_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Concurrency.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ConcurrencyExit_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ConcurrencyExit.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1620,6 +1639,30 @@
     ],
     "functions": []
   },
+  "tests_fixtures_limiter-exit_ts": {
+    "name": "limiter-exit.ts",
+    "path": "tests/fixtures/limiter-exit.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Runs tasks through createLimiter with onRateLimit to reproduce and verify process exit behavior",
+    "tags": [
+      "Fixture",
+      "Concurrency",
+      "Limiter",
+      "ProcessExit"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_helpers_fakeRedis_ts": {
     "name": "fakeRedis.ts",
     "path": "tests/helpers/fakeRedis.ts",
@@ -1781,6 +1824,30 @@
       "Concurrency",
       "Limiter",
       "Async"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ConcurrencyExit_test_ts": {
+    "name": "ConcurrencyExit.test.ts",
+    "path": "tests/unit/ConcurrencyExit.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Asserts that limiter pause timer keeps event loop alive so process does not exit early with pending work",
+    "tags": [
+      "Unit Test",
+      "Concurrency",
+      "Limiter",
+      "ProcessExit"
     ],
     "info": [
       {
