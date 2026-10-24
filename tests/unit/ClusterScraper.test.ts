@@ -8,6 +8,19 @@ import { EventEmitter } from 'events';
 import * as child_process from 'child_process';
 import { partitionSlugs, resolveWorkerCount, runClusterScrape, runWorkerShard } from '../../src/core/ClusterScraper';
 import { ErrorReportDocument, ErrorTracker } from '../../src/lib/ErrorTracker';
+import { publishCacheGeneration, recordScrapeFinished } from '../../src/cache/Publisher';
+
+jest.mock('../../src/cache/Publisher', () => ({
+    publishCacheGeneration: jest.fn().mockResolvedValue({
+        attempted: true,
+        status: 'published',
+        gen: 'mock-gen',
+        fields: 10,
+        bytes: 1000,
+        durationMs: 50
+    }),
+    recordScrapeFinished: jest.fn().mockResolvedValue(undefined)
+}));
 
 class MockChildProcess extends EventEmitter {
     public pid = 1234;
@@ -208,6 +221,179 @@ describe('ClusterScraper Unit Tests', () => {
             const result = await shardPromise;
             expect(result.status).toBe('timeout');
             expect(result.error).toContain('Worker timed out');
+        });
+
+        test('2 workers ok -> publishCacheGeneration called once, exit 0', async () => {
+            const child1 = new MockChildProcess();
+            const child2 = new MockChildProcess();
+
+            const createReport = (id: string) => ({
+                schemaVersion: '2.0',
+                run: { runId: id, mode: 'cluster' },
+                summary: {
+                    runId: id,
+                    mode: 'db_scrape',
+                    startedAt: new Date().toISOString(),
+                    completedAt: new Date().toISOString(),
+                    durationSeconds: 2,
+                    companiesAttempted: 1,
+                    companiesWithJobs: 1,
+                    companiesNotFound: 0,
+                    companiesFailed: 0,
+                    graphqlFallbacksUsed: 0,
+                    rateLimitsEncountered: 0,
+                    jobsCollected: 10,
+                    jobsSanitized: 0,
+                    jobsFilteredOut: 0,
+                    dbErrors: 0
+                },
+                events: []
+            });
+
+            (child1.send as jest.Mock).mockImplementation(() => {
+                setImmediate(() => {
+                    child1.emit('message', { type: 'worker_done', report: createReport('r1') });
+                    child1.emit('exit', 0, null);
+                });
+            });
+
+            (child2.send as jest.Mock).mockImplementation(() => {
+                setImmediate(() => {
+                    child2.emit('message', { type: 'worker_done', report: createReport('r2') });
+                    child2.emit('exit', 0, null);
+                });
+            });
+
+            (child_process.fork as jest.Mock)
+                .mockReturnValueOnce(child1)
+                .mockReturnValueOnce(child2);
+
+            const { PrismaClient } = require('@prisma/client');
+            const mockPrisma = new PrismaClient();
+            mockPrisma.company.findMany.mockResolvedValueOnce([
+                { slug: 'company-1' },
+                { slug: 'company-2' }
+            ]);
+
+            const report = await runClusterScrape(['node', 'ClusterScraper.ts', '--workers=2']);
+            expect(report?.run.outcome).toBe('success');
+            expect(report?.run.exitCode).toBe(0);
+            expect(publishCacheGeneration).toHaveBeenCalledTimes(1);
+        });
+
+        test('1 worker fails -> publishCacheGeneration not called, exit 1', async () => {
+            (publishCacheGeneration as jest.Mock).mockClear();
+            const child1 = new MockChildProcess();
+            const child2 = new MockChildProcess();
+
+            (child1.send as jest.Mock).mockImplementation(() => {
+                setImmediate(() => {
+                    child1.emit('message', {
+                        type: 'worker_done',
+                        report: {
+                            schemaVersion: '2.0',
+                            run: { runId: 'w1', mode: 'cluster' },
+                            summary: { durationSeconds: 1, companiesAttempted: 1, companiesWithJobs: 0, companiesNotFound: 0, companiesFailed: 0, graphqlFallbacksUsed: 0, rateLimitsEncountered: 0, jobsCollected: 0, jobsSanitized: 0, jobsFilteredOut: 0, dbErrors: 0 },
+                            events: []
+                        }
+                    });
+                    child1.emit('exit', 0, null);
+                });
+            });
+
+            (child2.send as jest.Mock).mockImplementation(() => {
+                setImmediate(() => {
+                    child2.emit('message', { type: 'worker_error', error: 'boom' });
+                    child2.emit('exit', 1, null);
+                });
+            });
+
+            (child_process.fork as jest.Mock)
+                .mockReturnValueOnce(child1)
+                .mockReturnValueOnce(child2);
+
+            const { PrismaClient } = require('@prisma/client');
+            const mockPrisma = new PrismaClient();
+            mockPrisma.company.findMany.mockResolvedValueOnce([
+                { slug: 'c1' },
+                { slug: 'c2' }
+            ]);
+
+            const report = await runClusterScrape(['node', 'ClusterScraper.ts', '--workers=2']);
+            expect(report?.run.outcome).toBe('failed');
+            expect(report?.run.exitCode).toBe(1);
+            expect(publishCacheGeneration).not.toHaveBeenCalled();
+            expect(report?.cache?.status).toBe('skipped_incomplete_run');
+        });
+
+        test('publish fails -> exit 2', async () => {
+            (publishCacheGeneration as jest.Mock).mockResolvedValueOnce({
+                attempted: true,
+                status: 'failed',
+                durationMs: 10,
+                error: 'Redis connection dropped'
+            });
+
+            const child1 = new MockChildProcess();
+            (child1.send as jest.Mock).mockImplementation(() => {
+                setImmediate(() => {
+                    child1.emit('message', {
+                        type: 'worker_done',
+                        report: {
+                            schemaVersion: '2.0',
+                            run: { runId: 'w1', mode: 'cluster' },
+                            summary: { durationSeconds: 1, companiesAttempted: 1, companiesWithJobs: 0, companiesNotFound: 0, companiesFailed: 0, graphqlFallbacksUsed: 0, rateLimitsEncountered: 0, jobsCollected: 0, jobsSanitized: 0, jobsFilteredOut: 0, dbErrors: 0 },
+                            events: []
+                        }
+                    });
+                    child1.emit('exit', 0, null);
+                });
+            });
+
+            (child_process.fork as jest.Mock).mockReturnValueOnce(child1);
+
+            const { PrismaClient } = require('@prisma/client');
+            const mockPrisma = new PrismaClient();
+            mockPrisma.company.findMany.mockResolvedValueOnce([{ slug: 'c1' }]);
+
+            const report = await runClusterScrape(['node', 'ClusterScraper.ts', '--workers=1']);
+            expect(report?.run.outcome).toBe('failed');
+            expect(report?.run.exitCode).toBe(2);
+            expect(report?.cache?.status).toBe('failed');
+        });
+
+        test('skip-publish -> recordScrapeFinished called, publisher not called, exit 0', async () => {
+            (publishCacheGeneration as jest.Mock).mockClear();
+            (recordScrapeFinished as jest.Mock).mockClear();
+
+            const child1 = new MockChildProcess();
+            (child1.send as jest.Mock).mockImplementation(() => {
+                setImmediate(() => {
+                    child1.emit('message', {
+                        type: 'worker_done',
+                        report: {
+                            schemaVersion: '2.0',
+                            run: { runId: 'w1', mode: 'cluster' },
+                            summary: { durationSeconds: 1, companiesAttempted: 1, companiesWithJobs: 0, companiesNotFound: 0, companiesFailed: 0, graphqlFallbacksUsed: 0, rateLimitsEncountered: 0, jobsCollected: 0, jobsSanitized: 0, jobsFilteredOut: 0, dbErrors: 0 },
+                            events: []
+                        }
+                    });
+                    child1.emit('exit', 0, null);
+                });
+            });
+
+            (child_process.fork as jest.Mock).mockReturnValueOnce(child1);
+
+            const { PrismaClient } = require('@prisma/client');
+            const mockPrisma = new PrismaClient();
+            mockPrisma.company.findMany.mockResolvedValueOnce([{ slug: 'c1' }]);
+
+            const report = await runClusterScrape(['node', 'ClusterScraper.ts', '--workers=1', '--skip-publish']);
+            expect(report?.run.outcome).toBe('success');
+            expect(report?.run.exitCode).toBe(0);
+            expect(publishCacheGeneration).not.toHaveBeenCalled();
+            expect(recordScrapeFinished).toHaveBeenCalledTimes(1);
+            expect(report?.cache?.status).toBe('skipped_flag');
         });
     });
 });

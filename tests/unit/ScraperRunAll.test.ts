@@ -36,6 +36,18 @@ jest.mock('../../src/lib/Redis', () => ({
     redis: fakeRedis
 }));
 
+jest.mock('../../src/cache/Publisher', () => ({
+    publishCacheGeneration: jest.fn().mockResolvedValue({
+        attempted: true,
+        status: 'published',
+        gen: 'mock-gen-standalone',
+        fields: 5,
+        bytes: 500,
+        durationMs: 20
+    }),
+    recordScrapeFinished: jest.fn().mockResolvedValue(undefined)
+}));
+
 jest.mock('../../src/lib/AshbyClient', () => ({
     fetchAshbyBoardWithFallback: jest.fn(),
     extractSalary: jest.fn((job: any) => {
@@ -491,5 +503,45 @@ describe('AshbyScraper runAll() Harness (P1-T03)', () => {
         }
         const companyAfterRun2 = statefulPrisma._data.companies.get('acme-corp');
         expect(companyAfterRun2.pendingEmptySince).toBeNull();
+    });
+
+    test('P2-T04: standalone runAll honors publish: true and skipPublish', async () => {
+        const { publishCacheGeneration, recordScrapeFinished } = require('../../src/cache/Publisher');
+        (publishCacheGeneration as jest.Mock).mockClear();
+        (recordScrapeFinished as jest.Mock).mockClear();
+
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValue({
+            slug: 'acme-corp',
+            jobs: [],
+            source: 'rest',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        const scraper = new AshbyScraper();
+
+        // 1. With publish: true
+        const report1 = await scraper.runAll({
+            slugs: ['acme-corp'],
+            concurrency: 1,
+            saveTelemetry: false,
+            publish: true
+        });
+        expect(publishCacheGeneration).toHaveBeenCalledTimes(1);
+        expect(report1.cache?.status).toBe('published');
+
+        // 2. With skipPublish: true
+        (publishCacheGeneration as jest.Mock).mockClear();
+        const report2 = await scraper.runAll({
+            slugs: ['acme-corp'],
+            concurrency: 1,
+            saveTelemetry: false,
+            publish: true,
+            skipPublish: true
+        });
+        expect(publishCacheGeneration).not.toHaveBeenCalled();
+        expect(recordScrapeFinished).toHaveBeenCalledTimes(1);
+        expect(report2.cache?.status).toBe('skipped_flag');
     });
 });

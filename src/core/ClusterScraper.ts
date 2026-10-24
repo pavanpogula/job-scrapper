@@ -9,6 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
 import { ErrorReportDocument, ErrorTracker } from '../lib/ErrorTracker';
+import { publishCacheGeneration, recordScrapeFinished } from '../cache/Publisher';
 
 const prisma = new PrismaClient();
 
@@ -26,6 +27,10 @@ export interface ClusterScrapeOptions {
     workerTimeoutMs?: number;
     killGracePeriodMs?: number;
     saveTelemetry?: boolean;
+    skipPublish?: boolean;
+    force?: boolean;
+    dryRun?: boolean;
+    redis?: any;
 }
 
 /**
@@ -326,6 +331,11 @@ export async function runClusterScrape(
     if (hasFailures) {
         mergedReport.run.outcome = 'failed';
         mergedReport.run.exitCode = 1;
+        mergedReport.cache = {
+            attempted: false,
+            status: 'skipped_incomplete_run',
+            durationMs: 0
+        };
 
         for (const failedWorker of results.filter(w => w.status !== 'ok')) {
             if (!mergedReport.categories['worker_failed']) {
@@ -341,8 +351,48 @@ export async function runClusterScrape(
             });
         }
     } else {
-        mergedReport.run.outcome = 'success';
-        mergedReport.run.exitCode = 0;
+        const isSkipPublish = argv.includes('--skip-publish') || options.skipPublish;
+        if (isSkipPublish) {
+            await recordScrapeFinished({
+                scrapeFinishedAt: new Date().toISOString(),
+                redis: options.redis
+            });
+            mergedReport.cache = {
+                attempted: false,
+                status: 'skipped_flag',
+                durationMs: 0
+            };
+            mergedReport.run.outcome = 'success';
+            mergedReport.run.exitCode = 0;
+        } else {
+            try {
+                const publishResult = await publishCacheGeneration({
+                    runId: mergedReport.run.runId,
+                    scrapeFinishedAt: new Date().toISOString(),
+                    prisma,
+                    redis: options.redis,
+                    dryRun: argv.includes('--dry-run') || options.dryRun,
+                    force: argv.includes('--force') || options.force
+                });
+                mergedReport.cache = publishResult;
+                if (publishResult.status === 'published' || publishResult.status.startsWith('skipped')) {
+                    mergedReport.run.outcome = 'success';
+                    mergedReport.run.exitCode = 0;
+                } else {
+                    mergedReport.run.outcome = 'failed';
+                    mergedReport.run.exitCode = 2;
+                }
+            } catch (err: any) {
+                mergedReport.cache = {
+                    attempted: true,
+                    status: 'failed',
+                    durationMs: 0,
+                    error: err.message || String(err)
+                };
+                mergedReport.run.outcome = 'failed';
+                mergedReport.run.exitCode = 2;
+            }
+        }
     }
 
     const savedPath = ErrorTracker.saveMergedReport(mergedReport);

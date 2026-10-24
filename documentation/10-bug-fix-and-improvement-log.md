@@ -53,6 +53,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 | BF-014 | `55465a0` | Limiter pause timer event loop retention (SCR-09) | ✅ (`tests/unit/ConcurrencyExit.test.ts`) |
 | BF-015 | `8895d95` | Posting API failure classification, 429 rate limit scoping, and Retry-After header honoring (SCR-11/12) | ✅ (`tests/unit/AshbyClient.test.ts`, `ScraperRunAll.test.ts`) |
 | BF-016 | `38f4f01` | GraphQL source preservation against REST overwrite and empty board deactivation deferral (SCR-16/17) | ✅ (`tests/unit/ScraperRunAll.test.ts`) |
+| BF-017 | HEAD | Cache publishing orchestration, worker failure isolation, and exit code contract (CACHE-04, GAP-OPS-06) | ✅ (`tests/unit/ClusterScraper.test.ts`, `ScraperRunAll.test.ts`) |
 
 ### BF-001: Posting API 404/403 for boards that are live in the browser
 - **Symptom:** Companies return `404`/`403` from `api.ashbyhq.com/posting-api/job-board/<slug>` but show live jobs at `jobs.ashbyhq.com/<slug>`.
@@ -200,6 +201,17 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Implemented in:** `prisma/schema.prisma`, `src/core/Scraper.ts`.
 - **Regression Invariant:** GraphQL fallback never overwrites rich REST job content or bumps `updatedAt`; empty boards for companies with ≥ 5 active jobs defer deactivation for one scrape cycle and record `suspicious_empty_board`.
 - **Guarding tests:** `tests/unit/ScraperRunAll.test.ts` (`-t "graphql does not overwrite rest content"` and `-t "empty board deferred one run"`).
+
+### BF-017: Cache publishing orchestration, worker failure isolation, and exit code contract
+- **Symptom:** Without coordination between scrapers and the Redis publisher, partial worker failures in cluster mode could publish corrupted or incomplete cache generations, and exit codes did not distinguish between scraper crashes (exit 1) and cache publication failures / sanity gate trips (exit 2). In addition, debug runs with `--skip-publish` failed to update `meta:lastScrapeAt`.
+- **Root cause & fix:**
+  1. Updated `ClusterScraper.ts` so `publishCacheGeneration()` is invoked only after `Promise.allSettled()` confirms 100% of workers succeeded.
+  2. If any worker failed or timed out, cache publication is skipped (`skipped_incomplete_run`), `meta:lastScrapeAt` is untouched, and process exits 1.
+  3. When scraping succeeds but cache publishing fails or trips the sanity gate (`gated`), `exitCode = 2` is emitted (GAP-OPS-06).
+  4. Both `ClusterScraper.ts` and `Scraper.ts` honor `--skip-publish` by calling `recordScrapeFinished()` and setting cache status to `skipped_flag` with exit code 0.
+- **Implemented in:** `src/core/ClusterScraper.ts`, `src/core/Scraper.ts`, `src/cache/Publisher.ts`.
+- **Regression Invariant:** Cache publishing is never attempted if any worker fails; cache publication failure or sanity gate tripping yields exit code 2; `--skip-publish` records scrape timestamp and yields exit code 0.
+- **Guarding tests:** `tests/unit/ClusterScraper.test.ts` (all ok -> publish once exit 0; 1 worker fails -> publish skipped exit 1; publish fails -> exit 2; skip-publish -> exit 0), `tests/unit/ScraperRunAll.test.ts` (`-t "standalone runAll honors publish: true and skipPublish"`).
 
 ---
 

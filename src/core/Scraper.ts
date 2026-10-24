@@ -19,6 +19,7 @@ import {
 } from '../lib/Sanitizer';
 import { toIsoCountry } from '../lib/Country';
 import { ErrorTracker, ErrorReportDocument } from '../lib/ErrorTracker';
+import { publishCacheGeneration, recordScrapeFinished } from '../cache/Publisher';
 
 const prisma = new PrismaClient();
 
@@ -614,6 +615,10 @@ export class AshbyScraper {
         concurrency?: number;
         saveTelemetry?: boolean;
         recheckNotFound?: boolean;
+        publish?: boolean;
+        force?: boolean;
+        skipPublish?: boolean;
+        redis?: any;
     } = {}): Promise<ErrorReportDocument> {
         const startTime = Date.now();
         const workerPrefix = options.workerId !== undefined ? `[Worker #${options.workerId} | PID ${process.pid}] ` : '';
@@ -916,7 +921,58 @@ export class AshbyScraper {
         enqueueFlushIfNeeded(true);
         await flushChain;
 
+        const isIpcWorker = options.workerId !== undefined || process.argv.includes('--ipc-worker');
+        const shouldPublish = options.publish ?? (!isIpcWorker);
+
+        let cacheResult: any = undefined;
+        let publishExitCode: number | null = null;
+
+        if (shouldPublish) {
+            const isSkipPublish = options.skipPublish ?? process.argv.includes('--skip-publish');
+            if (isSkipPublish) {
+                await recordScrapeFinished({
+                    scrapeFinishedAt: new Date().toISOString(),
+                    redis: options.redis
+                });
+                cacheResult = {
+                    attempted: false,
+                    status: 'skipped_flag',
+                    durationMs: 0
+                };
+            } else {
+                try {
+                    const publishRes = await publishCacheGeneration({
+                        runId: tracker.runId,
+                        scrapeFinishedAt: new Date().toISOString(),
+                        prisma,
+                        redis: options.redis,
+                        dryRun: process.argv.includes('--dry-run'),
+                        force: options.force ?? process.argv.includes('--force')
+                    });
+                    cacheResult = publishRes;
+                    if (publishRes.status !== 'published' && !publishRes.status.startsWith('skipped')) {
+                        publishExitCode = 2;
+                    }
+                } catch (err: any) {
+                    cacheResult = {
+                        attempted: true,
+                        status: 'failed',
+                        durationMs: 0,
+                        error: err.message || String(err)
+                    };
+                    publishExitCode = 2;
+                }
+            }
+        }
+
         const report = tracker.buildReport();
+        if (cacheResult) {
+            report.cache = cacheResult;
+        }
+        if (publishExitCode !== null) {
+            report.run.outcome = 'failed';
+            report.run.exitCode = publishExitCode;
+        }
         if (shouldSaveTelemetry) {
             const reportPath = tracker.saveReport();
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -943,7 +999,8 @@ if (require.main === module) {
                     slugs: msg.slugs,
                     workerId: msg.workerId,
                     concurrency: msg.concurrency,
-                    saveTelemetry: false
+                    saveTelemetry: false,
+                    publish: false
                 });
                 if (process.send) {
                     process.send({ type: 'worker_done', workerId: msg.workerId, report });
@@ -960,9 +1017,11 @@ if (require.main === module) {
         });
     } else {
         const scraper = new AshbyScraper();
-        scraper.runAll()
-            .then(async () => {
+        scraper.runAll({ publish: true })
+            .then(async (report) => {
                 await prisma.$disconnect();
+                const code = report?.run?.exitCode ?? 0;
+                process.exit(code);
             })
             .catch(async (e) => {
                 console.error(e);
