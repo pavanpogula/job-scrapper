@@ -373,6 +373,25 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
+                        <span>helpers</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('tests_helpers_fakeRedis_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>fakeRedis.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_helpers_prismaFactory_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>prismaFactory.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
                         <span>unit</span>
                     </div>
                     <ul><li>
@@ -445,6 +464,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_ScraperCSV_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ScraperCSV.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ScraperRunAll_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ScraperRunAll.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1507,6 +1532,54 @@
     ],
     "functions": []
   },
+  "tests_helpers_fakeRedis_ts": {
+    "name": "fakeRedis.ts",
+    "path": "tests/helpers/fakeRedis.ts",
+    "icon": "⚡",
+    "iconClass": "pink",
+    "summary": "Emulates ioredis commands with command counting and fail-safe state",
+    "tags": [
+      "Testing",
+      "Redis",
+      "Mock",
+      "In-Memory"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_helpers_prismaFactory_ts": {
+    "name": "prismaFactory.ts",
+    "path": "tests/helpers/prismaFactory.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "In-memory database emulator matching PrismaClient contracts for Job, Company, Department, and Location",
+    "tags": [
+      "Testing",
+      "Prisma",
+      "Mock",
+      "Factory"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_unit_AshbyClient_test_ts": {
     "name": "AshbyClient.test.ts",
     "path": "tests/unit/AshbyClient.test.ts",
@@ -1794,6 +1867,31 @@
       "Redis",
       "Hashing",
       "Batch"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ScraperRunAll_test_ts": {
+    "name": "ScraperRunAll.test.ts",
+    "path": "tests/unit/ScraperRunAll.test.ts",
+    "icon": "⭐",
+    "iconClass": "pink",
+    "summary": "Tests 100-job streaming flushes, stale job deactivation, and createMany fast-path",
+    "tags": [
+      "Testing",
+      "Scraper",
+      "Batch",
+      "Deactivation",
+      "createMany"
     ],
     "info": [
       {

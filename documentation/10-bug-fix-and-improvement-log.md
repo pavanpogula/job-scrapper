@@ -91,11 +91,9 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Root cause & fix:** Added `departmentInFlight` / `locationInFlight` Promise maps in front of `departmentCache` / `locationCache`. Added streaming flushes (`enqueueFlushIfNeeded()` chunks of `BATCH_SIZE = 100`, serialized through `flushChain`), `deactivateStaleJobs()` after every successful `rest`/`graphql` fetch, and `recordNotFoundStrike()` (3-strike `NOT_FOUND`).
 - **Implemented in:** `src/core/Scraper.ts` (`getOrCreateDepartment`, `getOrCreateLocation`, `runAll`, `deactivateStaleJobs`, `recordNotFoundStrike`).
 - **Regression Invariant:** Concurrent `getOrCreateDepartment`/`getOrCreateLocation` calls for the same name share one in-flight Promise. Pending jobs are flushed every 100 and at the end. Jobs are deactivated **only** after a successful board fetch (never on `source: 'none'`).
-- **Guarding tests:** ❌ none for the invariant itself (see 11-testing-guide.md §6). `tests/unit/ScraperCore.test.ts` only covers a sequential cache hit, empty names and `recordNotFoundStrike()` called directly. *(Correction: `tests/unit/Concurrency.test.ts`, listed before, tests the limiter, not this invariant.)*
+- **Guarding tests:** `tests/unit/ScraperRunAll.test.ts` (guards 100-job streaming flush and `deactivateStaleJobs()` stale job deactivation); `tests/unit/ScraperCore.test.ts` (cache hit, empty names, and `recordNotFoundStrike()` called directly).
 - **⚠️ Unguarded / known broken:**
   - Concurrent in-flight dedupe has no test (no `Promise.all([get(x), get(x)])` → 1 upsert check).
-  - `deactivateStaleJobs()` has no test.
-  - The 100-job streaming flush in `runAll()` has no test.
   - **The 3-strike quarantine never triggers in production.** Strikes live in an in-memory `Map` per instance and `runAll()` fetches each company once per run (09 #29; the latest run had 1,109 `companiesNotFound`). The only test calls `recordNotFoundStrike()` three times directly.
   - Jobs that reappear after deactivation are not reactivated while their Redis hash is cached (09 #30).
 
@@ -127,7 +125,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Root cause & fix:** `batchUpsertJobs()` now runs one `findMany` per batch, `createMany({ skipDuplicates: true })` for new `ashbyId`s, and `$transaction(upsert)` only for existing rows whose `contentHash` changed or that are `!active`. It falls back to the plain `$transaction(upsert)` path when `findMany`/`createMany` are unavailable. `runAll()` pre-warms `departmentCache`/`locationCache` and loads `companiesWithExistingJobs` (distinct `companySlug` of active jobs) to skip `deactivateStaleJobs()` for companies with no prior active jobs. `ClusterScraper` uses 12 requests per worker when there are more than 100 companies. Result: 34,035 jobs / 1,747 companies in 141.3 s with `--workers=8`.
 - **Implemented in:** `src/core/Scraper.ts` (`batchUpsertJobs`, `runAll` pre-warm), `src/core/ClusterScraper.ts` (`perWorkerConcurrency`).
 - **Regression Invariant:** When `prisma.job.findMany` and `prisma.job.createMany` exist, new IDs go through `createMany` and only changed or inactive existing rows are upserted. Unchanged rows cause no write. The `catch` per-job fallback (BF-004) still wraps both paths.
-- **Guarding tests:** ❌ none (see 11-testing-guide.md §6). The `ScraperCore.test.ts` Prisma factory has no `job.findMany`/`createMany` and the global mock (`__mocks__/@prisma/client.ts`) has no `job.createMany`, so every `batchUpsertJobs` test takes the legacy `$transaction` path. *(Correction: the previously listed `ScraperCore.test.ts` / `ClusterScraper.test.ts` do not exercise this code.)*
+- **Guarding tests:** `tests/unit/ScraperRunAll.test.ts` (asserts `createMany({ skipDuplicates: true })` fast-path handles newly discovered IDs in 100-job chunks).
 - **Known gap:** because the hash covers only five fields, "unchanged" can hide real changes (09 #31; resolved in BF-011).
 
 ### BF-011: Promotion of structured Posting API fields, GraphQL field preservation, company enrichment, and full change detection
