@@ -19,7 +19,7 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-23 (P1-T
 - `npm run verify:ui` (planned: P1-T19): Run UI typecheck, lint, and tests.
 
 ## Data & Cache Facts
-- **Change Detection:** Today uses Redis `job:<ashbyId>:hash` (7-day TTL) when `REDIS_URL` is set, combined with PostgreSQL `contentHash` comparison. (Removing Redis change detection in favor of DB contentHash comparison alone is planned: P1-T04).
+- **Change Detection:** PostgreSQL `contentHash` comparison in `batchUpsertJobs` (Redis change detection removed in P1-T04 per D-06).
 - **Cache Generations:** Today there is no `jc:v1` cache; the API queries PostgreSQL directly. Cache-first architecture using Upstash Redis `jc:v1:*` keys is planned: P2.
 - **REST Endpoints:** `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, `/health`. (`/v1/meta` is planned: P2).
 - **Telemetry:** Each run writes `output/latest-error-report.json`. (Structured run-id report history in `output/reports/<YYYY-MM>/<runId>.json` is planned: P1-T10).

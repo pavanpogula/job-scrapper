@@ -141,4 +141,49 @@ describe('AshbyScraper runAll() Harness (P1-T03)', () => {
         const stale = statefulPrisma._data.jobs.get('old-stale-job');
         expect(stale.active).toBe(false);
     });
+
+    test('reactivates inactive job with same hash', async () => {
+        const scraper = new AshbyScraper();
+        const returningJobPayload = {
+            id: 'returning-job',
+            title: 'Reactivated Engineer',
+            department: 'Engineering',
+            location: 'Remote',
+            jobUrl: 'https://jobs.ashbyhq.com/acme-corp/returning-job',
+            applyUrl: 'https://jobs.ashbyhq.com/acme-corp/returning-job/application',
+            isListed: true
+        };
+        const returningHash = (scraper as any).generateHash(returningJobPayload);
+
+        // Seed statefulPrisma with an inactive job with the exact same contentHash
+        statefulPrisma._data.jobs.set('returning-job', {
+            ashbyId: 'returning-job',
+            title: 'Reactivated Engineer',
+            companySlug: 'acme-corp',
+            active: false,
+            isListed: true,
+            contentHash: returningHash
+        });
+
+        // Seed fakeRedis with the cached hash (simulating the bug where Redis previously blocked reactivation)
+        await fakeRedis.set('job:returning-job:hash', returningHash);
+
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: [returningJobPayload],
+            source: 'rest',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        await scraper.runAll({
+            slugs: ['acme-corp'],
+            concurrency: 1,
+            saveTelemetry: false
+        });
+
+        const stored = statefulPrisma._data.jobs.get('returning-job');
+        expect(stored.active).toBe(true);
+    });
 });

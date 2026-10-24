@@ -76,7 +76,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Symptom:** A single constraint error inside `prisma.$transaction(batch)` rolled back all 100 jobs.
 - **Root cause & fix:** Malformed records are pre-filtered (`validateAndSanitizeJob()` / `sanitizeJobBatch()`: non-objects, invalid/placeholder IDs, empty titles, duplicate IDs). `batchUpsertJobs()` wraps each batch in `try/catch`, and on failure retries each job individually with `upsert`, logging `[BatchError]` → `[JobStoreError]` and recording a `db_error` event (`skipped_corrupt_job_in_fallback`).
 - **Implemented in:** `src/lib/Sanitizer.ts`, `src/core/Scraper.ts` `batchUpsertJobs()`.
-- **Regression Invariant:** Any error in a batch (either the `createMany` fast path or the `$transaction` path) must fall back to per-job upserts so the valid jobs are still saved. Only failing `ashbyId`s are skipped and counted in `tracker.dbErrors`. Redis hashes are written only for jobs that succeeded.
+- **Regression Invariant:** Any error in a batch (either the `createMany` fast path or the `$transaction` path) must fall back to per-job upserts so the valid jobs are still saved. Only failing `ashbyId`s are skipped and counted in `tracker.dbErrors`.
 - **Guarding tests:** `tests/unit/ScraperCore.test.ts` ("fall back to per-job upserts and isolate failing job"), `tests/unit/Sanitizer.test.ts`. ⚠️ Only on the legacy `$transaction` branch. The fallback after a failing `createMany` (BF-010 path) and `tracker.dbErrors` are not asserted.
 
 ### BF-005: Salary columns always `NULL`
@@ -91,11 +91,11 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Root cause & fix:** Added `departmentInFlight` / `locationInFlight` Promise maps in front of `departmentCache` / `locationCache`. Added streaming flushes (`enqueueFlushIfNeeded()` chunks of `BATCH_SIZE = 100`, serialized through `flushChain`), `deactivateStaleJobs()` after every successful `rest`/`graphql` fetch, and `recordNotFoundStrike()` (3-strike `NOT_FOUND`).
 - **Implemented in:** `src/core/Scraper.ts` (`getOrCreateDepartment`, `getOrCreateLocation`, `runAll`, `deactivateStaleJobs`, `recordNotFoundStrike`).
 - **Regression Invariant:** Concurrent `getOrCreateDepartment`/`getOrCreateLocation` calls for the same name share one in-flight Promise. Pending jobs are flushed every 100 and at the end. Jobs are deactivated **only** after a successful board fetch (never on `source: 'none'`).
-- **Guarding tests:** `tests/unit/ScraperRunAll.test.ts` (guards 100-job streaming flush and `deactivateStaleJobs()` stale job deactivation); `tests/unit/ScraperCore.test.ts` (cache hit, empty names, and `recordNotFoundStrike()` called directly).
+- **Guarding tests:** `tests/unit/ScraperRunAll.test.ts` (guards 100-job streaming flush, `deactivateStaleJobs()` stale job deactivation, and reactivation of inactive jobs with identical hash); `tests/unit/ScraperCore.test.ts` (cache hit, empty names, and `recordNotFoundStrike()` called directly).
 - **⚠️ Unguarded / known broken:**
   - Concurrent in-flight dedupe has no test (no `Promise.all([get(x), get(x)])` → 1 upsert check).
   - **The 3-strike quarantine never triggers in production.** Strikes live in an in-memory `Map` per instance and `runAll()` fetches each company once per run (09 #29; the latest run had 1,109 `companiesNotFound`). The only test calls `recordNotFoundStrike()` three times directly.
-  - Jobs that reappear after deactivation are not reactivated while their Redis hash is cached (09 #30).
+  - *(Resolved in P1-T04 / D-06)* Jobs that reappear after deactivation are now reactivated properly; Redis change detection was removed so the DB `!prev.active` check reactivates returning jobs cleanly.
 
 ### BF-007: CSV / `JOBS.md` corruption from quotes, CRLF and pipes
 - **Symptom:** Escaped quotes (`""`), `\r\n` and `|` in titles/locations broke CSV parsing and the Markdown table.

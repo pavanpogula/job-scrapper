@@ -6,7 +6,6 @@
 
 import axios from 'axios';
 import { AshbyScraper } from '../../src/core/Scraper';
-import { redis } from '../../src/lib/Redis';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -42,21 +41,6 @@ jest.mock('@prisma/client', () => {
       $transaction: (...args: any[]) => mockTransaction(...args),
       $disconnect: (...args: any[]) => mockDisconnect(...args)
     }))
-  };
-});
-
-jest.mock('../../src/lib/Redis', () => {
-  return {
-    redis: {
-      status: 'ready',
-      connect: jest.fn().mockResolvedValue(undefined),
-      get: jest.fn(),
-      pipeline: jest.fn().mockReturnValue({
-        set: jest.fn(),
-        exec: jest.fn().mockResolvedValue([])
-      }),
-      quit: jest.fn().mockResolvedValue(undefined)
-    }
   };
 });
 
@@ -149,55 +133,8 @@ describe('AshbyScraper Unit Tests', () => {
     });
   });
 
-  describe('filterChangedJobs', () => {
-    it('should skip job when hash matches Redis cache', async () => {
-      (scraper as any).isRedisConnected = true;
-      const job = {
-        id: 'job-1',
-        title: 'Engineer',
-        location: 'Remote',
-        department: 'IT'
-      };
-      const expectedHash = (scraper as any).generateHash(job);
-
-      (redis.get as jest.Mock).mockResolvedValueOnce(expectedHash);
-
-      const changed = await (scraper as any).filterChangedJobs([job]);
-      expect(changed).toHaveLength(0);
-    });
-
-    it('should include job when hash differs from Redis cache', async () => {
-      (scraper as any).isRedisConnected = true;
-      const job = {
-        id: 'job-2',
-        title: 'Engineer 2',
-        location: 'Remote',
-        department: 'IT'
-      };
-
-      (redis.get as jest.Mock).mockResolvedValueOnce('old-outdated-hash');
-
-      const changed = await (scraper as any).filterChangedJobs([job]);
-      expect(changed).toHaveLength(1);
-      expect(changed[0].job.id).toBe('job-2');
-    });
-
-    it('should retain all jobs when Redis is disabled', async () => {
-      (scraper as any).isRedisConnected = false;
-      const jobs = [
-        { id: 'job-1', title: 'A', location: 'X', department: 'Y' },
-        { id: 'job-2', title: 'B', location: 'X', department: 'Y' }
-      ];
-
-      const changed = await (scraper as any).filterChangedJobs(jobs);
-      expect(changed).toHaveLength(2);
-      expect(redis.get).not.toHaveBeenCalled();
-    });
-  });
-
   describe('batchUpsertJobs', () => {
-    it('should batch database transactions into chunks of BATCH_SIZE (100) and update Redis pipeline', async () => {
-      (scraper as any).isRedisConnected = true;
+    it('should batch database transactions into chunks of BATCH_SIZE (100)', async () => {
       const mockJobs = Array.from({ length: 150 }, (_, i) => ({
         ashbyId: `job-${i}`,
         title: `Job ${i}`,
@@ -215,11 +152,9 @@ describe('AshbyScraper Unit Tests', () => {
 
       // 150 jobs with BATCH_SIZE 100 -> 2 batches
       expect(mockTransaction).toHaveBeenCalledTimes(2);
-      expect(redis.pipeline).toHaveBeenCalledTimes(2);
     });
 
     it('should fall back to per-job upserts and isolate failing job when a batch transaction throws', async () => {
-      (scraper as any).isRedisConnected = true;
       const mockJobs = [
         {
           ashbyId: 'good-job-1',

@@ -27,6 +27,8 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 | — | `generate-readme.ts` CSV parser broke on `""` and pipes. `parseCSV()` unescapes `""` and `sanitizeMarkdownCell()` escapes `\|` and newlines | `f872356` · BF-007 (but see #42) |
 | 16 | `docs/GOOGLE_DRIVE_SETUP.md` said `google-credentials.json` goes in the project root. It now says `apikeys/google-credentials.json` (and documents the user-OAuth files) | 2026-10-22 docs sync (working tree, not yet committed) |
 | 17/18 *(README part only)* | README said Redis is "Required" and that Job has a "type" column, and it advertised "Hourly Scraping". All corrected in README | 2026-10-22 docs sync. `.env.example` is still stale, so #17 stays open below |
+| 7 | One sequential Redis `GET` per job (~34k round trips per run). Removed Redis change detection from `Scraper.ts` (D-06) | P1-T04 |
+| 30 | Jobs that come back after deactivation stayed `active = false`. Removed Redis change detection so DB `!prev.active` reactivates jobs | P1-T04 |
 
 ---
 
@@ -38,9 +40,9 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 - The private `fetchJobs()` uses threshold `1` and does mark `NOT_FOUND`, but nothing calls it except `tests/unit/ScraperCore.test.ts`, so the tests pass while the production path is broken.
 - Fix direction: persist strikes (a `Company.notFoundStrikes` column or a Redis counter `company:<slug>:404`), or treat a REST 404 that GraphQL confirms as a strike that survives across runs.
 
-### #30 Jobs that come back after deactivation stay `active = false`
-- `deactivateStaleJobs()` sets `active = false` in Postgres but leaves the Redis key `job:<ashbyId>:hash` (7-day TTL). If the job reappears with the same content, `filterChangedJobs()` sees the cached hash and skips it. The job never reaches `batchUpsertJobs()`, so the bulk path's `!prev.active` check cannot reactivate it.
-- Fix direction: delete the Redis hash keys for jobs you deactivate, or include `active` in the cache value.
+### #30 Jobs that come back after deactivation stay `active = false` — [RESOLVED in P1-T04]
+- Previously, `deactivateStaleJobs()` set `active = false` in Postgres but left the Redis key `job:<ashbyId>:hash` (7-day TTL). If the job reappeared with the same content, `filterChangedJobs()` saw the cached hash and skipped it. The job never reached `batchUpsertJobs()`, so the bulk path's `!prev.active` check could not reactivate it.
+- **Resolved in P1-T04 (D-06):** Redis change detection (`job:<id>:hash`) was removed from `Scraper.ts`. The DB `contentHash` and `!prev.active` checks in `batchUpsertJobs()` now handle reactivation cleanly without Redis caching side effects, guarded by `tests/unit/ScraperRunAll.test.ts`.
 
 ### #31 The change-detection hash ignores most stored fields — [RESOLVED in BF-011]
 - `generateHash()` previously hashed only `title|location|department|salary.min|salary.max`.
@@ -58,7 +60,7 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 
 | # | Issue | Where |
 |---|---|---|
-| 7 | One sequential Redis `GET` per job (~34k round trips per run). Use `MGET` or a pipeline | `Scraper.ts` `filterChangedJobs()` |
+| 7 | [RESOLVED in P1-T04] One sequential Redis `GET` per job (~34k round trips per run). Removed Redis change detection from `Scraper.ts` (D-06) | `Scraper.ts` |
 | 8 | `NOT_FOUND` is terminal: nothing re-checks those companies (`runAll()` only loads `ACTIVE`). `REDIRECTED` is never set. Today this only matters for slugs marked by hand or by `fetchJobs()`, because of #29 | `Scraper.ts`, `schema.prisma` |
 | 9 | The CSV scraper counts `companiesNotFound` but never quarantines them, so dead slugs are requested on every run | `ScraperCSV.ts` `fetchJobsForCompany()` |
 | 10 | Exit code 0 on failure: `scrapeToCSV().catch(console.error)`, `seed().catch(console.error)`, `GenerateDocs`/`generate-readme`/`test-drive-upload` `main().catch(console.error)`, and `cleanDatabase()` / `inspectDatabase()` catch their own errors. `npm run verify` exits 0 even when its integrity audit finds defects. These now exit 1 on a thrown error: `Scraper` (`runAll` catch), `ClusterScraper`, `Verify`, `CdxWorker` | `ScraperCSV.ts`, `Seed.ts`, `DbClean.ts`, `DbInspect.ts`, `Verify.ts`, `scripts/*.ts` |

@@ -781,11 +781,10 @@
     "path": "src/core/Scraper.ts",
     "icon": "⭐",
     "iconClass": "pink",
-    "summary": "Fetches jobs from Ashby API using adaptive concurrency, streaming batch DB writes, stale job deactivation, and Redis caching",
+    "summary": "Fetches jobs from Ashby API using adaptive concurrency, streaming batch DB writes, and stale job deactivation",
     "tags": [
       "Core",
       "Ashby API",
-      "Redis",
       "Batch",
       "Concurrent",
       "High-Performance"
@@ -797,14 +796,10 @@
       },
       {
         "label": "Functions",
-        "value": "11"
+        "value": "9"
       }
     ],
     "functions": [
-      {
-        "name": "initRedis()",
-        "desc": "Initializes Redis connection"
-      },
       {
         "name": "recordNotFoundStrike()",
         "desc": "Tracks consecutive 404 strikes for a company and marks status NOT_FOUND once threshold is reached"
@@ -828,10 +823,6 @@
       {
         "name": "getOrCreateLocation()",
         "desc": "Gets or creates location with in-memory caching, concurrent in-flight deduplication, and cross-process P2002 race recovery"
-      },
-      {
-        "name": "filterChangedJobs()",
-        "desc": "Checks Redis cache for job changes, returns jobs that need processing"
       },
       {
         "name": "batchUpsertJobs()",

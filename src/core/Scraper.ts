@@ -1,13 +1,12 @@
 /**
  * @file Core Ashby job scraper (High-Performance)
- * @summary Fetches jobs from Ashby API using adaptive concurrency, streaming batch DB writes, stale job deactivation, and Redis caching
- * @tags Core, Ashby API, Redis, Batch, Concurrent, High-Performance
+ * @summary Fetches jobs from Ashby API using adaptive concurrency, streaming batch DB writes, and stale job deactivation
+ * @tags Core, Ashby API, Batch, Concurrent, High-Performance
  */
 
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import { createLimiter } from '../lib/Concurrency';
-import { redis } from '../lib/Redis';
 import {
     AshbyJob,
     extractSalary,
@@ -61,23 +60,6 @@ export class AshbyScraper {
     private notFoundStrikes = new Map<string, number>();
     private companiesWithExistingJobs = new Set<string>();
     private hasLoadedExistingJobSlugs = false;
-    private isRedisConnected = false;
-
-    /**
-     * @summary Initializes Redis connection
-     */
-    private async initRedis() {
-        if (redis.status === 'wait') {
-            try {
-                await redis.connect();
-                this.isRedisConnected = true;
-            } catch {
-                this.isRedisConnected = false;
-            }
-        } else {
-            this.isRedisConnected = redis.status === 'ready';
-        }
-    }
 
     /**
      * @summary Tracks consecutive 404 strikes for a company and marks status NOT_FOUND once threshold is reached
@@ -254,27 +236,6 @@ export class AshbyScraper {
     }
 
     /**
-     * @summary Checks Redis cache for job changes, returns jobs that need processing
-     */
-    private async filterChangedJobs(jobs: AshbyJob[]): Promise<{ job: AshbyJob; hash: string }[]> {
-        const changedJobs: { job: AshbyJob; hash: string }[] = [];
-
-        for (const job of jobs) {
-            const contentHash = this.generateHash(job);
-
-            if (this.isRedisConnected) {
-                const redisKey = `job:${job.id}:hash`;
-                const cachedHash = await redis.get(redisKey);
-                if (cachedHash === contentHash) continue;
-            }
-
-            changedJobs.push({ job, hash: contentHash });
-        }
-
-        return changedJobs;
-    }
-
-    /**
      * @summary Processes jobs in batches using database transactions with per-job fallback on error
      */
     private async batchUpsertJobs(processedJobs: ProcessedJob[], tracker?: ErrorTracker) {
@@ -421,15 +382,6 @@ export class AshbyScraper {
                     }
                 }
             }
-
-            // Update Redis cache for succeeded jobs
-            if (this.isRedisConnected && succeededJobs.length > 0) {
-                const pipeline = redis.pipeline();
-                succeededJobs.forEach(job => {
-                    pipeline.set(`job:${job.ashbyId}:hash`, job.contentHash, 'EX', 60 * 60 * 24 * 7);
-                });
-                await pipeline.exec();
-            }
         }
     }
 
@@ -440,12 +392,11 @@ export class AshbyScraper {
         companySlug: string,
         jobs: AshbyJob[]
     ): Promise<ProcessedJob[]> {
-        const changedJobs = await this.filterChangedJobs(jobs);
-        if (changedJobs.length === 0) return [];
+        if (jobs.length === 0) return [];
 
         const processedJobs: ProcessedJob[] = [];
 
-        for (const { job, hash } of changedJobs) {
+        for (const job of jobs) {
             const cleanTitle = sanitizeText(job.title);
             if (!cleanTitle || !job.id) {
                 console.warn(`  ⚠️ [ValidationFilter] Skipping malformed job in ${companySlug} (id=${job.id})`);
@@ -462,6 +413,7 @@ export class AshbyScraper {
             const postal = job.address?.postalAddress;
             const parsedPublishedAt = job.publishedAt ? new Date(job.publishedAt) : null;
             const validPublishedAt = parsedPublishedAt && !isNaN(parsedPublishedAt.getTime()) ? parsedPublishedAt : null;
+            const hash = this.generateHash(job);
 
             processedJobs.push({
                 ashbyId: job.id,
@@ -505,8 +457,6 @@ export class AshbyScraper {
         const concurrencyLimit = options.concurrency ?? CONCURRENCY_LIMIT;
         const shouldSaveTelemetry = options.saveTelemetry ?? (options.workerId === undefined);
 
-        await this.initRedis();
-
         // Pre-warm department and location caches in 2 queries to avoid per-company round trips
         if (typeof (prisma.department as any)?.findMany === 'function') {
             const depts = await (prisma.department as any).findMany({ select: { id: true, name: true } }).catch(() => []);
@@ -536,8 +486,7 @@ export class AshbyScraper {
             });
 
         console.log(`🚀 ${workerPrefix}Starting HIGH-PERFORMANCE scrape for ${companies.length} companies`);
-        console.log(`   ${workerPrefix}Concurrency: ${concurrencyLimit} | Batch Size: ${BATCH_SIZE}`);
-        console.log(`   ${workerPrefix}Redis: ${this.isRedisConnected ? '✅ Connected' : '⚠️ Disabled'}\n`);
+        console.log(`   ${workerPrefix}Concurrency: ${concurrencyLimit} | Batch Size: ${BATCH_SIZE}\n`);
 
         // Create adaptive concurrency limiter and telemetry tracker
         const limit = createLimiter(concurrencyLimit);
@@ -663,7 +612,6 @@ if (require.main === module) {
                     process.send({ type: 'worker_done', workerId: msg.workerId, report });
                 }
                 await prisma.$disconnect();
-                if (redis.status === 'ready') await redis.quit();
                 process.exit(0);
             } catch (err: any) {
                 if (process.send) {
@@ -678,7 +626,6 @@ if (require.main === module) {
         scraper.runAll()
             .then(async () => {
                 await prisma.$disconnect();
-                if (redis.status === 'ready') await redis.quit();
             })
             .catch(async (e) => {
                 console.error(e);
