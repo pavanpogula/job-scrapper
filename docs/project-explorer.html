@@ -438,6 +438,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('src_utils_InstallReportFixture_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>InstallReportFixture.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_utils_ProcessCdxData_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ProcessCdxData.ts</span>
@@ -632,6 +638,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_HealthMeta_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>HealthMeta.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_InstallReportFixture_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>InstallReportFixture.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -2154,6 +2166,36 @@
       }
     ]
   },
+  "src_utils_InstallReportFixture_ts": {
+    "name": "InstallReportFixture.ts",
+    "path": "src/utils/InstallReportFixture.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Installs a v2 error report fixture into output/ for testing CI alerts and self-healing fixer",
+    "tags": [
+      "CLI",
+      "Testing",
+      "Telemetry",
+      "Fixtures",
+      "CI"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "installReportFixture()",
+        "desc": "Installs a test report fixture into output/reports/<YYYY-MM>/<runId>.json"
+      }
+    ]
+  },
   "src_utils_ProcessCdxData_ts": {
     "name": "ProcessCdxData.ts",
     "path": "src/utils/ProcessCdxData.ts",
@@ -2820,6 +2862,30 @@
       "Meta",
       "ShallowHealth",
       "ReadThrough"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_InstallReportFixture_test_ts": {
+    "name": "InstallReportFixture.test.ts",
+    "path": "tests/unit/InstallReportFixture.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates installation of v2 report fixtures and exit code propagation",
+    "tags": [
+      "Testing",
+      "Fixtures",
+      "Telemetry",
+      "Reports"
     ],
     "info": [
       {

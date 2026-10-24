@@ -1,0 +1,136 @@
+name: Daily scrape
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      workers:
+        description: 'Number of worker processes for parallel scrape'
+        default: '4'
+      skip_publish:
+        description: 'Skip cache generation publish to Upstash Redis'
+        type: boolean
+        default: false
+      publish_only:
+        description: 'Only publish cache generation without scraping'
+        type: boolean
+        default: false
+      recheck_not_found:
+        description: 'Recheck not_found companies'
+        type: boolean
+        default: false
+      skip_fixer:
+        description: 'Skip automated fixer job'
+        type: boolean
+        default: false
+      fixture_report:
+        description: 'Repo path of a v2 report fixture; skips scraping (for testing alerts/fixer)'
+        default: ''
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: scrape-production
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    name: Scrape & Publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+    outputs:
+      actionable: ${{ steps.classify.outputs.actionable }}
+      run_id: ${{ steps.classify.outputs.run_id }}
+      scrape_exit: ${{ steps.scrape.outputs.exit_code }}
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      REDIS_URL: ${{ secrets.REDIS_URL }}
+      TS_NODE_TRANSPILE_ONLY: 'true'
+      SCRAPE_TRIGGER: ${{ github.event_name }}
+      GIT_SHA: ${{ github.sha }}
+      CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      SCRAPE_WORKER_TIMEOUT_MS: '900000'
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Type-check scraper
+        run: npx tsc --noEmit -p .
+
+      - name: Sync database schema
+        run: npx prisma db push --skip-generate
+
+      - name: Restore run history cache
+        uses: actions/cache/restore@v6
+        with:
+          path: output/run-history.json
+          key: scrape-history-${{ github.run_id }}
+          restore-keys: scrape-history-
+
+      - name: Enrich active companies metadata
+        run: npm run enrich:companies
+        continue-on-error: true
+
+      - name: Run scrape or fixture
+        id: scrape
+        run: |
+          set +e
+          if [ -n "${{ inputs.fixture_report }}" ]; then
+            npm run report:install-fixture -- "${{ inputs.fixture_report }}"; true
+          elif [ "${{ inputs.publish_only }}" = "true" ]; then
+            npm run cache:publish
+          else
+            ARGS="--workers=${{ inputs.workers || '4' }}"
+            [ "${{ inputs.skip_publish }}" = "true" ] && ARGS="$ARGS --skip-publish"
+            [ "${{ inputs.recheck_not_found }}" = "true" ] && ARGS="$ARGS --recheck-not-found"
+            npm run scrape:parallel -- $ARGS
+          fi
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Classify scrape telemetry
+        id: classify
+        if: always()
+        run: npm run report:classify -- --github-output "$GITHUB_OUTPUT" --step-summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload scrape report artifact
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: scrape-report-${{ steps.classify.outputs.run_id || github.run_id }}
+          path: output/reports/**
+          retention-days: 30
+
+      - name: Save run history cache
+        uses: actions/cache/save@v6
+        if: always()
+        with:
+          path: output/run-history.json
+          key: scrape-history-${{ github.run_id }}
+
+      - name: Create or update alert issue on failure
+        if: steps.scrape.outputs.exit_code == '1' || steps.classify.outputs.infra_alert == 'true'
+        run: scripts/ci/alert-issue.sh "$CI_RUN_URL" "${{ steps.scrape.outputs.exit_code }}"
+
+      - name: Propagate scraper exit code
+        if: steps.scrape.outputs.exit_code == '1'
+        run: exit 1
