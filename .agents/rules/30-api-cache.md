@@ -1,10 +1,7 @@
 ---
 trigger: glob
-globs:
-  - "src/api/**"
-  - "api/**"
-  - "src/lib/cache/**"
-  - "src/cache/**"
+globs: "src/api/**, api/**, src/lib/cache/**, src/cache/**"
+description: "API and caching invariants"
 ---
 
 # API & Cache Invariants

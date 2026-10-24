@@ -1,8 +1,7 @@
 ---
 trigger: glob
-globs:
-  - "src/core/**"
-  - "src/lib/**"
+globs: "src/core/**, src/lib/**"
+description: "Scraper core and library invariants"
 ---
 
 # Scraper Invariants

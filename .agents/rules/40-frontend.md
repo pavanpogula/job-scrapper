@@ -1,7 +1,7 @@
 ---
 trigger: glob
-globs:
-  - "job-scrapper-ui/**"
+globs: "job-scrapper-ui/**"
+description: "Frontend web application invariants"
 ---
 
 # Frontend Invariants
