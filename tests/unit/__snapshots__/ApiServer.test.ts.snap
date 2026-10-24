@@ -1,0 +1,131 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`API Server Contract & Snapshot Tests GET /health returns 200 with status ok and active jobs count 1`] = `
+{
+  "activeJobs": 34035,
+  "status": "ok",
+}
+`;
+
+exports[`API Server Contract & Snapshot Tests GET /v1/companies returns 200 with company list and matches snapshot 1`] = `
+{
+  "data": [
+    {
+      "jobCount": 42,
+      "logoUrl": "https://logo.com/acme.png",
+      "name": "Acme Corp",
+      "slug": "acme-corp",
+    },
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "total": 1,
+  "totalPages": 1,
+}
+`;
+
+exports[`API Server Contract & Snapshot Tests GET /v1/facets returns 200 with facet groups and matches snapshot 1`] = `
+{
+  "countries": [
+    {
+      "count": 15,
+      "value": "US",
+    },
+  ],
+  "departments": [],
+  "employmentTypes": [
+    {
+      "count": 8,
+      "value": "FullTime",
+    },
+  ],
+  "hasSalary": {
+    "no": 3,
+    "yes": 12,
+  },
+  "workplaceTypes": [
+    {
+      "count": 10,
+      "value": "Remote",
+    },
+  ],
+}
+`;
+
+exports[`API Server Contract & Snapshot Tests GET /v1/jobs returns 200 with paginated jobs matching contract snapshot 1`] = `
+{
+  "data": [
+    {
+      "applyUrl": "https://jobs.ashbyhq.com/acme-corp/ashby-job-123/application",
+      "ashbyId": "ashby-job-123",
+      "city": "San Francisco",
+      "companyLogoUrl": "https://logo.com/acme.png",
+      "companyName": "Acme Corp",
+      "companySlug": "acme-corp",
+      "country": "US",
+      "createdAt": "2026-03-01T00:00:00.000Z",
+      "department": "Engineering",
+      "employmentType": "FullTime",
+      "id": "e4b52cb5-3d8a-4d2a-89a1-cb9cf540192a",
+      "isListed": true,
+      "isRemote": true,
+      "location": "San Francisco, CA",
+      "publishedAt": "2026-03-01T00:00:00.000Z",
+      "region": "California",
+      "salaryCurrency": "USD",
+      "salaryInterval": "1 YEAR",
+      "salaryMax": 200000,
+      "salaryMin": 150000,
+      "title": "Senior Software Engineer",
+      "updatedAt": "2026-03-01T00:00:00.000Z",
+      "workplaceType": "Remote",
+    },
+  ],
+  "meta": {
+    "hasNext": false,
+    "hasPrev": false,
+    "page": 1,
+    "pageSize": 25,
+    "total": 1,
+    "totalPages": 1,
+  },
+}
+`;
+
+exports[`API Server Contract & Snapshot Tests GET /v1/jobs/:id returns 200 with job details when found by id and matches snapshot 1`] = `
+{
+  "applyUrl": "https://jobs.ashbyhq.com/acme-corp/ashby-job-123/application",
+  "ashbyId": "ashby-job-123",
+  "city": "San Francisco",
+  "company": {
+    "jobCount": 42,
+    "logoUrl": "https://logo.com/acme.png",
+    "name": "Acme Corp",
+    "slug": "acme-corp",
+  },
+  "companyLogoUrl": "https://logo.com/acme.png",
+  "companyName": "Acme Corp",
+  "companySlug": "acme-corp",
+  "country": "US",
+  "createdAt": "2026-03-01T00:00:00.000Z",
+  "department": "Engineering",
+  "descriptionHtml": "<p>Build scalable backend systems</p>",
+  "descriptionPlain": "Build scalable backend systems",
+  "employmentType": "FullTime",
+  "id": "e4b52cb5-3d8a-4d2a-89a1-cb9cf540192a",
+  "isListed": true,
+  "isRemote": true,
+  "jobUrl": "https://jobs.ashbyhq.com/acme-corp/ashby-job-123",
+  "location": "San Francisco, CA",
+  "publishedAt": "2026-03-01T00:00:00.000Z",
+  "region": "California",
+  "salaryCurrency": "USD",
+  "salaryInterval": "1 YEAR",
+  "salaryMax": 200000,
+  "salaryMin": 150000,
+  "team": "Core Platform",
+  "title": "Senior Software Engineer",
+  "updatedAt": "2026-03-01T00:00:00.000Z",
+  "workplaceType": "Remote",
+}
+`;

@@ -6,6 +6,8 @@
 
 export const mockCompany = {
   findMany: jest.fn().mockResolvedValue([]),
+  findFirst: jest.fn().mockResolvedValue(null),
+  findUnique: jest.fn().mockResolvedValue(null),
   createMany: jest.fn().mockResolvedValue({ count: 0 }),
   deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
   upsert: jest.fn().mockResolvedValue({}),
@@ -15,6 +17,8 @@ export const mockCompany = {
 
 export const mockJob = {
   findMany: jest.fn().mockResolvedValue([]),
+  findFirst: jest.fn().mockResolvedValue(null),
+  findUnique: jest.fn().mockResolvedValue(null),
   createMany: jest.fn().mockResolvedValue({ count: 0 }),
   deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
   updateMany: jest.fn().mockResolvedValue({ count: 0 }),
