@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "2.0",
+  "run": {
+    "runId": "20261024T061700Z-cluster-1a2b3c4",
+    "mode": "cluster",
+    "trigger": "schedule",
+    "gitSha": "1a2b3c4",
+    "gitBranch": "main",
+    "nodeVersion": "v24.21.0",
+    "workers": 4,
+    "perWorkerConcurrency": 12,
+    "startedAt": "2026-10-24T06:17:03.000Z",
+    "completedAt": "2026-10-24T06:18:24.000Z",
+    "durationSeconds": 81,
+    "outcome": "success",
+    "exitCode": 0
+  },
+  "summary": {
+    "runId": "20261024T061700Z-cluster-1a2b3c4",
+    "mode": "cluster",
+    "startedAt": "2026-10-24T06:17:03.000Z",
+    "completedAt": "2026-10-24T06:18:24.000Z",
+    "durationSeconds": 81,
+    "companiesAttempted": 1747,
+    "companiesWithJobs": 1744,
+    "companiesNotFound": 1109,
+    "companiesFailed": 0,
+    "companiesQuarantined": 3,
+    "graphqlFallbacksUsed": 12,
+    "rateLimitsEncountered": 0,
+    "jobsCollected": 34050,
+    "jobsSanitized": 45,
+    "jobsFilteredOut": 37,
+    "jobsCreated": 210,
+    "jobsUpdated": 640,
+    "jobsUnchanged": 33200,
+    "jobsReactivated": 0,
+    "jobsDeactivated": 157,
+    "dbErrors": 0,
+    "dbActiveJobsBefore": 34023,
+    "dbActiveJobsAfter": 34076
+  },
+  "workers": [
+    { "workerId": 0, "pid": 1001, "companies": 437, "status": "ok", "durationSeconds": 79 },
+    { "workerId": 1, "pid": 1002, "companies": 437, "status": "ok", "durationSeconds": 80 },
+    { "workerId": 2, "pid": 1003, "companies": 437, "status": "ok", "durationSeconds": 77 },
+    { "workerId": 3, "pid": 1004, "companies": 436, "status": "ok", "durationSeconds": 81 }
+  ],
+  "categories": {
+    "validation_filtered": {
+      "count": 37,
+      "distinctCompanies": 4
+    },
+    "not_found": {
+      "count": 1109,
+      "newThisRun": 3
+    },
+    "graphql_fallback": {
+      "count": 12,
+      "distinctCompanies": 12
+    }
+  },
+  "events": [
+    {
+      "id": "ev-1",
+      "timestamp": "2026-10-24T06:17:10.000Z",
+      "category": "validation_filtered",
+      "subkind": "invalid_or_duplicate_id",
+      "companySlug": "acme",
+      "jobId": "bad-id-123",
+      "field": "id",
+      "message": "job id missing or duplicated",
+      "actionTaken": "filtered"
+    }
+  ]
+}

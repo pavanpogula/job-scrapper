@@ -43,7 +43,7 @@ describe('ErrorTracker Unit Tests', () => {
 
         const report = tracker.buildReport();
 
-        expect(report.schemaVersion).toBe('1.0');
+        expect(report.schemaVersion).toBe('2.0');
         expect(report.summary.mode).toBe('db_scrape');
         expect(report.summary.companiesAttempted).toBe(5);
         expect(report.summary.jobsCollected).toBe(42);
@@ -55,16 +55,18 @@ describe('ErrorTracker Unit Tests', () => {
     it('should write latest-error-report.json and dated report to disk', () => {
         const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scraper-telemetry-'));
         try {
-            const tracker = new ErrorTracker('csv_scrape');
+            const tracker = new ErrorTracker('db_scrape');
             tracker.companiesAttempted = 2;
             tracker.jobsCollected = 10;
 
             const savedPath = tracker.saveReport(tmpDir);
-            expect(savedPath).toBe(path.join(tmpDir, 'latest-error-report.json'));
             expect(fs.existsSync(savedPath!)).toBe(true);
 
-            const parsed = JSON.parse(fs.readFileSync(savedPath!, 'utf-8'));
-            expect(parsed.summary.mode).toBe('csv_scrape');
+            const compatPath = path.join(tmpDir, 'latest-error-report.json');
+            expect(fs.existsSync(compatPath)).toBe(true);
+
+            const parsed = JSON.parse(fs.readFileSync(compatPath, 'utf-8'));
+            expect(parsed.summary.mode).toBe('db_scrape');
             expect(parsed.summary.jobsCollected).toBe(10);
         } finally {
             fs.rmSync(tmpDir, { recursive: true, force: true });

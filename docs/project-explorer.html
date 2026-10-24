@@ -318,6 +318,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ReportClassifier_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ReportClassifier.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_lib_Sanitizer_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Sanitizer.ts</span>
@@ -340,6 +346,12 @@
                     <div class="tree-item file" onclick="showFile('src_utils_ProcessCdxData_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ProcessCdxData.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_utils_ReportClassifyCli_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ReportClassifyCli.ts</span>
                         
                     </div>
                 </li><li>
@@ -480,6 +492,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ErrorTrackerV2_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ErrorTrackerV2.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_GenerateReadme_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GenerateReadme.test.ts</span>
@@ -495,6 +513,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_ProcessCdxData_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ProcessCdxData.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ReportClassifier_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ReportClassifier.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1249,13 +1273,14 @@
     "path": "src/lib/ErrorTracker.ts",
     "icon": "📦",
     "iconClass": "blue",
-    "summary": "Collects API errors, sanitization/validation issues, DB errors, and run statistics into structured JSON reports for automated bug-fix agents",
+    "summary": "Collects API errors, validation/sanitization issues, DB errors, and run statistics into structured v2.0 JSON reports",
     "tags": [
       "Telemetry",
       "Error Tracking",
       "Bug Fix Agent",
       "Diagnostics",
-      "Reporting"
+      "Reporting",
+      "SchemaV2"
     ],
     "info": [
       {
@@ -1264,37 +1289,45 @@
       },
       {
         "label": "Functions",
-        "value": "7"
+        "value": "9"
       }
     ],
     "functions": [
+      {
+        "name": "generateRunId()",
+        "desc": "Generates standard runId in format YYYYMMDDTHHmmssZ-<mode>-<sha>"
+      },
       {
         "name": "constructor()",
         "desc": "Initializes a new ErrorTracker instance for a scrape run"
       },
       {
         "name": "recordEvent()",
-        "desc": "Records a structured event (capped at MAX_EVENTS_STORED to bound memory)"
+        "desc": "Records a structured event with category-capped storage and exact metric tracking"
       },
       {
         "name": "recordValidationIssues()",
-        "desc": "Records validation and sanitization issues returned by Sanitizer"
+        "desc": "Records validation and sanitization issues returned by Sanitizer, splitting into filtered and sanitized"
       },
       {
         "name": "buildReport()",
-        "desc": "Builds the complete ErrorReportDocument for the current run"
+        "desc": "Builds the complete ErrorReportDocument for the current run matching schema v2.0"
+      },
+      {
+        "name": "pruneOldReports()",
+        "desc": "Prunes local report files exceeding the 60-report retention cap"
       },
       {
         "name": "saveReport()",
-        "desc": "Writes the telemetry and error report to output/latest-error-report.json and dated file"
+        "desc": "Saves the complete report to structured output paths and writes latest-<mode>.json"
       },
       {
         "name": "mergeReports()",
-        "desc": "Merges multiple worker process ErrorReportDocuments into a single aggregated telemetry report"
+        "desc": "Merges multiple worker reports into a single consolidated report"
       },
       {
         "name": "saveMergedReport()",
-        "desc": "Writes an aggregated multi-process ErrorReportDocument to output/latest-error-report.json"
+        "desc": "Saves consolidated cluster report to reports/<YYYY-MM>/<runId>.json and latest-error-report.json"
       }
     ]
   },
@@ -1403,6 +1436,44 @@
       {
         "name": "retryStrategy()",
         "desc": "Retry strategy for connection failures"
+      }
+    ]
+  },
+  "src_lib_ReportClassifier_ts": {
+    "name": "ReportClassifier.ts",
+    "path": "src/lib/ReportClassifier.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Evaluates scrape reports against classification rules R-*, manages run-history.json, and outputs actionable issues",
+    "tags": [
+      "Classifier",
+      "Error Report",
+      "Self-Healing",
+      "Telemetry",
+      "Rules"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "normalizeMessage()",
+        "desc": "Normalizes error message strings replacing variable segments (UUIDs, IDs, URLs, numbers) with stable placeholders"
+      },
+      {
+        "name": "computeIssueFingerprint()",
+        "desc": "Computes deterministic SHA-1 fingerprint for an issue based on category, subkind, field, and normalized message"
+      },
+      {
+        "name": "classifyReport()",
+        "desc": "Classifies an ErrorReportDocument against rules R-*, updates run-history.json, and produces classified issues"
       }
     ]
   },
@@ -1523,6 +1594,36 @@
       }
     ],
     "functions": []
+  },
+  "src_utils_ReportClassifyCli_ts": {
+    "name": "ReportClassifyCli.ts",
+    "path": "src/utils/ReportClassifyCli.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Evaluates a scrape telemetry report, updates run history, writes <runId>.md / .issues.json, and sets GITHUB_OUTPUT",
+    "tags": [
+      "CLI",
+      "Classifier",
+      "Self-Healing",
+      "Telemetry",
+      "CI"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "main()",
+        "desc": "Main CLI entry point for report classification"
+      }
+    ]
   },
   "src_utils_Seed_ts": {
     "name": "Seed.ts",
@@ -1959,6 +2060,30 @@
     ],
     "functions": []
   },
+  "tests_unit_ErrorTrackerV2_test_ts": {
+    "name": "ErrorTrackerV2.test.ts",
+    "path": "tests/unit/ErrorTrackerV2.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Tests runId naming, distinct files per mode, category event caps with exact counts, and numeric report merging",
+    "tags": [
+      "Unit Test",
+      "ErrorTracker",
+      "SchemaV2",
+      "Telemetry"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_unit_GenerateReadme_test_ts": {
     "name": "GenerateReadme.test.ts",
     "path": "tests/unit/GenerateReadme.test.ts",
@@ -2019,6 +2144,31 @@
       "CDX",
       "Filtering",
       "Slug Extraction"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ReportClassifier_test_ts": {
+    "name": "ReportClassifier.test.ts",
+    "path": "tests/unit/ReportClassifier.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Tests all classification rules R-*, deterministic fingerprint normalization, regression detection, and issue capping",
+    "tags": [
+      "Unit Test",
+      "Classifier",
+      "Report",
+      "Rules",
+      "Fingerprint"
     ],
     "info": [
       {

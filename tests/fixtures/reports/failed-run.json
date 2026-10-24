@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "2.0",
+  "run": {
+    "runId": "20261024T070000Z-cluster-failed1",
+    "mode": "cluster",
+    "trigger": "schedule",
+    "gitSha": "failed1",
+    "gitBranch": "main",
+    "nodeVersion": "v24.21.0",
+    "workers": 4,
+    "perWorkerConcurrency": 12,
+    "startedAt": "2026-10-24T07:00:00.000Z",
+    "completedAt": "2026-10-24T07:01:00.000Z",
+    "durationSeconds": 60,
+    "outcome": "failed",
+    "exitCode": 1
+  },
+  "summary": {
+    "runId": "20261024T070000Z-cluster-failed1",
+    "mode": "cluster",
+    "startedAt": "2026-10-24T07:00:00.000Z",
+    "completedAt": "2026-10-24T07:01:00.000Z",
+    "durationSeconds": 60,
+    "companiesAttempted": 100,
+    "companiesWithJobs": 50,
+    "companiesNotFound": 10,
+    "companiesFailed": 40,
+    "graphqlFallbacksUsed": 0,
+    "rateLimitsEncountered": 0,
+    "jobsCollected": 500,
+    "jobsSanitized": 0,
+    "jobsFilteredOut": 0,
+    "dbErrors": 5
+  },
+  "categories": {
+    "db_error": {
+      "count": 5,
+      "distinctCompanies": 1
+    }
+  },
+  "events": [
+    {
+      "id": "ev-fail-1",
+      "timestamp": "2026-10-24T07:00:30.000Z",
+      "category": "db_error",
+      "companySlug": "acme",
+      "message": "PrismaClientKnownRequestError: Can't reach database",
+      "actionTaken": "batch_flush_failed"
+    }
+  ]
+}

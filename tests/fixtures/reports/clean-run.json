@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "2.0",
+  "run": {
+    "runId": "20261024T080000Z-cluster-clean1",
+    "mode": "cluster",
+    "trigger": "schedule",
+    "gitSha": "clean1",
+    "gitBranch": "main",
+    "nodeVersion": "v24.21.0",
+    "workers": 4,
+    "perWorkerConcurrency": 12,
+    "startedAt": "2026-10-24T08:00:00.000Z",
+    "completedAt": "2026-10-24T08:01:20.000Z",
+    "durationSeconds": 80,
+    "outcome": "success",
+    "exitCode": 0
+  },
+  "summary": {
+    "runId": "20261024T080000Z-cluster-clean1",
+    "mode": "cluster",
+    "startedAt": "2026-10-24T08:00:00.000Z",
+    "completedAt": "2026-10-24T08:01:20.000Z",
+    "durationSeconds": 80,
+    "companiesAttempted": 1747,
+    "companiesWithJobs": 1744,
+    "companiesNotFound": 1109,
+    "companiesFailed": 0,
+    "companiesQuarantined": 0,
+    "graphqlFallbacksUsed": 5,
+    "rateLimitsEncountered": 0,
+    "jobsCollected": 34050,
+    "jobsSanitized": 0,
+    "jobsFilteredOut": 0,
+    "jobsCreated": 50,
+    "jobsUpdated": 100,
+    "jobsUnchanged": 33900,
+    "jobsReactivated": 0,
+    "jobsDeactivated": 0,
+    "dbErrors": 0,
+    "dbActiveJobsBefore": 34000,
+    "dbActiveJobsAfter": 34050
+  },
+  "categories": {
+    "not_found": {
+      "count": 1109,
+      "newThisRun": 0
+    },
+    "graphql_fallback": {
+      "count": 5,
+      "distinctCompanies": 5
+    }
+  },
+  "events": []
+}

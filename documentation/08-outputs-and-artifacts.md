@@ -5,8 +5,10 @@ Every file written by the code (verified by grepping `writeFile*`, `createWriteS
 | Artifact | Format | Writer (code) | Command | Tracked in git? | Notes |
 |---|---|---|---|---|---|
 | `output/jobs_YYYY-MM-DD.csv` | CSV | `scrapeToCSV()` in `src/core/ScraperCSV.ts` (`fs.createWriteStream`) | `npm run scrape:csv` | ❌ (`output/` ignored) | ~4.5 MB, ~29.9k rows for a full run; deleted again if 0 jobs |
-| `output/latest-error-report.json` | JSON | `ErrorTracker.saveReport()` / `ErrorTracker.saveMergedReport()` in `src/lib/ErrorTracker.ts` | `npm run scrape`, `scrape:parallel` (merged), `scrape:csv` | ❌ | Always the **last** run of any of the three modes |
-| `output/error-report_YYYY-MM-DD.json` | JSON | same (identical content) | same | ❌ | Date = UTC date of `summary.startedAt`; later runs on the same UTC day overwrite it |
+| `output/reports/<YYYY-MM>/<runId>.json` | JSON | `ErrorTracker.saveReport()` / `saveMergedReport()` | `npm run scrape`, `scrape:parallel`, `scrape:csv` | ❌ | Machine-readable Schema v2.0 run report |
+| `output/reports/<YYYY-MM>/<runId>.md` | Markdown | `classifyReport()` / `ReportClassifier.ts` | `npm run report:classify` | ❌ | Human-readable run summary |
+| `output/latest-<mode>.json` | JSON | `ErrorTracker.saveReport()` / `saveMergedReport()` | `npm run scrape`, `scrape:parallel`, `scrape:csv` | ❌ | Copy of the newest report for that mode (`cluster`, `single`, `csv`) |
+| `output/latest-error-report.json` | JSON | `ErrorTracker.saveReport()` / `saveMergedReport()` | `npm run scrape`, `scrape:parallel` | ❌ | Copy of newest DB-mode run, kept for compatibility (CSV runs do not overwrite) |
 | `output/test-upload.txt` | text | `main()` in `scripts/test-drive-upload.ts` | `npx ts-node scripts/test-drive-upload.ts` | ❌ | Deleted at the end of the script; left behind if the script throws before cleanup (a leftover exists locally) |
 | `apikeys/oauth-token.json` | JSON (Google OAuth tokens) | `src/lib/GoogleDriveUserOAuth.ts` | `test-drive-upload.ts` | ❌ (`apikeys/` ignored) | Secret — never print or commit |
 | `extracted-slugs.json` (CWD) | JSON array | `processRawCDXData()` in `src/utils/ProcessCdxData.ts` | `npm run process:cdx -- <file>` | ✅ tracked (despite `/extracted-slugs*` in `.gitignore`) | 3,072 slugs; read by `npm run seed -- --all` |
@@ -86,48 +88,70 @@ Single self-contained HTML file with a collapsible file tree; per file shows `@s
 except `node_modules`, `dist`, `.git`, `docs`, `output`, `.vscode`, `apikeys`. Regenerate after adding/renaming files or
 changing JSDoc headers: `npm run docs:generate`.
 
-## 5. `output/latest-error-report.json` (Telemetry & Bug-Fix Agent Input)
+## 5. `output/reports/<YYYY-MM>/<runId>.json` (Telemetry & Bug-Fix Agent Input v2.0)
 
 Written by `ErrorTracker` (`src/lib/ErrorTracker.ts`) at the end of every `npm run scrape` (`saveReport()`),
 `npm run scrape:parallel` (`mergeReports()` + `saveMergedReport()`; `--ipc-worker` children never write files) and
-`npm run scrape:csv` (`saveReport()`). The same JSON is also written to `output/error-report_YYYY-MM-DD.json`.
-Pretty-printed with 2-space indentation. Write failures are swallowed (the function returns `null`).
+`npm run scrape:csv` (`saveReport()`). Reports are uniquely named per run (`<runId> = <UTC YYYYMMDDTHHmmssZ>-<mode>-<gitSha>`) under month folders. Copies are saved to `output/latest-<mode>.json`, and DB-mode runs also copy to `output/latest-error-report.json` for compatibility.
 
 ```jsonc
 {
-  "schemaVersion": "1.0",
-  "summary": {
-    "runId": "run_<startMs>",            // "cluster_run_<startMs>" for scrape:parallel
-    "mode": "db_scrape",                 // "db_scrape" (scrape, scrape:parallel) | "csv_scrape" (scrape:csv)
+  "schemaVersion": "2.0",
+  "run": {
+    "runId": "20261024T061700Z-cluster-1a2b3c4",
+    "mode": "cluster",                  // "cluster" | "single" | "csv"
+    "trigger": "schedule",              // "schedule" | "workflow_dispatch" | "local"
+    "gitSha": "1a2b3c4",
+    "gitBranch": "main",
+    "nodeVersion": "v24.21.0",
     "startedAt": "<ISO-8601>",
     "completedAt": "<ISO-8601>",
-    "durationSeconds": 0,                // 2 decimals
-    "companiesAttempted": 0,             // ACTIVE companies in this run
-    "companiesWithJobs": 0,              // companies whose board returned ≥ 1 job
-    "companiesNotFound": 0,              // REST 404 and GraphQL fallback found no board
-    "graphqlFallbacksUsed": 0,           // boards recovered via GraphQL
-    "rateLimitsEncountered": 0,          // fetches that saw HTTP 429 or 403 at least once
-    "jobsCollected": 0,                  // jobs returned after sanitization (before Redis/DB change detection)
-    "jobsSanitized": 0,                  // validation issues with action "sanitized"
-    "jobsFilteredOut": 0,                // validation issues with action "filtered"
-    "dbErrors": 0                        // jobs that failed even the per-job upsert fallback (DB mode only)
+    "durationSeconds": 81,
+    "outcome": "success",               // "success" | "partial" | "failed"
+    "exitCode": 0
   },
-  "events": [                            // max 500 (MAX_EVENTS_STORED); extra events are dropped silently
+  "summary": {
+    "runId": "20261024T061700Z-cluster-1a2b3c4",
+    "mode": "db_scrape",
+    "startedAt": "<ISO-8601>",
+    "completedAt": "<ISO-8601>",
+    "durationSeconds": 81,
+    "companiesAttempted": 1747,
+    "companiesWithJobs": 1744,
+    "companiesNotFound": 1109,
+    "companiesFailed": 0,
+    "companiesQuarantined": 3,
+    "graphqlFallbacksUsed": 12,
+    "rateLimitsEncountered": 0,
+    "jobsCollected": 34050,
+    "jobsSanitized": 45,                // distinct sanitized job IDs
+    "jobsFilteredOut": 37,              // distinct filtered job IDs
+    "jobsCreated": 210,
+    "jobsUpdated": 640,
+    "jobsUnchanged": 33200,
+    "jobsReactivated": 0,
+    "jobsDeactivated": 157,
+    "dbErrors": 0
+  },
+  "categories": {                       // exact counts per category
+    "validation_filtered": { "count": 37, "distinctCompanies": 4 },
+    "not_found": { "count": 1109, "newThisRun": 3 },
+    "graphql_fallback": { "count": 12, "distinctCompanies": 12 }
+  },
+  "events": [                           // max 100 per category; exact counts in categories
     {
+      "id": "ev-1",
       "timestamp": "<ISO-8601>",
-      "category": "graphql_fallback",    // "graphql_fallback" | "validation_issue" | "db_error" | "api_error" (declared, never emitted)
+      "category": "validation_filtered",
       "companySlug": "<slug>",
-      "jobId": "<ashbyId>",              // optional (validation_issue, db_error)
-      "field": "applyUrl",               // optional (validation_issue)
-      "message": "<reason>",
-      "actionTaken": "recovered_12_jobs" // graphql_fallback: "recovered_<n>_jobs"; validation_issue: "sanitized" | "filtered"; db_error: "skipped_corrupt_job_in_fallback"
-      // "samplePayload": {}             // optional in the type, never populated
+      "jobId": "<ashbyId>",
+      "field": "id",
+      "message": "job id missing or duplicated",
+      "actionTaken": "filtered"
     }
   ]
 }
 ```
 
-Merge semantics (`mergeReports`): numeric summary fields are summed across workers, `startedAt` / `durationSeconds`
-come from the coordinator, events are concatenated in worker order up to 500. Note that `jobsSanitized` /
-`jobsFilteredOut` count **issues**, not distinct jobs (one job can produce several issues), and validation issues from
-GraphQL-fallback boards are not reported.
+Merge semantics (`mergeReports`): numeric summary fields and category counts are summed across workers, `startedAt` / `durationSeconds`
+come from the coordinator, and events are capped at 100 per category. `jobsSanitized` and `jobsFilteredOut` track distinct job IDs.
