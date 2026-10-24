@@ -375,13 +375,29 @@ export class ReadThroughService {
   }
 
   /**
-   * @summary Serves a job detail query through shard hash or DB fallback
+   * @summary Serves a job detail query through shard hash, negative 404 LRU, or DB fallback
    */
   public async serveDetail(
     id: string,
     res: Response,
     fetchDb: () => Promise<any>
   ): Promise<any> {
+    const notFoundKey = `detail_404:${id}`;
+    const cached404 = this.lru.get(notFoundKey);
+    if (cached404 && cached404.expiresAt > Date.now()) {
+      res.setHeader('X-Cache', 'HIT');
+      res.setHeader('Server-Timing', 'redis;dur=0');
+      return null;
+    }
+
+    const lruDetailKey = `detail:${id}`;
+    const cachedDetail = this.lru.get(lruDetailKey);
+    if (cachedDetail && cachedDetail.expiresAt > Date.now()) {
+      res.setHeader('X-Cache', 'HIT');
+      res.setHeader('Server-Timing', 'redis;dur=0');
+      return cachedDetail.data;
+    }
+
     const redis = this.getClient();
     if (!redis) {
       res.setHeader('X-Cache', 'BYPASS');
@@ -389,6 +405,12 @@ export class ReadThroughService {
       const startDb = Date.now();
       const result = await dbGuard.run(() => singleFlight(`detail:${id}`, fetchDb));
       res.setHeader('Server-Timing', `db;dur=${Date.now() - startDb}`);
+      if (!result) {
+        this.lru.set(notFoundKey, {
+          data: null,
+          expiresAt: Date.now() + 600000,
+        });
+      }
       return result;
     }
 
@@ -398,6 +420,12 @@ export class ReadThroughService {
       const startDb = Date.now();
       const result = await dbGuard.run(() => singleFlight(`detail:${id}`, fetchDb));
       res.setHeader('Server-Timing', `db;dur=${Date.now() - startDb}`);
+      if (!result) {
+        this.lru.set(notFoundKey, {
+          data: null,
+          expiresAt: Date.now() + 600000,
+        });
+      }
       return result;
     }
 
@@ -407,6 +435,12 @@ export class ReadThroughService {
       const startDb = Date.now();
       const result = await dbGuard.run(() => singleFlight(`detail:${id}`, fetchDb));
       res.setHeader('Server-Timing', `db;dur=${Date.now() - startDb}`);
+      if (!result) {
+        this.lru.set(notFoundKey, {
+          data: null,
+          expiresAt: Date.now() + 600000,
+        });
+      }
       return result;
     }
 
@@ -433,6 +467,12 @@ export class ReadThroughService {
       const startDb = Date.now();
       const result = await dbGuard.run(() => singleFlight(`detail:${id}`, fetchDb));
       res.setHeader('Server-Timing', `db;dur=${Date.now() - startDb}`);
+      if (!result) {
+        this.lru.set(notFoundKey, {
+          data: null,
+          expiresAt: Date.now() + 600000,
+        });
+      }
       return result;
     }
 
@@ -444,6 +484,17 @@ export class ReadThroughService {
       const startDb = Date.now();
       const result = await dbGuard.run(() => singleFlight(`detail:${id}`, fetchDb));
       res.setHeader('Server-Timing', `redis;dur=${redisDur}, db;dur=${Date.now() - startDb}`);
+      if (!result) {
+        this.lru.set(notFoundKey, {
+          data: null,
+          expiresAt: Date.now() + 600000, // 10 min negative cache
+        });
+      } else {
+        this.lru.set(lruDetailKey, {
+          data: result,
+          expiresAt: Date.now() + 30000,
+        });
+      }
       return result;
     }
 
@@ -454,9 +505,15 @@ export class ReadThroughService {
       parsed = JSON.parse(rawBuffer.toString('utf8'));
     }
 
+    const detailData = parsed.data || parsed;
+    this.lru.set(lruDetailKey, {
+      data: detailData,
+      expiresAt: Date.now() + 30000,
+    });
+
     res.setHeader('X-Cache', 'HIT');
     res.setHeader('Server-Timing', `redis;dur=${redisDur}`);
-    return parsed.data || parsed;
+    return detailData;
   }
 }
 

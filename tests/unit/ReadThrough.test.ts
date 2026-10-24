@@ -11,9 +11,13 @@ import { readThroughService } from '../../src/api/cache/ReadThrough';
 import { DbGuard, dbGuard, singleFlight } from '../../src/api/middleware/dbGuard';
 import { FakeRedis } from '../helpers/fakeRedis';
 import { KEY_CURRENT, KEY_LAST_SCRAPE_AT, genKey } from '../../src/lib/cache/keys';
+import { mockJob } from '../../__mocks__/@prisma/client';
+import sampleJob from '../fixtures/api/sample-job.json';
 
 describe('API Cache ReadThrough (P2-T05)', () => {
   let fakeRedis: FakeRedis;
+  let ipCounter = 1;
+  const getNextIp = () => `10.200.1.${ipCounter++}`;
 
   beforeEach(() => {
     fakeRedis = new FakeRedis();
@@ -28,7 +32,9 @@ describe('API Cache ReadThrough (P2-T05)', () => {
   it('returns X-Cache: BYPASS with reason not_configured when Redis client is null', async () => {
     readThroughService.setRedisClient(null);
 
-    const res = await request(app).get('/v1/jobs?page=1');
+    const res = await request(app)
+      .get('/v1/jobs?page=1')
+      .set('X-Forwarded-For', getNextIp());
     expect(res.status).toBe(200);
     expect(res.headers['x-cache']).toBe('BYPASS');
     expect(res.headers['x-cache-reason']).toBe('not_configured');
@@ -36,7 +42,9 @@ describe('API Cache ReadThrough (P2-T05)', () => {
   });
 
   it('returns X-Cache: MISS with reason view_not_cached for search queries without calling Redis', async () => {
-    const res = await request(app).get('/v1/jobs?search=engineer');
+    const res = await request(app)
+      .get('/v1/jobs?search=engineer')
+      .set('X-Forwarded-For', getNextIp());
     expect(res.status).toBe(200);
     expect(res.headers['x-cache']).toBe('MISS');
     expect(res.headers['x-cache-reason']).toBe('view_not_cached');
@@ -50,7 +58,9 @@ describe('API Cache ReadThrough (P2-T05)', () => {
     breaker.recordFailure(new Error('fail 2'));
     breaker.recordFailure(new Error('fail 3'));
 
-    const res = await request(app).get('/v1/jobs?page=1');
+    const res = await request(app)
+      .get('/v1/jobs?page=1')
+      .set('X-Forwarded-For', getNextIp());
     expect(res.status).toBe(200);
     expect(res.headers['x-cache']).toBe('BYPASS');
     expect(res.headers['x-cache-reason']).toBe('circuit_open');
@@ -79,7 +89,9 @@ describe('API Cache ReadThrough (P2-T05)', () => {
     const gzipped = zlib.gzipSync(Buffer.from(JSON.stringify(page1Data)));
     await fakeRedis.hset(genKey(gen), 'jobs?page=1', gzipped);
 
-    const res = await request(app).get('/v1/jobs?page=1');
+    const res = await request(app)
+      .get('/v1/jobs?page=1')
+      .set('X-Forwarded-For', getNextIp());
     expect(res.status).toBe(200);
     expect(res.headers['x-cache']).toBe('HIT');
     expect(res.headers['x-cache-generation']).toBe(gen);
@@ -99,7 +111,9 @@ describe('API Cache ReadThrough (P2-T05)', () => {
     };
     await fakeRedis.hset(genKey(gen), '__manifest', JSON.stringify(manifest));
 
-    const res = await request(app).get('/v1/jobs?page=99');
+    const res = await request(app)
+      .get('/v1/jobs?page=99')
+      .set('X-Forwarded-For', getNextIp());
     expect(res.status).toBe(200);
     expect(res.headers['x-cache']).toBe('HIT');
     expect(res.body.data).toEqual([]);
@@ -120,7 +134,9 @@ describe('API Cache ReadThrough (P2-T05)', () => {
     };
     await fakeRedis.hset(genKey(gen), '__manifest', JSON.stringify(manifest));
 
-    const res = await request(app).get('/v1/jobs?workplaceType=Remote&page=50');
+    const res = await request(app)
+      .get('/v1/jobs?workplaceType=Remote&page=50')
+      .set('X-Forwarded-For', getNextIp());
     expect(res.status).toBe(200);
     expect(res.headers['x-cache']).toBe('MISS');
     expect(res.headers['x-cache-reason']).toBe('page_not_cached');
@@ -165,6 +181,78 @@ describe('API Cache ReadThrough (P2-T05)', () => {
       await p1;
       await p2;
       expect(fn2Run).toBe(true);
+    });
+  });
+
+  describe('Details Shard Reader & Negative 404 Cache (P2-T06)', () => {
+    const validUuid = 'e4b52cb5-3d8a-4d2a-89a1-cb9cf540192a';
+    const unknownUuid = '11111111-2222-3333-4444-555555555555';
+
+    it('returns X-Cache: HIT when job detail is cached in shard hash', async () => {
+      const { detailsShardKey } = require('../../src/lib/cache/keys');
+      const shard = detailsShardKey(validUuid);
+      const detailEnvelope = {
+        data: {
+          id: validUuid,
+          title: 'Shard Cached Job',
+          companyName: 'Acme',
+        },
+      };
+      await fakeRedis.hset(
+        shard,
+        validUuid,
+        zlib.gzipSync(Buffer.from(JSON.stringify(detailEnvelope)))
+      );
+
+      const res = await request(app)
+        .get(`/v1/jobs/${validUuid}`)
+        .set('X-Forwarded-For', getNextIp());
+      expect(res.status).toBe(200);
+      expect(res.headers['x-cache']).toBe('HIT');
+      expect(res.body.title).toBe('Shard Cached Job');
+    });
+
+    it('falls back to Postgres on shard miss returning 200 with X-Cache: MISS and reason field_missing', async () => {
+      mockJob.findFirst.mockResolvedValueOnce(sampleJob);
+
+      const res = await request(app)
+        .get(`/v1/jobs/${validUuid}`)
+        .set('X-Forwarded-For', getNextIp());
+      expect(res.status).toBe(200);
+      expect(res.headers['x-cache']).toBe('MISS');
+      expect(res.headers['x-cache-reason']).toBe('field_missing');
+      expect(res.headers['server-timing']).toMatch(/redis;dur=\d+, db;dur=\d+/);
+    });
+
+    it('absorbs unknown UUID with 404 negative cache on second request returning X-Cache: HIT', async () => {
+      mockJob.findFirst.mockResolvedValueOnce(null);
+
+      // First request: misses shard, falls back to Postgres, returns 404
+      const res1 = await request(app)
+        .get(`/v1/jobs/${unknownUuid}`)
+        .set('X-Forwarded-For', getNextIp());
+      expect(res1.status).toBe(404);
+      expect(res1.headers['x-cache']).toBe('MISS');
+
+      const commandsBefore = fakeRedis.commandCount;
+
+      // Second request: served from negative LRU cache, 0 Redis/DB commands, X-Cache: HIT
+      const res2 = await request(app)
+        .get(`/v1/jobs/${unknownUuid}`)
+        .set('X-Forwarded-For', getNextIp());
+      expect(res2.status).toBe(404);
+      expect(res2.headers['x-cache']).toBe('HIT');
+      expect(fakeRedis.commandCount).toBe(commandsBefore);
+    });
+
+    it('returns 404 immediately for non-UUID id with 0 commands', async () => {
+      const initialCommands = fakeRedis.commandCount;
+      const res = await request(app)
+        .get('/v1/jobs/not-a-valid-uuid')
+        .set('X-Forwarded-For', getNextIp());
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Job not found');
+      expect(fakeRedis.commandCount).toBe(initialCommands);
     });
   });
 });
