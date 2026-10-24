@@ -168,34 +168,32 @@ Deleting a `Company` therefore requires deleting its jobs first (done in `DbClea
 
 `ScraperCSV.ts` never writes to the DB (it only reads `Company` slugs).
 
-## 4. Redis Cache
+## 4. Redis Cache (`jc:v1:*`)
 
-Client: [src/lib/Redis.ts](src/lib/Redis.ts) (shared `ioredis` singleton; also calls `dotenv.config()`).
+The caching layer uses Upstash Redis via `src/lib/cache/RedisClient.ts` to power generation-based read-through caching for the REST API and scraper deduplication.
 
-| Setting | Value |
-|---|---|
-| URL | `process.env.REDIS_URL` or fallback `redis://localhost:6379` (supports `rediss://`, e.g. Upstash) |
-| `lazyConnect` | `true` — `AshbyScraper.initRedis()` calls `redis.connect()` once per process; on failure the cache is disabled for the run |
-| Retry | `retryStrategy`: `times * 50` ms (50/100/150 ms), gives up after 3 retries with `Redis connection failed. Disabling cache for this run.` |
-| Errors | `ECONNREFUSED` silenced; other errors logged as `Redis Error:` |
-| Shutdown | `redis.quit()` at the end of `scrape` / each `--ipc-worker` if status is `ready` |
+### Client Factory & Roles
+- **API Client (`role: 'api'`):** Read-only client used by Express on Vercel. `enableOfflineQueue: false`, `commandTimeout: 1000ms`, `connectTimeout: 2000ms`, `lazyConnect: true`. Returns `null` if `REDIS_URL` is omitted.
+- **Publisher Client (`role: 'publisher'`):** Batch write client used by `cache:publish` CLI and the scraper cluster coordinator. `enableOfflineQueue: true`, `maxRetriesPerRequest: 3`, `commandTimeout: 10000ms`.
+- **Circuit Breaker:** `src/api/cache/Breaker.ts` protects the application from Redis latency and rate limits, entering cooldown after 3 consecutive failures or on Upstash budget exhaustion.
 
-**Key schema** (the only key pattern used anywhere in the code)
+### Key Schema
 
-| Key | Redis type | Value | TTL | Written | Read |
-|---|---|---|---|---|---|
-| `job:{ashbyId}:hash` | string | md5 `contentHash` (hex) | `EX 604800` (7 days = `60*60*24*7`) | `pipeline.set(...)` after each batch (≤ 100 jobs; the final flush can be smaller), for every job in the batch that was stored successfully (including unchanged rows the fast path skipped) | `filterChangedJobs()` — one sequential `GET` per fetched job |
+| Key | Redis Type | Purpose | TTL |
+|---|---|---|---|
+| `jc:v1:current` | string | Pointer storing active generation ID (`g<iso>-<hash>`) | Persistent |
+| `jc:v1:meta:lastScrapeAt` | string | ISO timestamp of the last completed scrape run | Persistent |
+| `jc:v1:meta:lastPublish` | string | JSON record of the last publish status and shard metrics | Persistent |
+| `jc:v1:lock:publish` | string | Mutex preventing concurrent cache publications | 600s (10 min) |
+| `jc:v1:gen:<gen>` | hash | Precomputed gzip-compressed views (`__manifest`, `meta`, `facets`, `companies`, `jobs?<query>`) | 900s on retirement |
+| `jc:v1:details:<shard>` | hash | Sharded job details (shards 0..7 partitioned via CRC32) | Persistent |
+| `jc:v1:details:index` | hash | Hash mapping `ashbyId` to `job.id` for fast routing | Persistent |
 
-Only `Scraper.ts` (and therefore `scrape:parallel` workers, which share the same keys) uses Redis. If the cached hash
-equals the newly computed hash, the job is dropped before `processCompanyJobs()` does its per-job work (no
-`sanitizeText`/`sanitizeJobUrl`/`sanitizeJsonMetadata`, no department/location lookup, no DB write). Note that the
-board-level `sanitizeJobBatch()` has **already** run inside `AshbyClient.ts` before `filterChangedJobs()`, and the job
-still counts toward `jobsCollected` and the live-ID list passed to `deactivateStaleJobs()`. Because the TTL is 7 days,
-every job is re-checked against the DB at least weekly. Side effect: an unchanged cached job is **not** re-activated if
-someone set `active = false` manually.
-
-If `REDIS_URL` is unset and nothing listens on `localhost:6379`, the scraper prints `Redis: ⚠️ Disabled` and falls back to
-the DB-side hash comparison of the fast path (§2).
+### Legacy Key Migration
+The historical un-namespaced keys (`job:<ashbyId>:hash`) are purged using:
+```bash
+npm run cache:purge-legacy
+```
 
 ## 5. Useful SQL (for `db:menu` option 7)
 

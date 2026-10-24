@@ -7,8 +7,12 @@ These are the **only** environment variables read anywhere in `src/`, `scripts/`
 
 | Variable | Required | Read by | Default / Fallback | Example |
 |---|---|---|---|---|
-| `DATABASE_URL` | ✅ for every DB command (`seed`, `discover`, `scrape`, `scrape:parallel`, `scrape:csv`, `db:*`, `verify`, `prisma:studio`). Not needed by `process:cdx`, `docs:generate`, `generate-readme.ts`, `lint`, `test` | Prisma (`prisma/schema.prisma` → `env("DATABASE_URL")`) | none — Prisma throws on first query | `postgresql://user:pass@host:5432/jobscraper` (Neon works; add `?sslmode=require`) |
-| `REDIS_URL` | optional (`.env.example` and `README.md` label it "Required"; code treats it as optional) | `src/lib/Redis.ts` (used only by `Scraper.ts`) | `redis://localhost:6379`; if unreachable, cache disabled for the run | `rediss://default:xxx@xxx.upstash.io:6379` |
+| `DATABASE_URL` | ✅ for every DB command and the backend API (`seed`, `discover`, `scrape`, `scrape:parallel`, `api:start`, etc.). In serverless (Vercel), connect via the Neon pooled pgBouncer URL to prevent connection exhaustion. | Prisma (`prisma/schema.prisma` → `env("DATABASE_URL")`) | none — Prisma throws on first query | `postgresql://user:pass@host-pooler.region.neon.tech:5432/jobscraper?sslmode=require&pgbouncer=true` |
+| `REDIS_URL` | optional (Upstash Redis for `jc:v1:*` generation read-through caching; if omitted, API falls back to PostgreSQL via `dbGuard`) | `src/lib/cache/RedisClient.ts`, `src/lib/Redis.ts` | `null` for API; if unreachable, cache disabled | `rediss://default:xxx@xxx.upstash.io:6379` |
+| `CORS_ORIGINS` | optional (comma-separated origins allowed to access the REST API) | `src/api/Server.ts` | `https://job-scrapper-ui.vercel.app,http://localhost:3000` | `https://my-app.vercel.app,http://localhost:3000` |
+| `HEALTH_TOKEN` | optional (secret token required to run deep database inspection via `GET /health?deep=1`) | `src/api/Server.ts` | `undefined` (deep ping disabled) | `sec-xxxx-yyyy` |
+| `VERCEL_TOKEN` | optional (used by cache publisher to purge CDN tag `jobs-v1`) | `src/cache/Publisher.ts` | `undefined` (CDN purge skipped) | `vercel_pat_xxxx` |
+| `VERCEL_PROJECT_ID` | optional (project ID paired with `VERCEL_TOKEN`) | `src/cache/Publisher.ts` | `undefined` (CDN purge skipped) | `prj_xxxx` |
 | `GOOGLE_DRIVE_FOLDER_ID` | optional; only with `scrape:csv -- --upload-cloud` | `src/core/ScraperCSV.ts` → `uploadToGoogleDrive()` | `undefined` → file goes to the service account's own My Drive root (not visible to you) | ID from `drive.google.com/drive/folders/<ID>` |
 
 No other tunables are environment-driven: concurrency (`CONCURRENCY_LIMIT = 15` in `Scraper.ts`/`ScraperCSV.ts`),
