@@ -251,4 +251,97 @@ describe('AshbyScraper runAll() Harness (P1-T03)', () => {
         expect(lastCall.update.workplaceType).toBeNull();
         expect(lastCall.update.postalAddress).toBe(Prisma.DbNull);
     });
+
+    test('isolates a failing company (P1-T08 / SCR-07)', async () => {
+        (fetchAshbyBoardWithFallback as jest.Mock).mockImplementation(async (slug: string) => {
+            if (slug === 'failing-corp') {
+                throw new Error('Catastrophic company failure');
+            }
+            return {
+                slug: 'healthy-corp',
+                jobs: [
+                    {
+                        id: 'healthy-job-1',
+                        title: 'Healthy Engineer',
+                        department: 'Engineering',
+                        location: 'Remote',
+                        jobUrl: 'https://jobs.ashbyhq.com/healthy-corp/healthy-job-1',
+                        applyUrl: 'https://jobs.ashbyhq.com/healthy-corp/healthy-job-1/application',
+                        isListed: true
+                    }
+                ],
+                source: 'rest',
+                rateLimited: false,
+                notFound: false,
+                validationIssues: []
+            };
+        });
+
+        const scraper = new AshbyScraper();
+        const report = await scraper.runAll({
+            slugs: ['failing-corp', 'healthy-corp'],
+            concurrency: 2,
+            saveTelemetry: false
+        });
+
+        expect(report.summary.companiesAttempted).toBe(2);
+        expect(report.summary.companiesFailed).toBe(1);
+        expect(report.summary.jobsCollected).toBe(1);
+
+        const companyErrorEvent = report.events.find(
+            e => e.category === 'company_error' && e.companySlug === 'failing-corp'
+        );
+        expect(companyErrorEvent).toBeDefined();
+        expect(companyErrorEvent?.actionTaken).toBe('skipped');
+    });
+
+    test('flush failure does not drop later batches (P1-T08 / SCR-08)', async () => {
+        // Generate 150 jobs so that it splits into two chunks: 100 jobs and 50 jobs
+        const jobs150 = Array.from({ length: 150 }, (_, i) => ({
+            id: `split-job-${i + 1}`,
+            title: `Split Engineer ${i + 1}`,
+            department: 'Engineering',
+            location: 'Remote',
+            jobUrl: `https://jobs.ashbyhq.com/acme-corp/split-job-${i + 1}`,
+            applyUrl: `https://jobs.ashbyhq.com/acme-corp/split-job-${i + 1}/application`,
+            isListed: true
+        }));
+
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: jobs150,
+            source: 'rest',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        const scraper = new AshbyScraper();
+        let batchUpsertCalls = 0;
+        const origBatchUpsert = (scraper as any).batchUpsertJobs.bind(scraper);
+
+        jest.spyOn(scraper as any, 'batchUpsertJobs').mockImplementation(async (chunk: any, tracker: any) => {
+            batchUpsertCalls++;
+            if (batchUpsertCalls === 1) {
+                throw new Error('Simulated transient DB connection drop on chunk 1');
+            }
+            return origBatchUpsert(chunk, tracker);
+        });
+
+        const report = await scraper.runAll({
+            slugs: ['acme-corp'],
+            concurrency: 1,
+            saveTelemetry: false
+        });
+
+        // Both batches were attempted to be flushed
+        expect(batchUpsertCalls).toBe(2);
+        expect(report.summary.dbErrors).toBe(1);
+
+        const dbErrorEvent = report.events.find(
+            e => e.category === 'db_error' && e.actionTaken === 'batch_flush_failed'
+        );
+        expect(dbErrorEvent).toBeDefined();
+        expect(dbErrorEvent?.message).toContain('Simulated transient DB connection drop on chunk 1');
+    });
 });

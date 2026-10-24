@@ -616,140 +616,163 @@ export class AshbyScraper {
         const enqueueFlushIfNeeded = (force = false) => {
             while (pendingJobs.length >= BATCH_SIZE || (force && pendingJobs.length > 0)) {
                 const chunkToWrite = pendingJobs.splice(0, BATCH_SIZE);
-                flushChain = flushChain.then(async () => {
-                    await this.batchUpsertJobs(chunkToWrite, tracker);
-                });
+                flushChain = flushChain
+                    .then(async () => {
+                        await this.batchUpsertJobs(chunkToWrite, tracker);
+                    })
+                    .catch((err: any) => {
+                        tracker.dbErrors++;
+                        tracker.recordEvent({
+                            category: 'db_error',
+                            companySlug: 'system',
+                            message: `Batch flush failed: ${err.message || String(err)}`,
+                            actionTaken: 'batch_flush_failed'
+                        });
+                        console.error(`  ❌ ${workerPrefix}[DbFlushError] Batch flush failed: ${err.message || String(err)}`);
+                    });
             }
         };
 
         const fetchPromises = companies.map(company =>
             limit(async () => {
-                const boardResult = await fetchAshbyBoardWithFallback(company.slug, {
-                    includeCompensation: true
-                });
-                completed++;
-
-                if (boardResult.rateLimited) {
-                    tracker.rateLimitsEncountered++;
-                    limit.onRateLimit();
-                } else {
-                    limit.onSuccess();
-                }
-
-                if (boardResult.source === 'graphql') {
-                    tracker.graphqlFallbacksUsed++;
-                    tracker.recordEvent({
-                        category: 'graphql_fallback',
-                        companySlug: company.slug,
-                        message: 'Posting API returned 404/403; recovered board via Ashby hosted GraphQL API',
-                        actionTaken: `recovered_${boardResult.jobs.length}_jobs`
+                try {
+                    const boardResult = await fetchAshbyBoardWithFallback(company.slug, {
+                        includeCompensation: true
                     });
-                }
+                    completed++;
 
-                const now = new Date();
+                    if (boardResult.rateLimited) {
+                        tracker.rateLimitsEncountered++;
+                        limit.onRateLimit();
+                    } else {
+                        limit.onSuccess();
+                    }
 
-                // Company health rules
-                if (boardResult.notFound) {
-                    tracker.companiesNotFound++;
-                    const consecutiveNotFound = (company.consecutiveNotFound ?? 0) + 1;
-                    const isQuarantined = consecutiveNotFound >= 3;
-
-                    if (isQuarantined) {
-                        const updateManyFn = (prisma.job as any)?.updateMany;
-                        if (typeof updateManyFn === 'function') {
-                            await updateManyFn({
-                                where: { companySlug: company.slug, active: true },
-                                data: { active: false }
-                            }).catch(() => {});
-                        }
+                    if (boardResult.source === 'graphql') {
+                        tracker.graphqlFallbacksUsed++;
                         tracker.recordEvent({
-                            category: 'company_quarantined',
+                            category: 'graphql_fallback',
                             companySlug: company.slug,
-                            message: `Quarantined company after ${consecutiveNotFound} consecutive 404 responses; deactivated active jobs`,
-                            actionTaken: 'status_not_found'
+                            message: 'Posting API returned 404/403; recovered board via Ashby hosted GraphQL API',
+                            actionTaken: `recovered_${boardResult.jobs.length}_jobs`
                         });
                     }
 
-                    await prisma.company.update({
-                        where: { slug: company.slug },
-                        data: {
-                            consecutiveNotFound,
-                            lastCheckedAt: now,
-                            ...(isQuarantined ? { status: 'NOT_FOUND' } : {})
-                        }
-                    }).catch(() => {});
-                } else if (boardResult.source === 'rest' || boardResult.source === 'graphql') {
-                    // Success resets strike counters and restores ACTIVE status
-                    await prisma.company.update({
-                        where: { slug: company.slug },
-                        data: {
-                            status: 'ACTIVE',
-                            consecutiveNotFound: 0,
-                            consecutiveFailures: 0,
-                            lastSuccessAt: now,
-                            lastCheckedAt: now
-                        }
-                    }).catch(() => {});
+                    const now = new Date();
 
-                    const activeIds = boardResult.jobs.map(j => j.id);
+                    // Company health rules
+                    if (boardResult.notFound) {
+                        tracker.companiesNotFound++;
+                        const consecutiveNotFound = (company.consecutiveNotFound ?? 0) + 1;
+                        const isQuarantined = consecutiveNotFound >= 3;
 
-                    // Touch lastSeenAt on existing jobs with one raw UPDATE per company
-                    if (activeIds.length > 0 && typeof prisma.$executeRaw === 'function') {
-                        await prisma.$executeRaw`UPDATE "Job" SET "lastSeenAt" = ${now} WHERE "companySlug" = ${company.slug} AND "ashbyId" = ANY(${activeIds})`.catch(() => {});
+                        if (isQuarantined) {
+                            const updateManyFn = (prisma.job as any)?.updateMany;
+                            if (typeof updateManyFn === 'function') {
+                                await updateManyFn({
+                                    where: { companySlug: company.slug, active: true },
+                                    data: { active: false }
+                                }).catch(() => {});
+                            }
+                            tracker.recordEvent({
+                                category: 'company_quarantined',
+                                companySlug: company.slug,
+                                message: `Quarantined company after ${consecutiveNotFound} consecutive 404 responses; deactivated active jobs`,
+                                actionTaken: 'status_not_found'
+                            });
+                        }
+
+                        await prisma.company.update({
+                            where: { slug: company.slug },
+                            data: {
+                                consecutiveNotFound,
+                                lastCheckedAt: now,
+                                ...(isQuarantined ? { status: 'NOT_FOUND' } : {})
+                            }
+                        }).catch(() => {});
+                    } else if (boardResult.source === 'rest' || boardResult.source === 'graphql') {
+                        // Success resets strike counters and restores ACTIVE status
+                        await prisma.company.update({
+                            where: { slug: company.slug },
+                            data: {
+                                status: 'ACTIVE',
+                                consecutiveNotFound: 0,
+                                consecutiveFailures: 0,
+                                lastSuccessAt: now,
+                                lastCheckedAt: now
+                            }
+                        }).catch(() => {});
+
+                        const activeIds = boardResult.jobs.map(j => j.id);
+
+                        // Touch lastSeenAt on existing jobs with one raw UPDATE per company
+                        if (activeIds.length > 0 && typeof prisma.$executeRaw === 'function') {
+                            await prisma.$executeRaw`UPDATE "Job" SET "lastSeenAt" = ${now} WHERE "companySlug" = ${company.slug} AND "ashbyId" = ANY(${activeIds})`.catch(() => {});
+                        }
+
+                        if (!this.hasLoadedExistingJobSlugs || this.companiesWithExistingJobs.has(company.slug)) {
+                            await this.deactivateStaleJobs(company.slug, activeIds);
+                        }
+                    } else {
+                        // source === 'none' with notFound === false (fetch error, network, timeout, 5xx)
+                        const consecutiveFailures = (company.consecutiveFailures ?? 0) + 1;
+
+                        if (consecutiveFailures >= 7) {
+                            tracker.recordEvent({
+                                category: 'company_unreachable',
+                                companySlug: company.slug,
+                                message: `Company fetch failed ${consecutiveFailures} consecutive times`,
+                                actionTaken: 'alert_unreachable'
+                            });
+                        }
+
+                        await prisma.company.update({
+                            where: { slug: company.slug },
+                            data: {
+                                consecutiveFailures,
+                                lastCheckedAt: now
+                            }
+                        }).catch(() => {});
                     }
 
-                    if (!this.hasLoadedExistingJobSlugs || this.companiesWithExistingJobs.has(company.slug)) {
-                        await this.deactivateStaleJobs(company.slug, activeIds);
-                    }
-                } else {
-                    // source === 'none' with notFound === false (fetch error, network, timeout, 5xx)
-                    const consecutiveFailures = (company.consecutiveFailures ?? 0) + 1;
-
-                    if (consecutiveFailures >= 7) {
-                        tracker.recordEvent({
-                            category: 'company_unreachable',
-                            companySlug: company.slug,
-                            message: `Company fetch failed ${consecutiveFailures} consecutive times`,
-                            actionTaken: 'alert_unreachable'
-                        });
-                    }
-
-                    await prisma.company.update({
-                        where: { slug: company.slug },
-                        data: {
-                            consecutiveFailures,
-                            lastCheckedAt: now
+                    if (boardResult.validationIssues && boardResult.validationIssues.length > 0) {
+                        tracker.recordValidationIssues(boardResult.validationIssues);
+                        const filteredCount = boardResult.validationIssues.filter(i => i.action === 'filtered').length;
+                        if (filteredCount > 0) {
+                            console.warn(
+                                `  ⚠️ ${workerPrefix}[Sanitizer] ${boardResult.slug}: filtered ${filteredCount} malformed job record(s)`
+                            );
                         }
-                    }).catch(() => {});
-                }
+                    }
 
-                if (boardResult.validationIssues && boardResult.validationIssues.length > 0) {
-                    tracker.recordValidationIssues(boardResult.validationIssues);
-                    const filteredCount = boardResult.validationIssues.filter(i => i.action === 'filtered').length;
-                    if (filteredCount > 0) {
-                        console.warn(
-                            `  ⚠️ ${workerPrefix}[Sanitizer] ${boardResult.slug}: filtered ${filteredCount} malformed job record(s)`
+                    if (boardResult.jobs.length > 0) {
+                        tracker.companiesWithJobs++;
+                        tracker.jobsCollected += boardResult.jobs.length;
+                        const processed = await this.processCompanyJobs(boardResult.slug, boardResult.jobs);
+                        totalProcessed += processed.length;
+                        pendingJobs.push(...processed);
+                        enqueueFlushIfNeeded(false);
+                        if (companies.length <= 50) {
+                            console.log(`  ✅ ${workerPrefix}${boardResult.slug}: ${boardResult.jobs.length} jobs (${processed.length} changed)`);
+                        }
+                    }
+
+                    // Progress indicator every 50 companies
+                    if (completed % 50 === 0 || completed === companies.length) {
+                        console.log(
+                            `📊 ${workerPrefix}Progress: ${completed}/${companies.length} companies | ${tracker.jobsCollected} jobs found (concurrency: ${limit.getConcurrency()})`
                         );
                     }
-                }
-
-                if (boardResult.jobs.length > 0) {
-                    tracker.companiesWithJobs++;
-                    tracker.jobsCollected += boardResult.jobs.length;
-                    const processed = await this.processCompanyJobs(boardResult.slug, boardResult.jobs);
-                    totalProcessed += processed.length;
-                    pendingJobs.push(...processed);
-                    enqueueFlushIfNeeded(false);
-                    if (companies.length <= 50) {
-                        console.log(`  ✅ ${workerPrefix}${boardResult.slug}: ${boardResult.jobs.length} jobs (${processed.length} changed)`);
-                    }
-                }
-
-                // Progress indicator every 50 companies
-                if (completed % 50 === 0 || completed === companies.length) {
-                    console.log(
-                        `📊 ${workerPrefix}Progress: ${completed}/${companies.length} companies | ${tracker.jobsCollected} jobs found (concurrency: ${limit.getConcurrency()})`
-                    );
+                } catch (err: any) {
+                    completed++;
+                    tracker.companiesFailed++;
+                    tracker.recordEvent({
+                        category: 'company_error',
+                        companySlug: company.slug,
+                        message: err.message || String(err),
+                        actionTaken: 'skipped'
+                    });
+                    console.error(`  ❌ ${workerPrefix}[CompanyError] Failed processing ${company.slug}: ${err.message || String(err)}`);
                 }
             })
         );

@@ -39,6 +39,7 @@ export interface RunTelemetrySummary {
     companiesAttempted: number;
     companiesWithJobs: number;
     companiesNotFound: number;
+    companiesFailed: number;
     graphqlFallbacksUsed: number;
     rateLimitsEncountered: number;
     jobsCollected: number;
@@ -67,6 +68,7 @@ export class ErrorTracker {
     public companiesAttempted = 0;
     public companiesWithJobs = 0;
     public companiesNotFound = 0;
+    public companiesFailed = 0;
     public graphqlFallbacksUsed = 0;
     public rateLimitsEncountered = 0;
     public jobsCollected = 0;
@@ -132,6 +134,7 @@ export class ErrorTracker {
                 companiesAttempted: this.companiesAttempted,
                 companiesWithJobs: this.companiesWithJobs,
                 companiesNotFound: this.companiesNotFound,
+                companiesFailed: this.companiesFailed,
                 graphqlFallbacksUsed: this.graphqlFallbacksUsed,
                 rateLimitsEncountered: this.rateLimitsEncountered,
                 jobsCollected: this.jobsCollected,
@@ -188,6 +191,7 @@ export class ErrorTracker {
             companiesAttempted: 0,
             companiesWithJobs: 0,
             companiesNotFound: 0,
+            companiesFailed: 0,
             graphqlFallbacksUsed: 0,
             rateLimitsEncountered: 0,
             jobsCollected: 0,
@@ -200,6 +204,7 @@ export class ErrorTracker {
             summary.companiesAttempted += r.summary.companiesAttempted;
             summary.companiesWithJobs += r.summary.companiesWithJobs;
             summary.companiesNotFound += r.summary.companiesNotFound;
+            summary.companiesFailed += r.summary.companiesFailed ?? 0;
             summary.graphqlFallbacksUsed += r.summary.graphqlFallbacksUsed;
             summary.rateLimitsEncountered += r.summary.rateLimitsEncountered;
             summary.jobsCollected += r.summary.jobsCollected;

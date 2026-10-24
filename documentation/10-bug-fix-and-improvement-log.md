@@ -40,7 +40,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 | BF-001 | `f872356` | REST 404/403/400 → GraphQL fallback, browser headers | ⚠️ (404 only, headers unchecked) |
 | BF-002 | `f872356` | `\u0000` / surrogate / script stripping before `jsonb` | ✅ |
 | BF-003 | `f872356` | URL validation + canonical fallback | ✅ |
-| BF-004 | `f872356` | Validation pre-filter + per-job batch fallback | ⚠️ (legacy branch only) |
+| BF-004 | `f872356` | Validation pre-filter + per-job batch fallback | ✅ |
 | BF-005 | `f872356` | Real salary extraction, null-clearing on removal | ✅ |
 | BF-006 | `f872356` | Dept/location dedupe, streaming flushes, stale-job deactivation, 3-strike quarantine | ✅ |
 | BF-007 | `f872356` | CSV / Markdown escaping | ⚠️ (newline/CRLF untested) |
