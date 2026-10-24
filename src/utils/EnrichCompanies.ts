@@ -80,7 +80,10 @@ export async function enrichActiveCompanies(options: {
                 const meta = await fetchOrganizationMetadata(company.slug);
                 processed++;
 
-                if (meta && (meta.name || meta.logoUrl)) {
+                if (meta.status === 'rate_limited') {
+                    failedCount++;
+                    limiter.onRateLimit(meta.retryAfterSeconds ? meta.retryAfterSeconds * 1000 : undefined);
+                } else if (meta.status === 'ok' && (meta.name || meta.logoUrl)) {
                     await prisma.company.update({
                         where: { slug: company.slug },
                         data: {
@@ -100,7 +103,7 @@ export async function enrichActiveCompanies(options: {
             } catch (err: any) {
                 processed++;
                 failedCount++;
-                if (err?.response?.status === 429 || err?.response?.status === 403) {
+                if (err?.response?.status === 429) {
                     limiter.onRateLimit();
                 }
             }

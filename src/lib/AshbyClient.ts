@@ -89,8 +89,10 @@ export interface AshbyBoardFetchResult {
 }
 
 export interface AshbyOrganizationMetadata {
+    status: 'ok' | 'not_found' | 'rate_limited' | 'error';
     name?: string;
     logoUrl?: string;
+    retryAfterSeconds?: number;
 }
 
 const GRAPHQL_URL = 'https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams';
@@ -258,7 +260,7 @@ export async function fetchFromAshbyGraphQL(companySlug: string): Promise<{
  */
 export async function fetchOrganizationMetadata(
     companySlug: string
-): Promise<AshbyOrganizationMetadata | null> {
+): Promise<AshbyOrganizationMetadata> {
     try {
         const response = await axios.get<string>(
             `https://jobs.ashbyhq.com/${encodeURIComponent(companySlug)}`,
@@ -269,21 +271,37 @@ export async function fetchOrganizationMetadata(
         );
         const html = typeof response?.data === 'string' ? response.data : '';
         const match = html.match(/window\.__appData\s*=\s*(\{[\s\S]*?\});/);
-        if (!match) return null;
+        if (!match) return { status: 'not_found' };
 
         const appData = JSON.parse(match[1]);
         const org = appData?.organization;
-        if (!org) return null;
+        if (!org) return { status: 'not_found' };
 
         return {
+            status: 'ok',
             name: org.name || undefined,
             logoUrl:
                 org.theme?.logoWordmarkImageUrl ||
                 org.theme?.logoSquareImageUrl ||
                 undefined
         };
-    } catch {
-        return null;
+    } catch (err: any) {
+        const status = err?.response?.status;
+        if (status === 429) {
+            let retryAfterSeconds: number | undefined;
+            const headerVal = err.response?.headers?.['retry-after'];
+            if (headerVal) {
+                const parsed = parseInt(String(headerVal), 10);
+                if (!isNaN(parsed) && parsed > 0) {
+                    retryAfterSeconds = Math.min(parsed, 10);
+                }
+            }
+            return { status: 'rate_limited', retryAfterSeconds };
+        }
+        if (status === 404) {
+            return { status: 'not_found' };
+        }
+        return { status: 'error' };
     }
 }
 

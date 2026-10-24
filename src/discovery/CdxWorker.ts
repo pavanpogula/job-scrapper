@@ -138,7 +138,7 @@ export function extractCompanySlug(url: string): string | null {
  */
 export async function enrichCompanyMetadata(slug: string): Promise<boolean> {
     const metadata = await fetchOrganizationMetadata(slug);
-    if (!metadata || (!metadata.name && !metadata.logoUrl)) {
+    if (metadata.status !== 'ok' || (!metadata.name && !metadata.logoUrl)) {
         return false;
     }
 
