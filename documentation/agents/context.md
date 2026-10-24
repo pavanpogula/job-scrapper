@@ -16,7 +16,7 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-23 (P1-T
 - `npm run verify`: Audit database counts, active/inactive ratios, and sample data integrity.
 - `npm run cache:publish` (planned: P2): Publish pre-rendered cache generation to Redis.
 - `npm run report:classify` (planned: P1-T10): Classify scrape report into actionable vs noise.
-- `npm run verify:ui` (planned: P1-T19): Run UI typecheck, lint, and tests.
+- `npm run verify:ui`: Run UI typecheck, lint, and tests.
 
 ## Data & Cache Facts
 - **Change Detection:** PostgreSQL `contentHash` comparison in `batchUpsertJobs` (Redis change detection removed in P1-T04 per D-06).

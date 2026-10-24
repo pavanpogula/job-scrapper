@@ -22,6 +22,7 @@
     "db:normalize-countries": "npx ts-node src/database/NormalizeCountries.ts",
     "report:classify": "npx ts-node src/utils/ReportClassifyCli.ts",
     "verify": "npx ts-node src/utils/Verify.ts",
+    "verify:ui": "npm --prefix job-scrapper-ui run typecheck && npm --prefix job-scrapper-ui run lint && npm --prefix job-scrapper-ui run test",
     "api:start": "npx ts-node src/api/Server.ts",
     "build": "npx prisma generate && npm --prefix job-scrapper-ui install && npm --prefix job-scrapper-ui run build"
   },
