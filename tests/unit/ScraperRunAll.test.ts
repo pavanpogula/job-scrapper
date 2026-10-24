@@ -344,4 +344,34 @@ describe('AshbyScraper runAll() Harness (P1-T03)', () => {
         expect(dbErrorEvent).toBeDefined();
         expect(dbErrorEvent?.message).toContain('Simulated transient DB connection drop on chunk 1');
     });
+
+    test('records api_error event when posting API request fails', async () => {
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: [],
+            source: 'none',
+            rateLimited: false,
+            notFound: false,
+            failure: {
+                kind: 'http',
+                status: 503,
+                code: 'http/503/3',
+                attempts: 3
+            }
+        });
+
+        const scraper = new AshbyScraper();
+        const report = await scraper.runAll({
+            slugs: ['acme-corp'],
+            concurrency: 1,
+            saveTelemetry: false
+        });
+
+        const apiError = report.events.find(e => e.category === 'api_error');
+        expect(apiError).toBeDefined();
+        expect(apiError?.subkind).toBe('http_503');
+        expect(apiError?.companySlug).toBe('acme-corp');
+        expect(apiError?.httpStatus).toBe(503);
+        expect(apiError?.attempts).toBe(3);
+    });
 });

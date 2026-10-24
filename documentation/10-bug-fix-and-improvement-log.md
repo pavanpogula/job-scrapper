@@ -175,6 +175,17 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Regression Invariant:** Rate limit cooldown timer must retain the Node.js event loop so in-flight and queued tasks are never abandoned by early process exit.
 - **Guarding tests:** `tests/unit/ConcurrencyExit.test.ts` running `tests/fixtures/limiter-exit.ts` (asserts `tasksDone=4/4` and exit code 0).
 
+### BF-015: Posting API failure classification, 429 rate limit scoping, and Retry-After header honoring
+- **Symptom:** Exhausted 5xx/timeout/network errors on Ashby board fetch silently returned `{ source: 'none', notFound: false }` without emitting any error event, masking network dropouts as empty boards. In addition, HTTP 403 on posting-api was incorrectly classified as rate-limiting (`sawRateLimit = true`), unnecessarily halving concurrency even when GraphQL fallback succeeded, and upstream `Retry-After` headers were ignored.
+- **Root cause & fix:**
+  1. Updated `AshbyBoardFetchResult` in `src/lib/AshbyClient.ts` to include structured `failure?: { kind: 'http' | 'timeout' | 'network'; status?: number; code?: string; attempts: number }`.
+  2. Only HTTP 429 sets `sawRateLimit = true`. 403/400 now cleanly attempt GraphQL fallback without penalizing concurrency.
+  3. Extracted and parsed `Retry-After` header on HTTP 429, capping delay at 10 seconds.
+  4. Both `Scraper.ts` and `ScraperCSV.ts` now emit `api_error` events when `failure` is present and `rate_limited` when `rateLimited` is true.
+- **Implemented in:** `src/lib/AshbyClient.ts`, `src/core/Scraper.ts`, `src/core/ScraperCSV.ts`.
+- **Regression Invariant:** Only HTTP 429 triggers `sawRateLimit`; Retry-After header is honored (capped at 10 s); exhausted network/http failures emit `api_error` with failure details and attempt counts.
+- **Guarding tests:** `tests/unit/AshbyClient.test.ts` (403/400 fallback, BROWSER_HEADERS on GET/POST, 503×3 failure, ETIMEDOUT timeout, 403 rateLimited: false, Retry-After capping), `tests/unit/ScraperRunAll.test.ts` (records api_error event).
+
 ---
 
 ## 📈 Improvement Log & Future Packaging Roadmap

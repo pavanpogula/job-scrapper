@@ -41,10 +41,34 @@ export async function fetchJobsForCompany(
     });
 
     if (result.rateLimited) {
-        if (tracker) tracker.rateLimitsEncountered++;
+        if (tracker) {
+            tracker.rateLimitsEncountered++;
+            tracker.recordEvent({
+                category: 'rate_limited',
+                companySlug,
+                message: 'HTTP 429 Too Many Requests received from Posting API',
+                actionTaken: 'throttled_concurrency'
+            });
+        }
         if (onRateLimit) onRateLimit();
     } else if (onSuccess) {
         onSuccess();
+    }
+
+    if (result.failure && tracker) {
+        tracker.recordEvent({
+            category: 'api_error',
+            subkind: result.failure.kind === 'timeout'
+                ? 'timeout'
+                : result.failure.kind === 'network'
+                ? 'network'
+                : `http_${result.failure.status || '5xx'}`,
+            companySlug,
+            message: `Posting API failed (${result.failure.code || result.failure.kind}) after ${result.failure.attempts} attempts`,
+            actionTaken: 'retry_exhausted',
+            httpStatus: result.failure.status,
+            attempts: result.failure.attempts
+        });
     }
 
     if (result.source === 'graphql' && tracker) {

@@ -644,6 +644,12 @@ export class AshbyScraper {
                     if (boardResult.rateLimited) {
                         tracker.rateLimitsEncountered++;
                         limit.onRateLimit();
+                        tracker.recordEvent({
+                            category: 'rate_limited',
+                            companySlug: company.slug,
+                            message: 'HTTP 429 Too Many Requests received from Posting API',
+                            actionTaken: 'throttled_concurrency'
+                        });
                     } else {
                         limit.onSuccess();
                     }
@@ -716,6 +722,22 @@ export class AshbyScraper {
                     } else {
                         // source === 'none' with notFound === false (fetch error, network, timeout, 5xx)
                         const consecutiveFailures = (company.consecutiveFailures ?? 0) + 1;
+
+                        if (boardResult.failure) {
+                            tracker.recordEvent({
+                                category: 'api_error',
+                                subkind: boardResult.failure.kind === 'timeout'
+                                    ? 'timeout'
+                                    : boardResult.failure.kind === 'network'
+                                    ? 'network'
+                                    : `http_${boardResult.failure.status || '5xx'}`,
+                                companySlug: company.slug,
+                                message: `Posting API failed (${boardResult.failure.code || boardResult.failure.kind}) after ${boardResult.failure.attempts} attempts`,
+                                actionTaken: 'retry_exhausted',
+                                httpStatus: boardResult.failure.status,
+                                attempts: boardResult.failure.attempts
+                            });
+                        }
 
                         if (consecutiveFailures >= 7) {
                             tracker.recordEvent({

@@ -80,6 +80,12 @@ export interface AshbyBoardFetchResult {
     rateLimited?: boolean;
     source: 'rest' | 'graphql' | 'none';
     validationIssues?: ValidationIssue[];
+    failure?: {
+        kind: 'http' | 'timeout' | 'network';
+        status?: number;
+        code?: string;
+        attempts: number;
+    };
 }
 
 export interface AshbyOrganizationMetadata {
@@ -294,8 +300,10 @@ export async function fetchAshbyBoardWithFallback(
 
     let lastError: any = null;
     let sawRateLimit = false;
+    let attemptsCount = 0;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        attemptsCount = attempt + 1;
         try {
             const { data } = await axios.get<{ jobs: AshbyJob[] }>(url, {
                 timeout: 10000,
@@ -312,12 +320,24 @@ export async function fetchAshbyBoardWithFallback(
             };
         } catch (err: any) {
             lastError = err;
-            if (err?.response?.status === 429 || err?.response?.status === 403) {
+            const status = err?.response?.status;
+            if (status === 429) {
                 sawRateLimit = true;
             }
+
             if (attempt < maxRetries && isRetryableError(err)) {
-                const jitter = Math.floor(Math.random() * 100);
-                const delay = baseDelayMs * Math.pow(2, attempt) + jitter;
+                let delay = baseDelayMs * Math.pow(2, attempt) + Math.floor(Math.random() * 100);
+
+                if (status === 429) {
+                    const retryAfterHeader = err?.response?.headers?.['retry-after'] || err?.response?.headers?.['Retry-After'];
+                    if (retryAfterHeader) {
+                        const parsedSeconds = parseInt(String(retryAfterHeader), 10);
+                        if (!isNaN(parsedSeconds) && parsedSeconds > 0) {
+                            delay = Math.min(parsedSeconds, 10) * 1000;
+                        }
+                    }
+                }
+
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
@@ -353,11 +373,35 @@ export async function fetchAshbyBoardWithFallback(
         }
     }
 
+    let failureKind: 'http' | 'timeout' | 'network' = 'http';
+    let failureCode: string | undefined = undefined;
+
+    if (status) {
+        failureKind = 'http';
+        failureCode = `http/${status}/${attemptsCount}`;
+    } else if (
+        lastError?.code === 'ECONNABORTED' ||
+        lastError?.code === 'ETIMEDOUT' ||
+        (lastError?.message && lastError.message.toLowerCase().includes('timeout'))
+    ) {
+        failureKind = 'timeout';
+        failureCode = 'timeout';
+    } else {
+        failureKind = 'network';
+        failureCode = lastError?.code || 'network';
+    }
+
     return {
         slug: companySlug,
         jobs: [],
         notFound: false,
         rateLimited: sawRateLimit,
-        source: 'none'
+        source: 'none',
+        failure: {
+            kind: failureKind,
+            status,
+            code: failureCode,
+            attempts: attemptsCount
+        }
     };
 }

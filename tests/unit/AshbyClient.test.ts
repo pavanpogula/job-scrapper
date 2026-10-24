@@ -227,5 +227,164 @@ describe('AshbyClient Unit Tests', () => {
             expect(result.source).toBe('rest');
             expect(result.jobs).toHaveLength(1);
         });
+
+        it('should send BROWSER_HEADERS on GET and POST requests', async () => {
+            mockedAxios.get.mockResolvedValueOnce({
+                data: { jobs: [] }
+            });
+
+            await fetchAshbyBoardWithFallback('test-slug');
+
+            expect(mockedAxios.get).toHaveBeenCalledWith(
+                expect.stringContaining('test-slug'),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        'User-Agent': expect.stringContaining('Mozilla/5.0'),
+                        'Accept-Language': 'en-US,en;q=0.9'
+                    })
+                })
+            );
+
+            mockedAxios.post.mockResolvedValueOnce({
+                data: { data: { jobBoard: { teams: [], jobPostings: [] } } }
+            });
+
+            await fetchFromAshbyGraphQL('test-slug');
+
+            expect(mockedAxios.post).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(Object),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        'User-Agent': expect.stringContaining('Mozilla/5.0'),
+                        'Content-Type': 'application/json'
+                    })
+                })
+            );
+        });
+
+        it('should fall back to GraphQL on 403 and 400 without setting rateLimited', async () => {
+            mockedAxios.isAxiosError.mockReturnValue(true);
+
+            // 403 test
+            mockedAxios.get.mockRejectedValueOnce({
+                isAxiosError: true,
+                response: { status: 403 }
+            });
+            mockedAxios.post.mockResolvedValueOnce({
+                data: {
+                    data: {
+                        jobBoard: {
+                            teams: [],
+                            jobPostings: [{ id: 'gql-1', title: 'Engineer' }]
+                        }
+                    }
+                }
+            });
+
+            const res403 = await fetchAshbyBoardWithFallback('forbidden-slug');
+            expect(res403.source).toBe('graphql');
+            expect(res403.rateLimited).toBe(false);
+            expect(res403.jobs).toHaveLength(1);
+
+            // 400 test
+            mockedAxios.get.mockRejectedValueOnce({
+                isAxiosError: true,
+                response: { status: 400 }
+            });
+            mockedAxios.post.mockResolvedValueOnce({
+                data: {
+                    data: {
+                        jobBoard: {
+                            teams: [],
+                            jobPostings: [{ id: 'gql-2', title: 'Designer' }]
+                        }
+                    }
+                }
+            });
+
+            const res400 = await fetchAshbyBoardWithFallback('badreq-slug');
+            expect(res400.source).toBe('graphql');
+            expect(res400.rateLimited).toBe(false);
+            expect(res400.jobs).toHaveLength(1);
+        });
+
+        it('should return failure info http/503/3 when 503 retries are exhausted', async () => {
+            mockedAxios.isAxiosError.mockReturnValue(true);
+            mockedAxios.get
+                .mockRejectedValueOnce({ isAxiosError: true, response: { status: 503 } })
+                .mockRejectedValueOnce({ isAxiosError: true, response: { status: 503 } })
+                .mockRejectedValueOnce({ isAxiosError: true, response: { status: 503 } });
+
+            const result = await fetchAshbyBoardWithFallback('exhausted-503', {
+                maxRetries: 2,
+                baseDelayMs: 1
+            });
+
+            expect(result.source).toBe('none');
+            expect(result.failure).toEqual({
+                kind: 'http',
+                status: 503,
+                code: 'http/503/3',
+                attempts: 3
+            });
+        });
+
+        it('should return failure info timeout when request times out', async () => {
+            mockedAxios.isAxiosError.mockReturnValue(true);
+            mockedAxios.get
+                .mockRejectedValueOnce({ code: 'ETIMEDOUT', message: 'Connection timed out' })
+                .mockRejectedValueOnce({ code: 'ETIMEDOUT', message: 'Connection timed out' });
+
+            const result = await fetchAshbyBoardWithFallback('timeout-slug', {
+                maxRetries: 1,
+                baseDelayMs: 1
+            });
+
+            expect(result.source).toBe('none');
+            expect(result.failure).toEqual({
+                kind: 'timeout',
+                status: undefined,
+                code: 'timeout',
+                attempts: 2
+            });
+        });
+
+        it('should honor Retry-After header and cap at 10 seconds', async () => {
+            jest.useFakeTimers();
+            mockedAxios.isAxiosError.mockReturnValue(true);
+
+            // Mock 429 with Retry-After: 30 (should be capped at 10s)
+            mockedAxios.get
+                .mockRejectedValueOnce({
+                    isAxiosError: true,
+                    response: {
+                        status: 429,
+                        headers: { 'retry-after': '30' }
+                    }
+                })
+                .mockResolvedValueOnce({
+                    data: { jobs: [{ id: 'after-429', title: 'Staff Eng' }] }
+                });
+
+            const promise = fetchAshbyBoardWithFallback('capped-retry-after', {
+                maxRetries: 1,
+                baseDelayMs: 1
+            });
+
+            // Fast-forward 9999ms - should still be pending
+            await jest.advanceTimersByTimeAsync(9999);
+            expect(mockedAxios.get).toHaveBeenCalledTimes(1);
+
+            // Advance past 10000ms
+            await jest.advanceTimersByTimeAsync(200);
+            const result = await promise;
+
+            expect(mockedAxios.get).toHaveBeenCalledTimes(2);
+            expect(result.source).toBe('rest');
+            expect(result.rateLimited).toBe(true);
+
+            jest.useRealTimers();
+        });
     });
 });
