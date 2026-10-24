@@ -43,6 +43,7 @@
 | 09 | [09-known-issues-and-tech-debt.md](./09-known-issues-and-tech-debt.md) | **Verified bugs**, gotchas, doc/code mismatches, improvement roadmap |
 | 10 | [10-bug-fix-and-improvement-log.md](./10-bug-fix-and-improvement-log.md) | **Bug-Fix Agent Protocol**, Regression Guard Registry (`BF-001`–`BF-010`, with honest guard status), and App Packaging Roadmap |
 | 11 | [11-testing-guide.md](./11-testing-guide.md) | How to run tests, mocking strategy, test-file → module map, e2e flows, coverage map, **BF invariant → test mapping**, conventions for new tests |
+| plan | [plan/00-README.md](./plan/00-README.md) | **Enhancement plan (2026-10-23, not yet implemented):** gap analysis, cache-first API on Upstash, scraper fixes, daily Actions schedule, self-healing fix→ADR→CHANGELOG loop, Claude Code + Antigravity agents, phased roadmap with implementer prompt |
 
 ---
 
