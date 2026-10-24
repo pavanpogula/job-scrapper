@@ -128,9 +128,15 @@ Empty names (`""`) are not stored → `departmentId`/`locationId = null`.
 | `createdAt` | `DateTime` | `@default(now())` |
 | `updatedAt` | `DateTime` | `@updatedAt` (also set explicitly to `new Date()` on update) |
 
-**Indexes:** unique `ashbyId`; `@@index([companySlug])`, `@@index([departmentId])`, `@@index([locationId])`,
-`@@index([active])`, `@@index([isRemote])`, `@@index([workplaceType])`, `@@index([employmentType])`,
-`@@index([country])`, `@@index([city])`, `@@index([publishedAt])`. (Plus unique indexes on `Company.slug`, `Department.name`, `Location.name`.)
+**Indexes:** unique `ashbyId`; composite indexes:
+- `@@index([active, isListed, publishedAt(sort: Desc), createdAt(sort: Desc), id])` (accelerates default filtered & sorted query)
+- `@@index([active, isListed, workplaceType, publishedAt(sort: Desc)])`
+- `@@index([active, isListed, employmentType, publishedAt(sort: Desc)])`
+- `@@index([active, isListed, country, publishedAt(sort: Desc)])`
+- `@@index([companySlug, active])` (replaces superseded `@@index([companySlug])`)
+- `@@index([active, lastSeenAt])` (accelerates stale job deactivation)
+- Single-column indexes preserved: `@@index([departmentId])`, `@@index([locationId])`, `@@index([isRemote])`, `@@index([city])`.
+(Plus unique indexes on `Company.slug`, `Department.name`, `Location.name`.)
 
 **Relations / referential actions:** none declared, so Prisma defaults apply — `Job.company` (required):
 `onDelete: Restrict`; `Job.department` / `Job.location` (optional): `onDelete: SetNull`; all `onUpdate: Cascade`.

@@ -33,23 +33,23 @@ model Company {
 }
 
 model Department {
-  id        String   @id @default(uuid())
-  name      String   @unique // "Engineering", "Sales"
-  jobs      Job[]
+  id   String @id @default(uuid())
+  name String @unique // "Engineering", "Sales"
+  jobs Job[]
 }
 
 model Location {
-  id        String   @id @default(uuid())
-  name      String   @unique // "Remote", "London, UK"
-  jobs      Job[]
+  id   String @id @default(uuid())
+  name String @unique // "Remote", "London, UK"
+  jobs Job[]
 }
 
 model Job {
-  id          String   @id @default(uuid())
-  ashbyId     String   @unique // External ID from Ashby
-  title       String
-  applyUrl    String
-  
+  id       String @id @default(uuid())
+  ashbyId  String @unique // External ID from Ashby
+  title    String
+  applyUrl String
+
   // Relations
   companySlug String
   company     Company @relation(fields: [companySlug], references: [slug])
@@ -57,9 +57,9 @@ model Job {
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id])
 
-  locationId   String?
-  location     Location? @relation(fields: [locationId], references: [id])
-  
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id])
+
   // Compensation
   salaryMin      Float?
   salaryMax      Float?
@@ -68,36 +68,35 @@ model Job {
 
   // Workplace & Employment
   isRemote       Boolean   @default(false)
-  workplaceType  String?   // "Remote", "Hybrid", "OnSite"
-  employmentType String?   // "FullTime", "PartTime", "Contract", "Intern", "Temporary"
+  workplaceType  String? // "Remote", "Hybrid", "OnSite"
+  employmentType String? // "FullTime", "PartTime", "Contract", "Intern", "Temporary"
   publishedAt    DateTime?
   isListed       Boolean   @default(true)
 
   // Structured Address
-  country        String?
-  region         String?
-  city           String?
-  postalAddress  Json?
+  country       String?
+  region        String?
+  city          String?
+  postalAddress Json?
 
   // Raw Data & Metadata
   metadata    Json
-  contentHash String   
-  
+  contentHash String
+
   active     Boolean   @default(true)
   lastSeenAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
-  
+
   // Index for efficient filtering
-  @@index([companySlug])
+  @@index([active, isListed, publishedAt(sort: Desc), createdAt(sort: Desc), id])
+  @@index([active, isListed, workplaceType, publishedAt(sort: Desc)])
+  @@index([active, isListed, employmentType, publishedAt(sort: Desc)])
+  @@index([active, isListed, country, publishedAt(sort: Desc)])
+  @@index([companySlug, active])
   @@index([departmentId])
   @@index([locationId])
-  @@index([active])
   @@index([active, lastSeenAt])
   @@index([isRemote])
-  @@index([workplaceType])
-  @@index([employmentType])
-  @@index([country])
   @@index([city])
-  @@index([publishedAt])
 }
