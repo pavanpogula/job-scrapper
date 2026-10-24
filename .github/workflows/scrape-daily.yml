@@ -134,3 +134,83 @@ jobs:
       - name: Propagate scraper exit code
         if: steps.scrape.outputs.exit_code == '1'
         run: exit 1
+
+  fixer:
+    name: Autonomous Bugfixer
+    needs: scrape
+    if: always() && needs.scrape.outputs.actionable == 'true' && inputs.skip_fixer != true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: fixer
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci && npm --prefix job-scrapper-ui ci && npx prisma generate
+
+      - name: Download scrape report artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: scrape-report-${{ needs.scrape.outputs.run_id }}
+          path: output/reports
+
+      - name: Checkout fix branch
+        run: git checkout -b "auto-fix/${{ needs.scrape.outputs.run_id }}"
+
+      - name: Claude fixer
+        if: env.ANTHROPIC_API_KEY != ''
+        uses: anthropics/claude-code-action@v1
+        env:
+          CLAUDE_BRANCH: auto-fix/${{ needs.scrape.outputs.run_id }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          prompt: |
+            /fix-from-error-report output/reports/*/${{ needs.scrape.outputs.run_id }}.issues.json (full report: same folder, <runId>.json)
+            Do not push. Do not change branches. Stop after at most 3 issues.
+          claude_args: |
+            --max-turns 60
+            --max-budget-usd 5
+            --permission-mode dontAsk
+            --allowedTools "Read,Edit,Write,Grep,Glob,Bash(npx tsc --noEmit -p .),Bash(npm run lint),Bash(npm test),Bash(npm test *),Bash(npx jest *),Bash(npm run verify:ui),Bash(npm run docs:generate),Bash(git status*),Bash(git diff*),Bash(git log*),Bash(git add *),Bash(git commit *)"
+
+      - name: Deterministic gate
+        run: npx tsc --noEmit -p . && npx tsc --noEmit -p tsconfig.test.json && npm run lint && npm test && npm run verify:ui && npm run docs:generate
+
+      - name: Generate GitHub App token
+        if: env.FIXER_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@v3
+        id: app
+        env:
+          FIXER_APP_CLIENT_ID: ${{ secrets.FIXER_APP_CLIENT_ID }}
+        with:
+          client-id: ${{ secrets.FIXER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FIXER_APP_PRIVATE_KEY }}
+
+      - name: Push branch and open PR
+        if: steps.app.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: scripts/ci/open-fix-pr.sh "${{ needs.scrape.outputs.run_id }}"
+
+      - name: Record failed fix attempt
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/ci/record-fix-attempt.sh "${{ needs.scrape.outputs.run_id }}"

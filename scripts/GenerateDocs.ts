@@ -43,7 +43,7 @@ function getFileIcon(filePath: string): { icon: string; iconClass: string } {
 }
 
 // Directories to exclude from scanning
-const EXCLUDED_DIRS = ['node_modules', 'dist', '.git', 'docs', 'output', '.vscode', 'apikeys', 'job-scrapper-ui', 'web'];
+const EXCLUDED_DIRS = ['node_modules', 'dist', '.git', 'docs', 'output', '.vscode', 'apikeys', 'job-scrapper-ui', 'web', '.agents', '.claude'];
 
 // Auto-discover all TypeScript and Prisma files
 function discoverFiles(dir: string, baseDir: string = dir): { path: string; icon: string; iconClass: string }[] {

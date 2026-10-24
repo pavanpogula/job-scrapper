@@ -156,17 +156,81 @@ stateDiagram-v2
 
 ---
 
-## 6. Self-Healing Fix Loop (Planned: P4-T03)
-*See `documentation/plan/02-target-architecture.md` §7 and `documentation/plan/07-error-report-and-self-healing-loop.md`.*
+## 6. Self-Healing Fix Loop
 
-## 7. Agent Routing Table (Planned: P4-T04)
-*See `documentation/agents/roster.md`.*
+```mermaid
+flowchart TD
+  A[Daily scrape run] --> B[Error doc v2: JSON, per run]
+  B --> C{report:classify → issues + runId.md + history<br/>Actionable?}
+  C -- no --> Z[Done: artifact + step summary]
+  C -- infra/auth issue --> I[Open/append GitHub issue 'scrape-alert'; no fixer]
+  C -- yes --> D{Open auto-fix PR for same fingerprint?}
+  D -- yes --> E[Comment on existing PR; stop]
+  D -- no --> F[Fixer job: Claude Code reads CHANGELOG + decisions + BF invariants + 09 + error doc]
+  F --> G[Branch auto-fix/<runId>: fix + tests + ADR + CHANGELOG Unreleased + run summary]
+  G --> H{Deterministic gate: tsc, lint, test, UI checks}
+  H -- fail --> K[Record failed attempt; after 2 → label needs-human]
+  H -- pass --> J[Push branch + open PR via GitHub App token]
+  J --> O[Owner reviews + merges]
+  O --> N[Next run uses fixed code; next fixer reads the new CHANGELOG/ADR first]
+```
 
-## 8. Cross-Component Invariants (Planned: P4-T05)
-*See `documentation/plan/02-target-architecture.md` §8.*
+Full details and the 9-step workflow are documented in [`documentation/16-self-healing-loop.md`](./16-self-healing-loop.md).
 
-## 9. Failure-Mode Matrix (Planned: P4-T05)
-*See `documentation/plan/02-target-architecture.md` §9.*
+---
 
-## 10. Architectural Glossary (Planned: P4-T05)
-*See `documentation/plan/02-target-architecture.md` §10.*
+## 7. Agent Routing Table
+
+Agents coordinate work according to specialized domains defined in [`documentation/agents/roster.md`](./agents/roster.md):
+
+| Role | Scope / Allowed Paths | Primary Responsibilities |
+|---|---|---|
+| `scraper-architect` | Read-only across codebase; writes `documentation/plan/**`, ADRs | System design, architectural evolution, and performance modeling |
+| `run-reviewer` | `output/reports/**`, `documentation/runs/**` | Triaging scrape run telemetry, distinguishing noise from actionable S1/S2 regressions |
+| `scraper-bugfixer` | `src/lib/**`, `src/core/**`, `src/database/**`, `tests/**`, `documentation/decisions/**`, `CHANGELOG.md` | Diagnosing root causes, implementing bug fixes, and authoring regression invariant guards |
+| `api-cache` | `src/api/**`, `src/cache/**`, `api/**`, `vercel.json`, `tests/unit/{ApiServer,ReadThrough,Breaker}*` | Express API, Upstash Redis caching, circuit breakers, rate limits, edge CDN headers |
+| `frontend` | `job-scrapper-ui/**` | React 19 UI, Redux Toolkit, accessibility, search UX, and Tailwind styling |
+| `docs-release-keeper` | `documentation/**`, `CHANGELOG.md`, `README.md`, `AGENTS.md` | Maintaining documentation sync, release changelogs, agent prompts, and explorer tools |
+
+---
+
+## 8. Cross-Component Invariants
+
+| Invariant | Owner | Guarding Test |
+|---|---|---|
+| Postgres is written before cache; cache is built only from verified DB snapshot. | scraper / publisher | `tests/unit/Publisher.test.ts` |
+| `jc:v1:active_gen` is flipped only after generation manifest is written & sanity drop check passes (< 30%). | publisher | `tests/unit/Publisher.test.ts` |
+| Cache errors never fail API requests; API falls back to Postgres with `X-Cache: BYPASS`. | API / ReadThrough | `tests/unit/ReadThrough.test.ts` |
+| Payload schema and ordering are byte-identical whether served from cache or Postgres. | API + publisher | `src/api/contract.ts`, `tests/unit/ReadThrough.test.ts` |
+| `salaryInterval` is ignored unless `salaryMin` or `salaryMax` is specified. | API + UI | `tests/unit/ApiServer.test.ts` |
+| List queries never select `metadata`. | API / queries | `src/api/db/queries.ts` |
+| Agents never push to `main` and never merge. Only CI deterministic steps push feature/fix branches. | fixer workflow | `scripts/ci/check-fixer-scope.sh` |
+| Agent instructions have one canonical copy; tool shells point to it. | docs-release-keeper | `tests/unit/AgentShells.test.ts` |
+
+---
+
+## 9. Failure-Mode Matrix
+
+| Failure Mode | Scraper Behavior | API Behavior | User Experience | Alert Mechanism |
+|---|---|---|---|---|
+| **Upstream 5xx on Ashby** | Exponential backoff, fallback to GraphQL, record `api_error` | Unaffected | Jobs from prior scrape remain available | Actionable only if failure rate > 5% |
+| **Worker process crash / timeout** | Watchdog terminates with SIGTERM, partial report saved, exit 1, no publish | Serves previous active cache generation | Uninterrupted browsing | GitHub Issue `scrape-alert` + fixer job |
+| **Cache publication failure** | Exit 2; DB is updated; old cache generation remains active | Serves previous active cache generation | Uninterrupted browsing | Actionable after 2 consecutive failures |
+| **Upstash Redis outage / archived** | Publication fails (exit 2) | Circuit breaker opens; reads bypass to PostgreSQL | Normal latency (< 150 ms) | `/health` indicates `cache.state=unreachable` |
+| **Redis command budget exhausted** | Publication skipped | Circuit breaker opens; reads bypass to PostgreSQL | Normal latency | `/health` reports `budget_exhausted` |
+| **Neon PostgreSQL outage** | Scrape halts (exit 1) | Cache HITs succeed; cache MISSes return 503 | Cached pages work; uncached pages 503 | GitHub Issue `scrape-alert` |
+| **Fixer cannot fix issue** | Test gate fails; attempts counter incremented | Unaffected | Unaffected | `needs-human` label applied on 2nd failure |
+
+---
+
+## 10. Architectural Glossary
+
+| Term | Definition |
+|---|---|
+| **Double-Buffered Generation** | Two alternating cache key spaces (`gen:A` and `gen:B`) swapped atomically via pointer key `jc:v1:active_gen`. |
+| **Sanity Gate** | Publisher safety check preventing cache swap if active job count drops by > 30% without explicit override. |
+| **Detail Shards** | 8 hash-partitioned Redis keys (`jc:v1:details:<0..7>`) storing full job description payloads, indexed via CRC32. |
+| **Circuit Breaker** | API fail-safe tracking Redis errors/timeouts; opens after 3 consecutive failures to route directly to DB. |
+| **DbGuard** | Serverless Express middleware limiting concurrent database queries to 3 with queue depth of 10 and 503 backpressure. |
+| **Error Fingerprint** | Deterministic SHA-256 hash identifying recurring scrape error categories, fields, and company targets. |
+

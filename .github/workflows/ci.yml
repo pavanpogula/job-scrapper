@@ -5,10 +5,12 @@ on:
     branches:
       - main
       - 'plan/**'
+      - 'auto-fix/**'
   push:
     branches:
       - main
       - 'plan/**'
+      - 'auto-fix/**'
   workflow_dispatch:
 
 concurrency:
@@ -59,3 +61,7 @@ jobs:
 
       - name: Verify docs generation
         run: npm run docs:generate
+
+      - name: Check fixer scope (auto-fix branches)
+        if: startsWith(github.head_ref || github.ref_name, 'auto-fix/')
+        run: scripts/ci/check-fixer-scope.sh

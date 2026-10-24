@@ -1,8 +1,7 @@
 {
   "name": "job-scrapper",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "1.3.0",
+  "description": "Batch TypeScript CLI scraper for Ashby ATS feeding Neon PostgreSQL & Upstash Redis, Express REST API on Vercel, and React 19 UI.",
   "scripts": {
     "test": "jest",
     "seed": "npx ts-node src/utils/Seed.ts",

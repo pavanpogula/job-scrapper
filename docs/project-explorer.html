@@ -533,6 +533,12 @@
                         <span>unit</span>
                     </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_AgentShells_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>AgentShells.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_ApiServer_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ApiServer.test.ts</span>
@@ -620,6 +626,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_ErrorTrackerV2_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ErrorTrackerV2.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_FixerScope_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>FixerScope.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -2442,6 +2454,37 @@
     ],
     "functions": []
   },
+  "tests_unit_AgentShells_test_ts": {
+    "name": "AgentShells.test.ts",
+    "path": "tests/unit/AgentShells.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Parity test validating agent shells, roles, skills symlinks, rules, and file size budgets across Claude Code and Google Antigravity environments.",
+    "tags": [
+      "parity",
+      "agents",
+      "claude",
+      "antigravity",
+      "rules",
+      "skills"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "parseFrontmatter()",
+        "desc": "Extracts frontmatter string values from markdown text."
+      }
+    ]
+  },
   "tests_unit_ApiServer_test_ts": {
     "name": "ApiServer.test.ts",
     "path": "tests/unit/ApiServer.test.ts",
@@ -2794,6 +2837,30 @@
       "ErrorTracker",
       "SchemaV2",
       "Telemetry"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_FixerScope_test_ts": {
+    "name": "FixerScope.test.ts",
+    "path": "tests/unit/FixerScope.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test verifying that check-fixer-scope.sh correctly allows permitted files and rejects forbidden modifications.",
+    "tags": [
+      "fixer",
+      "scope",
+      "security",
+      "ci"
     ],
     "info": [
       {

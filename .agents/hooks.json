@@ -1,0 +1,15 @@
+{
+  "postCommitReminder": {
+    "PostInvocation": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$WORKSPACE_ROOT\"/scripts/hooks/post-commit-reminder.sh --antigravity",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

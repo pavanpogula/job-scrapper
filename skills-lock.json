@@ -18,6 +18,12 @@
       "sourceType": "github",
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "89496d5dd00f4810205f351759594fc2742bf8eea85a2f2b2d1de59f4bd91576"
+    },
+    "impeccable": {
+      "source": "impeccable/impeccable",
+      "sourceType": "github",
+      "skillPath": "skills/impeccable/SKILL.md",
+      "computedHash": "88e9a46a91b6ddd1059f03f578bd0f9bbe6d212d6a395124379b9bb5c97c5cf2"
     }
   }
 }

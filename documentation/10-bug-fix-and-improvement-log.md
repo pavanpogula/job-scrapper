@@ -8,25 +8,9 @@
 
 ---
 
-## 🤖 Bug-Fix Agent Workflow (Mandatory 6-Step Loop)
+## 🤖 Bug-Fix Agent Protocol
 
-When you are started to investigate errors or improve the scraper, follow this loop:
-
-1. **Inspect the latest run telemetry & errors**
-   - Read `output/latest-error-report.json` (and `output/error-report_YYYY-MM-DD.json`. Same-day runs overwrite it, see 09 #36).
-   - Check `summary` (`companiesNotFound`, `jobsFilteredOut`, `jobsSanitized`, `dbErrors`, `graphqlFallbacksUsed`, `rateLimitsEncountered`) and look at `events[]` (at most 500) for the exact `companySlug`, `jobId`, `field`, `category` and `message`.
-   - Event categories actually emitted: `graphql_fallback`, `validation_issue`, `db_error`. `api_error` is declared but never emitted (09 #33), so transient fetch failures do **not** appear in the report.
-2. **Check the Regression Invariants** below (`BF-001` … `BF-010`) so your change does not break an earlier fix. Also read [`09-known-issues-and-tech-debt.md`](./09-known-issues-and-tech-debt.md).
-3. **Implement the fix** in the relevant module (`src/lib/Sanitizer.ts`, `src/lib/AshbyClient.ts`, `src/core/Scraper.ts`, `src/discovery/CdxWorker.ts`, …).
-4. **Add unit & E2E tests and verify**
-   - Add a unit test in `tests/unit/` and/or an E2E test in `tests/e2e/` that covers the exact payload you observed.
-   - Run:
-     ```bash
-     npx tsc --noEmit -p . && npm run lint && npm test && npm run docs:generate
-     ```
-   - Everything must pass with `0` TypeScript and `0` ESLint errors. `tsc` and `lint` cover only `src/` (09 #44), so check test files yourself.
-5. **Log the fix & sync docs**: add a `BF-XXX` entry below in the same format (Symptom, Root cause & fix, Implemented in, Regression Invariant, Guarding tests). Then update `AGENTS.md`, `README.md`, `09-known-issues-and-tech-debt.md` and any other affected `documentation/*.md`.
-6. **Commit with a detailed description**: stage code, tests, agent files and docs (never `.env`, `apikeys/` or `output/`) and write a Conventional Commit that covers the symptom, root cause, fix, tests and doc updates.
+All bug-fix workflows follow the mandatory 9-step self-healing protocol documented in [`documentation/16-self-healing-loop.md`](./16-self-healing-loop.md). This registry serves as the authoritative checklist of Regression Invariants (`BF-001` through `BF-018+`). Every fix must check and preserve all invariants below before committing.
 
 ---
 

@@ -29,7 +29,7 @@ Full details in `documentation/agents/roster.md` (planned: P4-T04):
 | `docs-release-keeper` | Maintains documentation integrity, stamps, and release docs. |
 
 ## Self-Healing Loop
-Every scrape writes a v2 error report partitioned by month (`output/reports/<YYYY-MM>/<runId>.json`) and updated to `output/latest-<mode>.json`. Actionable issues trigger automated investigation, a regression-guarded fix on a branch, documentation of decisions in `documentation/decisions/` (planned: P4-T01), and release notes in `CHANGELOG.md` (planned: P4-T02). See `documentation/16-self-healing-loop.md` (planned: P4-T03).
+Every scrape writes a v2 error report partitioned by month (`output/reports/<YYYY-MM>/<runId>.json`) and updated to `output/latest-<mode>.json`. Actionable issues trigger automated investigation, a regression-guarded fix on a branch, documentation of decisions in `documentation/decisions/`, and release notes in `CHANGELOG.md`. All fixes must strictly adhere to the 9-step Bug-Fix Agent Protocol detailed in `documentation/16-self-healing-loop.md`.
 
 ## Documentation Map
 | Topic | Document |
