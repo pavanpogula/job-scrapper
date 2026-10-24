@@ -64,6 +64,21 @@ const baseQueryWithRateLimit: BaseQueryFn<string | FetchArgs, unknown, FetchBase
   return rawBaseQuery(args, api, extraOptions);
 };
 
+export function buildJobsQueryParams(params: JobsQueryParams): string {
+  const queryParams = new URLSearchParams();
+  Object.entries(params)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .forEach(([key, value]) => {
+      if (value !== undefined && value !== null && (value as unknown) !== '' && (value as unknown) !== false) {
+        if (key === 'salaryInterval' && (params.salaryMin === undefined || params.salaryMin === null || isNaN(Number(params.salaryMin)))) {
+          return;
+        }
+        queryParams.append(key, String(value));
+      }
+    });
+  return queryParams.toString();
+}
+
 export const jobsApi = createApi({
   reducerPath: 'jobsApi',
   // Keep unused cache entries in the Redux store for 10 minutes (600 seconds)
@@ -76,17 +91,7 @@ export const jobsApi = createApi({
   endpoints: (builder) => ({
     getJobs: builder.query<JobsResponse, JobsQueryParams>({
       keepUnusedDataFor: 600,
-      query: (params) => {
-        const queryParams = new URLSearchParams();
-        Object.entries(params)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .forEach(([key, value]) => {
-            if (value !== undefined && value !== null && value !== '' && value !== false) {
-              queryParams.append(key, String(value));
-            }
-          });
-        return `jobs?${queryParams.toString()}`;
-      },
+      query: (params) => `jobs?${buildJobsQueryParams(params)}`,
       providesTags: ['Jobs'],
     }),
 

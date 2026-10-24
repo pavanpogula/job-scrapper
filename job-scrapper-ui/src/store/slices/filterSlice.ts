@@ -8,7 +8,7 @@ const initialState: JobsQueryParams = {
   country: '',
   hasSalary: false,
   salaryMin: undefined,
-  salaryInterval: '1 YEAR',
+  salaryInterval: undefined,
   sortBy: 'publishedAt',
   sortOrder: 'desc',
   page: 1,
