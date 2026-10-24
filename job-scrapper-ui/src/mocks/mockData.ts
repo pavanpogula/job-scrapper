@@ -130,6 +130,7 @@ export const MOCK_JOBS: JobListItem[] = [
 
 export const MOCK_JOB_DETAIL: JobDetail = {
   ...MOCK_JOBS[0],
+  active: true,
   jobUrl: 'https://jobs.ashbyhq.com/deel/7fe8abc1-deel-sr-fe',
   team: 'Design Systems & Core Experience',
   descriptionPlain: `About Deel:

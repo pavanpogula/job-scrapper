@@ -45,5 +45,6 @@ Every scrape writes a v2 error report partitioned by month (`output/reports/<YYY
 | Bug fix log & invariants | `documentation/10-bug-fix-and-improvement-log.md` |
 | Testing guide & invariant guards | `documentation/11-testing-guide.md` |
 | Backend API & cache read-through | `documentation/12-backend-api.md` |
+| Frontend UI & routes | `documentation/13-frontend-ui.md` |
 | Deployment & operations runbook | `documentation/14-deployment-and-operations.md` |
 | Enhancement plan (roadmap) | `documentation/plan/00-README.md` |

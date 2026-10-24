@@ -10,6 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Frontend URL Filter Synchronization & Mobile Drawer Draft:** Bidirectional URL query synchronization (`useJobFilters`), mobile filter drawer draft applying once, scroll-to-top with h1 focus on page change, and server-aligned sort options (P5-T01, FE-03, FE-07, FE-16).
+- **Shared QueryState Component & 429 Auto-Refetch:** Added `<QueryState>` handling loading indicators, 404 states, 5xx retries, and automatic countdown refetch based on `Retry-After` headers (P5-T02, FE-05, FE-06).
+- **Companies Directory Pagination & Dynamic Total:** Paginated companies view with server-side paging, dynamic total count, and empty state search feedback (P5-T03, FE-04).
+- **Dynamic Live Telemetry:** Replaced static job and company count literals with live metrics from `GET /v1/meta` across Header and navigation (P5-T04, FE-11).
+- **SEO & Fallback Routing:** Added React 19 native `<title>` and `<meta>` tags across all routes, `public/robots.txt`, and dedicated 404 `NotFoundPage` (P5-T06, FE-13).
+- **Performance Optimization & Bundle Chunking:** Lazy route loading, MUI and Redux vendor manualChunks chunk splitting, self-hosted `@fontsource-variable/geist` fonts, and dark theme initialization (P5-T08, FE-20, FE-21, FE-22, FE-24).
+- **UI Architecture Documentation:** Complete documentation of UI components, routing, Redux/RTK data flow, and testing in `documentation/13-frontend-ui.md` (P5-T09, DOC-03).
+- **Contract Tests & Fixtures:** Added `src/test/contract.test.ts` and `src/test/fixtures/` asserting strict parity with backend response schemas (P5-T10, FE-17, FE-23).
+- **Weekly Discovery Workflow & Paging:** Added `.github/workflows/discover-weekly.yml` and expanded CommonCrawl / CDX pagination in `src/discovery/CdxWorker.ts` (P5-T11, OPS-10).
+
+### Changed
+- **Removed Client Rate Gate (ADR-0011):** Deleted `rateLimitSlice.ts` and client-side 10 req/min request throttling in RTK Query, relying exclusively on Vercel WAF rules and backend `DbGuard` backpressure (P5-T02, FE-05).
+- **Accessibility & Touch Targets:** Enforced 44px minimum touch targets on mobile viewports, one h1 per page, `role="status"` on count elements, and proper aria attributes (P5-T05, FE-12, FE-25).
+
+### Fixed
+- **DOMPurify Hook & Closed-Job Banner (BF-013, FE-14, FE-15):** Implemented strict DOMPurify hook setting `target="_blank" rel="noopener noreferrer nofollow ugc"` and stripping inline styles; displayed closed-job banner and disabled both desktop and mobile Apply buttons when `active: false`. Guarded by `job-scrapper-ui/src/test/sanitize.test.ts`.
 - **Double-Buffered Cache Generations (`jc:v1:*`):** Atomic cache publication pipeline swapping active generation pointers upon verified completion with 30% drop sanity gate (P2-T01, P2-T02, P2-T04, ADR-0003, GAP-CAC-02).
 - **API Read-Through Service:** Express read-through service for jobs, companies, facets, and metadata backed by Upstash Redis with in-process LRU cache and circuit breaker fallback to Neon PostgreSQL (P2-T05, P2-T06, ADR-0001, ADR-0002, BF-018, GAP-API-03).
 - **Detail Sharding & Negative Caching:** Detail queries mapped to 8 CRC32 shards with index fallback and 10-minute in-process negative LRU caching for confirmed 404 lookups (P2-T06, BF-018).

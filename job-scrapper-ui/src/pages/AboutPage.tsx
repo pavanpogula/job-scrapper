@@ -7,9 +7,14 @@ import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 
 export const AboutPage: React.FC = () => {
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <title>About | Ashby Job Index</title>
+      <meta
+        name="description"
+        content="About the open public index of direct Ashby ATS job postings."
+      />
       <Box sx={{ mb: 5 }}>
-        <Typography variant="h4" sx={{ fontSize: { xs: '1.75rem', sm: '2.25rem' }, fontWeight: 700, mb: 1.5 }}>
+        <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '1.75rem', sm: '2.25rem' }, fontWeight: 700, mb: 1.5 }}>
           About the Ashby Job Index
         </Typography>
         <Typography variant="body1" color="text.secondary">
@@ -70,11 +75,11 @@ export const AboutPage: React.FC = () => {
               <Stack direction="row" spacing={1.5} sx={{ mb: 1, alignItems: 'center' }}>
                 <StorageOutlinedIcon color="primary" />
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                  34,000+ Verified Listings
+                  Comprehensive Verified Listings
                 </Typography>
               </Stack>
               <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.6, display: 'block' }}>
-                99.94% of roles carry full HTML/plain descriptions, published dates, and structured postal addresses.
+                Extensive coverage of open roles carrying full descriptions, published dates, and structured compensation.
               </Typography>
             </Paper>
 
@@ -104,3 +109,5 @@ export const AboutPage: React.FC = () => {
     </Container>
   );
 };
+
+export default AboutPage;

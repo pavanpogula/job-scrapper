@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Container,
@@ -18,7 +18,7 @@ import {
   IconButton,
   Drawer,
   Badge,
-  CircularProgress,
+  LinearProgress,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
@@ -29,18 +29,10 @@ import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import { useAppDispatch, useAppSelector } from '../store';
-import {
-  setSearch,
-  setWorkplaceType,
-  setEmploymentType,
-  setCountry,
-  setHasSalary,
-  setPage,
-  resetFilters,
-} from '../store/slices/filterSlice';
 import { useGetJobsQuery, useGetFacetsQuery } from '../store/api/jobsApi';
-import { WorkplaceType, EmploymentType } from '../types/api';
+import { WorkplaceType, EmploymentType, JobsQueryParams } from '../types/api';
+import { useJobFilters } from '../hooks/useJobFilters';
+import { QueryState } from '../components/QueryState';
 
 export function formatCountryOption(code: string): string {
   try {
@@ -50,160 +42,227 @@ export function formatCountryOption(code: string): string {
   }
 }
 
+export function formatSalary(min?: number | null, max?: number | null, currency?: string | null, interval?: string | null): string | null {
+  if (!min && !max) return null;
+  const curr = currency || '$';
+  const formatNum = (num: number) => {
+    if (num >= 1000) return `${Math.round(num / 1000)}k`;
+    return num.toLocaleString();
+  };
+
+  const inter = interval ? `/${interval.toLowerCase().replace('1 ', '')}` : '';
+
+  if (min && max) {
+    if (min === max) return `${curr}${formatNum(min)}${inter}`;
+    return `${curr}${formatNum(min)} – ${curr}${formatNum(max)}${inter}`;
+  }
+  if (min) return `From ${curr}${formatNum(min)}${inter}`;
+  if (max) return `Up to ${curr}${formatNum(max)}${inter}`;
+  return null;
+}
+
 export const BrowsePage: React.FC = () => {
-  const dispatch = useAppDispatch();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
-  const filters = useAppSelector((state) => state.filters);
-  const { data, isLoading, isFetching, error } = useGetJobsQuery(filters);
-  const { data: facetsData } = useGetFacetsQuery();
-
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const { filters, updateUrl, clearAllFilters } = useJobFilters();
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
-  // Keep local search in sync with external filter resets
+  // Local draft for mobile drawer (applies once on submit)
+  const [draftFilters, setDraftFilters] = useState<Partial<JobsQueryParams>>(filters);
+
+  // Sync search input state when URL filter changes
   useEffect(() => {
     setSearchTerm(filters.search || '');
   }, [filters.search]);
 
-  // Debounce search dispatch by 400ms to avoid firing requests on every keystroke
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm !== (filters.search || '')) {
-        dispatch(setSearch(searchTerm));
+  // Query jobs and facets
+  const { data, isLoading, isFetching, error, refetch } = useGetJobsQuery(filters);
+  const { data: facetsData } = useGetFacetsQuery();
+
+  // Scroll to top and focus heading on page change
+  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
+    updateUrl({ page: value });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    headingRef.current?.focus();
+  };
+
+  const handleOpenDrawer = () => {
+    setDraftFilters({ ...filters });
+    setMobileFilterOpen(true);
+  };
+
+  const handleApplyDraft = () => {
+    updateUrl({ ...draftFilters, page: 1 });
+    setMobileFilterOpen(false);
+  };
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.workplaceType) count++;
+    if (filters.employmentType) count++;
+    if (filters.country) count++;
+    if (filters.hasSalary) count++;
+    return count;
+  }, [filters]);
+
+  const renderFilterControls = (isDraft = false) => {
+    const activeState = isDraft ? draftFilters : filters;
+    const setDraftOrUrl = (key: keyof JobsQueryParams, val: any) => {
+      if (isDraft) {
+        setDraftFilters((prev) => ({ ...prev, [key]: val }));
+      } else {
+        updateUrl({ [key]: val, page: 1 });
       }
-    }, 400);
+    };
 
-    return () => clearTimeout(timer);
-  }, [searchTerm, filters.search, dispatch]);
-
-  // Active filter count for badge
-  const activeFilterCount = [
-    Boolean(filters.workplaceType),
-    Boolean(filters.employmentType),
-    Boolean(filters.country),
-    Boolean(filters.hasSalary),
-  ].filter(Boolean).length;
-
-  const formatSalary = (min?: number | null, max?: number | null, currency?: string | null, interval?: string | null) => {
-    if (!min && !max) return null;
-    const curr = currency || 'USD';
-    const sym = curr === 'USD' ? '$' : curr === 'EUR' ? '€' : curr === 'GBP' ? '£' : `${curr} `;
-    const intLabel = interval === '1 HOUR' ? '/hr' : interval === '1 MONTH' ? '/mo' : '/yr';
-
-    if (min && max) {
-      if (min === max) return `${sym}${min.toLocaleString()}${intLabel}`;
-      return `${sym}${min.toLocaleString()} – ${sym}${max.toLocaleString()}${intLabel}`;
-    }
-    if (min) return `From ${sym}${min.toLocaleString()}${intLabel}`;
-    return `Up to ${sym}${max!.toLocaleString()}${intLabel}`;
-  };
-
-  const formatDate = (isoString?: string | null) => {
-    if (!isoString) return 'Recently';
-    const date = new Date(isoString);
-    const diffMs = Date.now() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 30) return `${diffDays}d ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const renderFilterControls = () => (
-    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ alignItems: 'stretch' }}>
-      {/* Workplace Type */}
-      <FormControl size="small" sx={{ minWidth: 150 }}>
-        <InputLabel id="workplace-select-label">Workplace</InputLabel>
-        <Select
-          labelId="workplace-select-label"
-          value={filters.workplaceType || ''}
-          label="Workplace"
-          onChange={(e) => dispatch(setWorkplaceType(e.target.value as WorkplaceType | ''))}
-        >
-          <MenuItem value="">All Workplaces</MenuItem>
-          <MenuItem value="Remote">Remote only</MenuItem>
-          <MenuItem value="Hybrid">Hybrid</MenuItem>
-          <MenuItem value="OnSite">On-site</MenuItem>
-        </Select>
-      </FormControl>
-
-      {/* Employment Type */}
-      <FormControl size="small" sx={{ minWidth: 150 }}>
-        <InputLabel id="employment-select-label">Employment</InputLabel>
-        <Select
-          labelId="employment-select-label"
-          value={filters.employmentType || ''}
-          label="Employment"
-          onChange={(e) => dispatch(setEmploymentType(e.target.value as EmploymentType | ''))}
-        >
-          <MenuItem value="">All Employments</MenuItem>
-          <MenuItem value="FullTime">Full-time</MenuItem>
-          <MenuItem value="Contract">Contract</MenuItem>
-          <MenuItem value="PartTime">Part-time</MenuItem>
-          <MenuItem value="Intern">Internship</MenuItem>
-        </Select>
-      </FormControl>
-
-      {/* Country */}
-      <FormControl size="small" sx={{ minWidth: 140 }}>
-        <InputLabel id="country-select-label">Country</InputLabel>
-        <Select
-          labelId="country-select-label"
-          value={filters.country || ''}
-          label="Country"
-          onChange={(e) => dispatch(setCountry(e.target.value))}
-        >
-          <MenuItem value="">All Countries</MenuItem>
-          {filters.country && !facetsData?.countries?.some((c) => c.value === filters.country) && (
-            <MenuItem value={filters.country}>
-              {formatCountryOption(filters.country)}
-            </MenuItem>
-          )}
-          {facetsData?.countries?.map((c) => (
-            <MenuItem key={c.value} value={c.value}>
-              {formatCountryOption(c.value)}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {/* Salary Filter Toggle */}
-      <Button
-        variant={filters.hasSalary ? 'contained' : 'outlined'}
-        color={filters.hasSalary ? 'secondary' : 'inherit'}
-        size="small"
-        startIcon={<AttachMoneyOutlinedIcon fontSize="small" />}
-        onClick={() => dispatch(setHasSalary(!filters.hasSalary))}
-        sx={{
-          whiteSpace: 'nowrap',
-          borderColor: filters.hasSalary ? 'transparent' : 'divider',
-          color: filters.hasSalary ? '#fff' : 'text.primary',
-        }}
+    return (
+      <Stack
+        direction={isDraft ? 'column' : 'row'}
+        spacing={isDraft ? 2.5 : 1.5}
+        sx={{ alignItems: isDraft ? 'stretch' : 'center', flexWrap: 'wrap', gap: 1 }}
       >
-        Published Salary
-      </Button>
+        {/* Workplace Type */}
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel id="workplace-select-label">Workplace</InputLabel>
+          <Select
+            labelId="workplace-select-label"
+            value={activeState.workplaceType || ''}
+            label="Workplace"
+            onChange={(e) => setDraftOrUrl('workplaceType', e.target.value as WorkplaceType | '')}
+          >
+            <MenuItem value="">All Workplaces</MenuItem>
+            <MenuItem value="Remote">Remote</MenuItem>
+            <MenuItem value="OnSite">On-Site</MenuItem>
+            <MenuItem value="Hybrid">Hybrid</MenuItem>
+          </Select>
+        </FormControl>
 
-      {/* Reset Filters */}
-      {(filters.search || filters.workplaceType || filters.employmentType || filters.country || filters.hasSalary) && (
+        {/* Employment Type */}
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel id="employment-select-label">Commitment</InputLabel>
+          <Select
+            labelId="employment-select-label"
+            value={activeState.employmentType || ''}
+            label="Commitment"
+            onChange={(e) => setDraftOrUrl('employmentType', e.target.value as EmploymentType | '')}
+          >
+            <MenuItem value="">All Types</MenuItem>
+            <MenuItem value="FullTime">Full Time</MenuItem>
+            <MenuItem value="PartTime">Part Time</MenuItem>
+            <MenuItem value="Contract">Contract</MenuItem>
+            <MenuItem value="Intern">Internship</MenuItem>
+          </Select>
+        </FormControl>
+
+        {/* Country */}
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel id="country-select-label">Country</InputLabel>
+          <Select
+            labelId="country-select-label"
+            value={activeState.country || ''}
+            label="Country"
+            onChange={(e) => setDraftOrUrl('country', e.target.value)}
+          >
+            <MenuItem value="">All Countries</MenuItem>
+            {activeState.country && !facetsData?.countries?.some((c) => c.value === activeState.country) && (
+              <MenuItem value={activeState.country}>
+                {formatCountryOption(activeState.country)}
+              </MenuItem>
+            )}
+            {facetsData?.countries?.map((c) => (
+              <MenuItem key={c.value} value={c.value}>
+                {formatCountryOption(c.value)}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Sort Select */}
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel id="sort-select-label">Sort By</InputLabel>
+          <Select
+            labelId="sort-select-label"
+            value={`${activeState.sortBy || 'publishedAt'}-${activeState.sortOrder || 'desc'}`}
+            label="Sort By"
+            onChange={(e) => {
+              const [sortBy, sortOrder] = e.target.value.split('-') as [JobsQueryParams['sortBy'], 'asc' | 'desc'];
+              if (isDraft) {
+                setDraftFilters((prev) => ({ ...prev, sortBy, sortOrder }));
+              } else {
+                updateUrl({ sortBy, sortOrder, page: 1 });
+              }
+            }}
+          >
+            <MenuItem value="publishedAt-desc">Most Recent</MenuItem>
+            <MenuItem value="salary-desc">Highest Salary</MenuItem>
+            <MenuItem value="title-asc">Job Title (A-Z)</MenuItem>
+            <MenuItem value="company-asc">Company (A-Z)</MenuItem>
+          </Select>
+        </FormControl>
+
+        {/* Published Salary Toggle */}
         <Button
-          variant="text"
-          color="inherit"
+          variant={activeState.hasSalary ? 'contained' : 'outlined'}
+          color={activeState.hasSalary ? 'secondary' : 'inherit'}
           size="small"
-          startIcon={<RestartAltIcon fontSize="small" />}
-          onClick={() => dispatch(resetFilters())}
-          sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}
+          aria-pressed={Boolean(activeState.hasSalary)}
+          startIcon={<AttachMoneyOutlinedIcon fontSize="small" />}
+          onClick={() => setDraftOrUrl('hasSalary', !activeState.hasSalary)}
+          sx={{
+            whiteSpace: 'nowrap',
+            borderColor: activeState.hasSalary ? 'transparent' : 'divider',
+            minHeight: { xs: 44, sm: 36 },
+          }}
         >
-          Clear
+          Disclosed Salary
         </Button>
-      )}
-    </Stack>
-  );
+
+        {/* Reset / Clear */}
+        {!isDraft && (filters.search || filters.workplaceType || filters.employmentType || filters.country || filters.hasSalary) && (
+          <Button
+            variant="text"
+            color="inherit"
+            size="small"
+            startIcon={<RestartAltIcon fontSize="small" />}
+            onClick={clearAllFilters}
+            sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}
+          >
+            Clear
+          </Button>
+        )}
+      </Stack>
+    );
+  };
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      {/* React 19 Document Metadata */}
+      <title>Browse Jobs | Ashby Direct ATS Directory</title>
+      <meta
+        name="description"
+        content="Search and filter verified direct applicant tracking jobs across hundreds of companies on Ashby ATS."
+      />
+
+      {/* Screen-reader H1 */}
+      <Typography
+        ref={headingRef}
+        component="h1"
+        variant="h4"
+        tabIndex={-1}
+        sx={{
+          fontSize: { xs: '1.5rem', sm: '2rem' },
+          fontWeight: 800,
+          mb: 2,
+          letterSpacing: '-0.02em',
+          outline: 'none',
+        }}
+      >
+        Verified Ashby Job Postings
+      </Typography>
+
       {/* Search Header */}
       <Box sx={{ mb: 3 }}>
         <Stack spacing={2}>
@@ -215,11 +274,14 @@ export const BrowsePage: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                dispatch(setSearch(searchTerm));
+                updateUrl({ search: searchTerm.trim(), page: 1 });
               }
             }}
-            placeholder="Search 34,000+ jobs by title, company, or keywords..."
+            placeholder="Search verified jobs by title, company, or keywords..."
             slotProps={{
+              htmlInput: {
+                'aria-label': 'Search jobs by title or company',
+              },
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
@@ -230,9 +292,10 @@ export const BrowsePage: React.FC = () => {
                   <InputAdornment position="end">
                     <IconButton
                       size="small"
+                      aria-label="Clear search input"
                       onClick={() => {
                         setSearchTerm('');
-                        dispatch(setSearch(''));
+                        updateUrl({ search: '', page: 1 });
                       }}
                     >
                       <ClearIcon fontSize="small" />
@@ -245,9 +308,7 @@ export const BrowsePage: React.FC = () => {
 
           {/* Responsive Filters Area */}
           {isTablet ? (
-            /* Mobile / Tablet Filter Controls */
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-              {/* Quick Filter Chips */}
               <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', py: 0.5 }}>
                 <Chip
                   label="Remote"
@@ -255,7 +316,8 @@ export const BrowsePage: React.FC = () => {
                   variant={filters.workplaceType === 'Remote' ? 'filled' : 'outlined'}
                   color={filters.workplaceType === 'Remote' ? 'secondary' : 'default'}
                   size="small"
-                  onClick={() => dispatch(setWorkplaceType(filters.workplaceType === 'Remote' ? '' : 'Remote'))}
+                  onClick={() => updateUrl({ workplaceType: filters.workplaceType === 'Remote' ? '' : 'Remote', page: 1 })}
+                  sx={{ minHeight: 36 }}
                 />
                 <Chip
                   label="Salary"
@@ -263,7 +325,8 @@ export const BrowsePage: React.FC = () => {
                   variant={filters.hasSalary ? 'filled' : 'outlined'}
                   color={filters.hasSalary ? 'secondary' : 'default'}
                   size="small"
-                  onClick={() => dispatch(setHasSalary(!filters.hasSalary))}
+                  onClick={() => updateUrl({ hasSalary: !filters.hasSalary, page: 1 })}
+                  sx={{ minHeight: 36 }}
                 />
                 <Chip
                   label="Full-time"
@@ -271,39 +334,37 @@ export const BrowsePage: React.FC = () => {
                   variant={filters.employmentType === 'FullTime' ? 'filled' : 'outlined'}
                   color={filters.employmentType === 'FullTime' ? 'secondary' : 'default'}
                   size="small"
-                  onClick={() => dispatch(setEmploymentType(filters.employmentType === 'FullTime' ? '' : 'FullTime'))}
+                  onClick={() => updateUrl({ employmentType: filters.employmentType === 'FullTime' ? '' : 'FullTime', page: 1 })}
+                  sx={{ minHeight: 36 }}
                 />
               </Stack>
 
-              {/* All Filters Button */}
               <Button
                 variant="outlined"
                 color="inherit"
                 size="small"
+                aria-expanded={mobileFilterOpen}
                 startIcon={
                   <Badge badgeContent={activeFilterCount} color="secondary">
                     <TuneIcon fontSize="small" />
                   </Badge>
                 }
-                onClick={() => setMobileFilterOpen(true)}
-                sx={{ shrink: 0, borderColor: 'divider' }}
+                onClick={handleOpenDrawer}
+                sx={{ shrink: 0, borderColor: 'divider', minHeight: 44 }}
               >
                 Filters
               </Button>
             </Box>
           ) : (
-            /* Desktop Filters Bar */
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              {renderFilterControls()}
-              {isFetching && (
-                <Typography variant="caption" sx={{ fontFamily: "'Geist Mono', monospace", color: 'text.secondary' }}>
-                  Updating...
-                </Typography>
-              )}
+              {renderFilterControls(false)}
             </Box>
           )}
         </Stack>
       </Box>
+
+      {/* Fetching Progress Bar */}
+      {isFetching && <LinearProgress sx={{ height: 2, mb: 1, borderRadius: 1 }} />}
 
       {/* Ledger Count Header */}
       <Box
@@ -316,230 +377,185 @@ export const BrowsePage: React.FC = () => {
           borderColor: 'divider',
         }}
       >
-        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-          Showing <strong>{data?.meta?.total ?? 0}</strong> roles
+        <Typography variant="caption" role="status" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+          Showing <strong>{data?.meta?.total?.toLocaleString() ?? 0}</strong> roles
         </Typography>
         <Typography variant="caption" sx={{ fontFamily: "'Geist Mono', monospace", color: 'text.secondary' }}>
           Page {data?.meta?.page ?? 1} of {data?.meta?.totalPages ?? 1}
         </Typography>
       </Box>
 
-      {/* Jobs List (Ledger Rows) */}
-      <Paper sx={{ borderTop: 0, borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
-        {isLoading ? (
-          <Box sx={{ py: 10, textAlign: 'center' }}>
-            <CircularProgress size={28} sx={{ color: 'secondary.main', mb: 1.5 }} />
-            <Typography variant="body2" color="text.secondary">
-              Querying database ledger...
-            </Typography>
-          </Box>
-        ) : error ? (
-          <Box sx={{ py: 8, textAlign: 'center', px: 2 }}>
-            <Typography
-              variant="body2"
-              sx={{
-                color: (error as any)?.status === 429 ? 'warning.main' : 'error.main',
-                fontWeight: 500,
-              }}
-            >
-              {(error as any)?.status === 429
-                ? ((error as any)?.data?.message || 'Rate limit active: maximum 10 requests per 1 minute. Data is cached locally.')
-                : 'Unable to retrieve listings. Please verify connection or API mode.'}
-            </Typography>
-            {(error as any)?.status === 429 && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                Cached pages and previously viewed listings remain available immediately.
-              </Typography>
-            )}
-          </Box>
-        ) : data?.data?.length === 0 ? (
-          <Box sx={{ py: 8, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              No matching listings found.
-            </Typography>
-            <Button
-              variant="text"
-              color="secondary"
-              size="small"
-              onClick={() => dispatch(resetFilters())}
-              sx={{ mt: 1 }}
-            >
-              Reset all filters
-            </Button>
-          </Box>
-        ) : (
-          data?.data.map((job, idx) => {
-            const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryInterval);
-            return (
-              <Box
-                key={job.id}
-                sx={{
-                  p: { xs: 2, sm: 2.5 },
-                  borderTop: idx > 0 ? '1px solid' : 'none',
-                  borderColor: 'divider',
-                  transition: 'background-color 0.15s ease',
-                  '&:hover': {
-                    bgcolor: (th) => th.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.015)',
-                  },
-                }}
-              >
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={{ xs: 1.5, sm: 2 }}
+      {/* Query State wrapper handling error, 429 countdown/refetch, and loading */}
+      <QueryState
+        isLoading={isLoading}
+        isFetching={isFetching}
+        error={error}
+        onRetry={refetch}
+        empty={data?.data?.length === 0}
+        emptyMessage="No job postings match your active search and filter criteria."
+        emptyAction={
+          <Button variant="outlined" color="secondary" size="small" onClick={clearAllFilters}>
+            Reset All Filters
+          </Button>
+        }
+      >
+        {data && data.data.length > 0 && (
+          <Paper sx={{ borderTop: 0, borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+            {data.data.map((job, idx) => {
+              const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryInterval);
+              return (
+                <Box
+                  key={job.id}
                   sx={{
-                    alignItems: { xs: 'flex-start', sm: 'center' },
-                    justifyContent: 'space-between',
+                    p: { xs: 2, sm: 2.5 },
+                    borderTop: idx > 0 ? '1px solid' : 'none',
+                    borderColor: 'divider',
+                    transition: 'background-color 0.15s ease',
+                    '&:hover': {
+                      bgcolor: (th) => (th.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.015)'),
+                    },
                   }}
                 >
-                  {/* Left Column: Role Details */}
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Stack direction="row" spacing={1} sx={{ mb: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                        {job.companyName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">·</Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontFamily: "'Geist Mono', monospace",
-                          color: 'text.secondary',
-                          fontSize: '0.72rem',
-                        }}
-                      >
-                        jobs.ashbyhq.com/{job.companySlug}
-                      </Typography>
-                    </Stack>
-
-                    <Typography
-                      component={RouterLink}
-                      to={`/jobs/${job.id}`}
-                      variant="h6"
-                      sx={{
-                        fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                        fontWeight: 600,
-                        color: 'text.primary',
-                        textDecoration: 'none',
-                        display: 'block',
-                        lineHeight: 1.35,
-                        '&:hover': {
-                          color: 'secondary.main',
-                        },
-                      }}
-                    >
-                      {job.title}
-                    </Typography>
-
-                    <Stack direction="row" spacing={1.25} sx={{ mt: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', fontSize: '0.75rem' }}>
-                        <LocationOnOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                        <span>{job.location || 'Not specified'}</span>
-                      </Box>
-
-                      {job.workplaceType && (
-                        <Chip
-                          label={job.workplaceType}
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: '0.68rem',
-                            bgcolor: 'background.default',
-                          }}
-                        />
-                      )}
-
-                      {job.employmentType && (
-                        <Typography variant="caption" color="text.secondary">
-                          {job.employmentType}
-                        </Typography>
-                      )}
-
-                      {job.department && (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'inline' } }}>
-                          · {job.department}
-                        </Typography>
-                      )}
-                    </Stack>
-                  </Box>
-
-                  {/* Right Column: Salary & Action */}
-                  <Box
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={{ xs: 1.5, sm: 2 }}
                     sx={{
-                      width: { xs: '100%', sm: 'auto' },
-                      textAlign: { xs: 'left', sm: 'right' },
-                      display: 'flex',
-                      flexDirection: { xs: 'row', sm: 'column' },
-                      alignItems: { xs: 'center', sm: 'flex-end' },
+                      alignItems: { xs: 'flex-start', sm: 'center' },
                       justifyContent: 'space-between',
-                      gap: 1,
-                      borderTop: { xs: '1px solid', sm: 'none' },
-                      borderColor: 'divider',
-                      pt: { xs: 1.5, sm: 0 },
                     }}
                   >
-                    {salary ? (
+                    {/* Left Column: Role Details */}
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Stack direction="row" spacing={1} sx={{ mb: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                          {job.companyName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">·</Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontFamily: "'Geist Mono', monospace",
+                            color: 'text.secondary',
+                            fontSize: '0.72rem',
+                          }}
+                        >
+                          jobs.ashbyhq.com/{job.companySlug}
+                        </Typography>
+                      </Stack>
+
                       <Typography
-                        variant="subtitle2"
+                        component={RouterLink}
+                        to={`/jobs/${job.id}`}
+                        variant="h6"
                         sx={{
-                          fontWeight: 700,
-                          color: 'secondary.main',
-                          fontVariantNumeric: 'tabular-nums',
-                          letterSpacing: '-0.01em',
+                          fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                          fontWeight: 600,
+                          color: 'text.primary',
+                          textDecoration: 'none',
+                          display: 'block',
+                          lineHeight: 1.35,
+                          '&:hover': {
+                            color: 'secondary.main',
+                          },
                         }}
                       >
-                        {salary}
+                        {job.title}
                       </Typography>
-                    ) : (
-                      <Typography variant="caption" color="text.secondary">
-                        Salary unlisted
-                      </Typography>
-                    )}
 
-                    <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-                      <Typography variant="caption" sx={{ fontFamily: "'Geist Mono', monospace", color: 'text.secondary' }}>
-                        {formatDate(job.publishedAt)}
-                      </Typography>
+                      <Stack direction="row" spacing={1.25} sx={{ mt: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', fontSize: '0.75rem' }}>
+                          <LocationOnOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                          <span>{job.location || 'Not specified'}</span>
+                        </Box>
+
+                        {job.workplaceType && (
+                          <Chip
+                            label={job.workplaceType}
+                            size="small"
+                            variant="outlined"
+                            sx={{ height: 20, fontSize: '0.7rem' }}
+                          />
+                        )}
+
+                        {job.employmentType && (
+                          <Chip
+                            label={job.employmentType}
+                            size="small"
+                            variant="outlined"
+                            sx={{ height: 20, fontSize: '0.7rem' }}
+                          />
+                        )}
+                      </Stack>
+                    </Box>
+
+                    {/* Right Column: Salary & Outbound Action */}
+                    <Stack
+                      direction={{ xs: 'row', sm: 'column' }}
+                      spacing={{ xs: 2, sm: 1 }}
+                      sx={{
+                        alignItems: { xs: 'center', sm: 'flex-end' },
+                        justifyContent: 'space-between',
+                        width: { xs: '100%', sm: 'auto' },
+                        flexShrink: 0,
+                      }}
+                    >
+                      {salary && (
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            fontFamily: "'Geist Mono', monospace",
+                            fontWeight: 600,
+                            color: 'secondary.main',
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          {salary}
+                        </Typography>
+                      )}
 
                       <Button
                         component="a"
                         href={job.applyUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        variant="contained"
-                        color="primary"
                         size="small"
-                        endIcon={<OpenInNewIcon sx={{ fontSize: '0.85rem !important' }} />}
+                        variant="outlined"
+                        endIcon={<OpenInNewIcon sx={{ fontSize: 13 }} />}
                         sx={{
+                          textTransform: 'none',
+                          fontWeight: 600,
                           fontSize: '0.75rem',
-                          py: 0.5,
-                          px: 1.5,
+                          borderColor: 'divider',
+                          minHeight: { xs: 44, sm: 32 },
                         }}
                       >
-                        Apply
+                        Apply Direct
                       </Button>
                     </Stack>
-                  </Box>
-                </Stack>
-              </Box>
-            );
-          })
+                  </Stack>
+                </Box>
+              );
+            })}
+          </Paper>
         )}
-      </Paper>
 
-      {/* Pagination Footer */}
-      {data && data.meta.totalPages > 1 && (
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-          <Pagination
-            count={data.meta.totalPages}
-            page={data.meta.page}
-            onChange={(_e, val) => dispatch(setPage(val))}
-            size={isMobile ? 'small' : 'medium'}
-            shape="rounded"
-            color="primary"
-          />
-        </Box>
-      )}
+        {/* Pagination */}
+        {data && data.meta.totalPages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 2 }}>
+            <Pagination
+              count={data.meta.totalPages}
+              page={data.meta.page}
+              onChange={handlePageChange}
+              color="primary"
+              shape="rounded"
+              size={isTablet ? 'medium' : 'large'}
+              aria-label="Job postings pagination"
+            />
+          </Box>
+        )}
+      </QueryState>
 
-      {/* Mobile Filters Drawer */}
+      {/* Mobile Drawer Filter Dialog */}
       <Drawer
         anchor="bottom"
         open={mobileFilterOpen}
@@ -547,32 +563,50 @@ export const BrowsePage: React.FC = () => {
         slotProps={{
           paper: {
             sx: {
-              p: 3,
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
-              maxHeight: '80vh',
+              p: 3,
+              maxHeight: '85vh',
             },
           },
         }}
       >
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 700 }}>
-            Filter Listings
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            Filter Postings
           </Typography>
-          <IconButton size="small" onClick={() => setMobileFilterOpen(false)}>
+          <IconButton size="small" onClick={() => setMobileFilterOpen(false)} aria-label="Close filters drawer">
             <ClearIcon fontSize="small" />
           </IconButton>
         </Box>
 
-        <Stack spacing={2.5}>
-          {renderFilterControls()}
+        <Box sx={{ my: 2 }}>{renderFilterControls(true)}</Box>
 
+        <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            fullWidth
+            onClick={() => {
+              setDraftFilters({
+                workplaceType: '',
+                employmentType: '',
+                country: '',
+                hasSalary: false,
+                sortBy: 'publishedAt',
+                sortOrder: 'desc',
+              });
+            }}
+            sx={{ minHeight: 44 }}
+          >
+            Reset
+          </Button>
           <Button
             variant="contained"
             color="primary"
             fullWidth
-            onClick={() => setMobileFilterOpen(false)}
-            sx={{ mt: 1 }}
+            onClick={handleApplyDraft}
+            sx={{ minHeight: 44, fontWeight: 600 }}
           >
             Apply Filters
           </Button>
@@ -581,3 +615,5 @@ export const BrowsePage: React.FC = () => {
     </Container>
   );
 };
+
+export default BrowsePage;

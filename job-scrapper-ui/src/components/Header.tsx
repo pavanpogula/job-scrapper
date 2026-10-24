@@ -27,6 +27,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import { useAppDispatch } from '../store';
 import { toggleTheme } from '../store/slices/themeSlice';
+import { useGetMetaQuery } from '../store/api/jobsApi';
 
 export const Header: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -34,6 +35,11 @@ export const Header: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data: meta } = useGetMetaQuery();
+
+  const statsLabel = meta
+    ? `${meta.activeJobs.toLocaleString()} live jobs · ${meta.hiringCompanies.toLocaleString()} companies`
+    : 'Live verified jobs · Ashby ATS';
 
   const isActive = (path: string) => {
     if (path === '/' && location.pathname === '/') return true;
@@ -95,7 +101,7 @@ export const Header: React.FC = () => {
             {/* Desktop Stats Pill */}
             {!isMobile && (
               <Chip
-                label="34,037 live jobs · 1,747 companies"
+                label={statsLabel}
                 size="small"
                 variant="outlined"
                 sx={{
@@ -228,7 +234,7 @@ export const Header: React.FC = () => {
 
         <Box sx={{ px: 2, py: 1 }}>
           <Typography variant="caption" sx={{ fontFamily: "'Geist Mono', monospace", color: 'text.secondary' }}>
-            34,037 live jobs · 1,747 hiring companies
+            {statsLabel}
           </Typography>
         </Box>
       </Drawer>

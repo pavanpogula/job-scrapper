@@ -1,6 +1,6 @@
 # Agent Context
 
-Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (P2 completion).
+Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (P5 completion).
 
 ## Components & Entry Points
 - **Scraper:** `src/core/Scraper.ts` (single process / IPC worker), `src/core/ClusterScraper.ts` (parallel OS worker coordinator), `src/core/ScraperCSV.ts` (streaming CSV exporter).

@@ -11,7 +11,6 @@ import { fetchOrganizationMetadata } from '../lib/AshbyClient';
 const prisma = new PrismaClient();
 
 const CDX_API_URL = 'http://web.archive.org/cdx/search/cdx';
-const COMMON_CRAWL_INDEX_URL = 'https://index.commoncrawl.org/CC-MAIN-2024-51-index';
 
 // Strict regex: 
 // - Must start/end with a-z or 0-9
@@ -52,7 +51,7 @@ export function isValidSlug(slug: string): boolean {
 /**
  * @summary Fetches archived Ashby URLs from Wayback Machine CDX API
  */
-async function fetchAshbyUrls(limit = 1000) {
+async function fetchAshbyUrls(limit = 10000) {
     console.log('Fetching URLs from Wayback Machine CDX...');
     try {
         const response = await axios.get(CDX_API_URL, {
@@ -74,36 +73,47 @@ async function fetchAshbyUrls(limit = 1000) {
 }
 
 /**
- * @summary Fetches archived Ashby URLs from CommonCrawl Index API (JSONL format)
+ * @summary Fetches archived Ashby URLs from CommonCrawl Index API (JSONL format) across multiple pages
  */
-export async function fetchCommonCrawlUrls(): Promise<string[]> {
-    try {
-        const response = await axios.get<string>(COMMON_CRAWL_INDEX_URL, {
-            params: {
-                url: 'jobs.ashbyhq.com/*',
-                output: 'json',
-                fl: 'url'
-            },
-            timeout: 15000
-        });
+export async function fetchCommonCrawlUrls(crawlId = 'CC-MAIN-2024-51', maxPages = 3): Promise<string[]> {
+    const urls: string[] = [];
+    const indexUrl = `https://index.commoncrawl.org/${crawlId}-index`;
 
-        if (typeof response.data !== 'string') return [];
+    for (let page = 0; page < maxPages; page++) {
+        try {
+            const response = await axios.get<string>(indexUrl, {
+                params: {
+                    url: 'jobs.ashbyhq.com/*',
+                    output: 'json',
+                    fl: 'url',
+                    page
+                },
+                timeout: 15000
+            });
 
-        return response.data
-            .split('\n')
-            .map(line => line.trim())
-            .filter(Boolean)
-            .map(line => {
-                try {
-                    return JSON.parse(line).url as string;
-                } catch {
-                    return '';
-                }
-            })
-            .filter(Boolean);
-    } catch {
-        return [];
+            if (typeof response.data !== 'string') break;
+
+            const pageUrls = response.data
+                .split('\n')
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map(line => {
+                    try {
+                        return JSON.parse(line).url as string;
+                    } catch {
+                        return '';
+                    }
+                })
+                .filter(Boolean);
+
+            if (pageUrls.length === 0) break;
+            urls.push(...pageUrls);
+        } catch {
+            break;
+        }
     }
+
+    return urls;
 }
 
 /**

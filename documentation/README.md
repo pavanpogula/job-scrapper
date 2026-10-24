@@ -37,7 +37,7 @@
 | 10 | [10-bug-fix-and-improvement-log.md](./10-bug-fix-and-improvement-log.md) | Bug fix log, Regression Guard Registry (`BF-001`…`BF-013`) |
 | 11 | [11-testing-guide.md](./11-testing-guide.md) | Testing strategy, mocking, invariant guard status |
 | 12 | [12-backend-api.md](./12-backend-api.md) | Backend REST API contract and cache read path |
-| 13 | 13-frontend-ui.md *(planned: P5-T09)* | Frontend routes, state, and UI component architecture |
+| 13 | [13-frontend-ui.md](./13-frontend-ui.md) | Frontend routes, state, and UI component architecture |
 | 14 | [14-deployment-and-operations.md](./14-deployment-and-operations.md) | Vercel, GitHub Actions, Neon, Upstash operations & runbook |
 | 15 | [15-system-architecture-and-flows.md](./15-system-architecture-and-flows.md) | End-to-end Mermaid architecture and sequence flows |
 | 16 | 16-self-healing-loop.md *(planned: P4-T03)* | The automated error report, triage, fix, and release loop |
@@ -55,7 +55,7 @@ Every fact has a single canonical source of truth. Consult the owner doc:
 | Redis key schema and cache semantics | `documentation/05-database-and-cache.md` (summary), `plan/03-cache-design.md` |
 | External APIs called (Ashby, CDX, Drive) | `documentation/03-external-apis.md` |
 | Internal REST API contract | `documentation/plan/04-backend-api-plan.md` (planned: `12-backend-api.md`) |
-| UI routes, state, and API client | `documentation/plan/06-frontend-plan.md` (planned: `13-frontend-ui.md`) |
+| UI routes, state, and API client | `documentation/13-frontend-ui.md` |
 | Environment variables | `documentation/07-configuration-and-setup.md` |
 | CLI commands | `documentation/04-cli-commands.md` |
 | Deployment, schedule, secrets, runbook | `documentation/plan/02-target-architecture.md` (planned: `14-deployment-and-operations.md`) |

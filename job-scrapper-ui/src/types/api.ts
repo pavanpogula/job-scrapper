@@ -1,6 +1,6 @@
 /**
  * @file API Type Definitions for Ashby Job Scraper UI
- * @summary Types aligned with documentation/frontend-design/08-api-contract-proposal.md
+ * @summary Single source of truth for UI API contract, aligned with documentation/12-backend-api.md
  */
 
 export type WorkplaceType = 'Remote' | 'OnSite' | 'Hybrid';
@@ -20,6 +20,22 @@ export interface CompanySummary {
   name: string;
   logoUrl?: string | null;
   jobCount?: number;
+}
+
+export interface CompaniesResponse {
+  data: CompanySummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface ApiMeta {
+  activeJobs: number;
+  hiringCompanies: number;
+  withSalary: number;
+  lastScrapeAt: string | null;
+  generation?: string;
 }
 
 export interface JobListItem {
@@ -50,6 +66,7 @@ export interface JobListItem {
 
 export interface JobDetail extends JobListItem {
   jobUrl: string;
+  active: boolean;
   team?: string | null;
   descriptionHtml?: string | null;
   descriptionPlain?: string | null;

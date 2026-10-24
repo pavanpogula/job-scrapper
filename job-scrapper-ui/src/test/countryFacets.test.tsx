@@ -9,7 +9,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { BrowsePage, formatCountryOption } from '../pages/BrowsePage';
 import filterReducer from '../store/slices/filterSlice';
 import themeReducer from '../store/slices/themeSlice';
-import rateLimitReducer from '../store/slices/rateLimitSlice';
 import { jobsApi } from '../store/api/jobsApi';
 
 const server = setupServer(
@@ -66,7 +65,6 @@ function createTestStore() {
       [jobsApi.reducerPath]: jobsApi.reducer,
       filters: filterReducer,
       theme: themeReducer,
-      rateLimit: rateLimitReducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(jobsApi.middleware),
