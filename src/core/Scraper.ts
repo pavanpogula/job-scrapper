@@ -145,6 +145,7 @@ interface ProcessedJob {
     postalAddress: any;
     metadata: any;
     contentHash: string;
+    source?: 'rest' | 'graphql';
 }
 
 /**
@@ -377,17 +378,33 @@ export class AshbyScraper {
 
                 if (typeof findManyFn === 'function' && typeof createManyFn === 'function') {
                     // Fast bulk path: 1 SELECT + 1 INSERT (createMany) for new jobs, only upserting changed existing jobs
-                    const existingRows: { ashbyId: string; contentHash: string; active: boolean }[] = await findManyFn({
+                    const existingRows: { ashbyId: string; contentHash: string; active: boolean; metadata?: any }[] = await findManyFn({
                         where: { ashbyId: { in: batch.map(j => j.ashbyId) } },
-                        select: { ashbyId: true, contentHash: true, active: true }
+                        select: { ashbyId: true, contentHash: true, active: true, metadata: true }
                     });
                     const existingMap = new Map(existingRows.map(r => [r.ashbyId, r]));
 
                     const toCreate = batch.filter(j => !existingMap.has(j.ashbyId));
-                    const toUpdate = batch.filter(j => {
+                    const toRawTouch: string[] = [];
+                    const toUpdate: ProcessedJob[] = [];
+
+                    for (const j of batch) {
                         const prev = existingMap.get(j.ashbyId);
-                        return prev !== undefined && (prev.contentHash !== j.contentHash || !prev.active);
-                    });
+                        if (!prev) continue;
+
+                        const prevIsRest = prev.metadata?._source === 'rest';
+                        if (j.source === 'graphql' && prevIsRest) {
+                            // A GraphQL result arriving over a REST row updates only active and lastSeenAt via raw SQL (updatedAt untouched)
+                            toRawTouch.push(j.ashbyId);
+                        } else if (prev.contentHash !== j.contentHash || !prev.active) {
+                            toUpdate.push(j);
+                        }
+                    }
+
+                    if (toRawTouch.length > 0 && typeof prisma.$executeRaw === 'function') {
+                        const now = new Date();
+                        await prisma.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ANY(${toRawTouch})`.catch(() => {});
+                    }
 
                     if (toCreate.length > 0) {
                         const now = new Date();
@@ -428,9 +445,33 @@ export class AshbyScraper {
                     }
                 } else {
                     // Standard transaction upsert path
-                    await prisma.$transaction(
-                        batch.map(job => prisma.job.upsert(buildUpsertArgs(job)))
-                    );
+                    const toRawTouch: string[] = [];
+                    const toUpsert: ProcessedJob[] = [];
+
+                    for (const job of batch) {
+                        if (job.source === 'graphql') {
+                            const findUniqueFn = (prisma.job as any)?.findUnique;
+                            if (typeof findUniqueFn === 'function') {
+                                const existing = await findUniqueFn({ where: { ashbyId: job.ashbyId } });
+                                if (existing && existing.metadata?._source === 'rest') {
+                                    toRawTouch.push(job.ashbyId);
+                                    continue;
+                                }
+                            }
+                        }
+                        toUpsert.push(job);
+                    }
+
+                    if (toRawTouch.length > 0 && typeof prisma.$executeRaw === 'function') {
+                        const now = new Date();
+                        await prisma.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ANY(${toRawTouch})`.catch(() => {});
+                    }
+
+                    if (toUpsert.length > 0) {
+                        await prisma.$transaction(
+                            toUpsert.map(job => prisma.job.upsert(buildUpsertArgs(job)))
+                        );
+                    }
                 }
             } catch (batchErr: any) {
                 console.warn(
@@ -439,6 +480,20 @@ export class AshbyScraper {
                 succeededJobs = [];
                 for (const job of batch) {
                     try {
+                        if (job.source === 'graphql') {
+                            const findUniqueFn = (prisma.job as any)?.findUnique;
+                            if (typeof findUniqueFn === 'function') {
+                                const existing = await findUniqueFn({ where: { ashbyId: job.ashbyId } });
+                                if (existing && existing.metadata?._source === 'rest') {
+                                    const now = new Date();
+                                    if (typeof prisma.$executeRaw === 'function') {
+                                        await prisma.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ${job.ashbyId}`.catch(() => {});
+                                    }
+                                    succeededJobs.push(job);
+                                    continue;
+                                }
+                            }
+                        }
                         await prisma.job.upsert(buildUpsertArgs(job));
                         succeededJobs.push(job);
                     } catch (jobErr: any) {
@@ -466,7 +521,8 @@ export class AshbyScraper {
      */
     private async processCompanyJobs(
         companySlug: string,
-        jobs: AshbyJob[]
+        jobs: AshbyJob[],
+        source: 'rest' | 'graphql' = 'rest'
     ): Promise<ProcessedJob[]> {
         if (jobs.length === 0) return [];
 
@@ -485,7 +541,8 @@ export class AshbyScraper {
             const locationId = await this.getOrCreateLocation(cleanLoc);
             const salary = extractSalary(job);
             const cleanApplyUrl = sanitizeJobUrl(job.applyUrl, companySlug, job.id, true);
-            const cleanMetadata = sanitizeJsonMetadata(job);
+            const cleanMetadata = sanitizeJsonMetadata(job) || {};
+            cleanMetadata._source = source;
             const postal = job.address?.postalAddress;
             const parsedPublishedAt = job.publishedAt ? new Date(job.publishedAt) : null;
             const validPublishedAt = parsedPublishedAt && !isNaN(parsedPublishedAt.getTime()) ? parsedPublishedAt : null;
@@ -540,7 +597,8 @@ export class AshbyScraper {
                 city: postal?.addressLocality ? sanitizeText(postal.addressLocality) : null,
                 postalAddress: postal ? (sanitizeJsonMetadata(postal) ?? Prisma.DbNull) : Prisma.DbNull,
                 metadata: cleanMetadata,
-                contentHash: hash
+                contentHash: hash,
+                source
             });
         }
 
@@ -587,17 +645,17 @@ export class AshbyScraper {
         const recheckNotFound = options.recheckNotFound ?? (process.argv.includes('--recheck-not-found') || isSundayUtc);
         const statusFilter = recheckNotFound ? { in: ['ACTIVE', 'NOT_FOUND'] as any } : 'ACTIVE';
 
-        const companies: Array<{ slug: string; consecutiveNotFound?: number; consecutiveFailures?: number }> = options.slugs
+        const companies: Array<{ slug: string; consecutiveNotFound?: number; consecutiveFailures?: number; pendingEmptySince?: Date | null }> = options.slugs
             ? await prisma.company.findMany({
                 where: { slug: { in: options.slugs } },
-                select: { slug: true, consecutiveNotFound: true, consecutiveFailures: true }
+                select: { slug: true, consecutiveNotFound: true, consecutiveFailures: true, pendingEmptySince: true }
             }).then(rows => {
                 const rowMap = new Map(rows.map(r => [r.slug, r]));
-                return options.slugs!.map(s => rowMap.get(s) ?? { slug: s, consecutiveNotFound: 0, consecutiveFailures: 0 });
-            }).catch(() => options.slugs!.map(slug => ({ slug, consecutiveNotFound: 0, consecutiveFailures: 0 })))
+                return options.slugs!.map(s => rowMap.get(s) ?? { slug: s, consecutiveNotFound: 0, consecutiveFailures: 0, pendingEmptySince: null });
+            }).catch(() => options.slugs!.map(slug => ({ slug, consecutiveNotFound: 0, consecutiveFailures: 0, pendingEmptySince: null })))
             : await prisma.company.findMany({
                 where: { status: statusFilter },
-                select: { slug: true, consecutiveNotFound: true, consecutiveFailures: true }
+                select: { slug: true, consecutiveNotFound: true, consecutiveFailures: true, pendingEmptySince: true }
             });
 
         console.log(`🚀 ${workerPrefix}Starting HIGH-PERFORMANCE scrape for ${companies.length} companies`);
@@ -697,27 +755,76 @@ export class AshbyScraper {
                             }
                         }).catch(() => {});
                     } else if (boardResult.source === 'rest' || boardResult.source === 'graphql') {
-                        // Success resets strike counters and restores ACTIVE status
-                        await prisma.company.update({
-                            where: { slug: company.slug },
-                            data: {
-                                status: 'ACTIVE',
-                                consecutiveNotFound: 0,
-                                consecutiveFailures: 0,
-                                lastSuccessAt: now,
-                                lastCheckedAt: now
-                            }
-                        }).catch(() => {});
-
                         const activeIds = boardResult.jobs.map(j => j.id);
 
-                        // Touch lastSeenAt on existing jobs with one raw UPDATE per company
-                        if (activeIds.length > 0 && typeof prisma.$executeRaw === 'function') {
-                            await prisma.$executeRaw`UPDATE "Job" SET "lastSeenAt" = ${now} WHERE "companySlug" = ${company.slug} AND "ashbyId" = ANY(${activeIds})`.catch(() => {});
-                        }
+                        if (activeIds.length === 0) {
+                            let activeJobCount = 0;
+                            if (typeof (prisma.job as any)?.count === 'function') {
+                                activeJobCount = await (prisma.job as any).count({
+                                    where: { companySlug: company.slug, active: true }
+                                }).catch(() => 0);
+                            }
 
-                        if (!this.hasLoadedExistingJobSlugs || this.companiesWithExistingJobs.has(company.slug)) {
-                            await this.deactivateStaleJobs(company.slug, activeIds);
+                            if (activeJobCount >= 5 && !company.pendingEmptySince) {
+                                // Defer deactivation for one run: record pendingEmptySince, emit suspicious_empty_board
+                                await prisma.company.update({
+                                    where: { slug: company.slug },
+                                    data: {
+                                        status: 'ACTIVE',
+                                        consecutiveNotFound: 0,
+                                        consecutiveFailures: 0,
+                                        lastSuccessAt: now,
+                                        lastCheckedAt: now,
+                                        pendingEmptySince: now
+                                    }
+                                }).catch(() => {});
+
+                                tracker.recordEvent({
+                                    category: 'suspicious_empty_board',
+                                    companySlug: company.slug,
+                                    message: `Company with ${activeJobCount} active jobs returned an empty board; deactivation deferred for one run`,
+                                    actionTaken: 'deferred_deactivation'
+                                });
+                            } else {
+                                // Either activeJobCount < 5 or already pendingEmptySince was set
+                                await prisma.company.update({
+                                    where: { slug: company.slug },
+                                    data: {
+                                        status: 'ACTIVE',
+                                        consecutiveNotFound: 0,
+                                        consecutiveFailures: 0,
+                                        lastSuccessAt: now,
+                                        lastCheckedAt: now,
+                                        pendingEmptySince: null
+                                    }
+                                }).catch(() => {});
+
+                                if (!this.hasLoadedExistingJobSlugs || this.companiesWithExistingJobs.has(company.slug)) {
+                                    await this.deactivateStaleJobs(company.slug, activeIds);
+                                }
+                            }
+                        } else {
+                            // Non-empty board: success resets strike counters and clears pendingEmptySince
+                            await prisma.company.update({
+                                where: { slug: company.slug },
+                                data: {
+                                    status: 'ACTIVE',
+                                    consecutiveNotFound: 0,
+                                    consecutiveFailures: 0,
+                                    lastSuccessAt: now,
+                                    lastCheckedAt: now,
+                                    pendingEmptySince: null
+                                }
+                            }).catch(() => {});
+
+                            // Touch lastSeenAt on existing jobs with one raw UPDATE per company
+                            if (activeIds.length > 0 && typeof prisma.$executeRaw === 'function') {
+                                await prisma.$executeRaw`UPDATE "Job" SET "lastSeenAt" = ${now} WHERE "companySlug" = ${company.slug} AND "ashbyId" = ANY(${activeIds})`.catch(() => {});
+                            }
+
+                            if (!this.hasLoadedExistingJobSlugs || this.companiesWithExistingJobs.has(company.slug)) {
+                                await this.deactivateStaleJobs(company.slug, activeIds);
+                            }
                         }
                     } else {
                         // source === 'none' with notFound === false (fetch error, network, timeout, 5xx)
@@ -770,7 +877,11 @@ export class AshbyScraper {
                     if (boardResult.jobs.length > 0) {
                         tracker.companiesWithJobs++;
                         tracker.jobsCollected += boardResult.jobs.length;
-                        const processed = await this.processCompanyJobs(boardResult.slug, boardResult.jobs);
+                        const processed = await this.processCompanyJobs(
+                            boardResult.slug,
+                            boardResult.jobs,
+                            boardResult.source === 'graphql' ? 'graphql' : 'rest'
+                        );
                         totalProcessed += processed.length;
                         pendingJobs.push(...processed);
                         enqueueFlushIfNeeded(false);

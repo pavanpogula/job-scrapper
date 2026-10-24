@@ -374,4 +374,122 @@ describe('AshbyScraper runAll() Harness (P1-T03)', () => {
         expect(apiError?.httpStatus).toBe(503);
         expect(apiError?.attempts).toBe(3);
     });
+
+    test('graphql does not overwrite rest content', async () => {
+        const oldDate = new Date('2026-01-01T00:00:00.000Z');
+        statefulPrisma._data.jobs.set('job-rich', {
+            ashbyId: 'job-rich',
+            companySlug: 'acme-corp',
+            title: 'Senior REST Engineer',
+            active: false,
+            metadata: { _source: 'rest', descriptionHtml: '<p>Detailed REST description</p>' },
+            contentHash: 'hash-rest',
+            updatedAt: oldDate
+        });
+
+        // Board returns from GraphQL fallback with shorter/different content
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: [
+                {
+                    id: 'job-rich',
+                    title: 'GraphQL Engineer',
+                    department: 'Engineering',
+                    location: 'Remote',
+                    jobUrl: 'https://jobs.ashbyhq.com/acme-corp/job-rich',
+                    applyUrl: 'https://jobs.ashbyhq.com/acme-corp/job-rich/application',
+                    isListed: true
+                }
+            ],
+            source: 'graphql',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        const scraper = new AshbyScraper();
+        await scraper.runAll({
+            slugs: ['acme-corp'],
+            concurrency: 1,
+            saveTelemetry: false
+        });
+
+        const stored = statefulPrisma._data.jobs.get('job-rich');
+        expect(stored).toBeDefined();
+        // Title and description must remain from REST, NOT overwritten by GraphQL
+        expect(stored.title).toBe('Senior REST Engineer');
+        expect(stored.metadata?.descriptionHtml).toBe('<p>Detailed REST description</p>');
+        expect(stored.metadata?._source).toBe('rest');
+        expect(stored.updatedAt).toEqual(oldDate);
+        // Active status was restored via raw SQL
+        expect(stored.active).toBe(true);
+    });
+
+    test('empty board deferred one run', async () => {
+        // Company has 5 active jobs
+        statefulPrisma._data.companies.set('acme-corp', {
+            id: 'c1',
+            slug: 'acme-corp',
+            status: 'ACTIVE',
+            pendingEmptySince: null
+        });
+
+        for (let i = 1; i <= 5; i++) {
+            statefulPrisma._data.jobs.set(`job-${i}`, {
+                ashbyId: `job-${i}`,
+                companySlug: 'acme-corp',
+                title: `Job ${i}`,
+                active: true,
+                contentHash: `hash-${i}`
+            });
+        }
+
+        // Run 1: empty board returned (200 OK, jobs: [])
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: [],
+            source: 'rest',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        const scraper = new AshbyScraper();
+        const report1 = await scraper.runAll({
+            slugs: ['acme-corp'],
+            concurrency: 1,
+            saveTelemetry: false
+        });
+
+        // Run 1 should DEFER deactivation
+        expect(report1.events.some(e => e.category === 'suspicious_empty_board')).toBe(true);
+        for (let i = 1; i <= 5; i++) {
+            expect(statefulPrisma._data.jobs.get(`job-${i}`).active).toBe(true);
+        }
+        const companyAfterRun1 = statefulPrisma._data.companies.get('acme-corp');
+        expect(companyAfterRun1.pendingEmptySince).toBeInstanceOf(Date);
+
+        // Run 2: empty board returned again
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: [],
+            source: 'rest',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        await scraper.runAll({
+            slugs: ['acme-corp'],
+            concurrency: 1,
+            saveTelemetry: false
+        });
+
+        // Run 2 should now deactivate stale jobs
+        for (let i = 1; i <= 5; i++) {
+            expect(statefulPrisma._data.jobs.get(`job-${i}`).active).toBe(false);
+        }
+        const companyAfterRun2 = statefulPrisma._data.companies.get('acme-corp');
+        expect(companyAfterRun2.pendingEmptySince).toBeNull();
+    });
 });

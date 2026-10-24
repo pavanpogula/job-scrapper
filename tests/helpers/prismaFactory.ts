@@ -277,7 +277,25 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
         return [];
     });
 
-    const $executeRaw = jest.fn(async () => 1);
+    const $executeRaw = jest.fn(async (strings: any, ...values: any[]) => {
+        const sql = Array.isArray(strings) ? strings.join('?') : String(strings);
+        if (sql.includes('UPDATE "Job"') || sql.includes('UPDATE Job')) {
+            for (const val of values) {
+                if (typeof val === 'string' && jobs.has(val)) {
+                    const existing = jobs.get(val);
+                    jobs.set(val, { ...existing, active: true, lastSeenAt: new Date() });
+                } else if (Array.isArray(val)) {
+                    for (const id of val) {
+                        if (jobs.has(id)) {
+                            const existing = jobs.get(id);
+                            jobs.set(id, { ...existing, active: true, lastSeenAt: new Date() });
+                        }
+                    }
+                }
+            }
+        }
+        return 1;
+    });
     const $queryRaw = jest.fn(async () => []);
     const $disconnect = jest.fn(async () => undefined);
 

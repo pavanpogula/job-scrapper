@@ -27,6 +27,7 @@ model Company {
   consecutiveFailures Int           @default(0)
   lastSuccessAt       DateTime?
   lastCheckedAt       DateTime?
+  pendingEmptySince   DateTime?
   jobs                Job[]
   createdAt           DateTime      @default(now())
 }

@@ -186,6 +186,17 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Regression Invariant:** Only HTTP 429 triggers `sawRateLimit`; Retry-After header is honored (capped at 10 s); exhausted network/http failures emit `api_error` with failure details and attempt counts.
 - **Guarding tests:** `tests/unit/AshbyClient.test.ts` (403/400 fallback, BROWSER_HEADERS on GET/POST, 503×3 failure, ETIMEDOUT timeout, 403 rateLimited: false, Retry-After capping), `tests/unit/ScraperRunAll.test.ts` (records api_error event).
 
+### BF-016: GraphQL source preservation against REST overwrite and empty board deactivation deferral
+- **Symptom:** If a company temporarily fell back to GraphQL, less detailed GraphQL records overwrote richer REST records (e.g. descriptions, publishedAt, salary intervals) in Postgres. In addition, a single transient empty `200` response from Ashby would immediately deactivate all active jobs for companies with substantial listings.
+- **Root cause & fix:**
+  1. Stamped `metadata._source` ('rest' or 'graphql') during job processing.
+  2. When a GraphQL result arrives over an existing REST row, the scraper executes only a raw SQL update setting `active = true` and `lastSeenAt = now`, leaving `updatedAt` and rich REST content intact.
+  3. Added `pendingEmptySince` to `Company` model in Prisma schema.
+  4. When a company with ≥ 5 active jobs returns an empty board (200 OK, 0 jobs), deactivation is deferred for one run, recording `pendingEmptySince` and emitting `suspicious_empty_board`. If the board is empty on the second consecutive run, deactivation proceeds and `pendingEmptySince` is reset.
+- **Implemented in:** `prisma/schema.prisma`, `src/core/Scraper.ts`.
+- **Regression Invariant:** GraphQL fallback never overwrites rich REST job content or bumps `updatedAt`; empty boards for companies with ≥ 5 active jobs defer deactivation for one scrape cycle and record `suspicious_empty_board`.
+- **Guarding tests:** `tests/unit/ScraperRunAll.test.ts` (`-t "graphql does not overwrite rest content"` and `-t "empty board deferred one run"`).
+
 ---
 
 ## 📈 Improvement Log & Future Packaging Roadmap
