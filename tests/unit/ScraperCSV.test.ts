@@ -5,12 +5,16 @@
  */
 
 import axios from 'axios';
+import fs from 'fs';
 import {
   escapeCSV,
   formatCSVRow,
   fetchJobsForCompany,
+  scrapeToCSV,
   JobRecord
 } from '../../src/core/ScraperCSV';
+import { ErrorTracker } from '../../src/lib/ErrorTracker';
+import { mockCompany } from '../../__mocks__/@prisma/client';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -117,6 +121,37 @@ describe('ScraperCSV Unit Tests', () => {
 
       const records = await fetchJobsForCompany('nonexistent');
       expect(records).toEqual([]);
+    });
+  });
+
+  describe('scrapeToCSV', () => {
+    it('saves report after stream finish', async () => {
+      const order: string[] = [];
+
+      jest.spyOn(ErrorTracker.prototype, 'saveReport').mockImplementation(function (this: any) {
+        order.push('saveReport');
+        return null as any;
+      });
+
+      const mockStream: any = {
+        write: jest.fn(),
+        end: jest.fn((cb: any) => {
+          order.push('streamFinish');
+          if (cb) cb();
+        })
+      };
+      jest.spyOn(fs, 'createWriteStream').mockReturnValue(mockStream);
+      jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+      jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+
+      mockCompany.findMany.mockResolvedValueOnce([{ slug: 'acme-corp' }]);
+      mockedAxios.get.mockResolvedValueOnce({
+        data: { jobs: [] }
+      });
+
+      await scrapeToCSV();
+
+      expect(order).toEqual(['streamFinish', 'saveReport']);
     });
   });
 });

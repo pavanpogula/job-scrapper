@@ -163,19 +163,18 @@ export async function scrapeToCSV() {
         fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    const timestamp = new Date().toISOString().split('T')[0];
-    const fileName = `jobs_${timestamp}.csv`;
+    // Create concurrency limiter and telemetry tracker
+    const limit = createLimiter(CONCURRENCY_LIMIT);
+    const tracker = new ErrorTracker('csv_scrape');
+    tracker.companiesAttempted = companies.length;
+
+    const fileName = `jobs_${tracker.runId}.csv`;
     const filePath = path.join(outputDir, fileName);
 
     // Create write stream for streaming output
     const writeStream = fs.createWriteStream(filePath);
     const headers = 'Company,Job Title,Job Link,Published Date,Location,Department';
     writeStream.write(headers + '\n');
-
-    // Create concurrency limiter and telemetry tracker
-    const limit = createLimiter(CONCURRENCY_LIMIT);
-    const tracker = new ErrorTracker('csv_scrape');
-    tracker.companiesAttempted = companies.length;
 
     let completed = 0;
     let totalJobs = 0;
@@ -210,15 +209,16 @@ export async function scrapeToCSV() {
     );
 
     await Promise.all(fetchPromises);
-    tracker.saveReport(outputDir);
 
-    // Close the write stream
+    // Close the write stream before saving the report
     await new Promise<void>((resolve, reject) => {
         writeStream.end((err: Error | null) => {
             if (err) reject(err);
             else resolve();
         });
     });
+
+    tracker.saveReport(outputDir);
 
     await prisma.$disconnect();
 
@@ -243,5 +243,8 @@ export async function scrapeToCSV() {
 
 // Run
 if (require.main === module) {
-    scrapeToCSV().catch(console.error);
+    scrapeToCSV().catch((err: any) => {
+        console.error('Fatal CSV scraper error:', err);
+        process.exit(1);
+    });
 }
