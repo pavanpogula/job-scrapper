@@ -1,8 +1,13 @@
 ---
 paths: ["backend/src/core/**", "backend/src/lib/**"]
 ---
+<!-- GENERATED from docs/agents/rules/scraper-invariants.md - DO NOT EDIT DIRECTLY -->
 
-Before editing any scraper core or library files, you MUST:
-1. Consult `docs/bug-fix-log.md` and `docs/testing.md` §6 to verify you will not break any established regression invariants (BF-001 through BF-018+).
-2. Follow test-driven development: author a failing regression test in `backend/tests/unit/` before applying any fix.
-3. Preserve existing docstrings, interfaces, and error telemetry handling.
+# Scraper Invariants
+When modifying scraper core or library components:
+1. Consult `docs/bug-fix-log.md` and `docs/testing.md` §6.
+2. Invariants BF-001 through BF-018+ must be preserved.
+3. Test-driven development is required: author a failing test in `backend/tests/unit/` before applying any fix.
+4. Only HTTP 429 triggers `sawRateLimit`; Retry-After header must be honored (capped at 10s).
+5. GraphQL fallback rows must never overwrite rich REST fields.
+6. Preserve existing docstrings, interfaces, and error telemetry handling.

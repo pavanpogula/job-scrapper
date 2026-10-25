@@ -1,9 +1,14 @@
 ---
-trigger: glob
-globs: "backend/src/api/**, backend/api/**, backend/src/lib/cache/**, backend/src/cache/**"
+id: api-cache
+scope: backend
+always: false
+applies_to:
+  - "backend/src/api/**"
+  - "backend/api/**"
+  - "backend/src/cache/**"
+  - "backend/src/lib/cache/**"
 description: "API and caching invariants"
 ---
-
 # API & Cache Invariants
 1. Redis reads are read-through with fallback to PostgreSQL; Redis errors must never result in HTTP 500.
 2. API contract in `backend/src/api/contract.ts` must maintain byte-level parity between cache HIT and PostgreSQL responses.

@@ -3,6 +3,7 @@ trigger: glob
 globs: "backend/src/core/**, backend/src/lib/**"
 description: "Scraper core and library invariants"
 ---
+<!-- GENERATED from docs/agents/rules/scraper-invariants.md - DO NOT EDIT DIRECTLY -->
 
 # Scraper Invariants
 When modifying scraper core or library components:
@@ -11,3 +12,4 @@ When modifying scraper core or library components:
 3. Test-driven development is required: author a failing test in `backend/tests/unit/` before applying any fix.
 4. Only HTTP 429 triggers `sawRateLimit`; Retry-After header must be honored (capped at 10s).
 5. GraphQL fallback rows must never overwrite rich REST fields.
+6. Preserve existing docstrings, interfaces, and error telemetry handling.

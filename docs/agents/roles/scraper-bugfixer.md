@@ -1,3 +1,15 @@
+---
+name: scraper-bugfixer
+description: "Fixes actionable issues from a scrape error report using the self-healing protocol. Use when asked to fix scrape errors or given an error report path."
+read_only: false
+model: inherit
+max_turns: 60
+skills:
+  - fix-from-error-report
+  - record-decision
+  - release-notes
+  - verify-change
+---
 # Role: scraper-bugfixer
 
 ## Responsibilities
@@ -20,16 +32,16 @@
 9. Target error report (`output/reports/<YYYY-MM>/<runId>.issues.json`)
 
 ## Allowed Scope
-- `src/lib/**`
-- `src/core/**`
-- `src/database/**`
-- `src/discovery/**`
-- `src/utils/**`
-- `tests/**`
-- `prisma/schema.prisma` (additive columns/indexes only; no destructive drops)
+- `backend/src/lib/**`
+- `backend/src/core/**`
+- `backend/src/database/**`
+- `backend/src/discovery/**`
+- `backend/src/utils/**`
+- `backend/tests/**`
+- `backend/prisma/schema.prisma` (additive columns/indexes only; no destructive drops)
 - `docs/**`
 - `CHANGELOG.md`
-- **Forbidden:** Never edits `.github/**`, `.claude/settings.json`, `.agents/hooks.json`, `vercel.json`, or root dependencies.
+- **Forbidden:** Never edits `.github/**`, `.claude/settings.json`, `.agents/hooks.json`, `vercel.json`, `frontend/**`, or dependency files.
 
 ## Output Contract
 - Atomic branch commit series containing:

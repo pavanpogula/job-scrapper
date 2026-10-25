@@ -171,34 +171,41 @@
 - **Rollback command:** `git revert --no-edit e6fa663`
 - **Rollback chain:** `revert P4b` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)` -> restore "Verify & Test" check if set
 
-### [ ] P5 — Docs restructure
+### [x] P5 — Docs restructure (merged 2026-10-25, PR #12 rebase)
 - **Branch:** `plan/mono-p5-docs`
-- **PR:** `pending`
+- **PR:** #12
 - **Merge method:** `rebase`
-- **Commit SHAs (first..last):** `b921c27..197e1e0`
+- **Commit SHAs (first..last), on main:** `ee71be1..93981d1` (pure move, edits/ADRs/tests, and review fix: docs-links self-skip + discovery cron)
 - **Owner decisions used:** None
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 39 repo-level tests).
   - `node scripts/migration/compare-results.mjs --phase P5`: All metrics match or improve upon baseline (Jest 264 passed [0 missing], Vitest 14 passed, TS 0 errors, ESLint 0 errors / 1 warning, production smoke 11/11 passed).
   - `scripts/repo-tests/docs-links.test.mjs`: Passed all 4 checks (first ## in root README is Workflows, zero `documentation/` references outside allowed files, all relative links & @imports resolve, all active docs reachable from `docs/README.md`).
   - Monorepo Safety: `git diff --exit-code main -- '**/__snapshots__/**'` verified with 0 diff.
-  - Documentation Restructure: Moved all 54 legacy files in pure `git mv` commit 1 (`b921c27`), created `backend/README.md`, `backend/docs/testing.md`, `frontend/docs/testing.md`, `frontend/docs/known-issues.md`, and updated root `README.md` and `docs/README.md`.
+  - Documentation Restructure: Moved all 54 legacy files in pure `git mv` commit 1 (`ee71be1`), created `backend/README.md`, `backend/docs/testing.md`, `frontend/docs/testing.md`, `frontend/docs/known-issues.md`, and updated root `README.md` and `docs/README.md`.
   - Architecture Decision Records: Added ADR-0013 (monorepo layout), ADR-0014 (Vercel split, WAF, trust proxy), ADR-0015 (type contract and fixtures); updated `docs/decisions/README.md`.
   - Fixer Scope Hardening: Allowed `docs/bug-fix-log.md`, `docs/decisions/`, `docs/runs/`, `backend/docs/known-issues.md`, `backend/docs/testing.md`; ensured `frontend/docs/` remains strictly forbidden.
 - **Owner actions:** None
-- **Rollback command:** `git revert --no-edit b921c27^..197e1e0`
+- **Rollback command:** `git revert --no-edit ee71be1^..93981d1`
 - **Rollback chain:** `revert P5` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
 ### [ ] P6a — Agents canonical + generated shells
 - **Branch:** `plan/mono-p6a-agents-canonical`
 - **PR:** `pending`
 - **Merge method:** `squash`
-- **Commit SHAs:** `pending`
-- **Owner decisions used:** O12
-- **Verification evidence:** `pending`
+- **Commit SHAs:** `c5dcacc`
+- **Owner decisions used:** O12 (Codex = AGENTS.md + skills only)
+- **Verification evidence:**
+  - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 41 repo-level tests).
+  - `node scripts/migration/compare-results.mjs --phase P6a`: All metrics match or improve upon baseline (Jest 264 passed [0 missing], Vitest 14 passed, TS 0 errors, ESLint 0 errors / 1 warning, production smoke 11/11 passed).
+  - `scripts/agents/sync-shells.mjs --check`: Verified byte-for-byte fidelity against canonical files in `docs/agents/roles/*.md` and `docs/agents/rules/*.md`.
+  - `scripts/repo-tests/agent-shells.test.mjs`: Passed all 10 tests (roster coverage, identical name/description, sync-shells --check, banner & body inlining, skills symlinks and skills-lock entries, valid triggers/globs, claude frontmatter/context non-generation, byte budgets, CLAUDE.md lines/imports, settings.local.json untracked).
+  - `scripts/repo-tests/docs-links.test.mjs`: All 10 canonical rules and 6 roles reachable from `docs/README.md`.
+  - Monorepo Safety: `git diff --exit-code main -- '**/__snapshots__/**'` verified with 0 diff.
+  - Backend docs sync: `npm --prefix backend run docs:check` passed with 0 diff on `project-explorer.html`.
 - **Owner actions:** None
-- **Rollback command:** `git revert <squash-sha>`
-- **Rollback chain:** `revert P6a` -> ...
+- **Rollback command:** `git revert --no-edit c5dcacc`
+- **Rollback chain:** `revert P6a` -> `revert P5 range (ee71be1^..93981d1)` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
 ### [ ] P6b — Nested agent files + hooks
 - **Branch:** `plan/mono-p6b-agents-nested-hooks`

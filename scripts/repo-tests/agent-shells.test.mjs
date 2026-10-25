@@ -11,37 +11,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { getRepoRoot } from './_lib.mjs';
-
-const ROLES = [
-  'scraper-architect',
-  'run-reviewer',
-  'scraper-bugfixer',
-  'api-cache',
-  'frontend',
-  'docs-release-keeper',
-];
-
-/**
- * Extracts frontmatter string values from markdown text.
- * @param {string} content
- * @returns {{ name?: string; description?: string; body: string }}
- */
-function parseFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!match) {
-    return { body: content };
-  }
-  const yaml = match[1];
-  const body = match[2];
-
-  const nameMatch = yaml.match(/^name:\s*(.+)$/m);
-  const descMatch = yaml.match(/^description:\s*(.+)$/m);
-
-  const name = nameMatch ? nameMatch[1].trim().replace(/^["']|["']$/g, '') : undefined;
-  const description = descMatch ? descMatch[1].trim().replace(/^["']|["']$/g, '') : undefined;
-
-  return { name, description, body };
-}
+import {
+  ROLES,
+  RULES_CONFIG,
+  EXEMPT_FILES,
+  parseMarkdown,
+  buildExpectedOutputs,
+  runSync,
+} from '../agents/sync-shells.mjs';
 
 test('every role in roster has canonical role file, claude shell, and antigravity shell', () => {
   const root = getRepoRoot();
@@ -66,8 +43,8 @@ test('both shells for each role have identical name and description', () => {
     const claudeContent = fs.readFileSync(path.join(root, `.claude/agents/${role}.md`), 'utf-8');
     const agyContent = fs.readFileSync(path.join(root, `.agents/agents/${role}.md`), 'utf-8');
 
-    const claudeFm = parseFrontmatter(claudeContent);
-    const agyFm = parseFrontmatter(agyContent);
+    const claudeFm = parseMarkdown(claudeContent).frontmatter;
+    const agyFm = parseMarkdown(agyContent).frontmatter;
 
     assert.equal(claudeFm.name, role);
     assert.equal(agyFm.name, role);
@@ -77,19 +54,50 @@ test('both shells for each role have identical name and description', () => {
   }
 });
 
-test('every shell body references its canonical role file', () => {
+test('sync-shells generator in --check mode verifies all shells and rules match canonical sources byte-for-byte', () => {
   const root = getRepoRoot();
-  for (const role of ROLES) {
-    const claudeContent = fs.readFileSync(path.join(root, `.claude/agents/${role}.md`), 'utf-8');
-    const agyContent = fs.readFileSync(path.join(root, `.agents/agents/${role}.md`), 'utf-8');
+  const syncScript = path.join(root, 'scripts/agents/sync-shells.mjs');
 
-    const expectedRef = `docs/agents/roles/${role}.md`;
-    assert.ok(claudeContent.includes(expectedRef));
-    assert.ok(agyContent.includes(expectedRef));
+  const output = execFileSync('node', [syncScript, '--check'], {
+    cwd: root,
+    encoding: 'utf-8',
+  });
+  assert.ok(output.includes('in sync with canonical sources'));
+
+  const checkResult = runSync(true);
+  assert.equal(checkResult.success, true, `Sync check failed: ${checkResult.errors.join(', ')}`);
+});
+
+test('every generated shell contains a valid banner naming an existing canonical file and inlines its body', () => {
+  const root = getRepoRoot();
+  const expected = buildExpectedOutputs();
+
+  for (const [relPath, { canonicalPath }] of expected.entries()) {
+    const fullPath = path.join(root, relPath);
+    assert.ok(fs.existsSync(fullPath), `Expected file missing: ${relPath}`);
+
+    const diskContent = fs.readFileSync(fullPath, 'utf-8');
+    const banner = `<!-- GENERATED from ${canonicalPath} - DO NOT EDIT DIRECTLY -->`;
+    assert.ok(
+      diskContent.includes(banner),
+      `File ${relPath} missing banner: ${banner}`
+    );
+
+    const canonicalFull = path.join(root, canonicalPath);
+    assert.ok(
+      fs.existsSync(canonicalFull),
+      `Canonical file referenced in banner does not exist: ${canonicalPath}`
+    );
+
+    const canonicalBody = parseMarkdown(fs.readFileSync(canonicalFull, 'utf-8')).body;
+    assert.ok(
+      diskContent.includes(canonicalBody),
+      `File ${relPath} does not inline canonical body from ${canonicalPath}`
+    );
   }
 });
 
-test('every entry in .claude/skills/ is a symlink resolving into .agents/skills/', () => {
+test('every entry in .claude/skills/ is a symlink resolving into .agents/skills/ and skills-lock.json entries exist', () => {
   const root = getRepoRoot();
   const claudeSkillsDir = path.join(root, '.claude/skills');
   const entries = fs.readdirSync(claudeSkillsDir);
@@ -102,6 +110,18 @@ test('every entry in .claude/skills/ is a symlink resolving into .agents/skills/
 
     const realPath = fs.realpathSync(fullPath);
     assert.ok(realPath.includes(path.normalize('.agents/skills')));
+  }
+
+  // Verify skills-lock.json entries exist under .agents/skills/
+  const skillsLockPath = path.join(root, 'skills-lock.json');
+  assert.ok(fs.existsSync(skillsLockPath), 'skills-lock.json must exist');
+  const skillsLock = JSON.parse(fs.readFileSync(skillsLockPath, 'utf-8'));
+  for (const skillName of Object.keys(skillsLock.skills || {})) {
+    const targetDir = path.join(root, '.agents/skills', skillName);
+    assert.ok(
+      fs.existsSync(targetDir),
+      `Skill ${skillName} in skills-lock.json must exist in .agents/skills/`
+    );
   }
 });
 
@@ -122,6 +142,29 @@ test('every .agents/rules/*.md file has a valid trigger, and glob rules specify 
 
     if (trigger === 'glob') {
       assert.match(content, /globs:/);
+    }
+  }
+});
+
+test('every .claude/rules/*.md file has valid frontmatter and context rule is not generated', () => {
+  const root = getRepoRoot();
+  const rulesDir = path.join(root, '.claude/rules');
+  const rules = fs.readdirSync(rulesDir).filter((f) => f.endsWith('.md'));
+
+  assert.ok(rules.length > 0);
+  assert.strictEqual(
+    fs.existsSync(path.join(rulesDir, 'context.md')),
+    false,
+    '.claude/rules/context.md should NOT be generated (imported directly in CLAUDE.md)'
+  );
+
+  for (const file of rules) {
+    const content = fs.readFileSync(path.join(rulesDir, file), 'utf-8');
+    const { frontmatter } = parseMarkdown(content);
+    // If rule has paths, paths must be non-empty array
+    if (frontmatter.paths) {
+      assert.ok(Array.isArray(frontmatter.paths), `paths must be an array in ${file}`);
+      assert.ok(frontmatter.paths.length > 0, `paths must not be empty in ${file}`);
     }
   }
 });
