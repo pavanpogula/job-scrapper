@@ -304,7 +304,7 @@ app.get('/v1/meta', async (_req: Request, res: Response) => {
       async () => {
         const [activeJobs, hiringCompanies, facets] = await Promise.all([
           prisma.job.count({ where: { active: true, isListed: true } }),
-          prisma.company.count({ where: { status: 'ACTIVE', jobs: { some: { active: true } } } }),
+          prisma.company.count({ where: { status: 'ACTIVE', jobs: { some: { active: true, isListed: true } } } }),
           computeFacets(prisma),
         ]);
         return {

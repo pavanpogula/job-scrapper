@@ -3,7 +3,7 @@
 > **Purpose of this folder:** A single, authoritative source of context for humans *and AI agents*
 > working on this repository. Read this index first, then open only the file(s) relevant to your task.
 >
-> _Last full analysis: 2026-10-24 (P1 completion: Phase 1 correctness across scraper, database, API, UI, and documentation)._
+> _Last full analysis: 2026-10-24 (BF-019: cache/DB body parity, full companies cache, API Redis cold-start connect, fixer workflow fixes)._
 
 ---
 

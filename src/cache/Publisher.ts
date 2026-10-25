@@ -118,6 +118,22 @@ export async function recordScrapeFinished(options: {
 }
 
 /**
+ * @summary Reads every ACTIVE company by paging queryCompanies at its maximum page size
+ */
+async function fetchAllCompanies(prisma: any): Promise<{ data: any[]; total: number }> {
+  const data: any[] = [];
+  let total = 0;
+  let totalPages = 1;
+  for (let page = 1; page <= totalPages; page++) {
+    const result = await queryCompanies(prisma, { page, pageSize: 100 });
+    data.push(...result.data);
+    total = result.total;
+    totalPages = result.totalPages;
+  }
+  return { data, total };
+}
+
+/**
  * @summary Builds, compresses, and atomically publishes cache generation
  */
 export async function publishCacheGeneration(
@@ -169,7 +185,7 @@ export async function publishCacheGeneration(
         ],
       }),
       computeFacets(prisma),
-      queryCompanies(prisma, { pageSize: 100 }),
+      fetchAllCompanies(prisma),
     ]);
 
     const hiringCompaniesCount = new Set(
@@ -237,10 +253,12 @@ export async function publishCacheGeneration(
       const payload = {
         data: pageData,
         meta: {
+          total: defaultTotal,
           page: p,
           pageSize: 25,
-          total: defaultTotal,
           totalPages: defaultTotalPages,
+          hasNext: p < defaultTotalPages,
+          hasPrev: p > 1,
         },
       };
       genFields[`jobs?page=${p}`] = zlib.gzipSync(Buffer.from(JSON.stringify(payload)), { level: 6 });
@@ -292,10 +310,12 @@ export async function publishCacheGeneration(
         const payload = {
           data: pageData,
           meta: {
+            total: totalFiltered,
             page: p,
             pageSize: 25,
-            total: totalFiltered,
             totalPages,
+            hasNext: p < totalPages,
+            hasPrev: p > 1,
           },
         };
         genFields[canonKey] = zlib.gzipSync(Buffer.from(JSON.stringify(payload)), { level: 6 });
@@ -303,17 +323,15 @@ export async function publishCacheGeneration(
     }
 
     // Facets & Meta
-    genFields['facets'] = zlib.gzipSync(Buffer.from(JSON.stringify({ data: facets })), { level: 6 });
+    genFields['facets'] = zlib.gzipSync(Buffer.from(JSON.stringify(facets)), { level: 6 });
     genFields['meta'] = zlib.gzipSync(
       Buffer.from(
         JSON.stringify({
-          data: {
-            activeJobs: defaultTotal,
-            hiringCompanies: hiringCompaniesCount,
-            withSalary: facets.hasSalary?.yes ?? 0,
-            lastScrapeAt: scrapeFinishedAt,
-            generation: gen,
-          },
+          activeJobs: defaultTotal,
+          hiringCompanies: hiringCompaniesCount,
+          withSalary: facets.hasSalary?.yes ?? 0,
+          lastScrapeAt: scrapeFinishedAt,
+          generation: gen,
         })
       ),
       { level: 6 }
@@ -335,12 +353,10 @@ export async function publishCacheGeneration(
         Buffer.from(
           JSON.stringify({
             data: pageCompanies,
-            meta: {
-              page: p,
-              pageSize: 30,
-              total: totalCompanies,
-              totalPages: companyTotalPages,
-            },
+            total: totalCompanies,
+            page: p,
+            pageSize: 30,
+            totalPages: Math.ceil(totalCompanies / 30),
           })
         ),
         { level: 6 }

@@ -32,6 +32,7 @@ interface PointerCache {
  */
 export class ReadThroughService {
   private breaker: CircuitBreaker;
+  private connectPromise: Promise<void> | null = null;
   private lru = new Map<string, LruEntry>();
   private pointerCache: PointerCache | null = null;
   private manifestCache = new Map<string, any>();
@@ -74,6 +75,29 @@ export class ReadThroughService {
   }
 
   /**
+   * Resolves the API Redis client and connects it first when it is idle. The API client is lazyConnect with
+   * enableOfflineQueue:false, so a command on an unconnected client is rejected. Returns null if connecting fails.
+   */
+  private async getReadyClient(): Promise<any> {
+    const redis = this.getClient();
+    if (!redis) return null;
+    const idle = redis.status === 'wait' || redis.status === 'end';
+    if (!idle && !this.connectPromise) return redis;
+    try {
+      if (!this.connectPromise) {
+        this.connectPromise = Promise.resolve(redis.connect()).finally(() => {
+          this.connectPromise = null;
+        });
+      }
+      await this.connectPromise;
+      return redis;
+    } catch (err: any) {
+      this.breaker.recordFailure(err);
+      return null;
+    }
+  }
+
+  /**
    * Fetches current generation ID and last scrape timestamp with 300s TTL.
    */
   private async getPointer(): Promise<{ gen: string | null; lastScrapeAt: string | null }> {
@@ -85,7 +109,7 @@ export class ReadThroughService {
       };
     }
 
-    const redis = this.getClient();
+    const redis = await this.getReadyClient();
     if (!redis) {
       return { gen: null, lastScrapeAt: null };
     }
@@ -118,7 +142,7 @@ export class ReadThroughService {
       return this.manifestCache.get(gen);
     }
 
-    const redis = this.getClient();
+    const redis = await this.getReadyClient();
     if (!redis) return null;
 
     try {
@@ -155,7 +179,7 @@ export class ReadThroughService {
       return result;
     }
 
-    const redis = this.getClient();
+    const redis = await this.getReadyClient();
     if (!redis) {
       res.setHeader('X-Cache', 'BYPASS');
       res.setHeader('X-Cache-Reason', 'not_configured');
@@ -398,7 +422,7 @@ export class ReadThroughService {
       return cachedDetail.data;
     }
 
-    const redis = this.getClient();
+    const redis = await this.getReadyClient();
     if (!redis) {
       res.setHeader('X-Cache', 'BYPASS');
       res.setHeader('X-Cache-Reason', 'not_configured');
@@ -531,7 +555,7 @@ export class ReadThroughService {
     lastScrapeAt: string | null;
   }> {
     const start = Date.now();
-    const redis = this.getClient();
+    const redis = await this.getReadyClient();
     if (!redis) {
       return {
         configured: false,
