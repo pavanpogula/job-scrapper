@@ -2,7 +2,7 @@
   "version": 2,
   "regions": ["iad1"],
   "buildCommand": "npm run build",
-  "outputDirectory": "job-scrapper-ui/dist",
+  "outputDirectory": "frontend/dist",
   "functions": {
     "api/index.ts": {
       "maxDuration": 15

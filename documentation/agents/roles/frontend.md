@@ -1,7 +1,7 @@
 # Role: frontend
 
 ## Responsibilities
-- Owns the React 19 web application in `job-scrapper-ui/` built with TypeScript, Vite, Tailwind CSS, and Redux Toolkit.
+- Owns the React 19 web application in `frontend/` built with TypeScript, Vite, Tailwind CSS, and Redux Toolkit.
 - Implements job browsing, search debounce, facet multi-select, detail drawer presentation, and mobile-responsive views.
 - Enforces defensive security: sanitizes HTML rendering using DOMPurify to eliminate Stored XSS risks.
 - Maintains accessibility (WCAG AA), responsive layouts, smooth state transitions, and error states.
@@ -12,10 +12,10 @@
 2. `documentation/agents/context.md`
 3. `documentation/13-frontend-ui.md`
 4. `documentation/12-backend-api.md`
-5. `job-scrapper-ui/src/types/api.ts`
+5. `frontend/src/types/api.ts`
 
 ## Allowed Scope
-- `job-scrapper-ui/**`
+- `frontend/**`
 - `documentation/13-frontend-ui.md`
 
 ## Output Contract

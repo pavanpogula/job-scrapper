@@ -6,7 +6,7 @@
 
 ## 1. What the owner asked for
 
-1. **Frontend:** the React UI (`job-scrapper-ui/`) displays jobs: browse, search, filter, paginate, and Apply. There
+1. **Frontend:** the React UI (`frontend/`) displays jobs: browse, search, filter, paginate, and Apply. There
    are no logins.
 2. **Backend:** the Express API reads the cache first. Postgres is only the fail-safe, used when the cache misses, has
    been deleted, or Redis is down.

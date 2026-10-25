@@ -9,12 +9,12 @@
 ```mermaid
 flowchart LR
   subgraph Browser
-    UI["React UI<br/>job-scrapper-ui/ (Vite build)"]
+    UI["React UI<br/>frontend/ (Vite build)"]
   end
   subgraph Vercel["Vercel (Hobby)"]
     CDN["Vercel CDN + WAF rate-limit rule"]
     FN["Serverless function api/index.ts<br/>→ src/api/Server.ts (Express 5)"]
-    STATIC["Static SPA job-scrapper-ui/dist"]
+    STATIC["Static SPA frontend/dist"]
   end
   subgraph Data
     REDIS[("Upstash Redis (free, TLS)<br/>jc:v1:* cache generations + details")]
@@ -189,7 +189,7 @@ Agents coordinate work according to specialized domains defined in [`documentati
 | `run-reviewer` | `output/reports/**`, `documentation/runs/**` | Triaging scrape run telemetry, distinguishing noise from actionable S1/S2 regressions |
 | `scraper-bugfixer` | `src/lib/**`, `src/core/**`, `src/database/**`, `tests/**`, `documentation/decisions/**`, `CHANGELOG.md` | Diagnosing root causes, implementing bug fixes, and authoring regression invariant guards |
 | `api-cache` | `src/api/**`, `src/cache/**`, `api/**`, `vercel.json`, `tests/unit/{ApiServer,ReadThrough,Breaker}*` | Express API, Upstash Redis caching, circuit breakers, rate limits, edge CDN headers |
-| `frontend` | `job-scrapper-ui/**` | React 19 UI, Redux Toolkit, accessibility, search UX, and Tailwind styling |
+| `frontend` | `frontend/**` | React 19 UI, Redux Toolkit, accessibility, search UX, and Tailwind styling |
 | `docs-release-keeper` | `documentation/**`, `CHANGELOG.md`, `README.md`, `AGENTS.md` | Maintaining documentation sync, release changelogs, agent prompts, and explorer tools |
 
 ---

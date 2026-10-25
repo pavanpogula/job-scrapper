@@ -357,7 +357,7 @@ jobs:
         with: { ref: '${{ github.sha }}', fetch-depth: 0, persist-credentials: false }   # = main on schedule; the test branch on workflow_dispatch
       - uses: actions/setup-node@v7
         with: { node-version-file: '.nvmrc', cache: 'npm' }
-      - run: npm ci && npm --prefix job-scrapper-ui ci && npx prisma generate
+      - run: npm ci && npm --prefix frontend ci && npx prisma generate
       - uses: actions/download-artifact@v8      # v8.0.2 current (checked 2026-10-23)
         with: { name: 'scrape-report-${{ needs.scrape.outputs.run_id }}', path: output/reports }
       - run: git checkout -b "auto-fix/${{ needs.scrape.outputs.run_id }}"

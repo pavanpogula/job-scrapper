@@ -1,5 +1,10 @@
 {
-  "prefixes": [],
+  "prefixes": [
+    {
+      "from": "job-scrapper-ui/",
+      "to": "frontend/"
+    }
+  ],
   "deleted": [
     {
       "path": "tests/unit/AgentShells.test.ts",

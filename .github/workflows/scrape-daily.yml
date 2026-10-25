@@ -163,7 +163,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci && npm --prefix job-scrapper-ui ci && npx prisma generate
+        run: npm ci && npm --prefix frontend ci && npx prisma generate
 
       - name: Download scrape report artifact
         uses: actions/download-artifact@v8

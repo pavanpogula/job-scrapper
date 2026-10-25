@@ -30,7 +30,7 @@ P0 accounts & facts (owner) ─► P1 make existing correct ─► P2 cache + AP
 Phase 1 runs on four tracks:
 - **A (scraper):** `Scraper.ts`, so its tasks are sequential.
 - **B (API):** `src/api/**`.
-- **C (UI):** `job-scrapper-ui/**`.
+- **C (UI):** `frontend/**`.
 - **D (docs and agent files).**
 
 Tracks B, C and D can each run alongside A.
@@ -121,7 +121,7 @@ Tracks B, C and D can each run alongside A.
 |---|---|---|---|---|
 | P1-T19 | UI tooling: Vitest, Testing Library, MSW, Playwright, ESLint 9; root `verify:ui` (FE-09/10, TEST-12) | see 06 §4 | — | `npm run verify:ui` exits 0. `AGENTS.md` lists it in the mandatory checks. |
 | P1-T20 | The default view shows all jobs (FE-01, API-01) | `filterSlice.ts`, `jobsApi.ts`, tests | P1-T19, P1-T17 (deployed) | The default query string is `page=1&pageSize=25&sortBy=publishedAt&sortOrder=desc`. After deploy, `curl -s "$URL/v1/jobs?page=1&pageSize=25&sortBy=publishedAt&sortOrder=desc" \| jq .meta.total` equals `curl -s $URL/health \| jq .activeJobs`. |
-| P1-T21 | Country options come from facets, labelled with `Intl.DisplayNames` (FE-02) | `BrowsePage.tsx` / `FilterControls.tsx`, tests | P1-T19, P1-T15, P1-T17 | An MSW test passes. `grep -rnE '"(US\|GB\|CA\|DE\|FR)"' job-scrapper-ui/src/pages` prints nothing (mocks are excluded until P5-T10). When running these greps, type a plain `\|` as `|`. **Deploy together with the P1-T15 backfill.** After the backfill, `curl -s $URL/v1/facets \| jq -r '.countries[].value' \| grep -vcE '^[A-Z]{2}$'` prints `0`. |
+| P1-T21 | Country options come from facets, labelled with `Intl.DisplayNames` (FE-02) | `BrowsePage.tsx` / `FilterControls.tsx`, tests | P1-T19, P1-T15, P1-T17 | An MSW test passes. `grep -rnE '"(US\|GB\|CA\|DE\|FR)"' frontend/src/pages` prints nothing (mocks are excluded until P5-T10). When running these greps, type a plain `\|` as `|`. **Deploy together with the P1-T15 backfill.** After the backfill, `curl -s $URL/v1/facets \| jq -r '.countries[].value' \| grep -vcE '^[A-Z]{2}$'` prints `0`. |
 
 ### Track D (end of P1)
 
@@ -148,7 +148,7 @@ Tracks B, C and D can each run alongside A.
 | P2-T05 | Read-through for lists, facets, companies and meta; headers; error contract; single-flight; dbGuard (API-02/16/17/19, CACHE-04/07; 03 §5.1, 04 §3) | `src/api/cache/ReadThrough.ts`, `src/api/middleware/*`, `Server.ts`, `tests/unit/ReadThrough.test.ts` | P2-T01, T02, P1-T17 | ∥ T03 (different files) | The parity and failure-mode tests in 10 §2 pass. The P1-T16 snapshots still match (plus additive fields). A new BF for read-through parity is added. |
 | P2-T06 | Detail from `jc:v1:details:<detailsShard(id)>`, with DB fallback `OR(id, ashbyId)` (API-02; 03 §5.2) | `ReadThrough.ts`, `Server.ts`, tests | P2-T05 | — | `-t "detail HIT from details hash"` and `-t "detail miss → DB, no Redis write"` pass. |
 | P2-T07 | `/health` v2 and `GET /v1/meta` (API-04, CACHE-04; 04 §5) | `Server.ts`, tests | P2-T05 | — | Shallow health makes 0 Prisma calls. `?deep=1` without a token makes no DB call. Responses are `no-store`. `/v1/meta` matches the contract. |
-| P2-T08 | Remove the in-memory limiter; CORS allow-list; Cache-Control; `vercel.json` regions/functions/headers (SPA CSP); delete `job-scrapper-ui/vercel.json`; type-check and lint `api/` (API-03/07/08/14/15/21, FE-08/19; D-16) | `Server.ts`, `src/api/middleware/*`, `vercel.json`, `job-scrapper-ui/vercel.json` (delete), `tsconfig.json`, `package.json` (lint script) | P2-T05, P0-T05, P1-T17 (the `x-forwarded-uri` decision) | — | An unlisted origin gets no `Access-Control-Allow-Origin`. The 11th request from one IP is not a 429. The 14th concurrent fallback gets 503 + `Retry-After: 5`. On the preview, `curl -sI $PREVIEW/` shows a CSP without `script-src 'unsafe-inline'` and `X-Frame-Options: DENY`, and `curl -sI "$PREVIEW/v1/jobs?page=1"` shows `s-maxage=300` and `X-Cache`. |
+| P2-T08 | Remove the in-memory limiter; CORS allow-list; Cache-Control; `vercel.json` regions/functions/headers (SPA CSP); delete `frontend/vercel.json`; type-check and lint `api/` (API-03/07/08/14/15/21, FE-08/19; D-16) | `Server.ts`, `src/api/middleware/*`, `vercel.json`, `frontend/vercel.json` (delete), `tsconfig.json`, `package.json` (lint script) | P2-T05, P0-T05, P1-T17 (the `x-forwarded-uri` decision) | — | An unlisted origin gets no `Access-Control-Allow-Origin`. The 11th request from one IP is not a 429. The 14th concurrent fallback gets 503 + `Retry-After: 5`. On the preview, `curl -sI $PREVIEW/` shows a CSP without `script-src 'unsafe-inline'` and `X-Frame-Options: DENY`, and `curl -sI "$PREVIEW/v1/jobs?page=1"` shows `s-maxage=300` and `X-Cache`. |
 | P2-T09 | Docs: new `documentation/12-backend-api.md` (09 §8); doc 05 Redis section → `jc:v1:*`; doc 07 env vars and Neon pooled URL; `.env.example`; serverless Prisma notes (DOC-02, DOC-16, API-20, CACHE-05, OPS-08) | docs, `.env.example` | T03–T08 | ∥ | `grep -n "jc:v1:current" documentation/05-database-and-cache.md documentation/12-backend-api.md` finds matches. `grep -n "Required" .env.example` doesn't match the Redis line. |
 
 **P2 exit check:** the live checks in 10 §5 for P2 pass on a preview deploy and then on production.
@@ -159,7 +159,7 @@ Tracks B, C and D can each run alongside A.
 
 | Task | Goal (gaps) | Files | Deps | Acceptance |
 |---|---|---|---|---|
-| P3-T01 | PR CI: `.github/workflows/ci.yml` (Node 24, `npm ci` for root and UI, tsc, lint, test, `tsc -p tsconfig.test.json`, `verify:ui`, build, Playwright when relevant); `.nvmrc` = `24`; `engines`; `tsconfig.test.json`; root `build` uses `npm ci --prefix job-scrapper-ui` (OPS-01/02, TEST-10, FE-18) | `.github/workflows/ci.yml`, `.nvmrc`, `package.json`, `tsconfig.test.json` | P1 done | The `ci` check is green on a test PR. `npx tsc --noEmit -p tsconfig.test.json` exits 0. Branch protection requires `ci` (P0-T03). |
+| P3-T01 | PR CI: `.github/workflows/ci.yml` (Node 24, `npm ci` for root and UI, tsc, lint, test, `tsc -p tsconfig.test.json`, `verify:ui`, build, Playwright when relevant); `.nvmrc` = `24`; `engines`; `tsconfig.test.json`; root `build` uses `npm ci --prefix frontend` (OPS-01/02, TEST-10, FE-18) | `.github/workflows/ci.yml`, `.nvmrc`, `package.json`, `tsconfig.test.json` | P1 done | The `ci` check is green on a test PR. `npx tsc --noEmit -p tsconfig.test.json` exits 0. Branch protection requires `ci` (P0-T03). |
 | P3-T02 | Daily scrape workflow, `scrape` job only (07 §6 without `fixer`); `scripts/ci/alert-issue.sh`; `npm run report:install-fixture` (07 §6 notes) (OPS-01/03/04/05/07) | `.github/workflows/scrape-daily.yml`, `scripts/ci/alert-issue.sh`, `src/utils/InstallReportFixture.ts`, `tests/fixtures/reports/failed-run.json` | P3-T01 (`.nvmrc`), P2-T04, P1-T10, P0-T02 | A `workflow_dispatch` run is green. The `scrape-report-<runId>` artifact exists. The step summary uses the 07 §2.3 template. `npm run cache:status` (locally) shows `current` = that run's gen. A `workflow_dispatch` run with `fixture_report=tests/fixtures/reports/failed-run.json` (exit code 1) opens or appends the `scrape-alert` issue. `--workers=0` can't be used for this, because it is ignored. |
 | P3-T03 | Enrichment returns a status and backs off on 429 (SCR-22) | `src/lib/AshbyClient.ts`, `src/utils/EnrichCompanies.ts`, tests | P1-T12 | `-t "enrich backs off on 429"` passes. |
 | P3-T04 | Ops doc `documentation/14-deployment-and-operations.md` (09 §7), runbook (DOC-04, CACHE-06) | docs | P3-T02 | The doc exists, is linked from the index, and its secrets matrix matches the workflow files. |
@@ -219,7 +219,7 @@ The full specification for P5-T01…T10 (files and acceptance) is in [06](./06-f
 
 ```text
 You are implementing the plan in documentation/plan/ of the repo at /Users/pavanreddy/Documents/anti-gravity/job-scrapper
-(Ashby Job Scraper: TypeScript scraper CLI + Express API on Vercel + React UI in job-scrapper-ui/).
+(Ashby Job Scraper: TypeScript scraper CLI + Express API on Vercel + React UI in frontend/).
 
 Before anything else, read in order: AGENTS.md, CLAUDE.md, documentation/README.md, then documentation/plan/00-README.md
 and every file it lists (01–12). The plan is the spec; documentation/plan/11-open-questions-and-decisions.md holds the

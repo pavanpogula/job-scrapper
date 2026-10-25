@@ -43,7 +43,7 @@ function runCmd(cmd, options = {}) {
 export async function captureBaseline(targetDir) {
   const root = getRepoRoot();
   const isBackendLayout = fs.existsSync(path.join(root, 'backend/package.json'));
-  const uiDirName = fs.existsSync(path.join(root, 'frontend/package.json')) ? 'frontend' : 'job-scrapper-ui';
+  const uiDirName = 'frontend';
   const uiPath = path.join(root, uiDirName);
   const backendRoot = isBackendLayout ? path.join(root, 'backend') : root;
 
@@ -61,7 +61,8 @@ export async function captureBaseline(targetDir) {
   let jestParsed;
   try {
     const jsonStart = jestRaw.indexOf('{');
-    jestParsed = JSON.parse(jsonStart >= 0 ? jestRaw.slice(jsonStart) : jestRaw);
+    const jsonEnd = jestRaw.lastIndexOf('}');
+    jestParsed = JSON.parse(jsonStart >= 0 && jsonEnd >= jsonStart ? jestRaw.slice(jsonStart, jsonEnd + 1) : jestRaw);
   } catch (e) {
     console.error('Failed to parse jest JSON output:', e);
     jestParsed = { testResults: [] };
@@ -139,7 +140,8 @@ export async function captureBaseline(targetDir) {
   let lintParsed = [];
   try {
     const jsonStart = lintRaw.indexOf('[');
-    lintParsed = JSON.parse(jsonStart >= 0 ? lintRaw.slice(jsonStart) : lintRaw);
+    const jsonEnd = lintRaw.lastIndexOf(']');
+    lintParsed = JSON.parse(jsonStart >= 0 && jsonEnd >= jsonStart ? lintRaw.slice(jsonStart, jsonEnd + 1) : lintRaw);
   } catch (e) {
     console.error('Failed to parse ESLint JSON output:', e);
   }

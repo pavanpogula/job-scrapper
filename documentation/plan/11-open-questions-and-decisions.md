@@ -18,7 +18,7 @@ marked — are recorded here only.
 | D-09 | The fixer works on a branch `auto-fix/<runId>`, commits, and a deterministic CI step pushes **the branch** and opens a PR. Agents never push to `main` and never merge. | owner | Human review before any change ships | ADR-0006 |
 | D-10 | A company is quarantined after 3 consecutive confirmed 404s, and its jobs are deactivated. Fetch failures alone never deactivate a company; at 7 failures in a row an actionable issue is raised. | planner | Stale jobs disappear without data loss on transient outages | ADR-0009 |
 | D-11 | The CI fixer runs on **Claude Code** (`anthropics/claude-code-action@v1`), not on Antigravity | planner | `agy` headless documents no CI auth (checked 2026-10-23) | ADR-0005 |
-| D-12 | `job-scrapper-ui/` is the only frontend. `documentation/frontend-design/` was retired in `22afd64`. | owner | It described a Next.js app that was never built | — |
+| D-12 | `frontend/` is the only frontend. `documentation/frontend-design/` was retired in `22afd64`. | owner | It described a Next.js app that was never built | — |
 | D-13 | JobPosting JSON-LD is off by default (`VITE_ENABLE_JOBPOSTING_JSONLD=false`) | planner | Google's job-posting policy expects employer-provided data | — |
 | D-14 | One canonical agent context (`AGENTS.md`, `documentation/agents/**`, `.agents/skills/**`) with thin Claude and Antigravity shells, kept in sync by a parity test | planner | The current copies already contradict each other | ADR-0008 |
 | D-15 | Purging the Vercel CDN after a publish is optional, and happens only if `VERCEL_TOKEN` is set. Otherwise, normal staleness is about 5–10 min after a publish: CDN `s-maxage=300` plus the 300 s pointer cache. `stale-while-revalidate` allows up to 1 h, and `stale-if-error` up to 24 h during outages. | planner | Avoids needing another secret | — |
@@ -33,7 +33,7 @@ Each one has a recommended default. The implementer proceeds with the default un
 | Q-01 | Upstash free limits: the FAQ says **10,000 requests/day**, the pricing page says **500K/month**. Still unconfirmed: the concurrent-connection limit, and which of the two command limits applies. TLS and the budget error text are confirmed (03 §1). | Design for 10K/day (already done). Record the real values in P0-T01. | implementer (verify) | P0 |
 | Q-02 | Is the repo private? (An unauthenticated GitHub API call returned 404, so it probably is.) | Private: 2,000 Actions min/month, 2-core runners, `--workers=4` | owner confirms | P0 |
 | Q-03 | Use ioredis over `rediss://`, or the `@upstash/redis` REST client? | ioredis, unless P0-T01 finds a connection limit below 50, in which case switch the **API** to REST and keep ioredis for the publisher | implementer | P0/P2 |
-| Q-04 | Which Vercel project serves prod: the repo root (`vercel.json`) or `job-scrapper-ui/`? | Root. Delete `job-scrapper-ui/vercel.json` in P2-T08 once confirmed. | owner confirms | P0 |
+| Q-04 | Which Vercel project serves prod: the repo root (`vercel.json`) or `frontend/`? | Root. Delete `frontend/vercel.json` in P2-T08 once confirmed. | owner confirms | P0 |
 | Q-05 | Regions | Vercel `iad1`; Neon and Upstash in AWS us-east-1 | owner confirms | P0 |
 | Q-06 | Fixer cost ceiling | `--max-budget-usd 5` per run, at most one fixer run per day, so at most about $150/month. Set a monthly spend limit in the Anthropic console. | owner | P4 |
 | Q-07 | Publish the cache after a partial worker failure? | No (`skipped_incomplete_run`). Revisit after 30 runs. | owner | P2 |

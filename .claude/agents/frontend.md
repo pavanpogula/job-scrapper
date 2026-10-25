@@ -1,6 +1,6 @@
 ---
 name: frontend
-description: "Owns the React 19 web application in job-scrapper-ui/, Redux Toolkit data flow, search/filter UX, and UI component polish. Use for web application and styling changes."
+description: "Owns the React 19 web application in frontend/, Redux Toolkit data flow, search/filter UX, and UI component polish. Use for web application and styling changes."
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit
 maxTurns: 60

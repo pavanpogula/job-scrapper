@@ -93,9 +93,12 @@
 - **Branch:** `plan/mono-p2-frontend-rename`
 - **PR:** `pending`
 - **Merge method:** `rebase`
-- **Commit SHAs (first..last):** `pending`
+- **Commit SHAs (first..last):** `50d5248..b397907`
 - **Owner decisions used:** None
-- **Verification evidence:** `pending`
+- **Verification evidence:**
+  - `scripts/check-all.sh --no-install`: Passed all 9 verification steps cleanly (Prisma generate, root typecheck, test typecheck, lint, Jest [37 suites / 264 tests], Vitest UI verify [5 suites / 14 tests], build, docs check, repo-tests [25/25 tests]).
+  - `node scripts/migration/compare-results.mjs --phase P2`: Passed (Jest 264, Vitest 14, TS 0 errors, ESLint 0 errors / 1 warning, dist inspected, production smoke verified).
+  - Grep verification: `git grep -n 'job-scrapper-ui/'` and `git grep -n 'job-scrapper-ui' | grep -v 'vercel.app'` return only the required move-map prefix entry in `scripts/migration/move-map.json` outside frozen baseline.
 - **Owner actions:** Local cleanup `rm -rf job-scrapper-ui`
 - **Rollback command:** `git revert --no-edit <first>^..<last>` (+ Vercel instant rollback if prod affected)
 - **Rollback chain:** `revert P2`

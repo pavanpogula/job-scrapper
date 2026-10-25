@@ -21,12 +21,12 @@
 ```mermaid
 flowchart LR
   subgraph Browser
-    UI["React UI<br/>job-scrapper-ui/ (Vite build)"]
+    UI["React UI<br/>frontend/ (Vite build)"]
   end
   subgraph Vercel["Vercel (Hobby)"]
     CDN["Vercel CDN + WAF rate-limit rule"]
     FN["Serverless function api/index.ts<br/>→ src/api/Server.ts (Express 5)"]
-    STATIC["Static SPA job-scrapper-ui/dist"]
+    STATIC["Static SPA frontend/dist"]
   end
   subgraph Data
     REDIS[("Upstash Redis (free, TLS)<br/>jc:v1:* cache generations + details")]

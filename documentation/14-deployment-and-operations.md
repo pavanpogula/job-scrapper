@@ -42,7 +42,7 @@ The matrix below documents where every secret is configured and consumed:
 - **Triggers:** Pull requests and pushes targeting `main` or `plan/**`, plus manual `workflow_dispatch`.
 - **Environment:** Node 24 (`.nvmrc`), Ubuntu 24.04 runner.
 - **Steps:**
-  1. `npm ci` (root and `job-scrapper-ui`)
+  1. `npm ci` (root and `frontend`)
   2. `npx prisma generate`
   3. `npx tsc --noEmit -p .` (root + serverless API)
   4. `npx tsc --noEmit -p tsconfig.test.json` (all test suites)
@@ -73,7 +73,7 @@ The matrix below documents where every secret is configured and consumed:
   "version": 2,
   "regions": ["iad1"],
   "buildCommand": "npm run build",
-  "outputDirectory": "job-scrapper-ui/dist",
+  "outputDirectory": "frontend/dist",
   "functions": {
     "api/index.ts": {
       "maxDuration": 15

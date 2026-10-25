@@ -22,12 +22,12 @@
     "report:classify": "npx ts-node src/utils/ReportClassifyCli.ts",
     "report:install-fixture": "npx ts-node src/utils/InstallReportFixture.ts",
     "verify": "npx ts-node src/utils/Verify.ts",
-    "verify:ui": "npm --prefix job-scrapper-ui run typecheck && npm --prefix job-scrapper-ui run lint && npm --prefix job-scrapper-ui run test",
+    "verify:ui": "npm --prefix frontend run typecheck && npm --prefix frontend run lint && npm --prefix frontend run test",
     "cache:publish": "npx ts-node src/cache/CacheCli.ts publish",
     "cache:status": "npx ts-node src/cache/CacheCli.ts status",
     "cache:purge-legacy": "npx ts-node src/cache/CacheCli.ts purge-legacy",
     "api:start": "npx ts-node src/api/Server.ts",
-    "build": "npx prisma generate && npm ci --prefix job-scrapper-ui && npm --prefix job-scrapper-ui run build"
+    "build": "npx prisma generate && npm ci --prefix frontend && npm --prefix frontend run build"
   },
   "engines": {
     "node": ">=24.0.0"
