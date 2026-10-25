@@ -4,7 +4,7 @@
 
 ### Vercel Deployment IDs
 - **Pre-P3 Production Deployment ID (frontend/current):** `https://job-scrapper-ha6lchynl-boolean6.vercel.app`
-- **Backend Promotion ID (P3a):** `pending`
+- **Backend Promotion ID (P3a):** preview `FJ6yV1tzi` (commit `5643349`) promoted to production on 2026-10-25; backend prod domain `https://job-scrapper-api-eight.vercel.app` (plain `job-scrapper-api.vercel.app` is owned by someone else). Backend smoke 9/9 passed.
 
 ### Stop-the-Line Toggles (O11)
 - `SCRAPE_ENABLED`: `true`
@@ -105,9 +105,9 @@
 
 ### [ ] P3a — Backend move + Vercel split
 - **Branch:** `plan/mono-p3a-backend-move`
-- **PR:** `pending`
-- **Merge method:** `rebase`
-- **Commit SHAs (first..last):** `7b86503..6c5447f`
+- **PR:** #6
+- **Merge method:** `rebase` (rebase-merge rewrites SHAs: record the new first..last from `git log origin/main` right after merging)
+- **Commit SHAs (first..last), branch:** `7b86503..` branch tip (commits: move, edits, domain fix, smoke fix)
 - **Owner decisions used:** O1, O2, O8, O9
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed all steps cleanly (`backend check:all`, `frontend check`, and 29 repo-level tests).
@@ -115,8 +115,8 @@
   - Architectural Invariants: Added `scripts/repo-tests/no-api-imports-scraper.test.mjs` and ESLint `no-restricted-imports` preventing API coupling to scraper/discovery modules.
   - Fixer Safety: Added `scripts/repo-tests/fixer-allowed-tools.test.mjs` and updated `scripts/ci/check-fixer-scope.sh` for `backend/` paths.
   - Unified Checks: Added `scripts/repo-tests/single-check-command.test.mjs` verifying canonical check commands.
-- **Owner actions:** Follow Vercel cutover runbook (promote backend, toggle vars, set root to frontend)
-- **Rollback command:** See PLAN.md runbook §8 (Instant Rollback frontend, root to `.`, `git revert --no-edit 7b86503^..6c5447f`)
+- **Owner actions:** Follow Vercel cutover runbook. Done: created `job-scrapper-api` (Root `backend`), backend preview verified, promoted to production. Pending: staging frontend project `job-scrapper-web-staging` check, toggles off, merge, set old project Root Directory to `frontend`, single redeploy, prod smoke.
+- **Rollback command:** See PLAN.md runbook §8 (Instant Rollback frontend, root to `.`, `git revert --no-edit <first>^..<last>` (the rebased SHAs on main))
 - **Rollback chain:** `revert P3a` -> `revert P2` -> `revert P1`
 
 ### [ ] P3b — Backend follow-ups
