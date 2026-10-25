@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Post-commit reminder hook for Claude Code and Antigravity
-# Warns if the latest commit does not include CHANGELOG.md
+# Warns if a git commit command was executed and the latest commit does not include CHANGELOG.md
 
 set -euo pipefail
 
@@ -13,6 +13,36 @@ fi
 INPUT=""
 if [[ ! -t 0 ]]; then
   INPUT=$(cat || true)
+fi
+
+# If stdin was provided, extract the command and verify it's a git commit
+if [[ -n "$INPUT" ]]; then
+  CMD=$(node -e '
+    let input = "";
+    process.stdin.on("data", chunk => input += chunk);
+    process.stdin.on("end", () => {
+      try {
+        const data = JSON.parse(input);
+        const cmd = data.tool_input?.command ||
+                    data.toolCall?.args?.CommandLine ||
+                    data.command ||
+                    "";
+        process.stdout.write(cmd);
+      } catch (e) {
+        process.stdout.write("");
+      }
+    });
+  ' <<< "$INPUT" 2>/dev/null || true)
+
+  # If a command was found in stdin and it is not a git commit, exit immediately with no output
+  if [[ -n "$CMD" ]]; then
+    if ! echo "$CMD" | grep -Eq '\bgit\s+commit\b'; then
+      exit 0
+    fi
+  else
+    # Stdin was provided but contained no recognizable tool command
+    exit 0
+  fi
 fi
 
 # Check if git is available and repo has commits

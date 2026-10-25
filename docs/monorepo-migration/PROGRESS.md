@@ -189,11 +189,11 @@
 - **Rollback command:** `git revert --no-edit ee71be1^..93981d1`
 - **Rollback chain:** `revert P5` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
-### [ ] P6a — Agents canonical + generated shells
+### [x] P6a — Agents canonical + generated shells (merged 2026-10-25, PR #13 squash)
 - **Branch:** `plan/mono-p6a-agents-canonical`
-- **PR:** `pending`
+- **PR:** #13
 - **Merge method:** `squash`
-- **Commit SHAs:** `c5dcacc`
+- **Commit SHAs:** `d53bc12`
 - **Owner decisions used:** O12 (Codex = AGENTS.md + skills only)
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 41 repo-level tests).
@@ -204,7 +204,7 @@
   - Monorepo Safety: `git diff --exit-code main -- '**/__snapshots__/**'` verified with 0 diff.
   - Backend docs sync: `npm --prefix backend run docs:check` passed with 0 diff on `project-explorer.html`.
 - **Owner actions:** None
-- **Rollback command:** `git revert --no-edit c5dcacc`
+- **Rollback command:** `git revert --no-edit d53bc12`
 - **Rollback chain:** `revert P6a` -> `revert P5 range (ee71be1^..93981d1)` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
 ### [ ] P6b — Nested agent files + hooks
@@ -213,10 +213,17 @@
 - **Merge method:** `squash`
 - **Commit SHAs:** `pending`
 - **Owner decisions used:** None
-- **Verification evidence:** `pending`
+- **Verification evidence:**
+  - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 47 repo-level tests).
+  - `node scripts/migration/compare-results.mjs --phase P6b`: All metrics match or improve upon baseline (Jest 264 passed [0 missing], Vitest 14 passed, TS 0 errors, ESLint 0 errors / 1 warning, production smoke 11/11 passed).
+  - `scripts/repo-tests/hooks.test.mjs`: Passed all 6 tests (post-commit-reminder stdin command filtering for non-commit commands, reminder injection when CHANGELOG.md is omitted from a commit, silence when CHANGELOG.md is present, Codex root evaluation via $(git rev-parse --show-toplevel) from frontend/ cwd, Antigravity PostToolUse schema validation, and nested settings deny list parity).
+  - Nested Guides: Created `backend/AGENTS.md` (2,517 bytes), `backend/CLAUDE.md` (5 lines), `frontend/AGENTS.md` (2,255 bytes), and `frontend/CLAUDE.md` (5 lines) with launch-location advice, check commands, secret/git invariants, and design pointers.
+  - Launch Safety: Added `backend/.claude/settings.json` and `frontend/.claude/settings.json` matching the root deny list, and updated `.gitignore` for `**/.claude/settings.local.json`.
+  - Monorepo Safety: `git diff --exit-code main -- '**/__snapshots__/**'` verified with 0 diff.
+  - Backend docs sync: `npm --prefix backend run docs:check` passed with 0 diff on `project-explorer.html`.
 - **Owner actions:** None
 - **Rollback command:** `git revert <squash-sha>`
-- **Rollback chain:** `revert P6b` -> ...
+- **Rollback chain:** `revert P6b` -> `revert P6a (d53bc12)` -> `revert P5 range (ee71be1^..93981d1)` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
 ### [ ] P7 — Backend types + strictness
 - **Branch:** `plan/mono-p7-types-backend`

@@ -1,11 +1,12 @@
 {
   "postCommitReminder": {
-    "PostInvocation": [
+    "PostToolUse": [
       {
+        "matcher": "run_command",
         "hooks": [
           {
             "type": "command",
-            "command": "\"$WORKSPACE_ROOT\"/scripts/hooks/post-commit-reminder.sh --antigravity",
+            "command": "[ ! -f ../scripts/hooks/post-commit-reminder.sh ] || ../scripts/hooks/post-commit-reminder.sh --antigravity",
             "timeout": 10
           }
         ]
