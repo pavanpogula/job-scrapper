@@ -48,7 +48,7 @@
 - **Branch:** `plan/mono-p0a-foundation`
 - **PR:** `pending`
 - **Merge method:** `squash`
-- **Commit SHAs (first..last):** `eede3eb..HEAD`
+- **Commit SHAs (first..last):** `eede3eb..941b8bf`
 - **Owner decisions used:** O11
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed 9/9 steps (Prisma generate, root typecheck, test typecheck, lint, Jest test suite [36 suites / 252 tests], UI verify, build, docs check, repo-tests [7/7 tests]).
