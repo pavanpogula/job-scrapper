@@ -45,12 +45,12 @@ function parseFrontmatter(content) {
 
 test('every role in roster has canonical role file, claude shell, and antigravity shell', () => {
   const root = getRepoRoot();
-  const rosterContent = fs.readFileSync(path.join(root, 'documentation/agents/roster.md'), 'utf-8');
+  const rosterContent = fs.readFileSync(path.join(root, 'docs/agents/roster.md'), 'utf-8');
 
   for (const role of ROLES) {
     assert.ok(rosterContent.includes(role), `Roster missing role: ${role}`);
 
-    const roleFilePath = path.join(root, `documentation/agents/roles/${role}.md`);
+    const roleFilePath = path.join(root, `docs/agents/roles/${role}.md`);
     const claudeShellPath = path.join(root, `.claude/agents/${role}.md`);
     const agyShellPath = path.join(root, `.agents/agents/${role}.md`);
 
@@ -83,7 +83,7 @@ test('every shell body references its canonical role file', () => {
     const claudeContent = fs.readFileSync(path.join(root, `.claude/agents/${role}.md`), 'utf-8');
     const agyContent = fs.readFileSync(path.join(root, `.agents/agents/${role}.md`), 'utf-8');
 
-    const expectedRef = `documentation/agents/roles/${role}.md`;
+    const expectedRef = `docs/agents/roles/${role}.md`;
     assert.ok(claudeContent.includes(expectedRef));
     assert.ok(agyContent.includes(expectedRef));
   }
@@ -129,7 +129,7 @@ test('every .agents/rules/*.md file has a valid trigger, and glob rules specify 
 test('file byte budgets for AGENTS.md and context.md are respected', () => {
   const root = getRepoRoot();
   const agentsSize = fs.statSync(path.join(root, 'AGENTS.md')).size;
-  const contextSize = fs.statSync(path.join(root, 'documentation/agents/context.md')).size;
+  const contextSize = fs.statSync(path.join(root, 'docs/agents/context.md')).size;
 
   assert.ok(agentsSize <= 6144, `AGENTS.md size ${agentsSize} exceeds 6144`);
   assert.ok(contextSize <= 6144, `context.md size ${contextSize} exceeds 6144`);
@@ -143,7 +143,7 @@ test('CLAUDE.md is <= 40 lines and imports AGENTS.md and context.md', () => {
 
   assert.ok(lines.length <= 40, `CLAUDE.md line count ${lines.length} exceeds 40`);
   assert.ok(content.includes('@AGENTS.md'));
-  assert.ok(content.includes('@documentation/agents/context.md'));
+  assert.ok(content.includes('@docs/agents/context.md'));
 });
 
 test('.claude/settings.local.json is gitignored and not tracked', () => {

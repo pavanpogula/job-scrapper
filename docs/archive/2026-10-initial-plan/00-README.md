@@ -1,8 +1,12 @@
 # Enhancement Plan: Index
 
-> **Status:** planning only; nothing here is implemented yet. Written 2026-10-23 at HEAD `22afd64`. An implementing
-> agent (a different session or LLM) will execute it. The paste-ready prompt for that agent is at the end of
-> [`12-implementation-roadmap.md`](./12-implementation-roadmap.md).
+> [!NOTE]
+> **Historical Archive Notice:**
+> The documents in this directory (`docs/archive/2026-10-initial-plan/`) represent the initial enhancement plan written in October 2026 prior to the monorepo restructuring.
+> They are preserved for historical context and auditability.
+> For current active architecture and specifications, consult [`docs/README.md`](../../README.md), `backend/docs/`, and [`docs/monorepo-migration/PLAN.md`](../../monorepo-migration/PLAN.md).
+
+> **Status:** Historical archive. Written 2026-10-23 at HEAD `22afd64`.
 
 ## 1. What the owner asked for
 

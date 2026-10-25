@@ -38,7 +38,87 @@
     },
     {
       "from": "docs/GOOGLE_DRIVE_SETUP.md",
-      "to": "backend/docs/GOOGLE_DRIVE_SETUP.md"
+      "to": "backend/docs/google-drive-setup.md"
+    },
+    {
+      "from": "documentation/01-overview.md",
+      "to": "docs/overview.md"
+    },
+    {
+      "from": "documentation/02-architecture-and-workflows.md",
+      "to": "backend/docs/architecture-and-workflows.md"
+    },
+    {
+      "from": "documentation/03-external-apis.md",
+      "to": "backend/docs/external-apis.md"
+    },
+    {
+      "from": "documentation/04-cli-commands.md",
+      "to": "backend/docs/cli-commands.md"
+    },
+    {
+      "from": "documentation/05-database-and-cache.md",
+      "to": "backend/docs/database-and-cache.md"
+    },
+    {
+      "from": "documentation/06-module-reference.md",
+      "to": "backend/docs/module-reference.md"
+    },
+    {
+      "from": "documentation/07-configuration-and-setup.md",
+      "to": "backend/docs/configuration.md"
+    },
+    {
+      "from": "documentation/08-outputs-and-artifacts.md",
+      "to": "backend/docs/outputs-and-artifacts.md"
+    },
+    {
+      "from": "documentation/09-known-issues-and-tech-debt.md",
+      "to": "backend/docs/known-issues.md"
+    },
+    {
+      "from": "documentation/10-bug-fix-and-improvement-log.md",
+      "to": "docs/bug-fix-log.md"
+    },
+    {
+      "from": "documentation/11-testing-guide.md",
+      "to": "docs/testing.md"
+    },
+    {
+      "from": "documentation/12-backend-api.md",
+      "to": "backend/docs/api.md"
+    },
+    {
+      "from": "documentation/13-frontend-ui.md",
+      "to": "frontend/docs/frontend-ui.md"
+    },
+    {
+      "from": "documentation/14-deployment-and-operations.md",
+      "to": "docs/deployment-and-operations.md"
+    },
+    {
+      "from": "documentation/15-system-architecture-and-flows.md",
+      "to": "docs/system-architecture-and-flows.md"
+    },
+    {
+      "from": "documentation/16-self-healing-loop.md",
+      "to": "docs/self-healing-loop.md"
+    },
+    {
+      "from": "documentation/README.md",
+      "to": "docs/README.md"
+    },
+    {
+      "from": "documentation/agents/",
+      "to": "docs/agents/"
+    },
+    {
+      "from": "documentation/decisions/",
+      "to": "docs/decisions/"
+    },
+    {
+      "from": "documentation/plan/",
+      "to": "docs/archive/2026-10-initial-plan/"
     },
     {
       "from": "jest.config.js",

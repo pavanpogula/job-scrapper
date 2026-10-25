@@ -11,15 +11,15 @@ These are the **only** environment variables read anywhere in `src/`, `scripts/`
 | `REDIS_URL` | optional (Upstash Redis for `jc:v1:*` generation read-through caching; if omitted, API falls back to PostgreSQL via `dbGuard`) | `src/lib/cache/RedisClient.ts`, `src/lib/Redis.ts` | `null` for API; if unreachable, cache disabled | `rediss://default:xxx@xxx.upstash.io:6379` |
 | `CORS_ORIGINS` | optional (comma-separated origins allowed to access the REST API) | `src/api/Server.ts` | `https://job-scrapper-ui.vercel.app,http://localhost:3000` | `https://my-app.vercel.app,http://localhost:3000` |
 | `HEALTH_TOKEN` | optional (secret token required to run deep database inspection via `GET /health?deep=1`) | `src/api/Server.ts` | `undefined` (deep ping disabled) | `sec-xxxx-yyyy` |
-| `VERCEL_TOKEN` | optional (used by cache publisher to purge CDN tag `jobs-v1`) | `src/cache/Publisher.ts` | `undefined` (CDN purge skipped) | `vercel_pat_xxxx` |
-| `VERCEL_PROJECT_ID` | optional (project ID paired with `VERCEL_TOKEN`) | `src/cache/Publisher.ts` | `undefined` (CDN purge skipped) | `prj_xxxx` |
+| `VERCEL_TOKEN` | deprecated / unused (removed from scrape workflow in P3a; CDN purge not used in split Vercel architecture) | `src/cache/Publisher.ts` | `undefined` (purge skipped) | — |
+| `VERCEL_PROJECT_ID` | deprecated / unused (removed from scrape workflow in P3a) | `src/cache/Publisher.ts` | `undefined` (purge skipped) | — |
 | `GOOGLE_DRIVE_FOLDER_ID` | optional; only with `scrape:csv -- --upload-cloud` | `src/core/ScraperCSV.ts` → `uploadToGoogleDrive()` | `undefined` → file goes to the service account's own My Drive root (not visible to you) | ID from `drive.google.com/drive/folders/<ID>` |
 
 No other tunables are environment-driven: concurrency (`CONCURRENCY_LIMIT = 15` in `Scraper.ts`/`ScraperCSV.ts`),
 `BATCH_SIZE = 100`, Redis TTL (7 days), HTTP timeouts (10 s Ashby, 15 s CommonCrawl), retries (`maxRetries = 2`,
 `baseDelayMs = 300`), limiter settings (`minConcurrency 2`, `recoveryThreshold 25`, `defaultCooldownMs 2000`), CDX
 `limit = 1000`, and the CommonCrawl index (`CC-MAIN-2024-51`) are hard-coded constants. Worker count is the CLI flag
-`--workers=N` (see [04 → `scrape:parallel`](./04-cli-commands.md)).
+`--workers=N` (see [04 → `scrape:parallel`](./cli-commands.md)).
 
 > **How `.env` gets loaded:** `dotenv.config()` is only called inside `src/lib/Redis.ts` (imported by `Scraper.ts`;
 > it reads `.env` from `process.cwd()`). Every other entry point relies on Prisma Client: `new PrismaClient()` loads the
@@ -38,7 +38,7 @@ No other tunables are environment-driven: concurrency (`CONCURRENCY_LIMIT = 15` 
 All three paths are resolved relative to `process.cwd()`, so run commands from the repo root.
 
 > `README.md` and older docs said `google-credentials.json` goes in the **project root**; the code reads it from
-> **`apikeys/`**. `docs/GOOGLE_DRIVE_SETUP.md` has been corrected.
+> **`apikeys/`**. `./google-drive-setup.md` has been corrected.
 
 ## 3. Requirements
 
@@ -62,7 +62,7 @@ npm install
 cp .env.example .env               # fill DATABASE_URL (and REDIS_URL if available)
 npx prisma generate                # (also run automatically by npm install via @prisma/client postinstall)
 npx prisma db push                 # creates tables/enum/indexes from schema.prisma
-npm run seed                       # seeds TARGET_COMPANIES (7 slugs in backend/src/config/Companies.ts)
+npm run seed                       # seeds TARGET_COMPANIES (7 slugs in ../src/config/Companies.ts)
 npm run seed -- --all              # or: seed all 3,072 slugs from extracted-slugs.json
 npm run verify                     # sanity-check counts
 npm run scrape                     # or: npm run scrape:parallel -- --workers=8
@@ -87,7 +87,7 @@ Verify the toolchain: `npx tsc --noEmit -p . && npm run lint && npm test`.
 
 ### 5.2 Service Account Mode (used by `npm run scrape:csv -- --upload-cloud`)
 
-Step-by-step instructions live in [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md). Summary:
+Step-by-step instructions live in [./google-drive-setup.md](./google-drive-setup.md). Summary:
 
 1. Create a GCP project and enable the **Google Drive API**.
 2. Create a service account → **Keys** → **Add Key** → JSON.
@@ -133,7 +133,7 @@ Step-by-step instructions live in [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE
 
 - **`tsconfig.json`**: `target es2020`, `module commonjs`, `lib [es2020, dom]`, `strict`, `esModuleInterop`,
   `skipLibCheck`, `forceConsistentCasingInFileNames`, `types [node]`, `rootDir ./src`, `outDir ./dist`,
-  `include ["./src/**/*"]` (relative to backend). ⇒ `npm --prefix backend run typecheck` type-checks **only `backend/src/`**; `backend/scripts/`, `backend/tests/` and `backend/__mocks__/`
+  `include ["./src/**/*"]` (relative to backend). ⇒ `npm --prefix backend run typecheck` type-checks **only `../src/`**; `../scripts/`, `backend/tests/` and `backend/__mocks__/`
   are not type-checked by it (ts-node still runs `scripts/`).
 - **`.eslintrc.json`**: `eslint:recommended` + `plugin:@typescript-eslint/recommended` + `eslint-plugin-jsdoc`;
   env `node`, `es2022`. JSDoc rules: `jsdoc/require-jsdoc` (functions, methods, classes; not arrows/constructors) and
@@ -142,7 +142,7 @@ Step-by-step instructions live in [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE
   `no-empty` and `prefer-const` warn. `ignorePatterns`: `node_modules/`, `dist/`, `docs/`, `*.js`, `scripts/`.
   `npm run lint` only targets `src/` anyway, so `tests/` and `__mocks__/` are never linted.
 - **`jest.config.js`**: preset `ts-jest`, `testEnvironment node`, `roots ['<rootDir>/tests']`, `testMatch **/*.test.ts`,
-  `clearMocks: true`, `modulePathIgnorePatterns` for `output/`, `documentation/`, `node_modules/`. ts-jest runs with
+  `clearMocks: true`, `modulePathIgnorePatterns` for `output/`, `docs/`, `node_modules/`. ts-jest runs with
   `isolatedModules: true` (transpile only — tests are **not** type-checked) and an inline tsconfig mirroring the root one.
 - **Prisma mock (`__mocks__/@prisma/client.ts`)**: `moduleNameMapper` maps `^@prisma/client$` to this file for **every**
   test, so no Prisma engine or database is loaded. It exports a fake `PrismaClient` with `company`

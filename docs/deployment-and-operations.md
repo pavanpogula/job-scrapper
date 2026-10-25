@@ -30,8 +30,8 @@ The matrix below documents where every secret is configured and consumed:
 | `FIXER_APP_PRIVATE_KEY` | — | ✅ | — | — | GitHub App private key for authenticating fix PR pushes. |
 | `CORS_ORIGINS` | — | — | ✅ | Optional | Comma-separated list of allowed origins (e.g. `https://job-scrapper-ui.vercel.app,http://localhost:3000`). |
 | `HEALTH_TOKEN` | — | — | ✅ | Optional | Bearer secret enabling deep database ping via `/health?deep=1`. |
-| `VERCEL_TOKEN` | Optional | — | — | — | Personal access token used to purge edge cache tag `jobs-v1`. |
-| `VERCEL_PROJECT_ID` | Optional | — | — | — | Project ID associated with `VERCEL_TOKEN`. |
+| `VERCEL_TOKEN` | Retired | — | — | — | Unused; removed from scrape environment in P3a. |
+| `VERCEL_PROJECT_ID` | Retired | — | — | — | Unused; removed from scrape environment in P3a. |
 | `GOOGLE_DRIVE_FOLDER_ID`| — | — | — | Optional | Folder ID for optional cloud CSV uploads (`scrape:csv -- --upload-cloud`). |
 
 ---
@@ -95,7 +95,7 @@ The matrix below documents where every secret is configured and consumed:
 - **Lists / Facets / Meta:** `s-maxage=300, stale-while-revalidate=3600` with `Vercel-Cache-Tag: jobs-v1`.
 - **Job Detail:** `s-maxage=3600, stale-while-revalidate=86400` with `Vercel-Cache-Tag: jobs-v1`.
 - **Bypass / Uncacheable:** `s-maxage=60, stale-while-revalidate=600`.
-- **Cache Invalidation:** The publisher optionally purges tag `jobs-v1` via Vercel Edge API when `VERCEL_TOKEN` and `VERCEL_PROJECT_ID` are configured.
+- **Cache Invalidation:** Atomic generation pointer swap in Upstash Redis (`jc:v1:*`) invalidates cache atomically on every publish run; external Vercel Edge API purging via `VERCEL_TOKEN` was retired in P3a.
 
 ---
 

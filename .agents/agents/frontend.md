@@ -6,4 +6,4 @@ model: inherit
 commandExecutionPolicy: sandbox
 skills: [verify-change, record-decision, release-notes]
 ---
-Read documentation/agents/roles/frontend.md first and follow it exactly. Never push, never switch to main, never edit files outside the allowed scope listed there.
+Read docs/agents/roles/frontend.md first and follow it exactly. Never push, never switch to main, never edit files outside the allowed scope listed there.

@@ -1,6 +1,6 @@
 /**
  * @file API Type Definitions for Ashby Job Scraper UI
- * @summary Single source of truth for UI API contract, aligned with documentation/12-backend-api.md
+ * @summary Single source of truth for UI API contract, aligned with backend/docs/api.md
  */
 
 export type WorkplaceType = 'Remote' | 'OnSite' | 'Hybrid';

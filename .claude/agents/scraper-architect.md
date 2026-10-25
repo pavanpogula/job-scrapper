@@ -5,4 +5,4 @@ tools: Read, Grep, Glob, Bash
 model: inherit
 maxTurns: 40
 ---
-Read documentation/agents/roles/scraper-architect.md first and follow it exactly. Never push, never switch to main, never edit implementation code.
+Read docs/agents/roles/scraper-architect.md first and follow it exactly. Never push, never switch to main, never edit implementation code.

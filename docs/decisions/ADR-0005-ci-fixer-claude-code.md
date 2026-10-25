@@ -13,7 +13,7 @@ Automated triage and bug-fixing workflows need to run in headless CI environment
 2. **Claude Code Action (`anthropics/claude-code-action@v1`)**: Mature, officially supported GitHub Action supporting headless execution authenticated via `ANTHROPIC_API_KEY`.
 
 ## Decision
-Use `anthropics/claude-code-action@v1` for the CI-based automated fixer workflow. Both Antigravity and Claude Code share the same canonical agent context (`AGENTS.md`, `documentation/agents/**`, `.agents/skills/**`), ensuring complete behavioral parity across both environments.
+Use `anthropics/claude-code-action@v1` for the CI-based automated fixer workflow. Both Antigravity and Claude Code share the same canonical agent context (`AGENTS.md`, `docs/agents/**`, `.agents/skills/**`), ensuring complete behavioral parity across both environments.
 
 ## Consequences
 - The CI fixer runs autonomously on GitHub Actions runners when `ANTHROPIC_API_KEY` is configured.

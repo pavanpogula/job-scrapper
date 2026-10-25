@@ -1,4 +1,4 @@
 ---
 trigger: always_on
 ---
-@[Scraper context](../../documentation/agents/context.md)
+@[Scraper context](../../docs/agents/context.md)

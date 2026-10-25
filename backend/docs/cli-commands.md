@@ -17,17 +17,17 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run scrape:csv` | `src/core/ScraperCSV.ts` | ✅ (read) | — | Ashby REST (+ GraphQL fallback) | `output/jobs_YYYY-MM-DD.csv`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 0 (`.catch(console.error)`) |
 | `npm run scrape:csv -- --upload-cloud` | same | ✅ (read) | — | Ashby + Google Drive | CSV + Drive file (service account) | 0 |
 | `npm run db:menu` | `src/database/DbMenu.ts` | ✅ | — | — | read-only (unless raw SQL in option 7 mutates!) | 0 |
-| `npm run db:inspect` | `backend/src/database/DbInspect.ts` | ✅ | — | — | read-only | 0 (errors caught & logged) |
-| `npm run db:clean` | `backend/src/database/DbClean.ts` | ✅ | — | — | nothing (dry run) | 0 (errors caught & logged) |
+| `npm run db:inspect` | `../src/database/DbInspect.ts` | ✅ | — | — | read-only | 0 (errors caught & logged) |
+| `npm run db:clean` | `../src/database/DbClean.ts` | ✅ | — | — | nothing (dry run) | 0 (errors caught & logged) |
 | `npm run db:clean -- --execute` | same | ✅ | — | — | **deletes** `Job` + `Company` rows with invalid slugs | 0 |
-| `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force]` | `backend/src/utils/EnrichCompanies.ts` | ✅ | — | Ashby hosted boards | updates `Company.name` & `Company.logoUrl` | 1 |
-| `npm run verify` | `backend/src/utils/Verify.ts` | ✅ | — | — | read-only (console report) | 1 |
-| `npm run api:start` | `backend/src/api/Server.ts` | ✅ | — | — | HTTP server on port 3001 with rate limiting and static UI serving | 1 |
+| `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force]` | `../src/utils/EnrichCompanies.ts` | ✅ | — | Ashby hosted boards | updates `Company.name` & `Company.logoUrl` | 1 |
+| `npm run verify` | `../src/utils/Verify.ts` | ✅ | — | — | read-only (console report) | 1 |
+| `npm run api:start` | `../src/api/Server.ts` | ✅ | — | — | HTTP server on port 3001 with rate limiting and static UI serving | 1 |
 | `npm run prisma:studio` | Prisma CLI (`npx prisma studio`) | ✅ | — | — | GUI (can edit rows) | — |
-| `npm run docs:generate` | `backend/scripts/GenerateDocs.ts` | — | — | — | `backend/docs/project-explorer.html` | 0 (`.catch(console.error)`) |
-| `npm run lint` / `npm run lint:fix` | `npx eslint backend/src/ --ext .ts [--fix]` | — | — | — | (`lint:fix`: rewrites `backend/src/` files) | non-zero only on lint **errors** (warnings pass) |
+| `npm run docs:generate` | `../scripts/GenerateDocs.ts` | — | — | — | `backend/docs/project-explorer.html` | 0 (`.catch(console.error)`) |
+| `npm run lint` / `npm run lint:fix` | `npx eslint ../src/ --ext .ts [--fix]` | — | — | — | (`lint:fix`: rewrites `../src/` files) | non-zero only on lint **errors** (warnings pass) |
 | `npm test` | `jest` (`jest.config.js`) | — (Prisma mocked) | — (mocked) | — (axios mocked) | nothing | non-zero on failing test |
-| `npx tsc --noEmit -p .` | TypeScript compiler | — | — | — | nothing (type-check `backend/src/**/*` only) | non-zero on type error |
+| `npx tsc --noEmit -p .` | TypeScript compiler | — | — | — | nothing (type-check `../src/**/*` only) | non-zero on type error |
 | `npx ts-node scripts/generate-readme.ts` | *(no npm script)* | — | — | — | `JOBS.md` (repo root) | 1 if no `jobs_*.csv`; otherwise 0 |
 
 Prisma CLI (not wrapped): `npx prisma generate`, `npx prisma db push` (no `prisma/migrations/` folder exists — the schema
@@ -51,7 +51,7 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
 - Prereq: `DATABASE_URL`, tables created (`npx prisma db push`).
 
 ### `npm run discover [-- --common-crawl] [-- --enrich]` — `src/discovery/CdxWorker.ts`
-- See [02 → Workflow A1](./02-architecture-and-workflows.md#workflow-a1).
+- See [02 → Workflow A1](./architecture-and-workflows.md#workflow-a1).
 - Always queries Wayback CDX (`http://web.archive.org/cdx/search/cdx`, `url=jobs.ashbyhq.com/*`, `collapse=urlkey`,
   **`limit=1000`**).
 - `--common-crawl`: also queries `https://index.commoncrawl.org/CC-MAIN-2024-51-index` (JSONL, 15 s timeout).
@@ -82,7 +82,7 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
   `active = true` jobs (used to skip the stale-job `updateMany` for companies that never had jobs).
 - Per company: `GET https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true` with retry, GraphQL
   fallback on `404/403/400`; 404 after fallback counts as a NOT_FOUND strike (threshold 3, in-memory per run — see
-  [05 → CompanyStatus](./05-database-and-cache.md#enum-companystatus)); successful fetch → `deactivateStaleJobs()`.
+  [05 → CompanyStatus](./database-and-cache.md#enum-companystatus)); successful fetch → `deactivateStaleJobs()`.
 - Logs: start banner (company count, concurrency, batch size, `Redis: ✅ Connected` / `⚠️ Disabled`);
   `✅ slug: N jobs (M changed)` per company **only when ≤ 50 companies are scraped**; `[Sanitizer] slug: filtered N…`
   warnings; `📊 Progress: X/Y companies | J jobs found (concurrency: C)` **every 50 companies** and at the end;
@@ -106,11 +106,11 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
 - Logs: `⚡ MULTI-PROCESS CLUSTER SCRAPER` banner (companies, worker count, CPU cores, per-worker concurrency), worker
   logs prefixed `[Worker #i | PID p]`, final `🏁 MULTI-PROCESS SCRAPE COMPLETE` summary.
 - If no active companies: prints `⚠️ No active companies found in database. Run: npm run seed` and exits 0.
-- The 34,035-job / 141.3 s benchmark in `documentation/README.md` was run with `-- --workers=8`.
+- The 34,035-job / 141.3 s benchmark in `docs/README.md` was run with `-- --workers=8`.
 
 ### `npm run scrape:csv [-- --upload-cloud]` — `src/core/ScraperCSV.ts`
 - Reads `ACTIVE` slugs from the DB; fetches **without** `includeCompensation`; concurrency 15 (adaptive). No Redis.
-- Writes `output/jobs_YYYY-MM-DD.csv` (format in [08](./08-outputs-and-artifacts.md#1-csv-format)).
+- Writes `output/jobs_YYYY-MM-DD.csv` (format in [08](./outputs-and-artifacts.md#1-csv-format)).
 - Logs `✅ slug: N jobs` for **every** company with jobs and `📊 Progress: X/Y companies (J jobs so far)` every 100.
 - File name uses the **UTC** date (`new Date().toISOString()`), so evening runs in US time zones get the next day's
   date; same-UTC-day reruns overwrite the file.
@@ -162,14 +162,14 @@ Interactive `readline` loop (`Select an option [1-8]`). Runs on import (no `requ
 
 ### `npm run docs:generate` — `scripts/GenerateDocs.ts`
 - Recursively scans the **whole project root** for `*.ts` (not `*.d.ts`) and `*.prisma`, excluding the directories
-  `node_modules`, `dist`, `.git`, `docs`, `output`, `.vscode`, `apikeys` (so `backend/src/`, `backend/scripts/`, `backend/tests/`, `backend/__mocks__/`
-  and `backend/prisma/` are all included).
+  `node_modules`, `dist`, `.git`, `docs`, `output`, `.vscode`, `apikeys` (so `../src/`, `../scripts/`, `backend/tests/`, `backend/__mocks__/`
+  and `../prisma/` are all included).
 - Parses the JSDoc `@file` / `@summary` / `@tags` header and per-function `@summary`; for `.prisma`, models and fields.
 - Writes `docs/project-explorer.html` (creates `docs/` if missing). Runs on import (`main().catch(console.error)`, no
   `require.main` guard).
 
 ### `npm run lint` / `npm run lint:fix`
-- `npx eslint backend/src/ --ext .ts` — only `backend/src/` is linted (`.eslintrc.json` additionally ignores `scripts/`, `docs/`,
+- `npx eslint ../src/ --ext .ts` — only `../src/` is linted (`.eslintrc.json` additionally ignores `scripts/`, `docs/`,
   `dist/`, `*.js`). `tests/` and `__mocks__/` are not linted. JSDoc rules (`jsdoc/require-jsdoc`,
   `jsdoc/check-tag-names` allowing `@file`, `@summary`, `@tags`, `@example`, `@configuration`, `@behavior`) are
   **warnings**, so they never fail the command.
@@ -187,7 +187,7 @@ Interactive `readline` loop (`Select an option [1-8]`). Runs on import (no `requ
   row cap) as a Markdown table to `<repo>/JOBS.md`. It splits on newlines **before** quote handling, so a quoted field
   containing a newline is split into two rows (the current exporter never emits one because `sanitizeText()` collapses
   whitespace, but the Dec-2025 CSVs contain one such title, which is why the committed `JOBS.md` shows 29,911 rows
-  from a 29,910-record CSV). Format in [08](./08-outputs-and-artifacts.md#2-jobsmd).
+  from a 29,910-record CSV). Format in [08](./outputs-and-artifacts.md#2-jobsmd).
 - Exits 1 with `❌ No job CSV files found in output/` when no CSV exists (throws → logged, exit 0, if `output/` itself
   is missing).
 

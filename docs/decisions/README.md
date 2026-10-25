@@ -23,6 +23,9 @@ Every ADR follows the template defined in [ADR-0000-template.md](./ADR-0000-temp
 | [ADR-0010](./ADR-0010-daily-scheduled-scrape.md) | Daily GitHub Actions schedule (06:17 UTC, --workers=4) | Accepted | 2026-10-24 | D-15, GAP-CI-01 |
 | [ADR-0011](./ADR-0011-rate-limiting-waf-and-dbguard.md) | Rate limiting: one Vercel WAF rule plus dbGuard; in-memory/client gates removed | Accepted | 2026-10-24 | D-16, BF-016, GAP-API-05, GAP-API-06 |
 | [ADR-0012](./ADR-0012-fix-attempt-tracking.md) | Fix-attempt tracking via fix-failed GitHub issues | Accepted | 2026-10-24 | D-12, GAP-CI-04 |
+| [ADR-0013](./ADR-0013-monorepo-layout.md) | Monorepo layout with nested workspaces and root orchestration | Accepted | 2026-10-25 | O12, P0a-P3b |
+| [ADR-0014](./ADR-0014-vercel-split-and-waf.md) | Independent Vercel projects for backend API and frontend SPA with WAF risk acceptance | Accepted | 2026-10-25 | O9, P3a, PR #6, PR #7 |
+| [ADR-0015](./ADR-0015-type-contract-and-fixtures.md) | Synchronized API contract fixtures and type parity between backend and frontend | Accepted | 2026-10-25 | O3, O4, O5, O6, O14, P8a |
 
 ---
 

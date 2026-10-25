@@ -14,8 +14,8 @@ Every file written by the code (verified by grepping `writeFile*`, `createWriteS
 | `JOBS.md` (repo root) | Markdown | `scripts/generate-readme.ts` | `npx ts-node scripts/generate-readme.ts` | ✅ tracked | ~5.4 MB, 29,911-row table (last generated 2026-01-05 UTC from `jobs_2025-12-29.csv`) |
 | `docs/project-explorer.html` | HTML | `scripts/GenerateDocs.ts` | `npm run docs:generate` | ✅ tracked | Interactive file/function explorer |
 | Google Drive file | CSV | `uploadWithOAuth()` (`GoogleDriveOAuth.ts`) | `npm run scrape:csv -- --upload-cloud` | — | Same file name as the local CSV, in `GOOGLE_DRIVE_FOLDER_ID` |
-| PostgreSQL tables | — | Prisma | `seed`, `discover`, `scrape`, `scrape:parallel`, `db:clean -- --execute` | — | see [05](./05-database-and-cache.md) |
-| Redis keys `job:{ashbyId}:hash` | string | `Scraper.ts` | `scrape`, `scrape:parallel` | — | 7-day TTL, see [05 §4](./05-database-and-cache.md#4-redis-cache) |
+| PostgreSQL tables | — | Prisma | `seed`, `discover`, `scrape`, `scrape:parallel`, `db:clean -- --execute` | — | see [05](./database-and-cache.md) |
+| Redis keys `job:{ashbyId}:hash` | string | `Scraper.ts` | `scrape`, `scrape:parallel` | — | 7-day TTL, see [05 §4](./database-and-cache.md#4-redis-cache) |
 
 `output/` is created on demand (`mkdirSync({ recursive: true })`) relative to `process.cwd()` by `ScraperCSV.ts` and
 `ErrorTracker`; `generate-readme.ts` resolves it relative to the script (`<repo>/output`).
@@ -53,7 +53,7 @@ Rows = CSV records excluding the header, counted with a real CSV parser. Each De
 containing a newline, so `wc -l` reports one extra line (and `generate-readme.ts` renders one extra row).
 
 So of ~3,072 discovered slugs, ~2,098 had at least one open job at the end of 2025 (1,747 hiring companies / 34,035
-jobs in the 2026-10 DB run, see `documentation/README.md`).
+jobs in the 2026-10 DB run, see `docs/README.md`).
 
 ## 2. `JOBS.md`
 

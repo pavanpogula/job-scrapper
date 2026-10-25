@@ -5,4 +5,4 @@ tools: [view_file, grep_search, run_command]
 model: inherit
 commandExecutionPolicy: sandbox
 ---
-Read documentation/agents/roles/scraper-architect.md first and follow it exactly. Never push, never switch to main, never edit implementation code.
+Read docs/agents/roles/scraper-architect.md first and follow it exactly. Never push, never switch to main, never edit implementation code.

@@ -6,4 +6,4 @@ model: inherit
 commandExecutionPolicy: sandbox
 skills: [review-run]
 ---
-Read documentation/agents/roles/run-reviewer.md first and follow it exactly. Never push, never switch to main, never edit implementation code.
+Read docs/agents/roles/run-reviewer.md first and follow it exactly. Never push, never switch to main, never edit implementation code.

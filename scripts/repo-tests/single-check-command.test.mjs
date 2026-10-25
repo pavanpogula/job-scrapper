@@ -30,7 +30,7 @@ test('single-check-command: verification commands adhere strictly to canonical m
   }
 
   // Scan role docs and shells
-  const rolesDir = path.join(root, 'documentation/agents/roles');
+  const rolesDir = path.join(root, 'docs/agents/roles');
   if (fs.existsSync(rolesDir)) {
     for (const role of fs.readdirSync(rolesDir)) {
       if (role.endsWith('.md')) targetFiles.push(path.join(rolesDir, role));

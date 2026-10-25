@@ -10,14 +10,14 @@
 
 ## 🤖 Bug-Fix Agent Protocol
 
-All bug-fix workflows follow the mandatory 9-step self-healing protocol documented in [`documentation/16-self-healing-loop.md`](./16-self-healing-loop.md). This registry serves as the authoritative checklist of Regression Invariants (`BF-001` through `BF-019+`). Every fix must check and preserve all invariants below before committing.
+All bug-fix workflows follow the mandatory 9-step self-healing protocol documented in [`docs/self-healing-loop.md`](./self-healing-loop.md). This registry serves as the authoritative checklist of Regression Invariants (`BF-001` through `BF-019+`). Every fix must check and preserve all invariants below before committing.
 
 ---
 
 ## 🛡️ Regression Guard Registry
 
 Guard status legend: ✅ an existing test fails if the invariant breaks · ⚠️ partially guarded · ❌ no test guards it.
-The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide.md` §5–§6](./11-testing-guide.md#6-bf--regression-invariants--guarding-tests). `src/core` has about 31.6 % statement coverage, and `runAll()`, `runClusterScrape()` and `scrapeToCSV()` have no tests.
+The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide.md` §5–§6](./testing.md#6-bf--regression-invariants--guarding-tests). `src/core` has about 31.6 % statement coverage, and `runAll()`, `runClusterScrape()` and `scrapeToCSV()` have no tests.
 
 | ID | Commit | Summary | Guard status |
 |---|---|---|---|

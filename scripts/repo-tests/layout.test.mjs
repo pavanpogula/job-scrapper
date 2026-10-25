@@ -29,6 +29,7 @@ test('layout: forbidden legacy root code, configs, and artifacts do not exist at
     'tsconfig.test.json',
     'extracted-slugs.json',
     'JOBS.md',
+    'documentation',
   ];
 
   for (const item of forbidden) {
@@ -55,7 +56,6 @@ test('layout: root contains only allow-listed tracked entries', () => {
     'README.md',
     'backend',
     'docs',
-    'documentation', // allowed until P5 docs restructure
     'frontend',
     'scripts',
     'skills-lock.json',

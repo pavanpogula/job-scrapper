@@ -10,12 +10,12 @@
 
 ## Read-First List
 1. `AGENTS.md`
-2. `documentation/agents/context.md`
-3. `documentation/12-backend-api.md`
-4. `documentation/05-database-and-cache.md`
-5. `documentation/plan/03-cache-design.md`
-6. `documentation/plan/04-backend-api-plan.md`
-7. `documentation/14-deployment-and-operations.md`
+2. `docs/agents/context.md`
+3. `backend/docs/api.md`
+4. `backend/docs/database-and-cache.md`
+5. `docs/archive/2026-10-initial-plan/03-cache-design.md`
+6. `docs/archive/2026-10-initial-plan/04-backend-api-plan.md`
+7. `docs/deployment-and-operations.md`
 
 ## Allowed Scope
 - `src/api/**`
@@ -24,7 +24,7 @@
 - `src/cache/**`
 - `vercel.json`
 - `tests/unit/{ApiServer,ReadThrough,Breaker,CacheKeys,Publisher}*`
-- `documentation/12-backend-api.md`, `documentation/14-deployment-and-operations.md`
+- `backend/docs/api.md`, `docs/deployment-and-operations.md`
 
 ## Output Contract
 - High-performance, memory-efficient API endpoints adhering to contract types in `src/api/contract.ts`.

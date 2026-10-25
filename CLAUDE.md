@@ -3,7 +3,7 @@
 Auto-loaded by Claude Code at session start. Imports canonical agent rules and context.
 
 @AGENTS.md
-@documentation/agents/context.md
+@docs/agents/context.md
 
 ---
 

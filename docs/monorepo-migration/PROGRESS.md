@@ -154,11 +154,11 @@
 - **Rollback command:** `git revert --no-edit 7fd7ad6`
 - **Rollback chain:** `revert P4a` -> `revert P3b` -> `revert P3a`
 
-### [ ] P4b — CI remove legacy (Point of no return)
+### [x] P4b — CI remove legacy (Point of no return) (merged 2026-10-25, PR #11 squash)
 - **Branch:** `plan/mono-p4b-ci-remove-legacy`
-- **PR:** `pending`
+- **PR:** #11
 - **Merge method:** `squash`
-- **Commit SHAs:** `a4251d5`
+- **Commit SHAs:** `e6fa663`
 - **Owner decisions used:** O10 (soak verification waived by owner)
 - **O10 Soak Waiver:** O10 waived by owner on 2026-10-25; evidence available: manual real scrape green from backend/ (workers=4, 33,995 jobs), fixture dispatch green, prod smoke 11/11, split CI green on PR #10. No scheduled run since P3a yet. Scheduled scrape runs after this merge are the real soak and must be watched.
 - **Verification evidence:**
@@ -168,19 +168,26 @@
   - Move Manifest: `.github/workflows/ci.yml` registered in `scripts/migration/move-map.json` under `deleted`.
   - Invariant Guard: `scripts/repo-tests/workflows.test.mjs` asserts `.github/workflows/ci.yml` does not exist and asserts split workflows existence.
 - **Owner actions:** Remove `Verify & Test` from required status checks in branch protection if present; confirm `backend-gate`, `frontend-gate`, `repo-gate` are required.
-- **Rollback command:** `git revert <squash-sha>`
+- **Rollback command:** `git revert --no-edit e6fa663`
 - **Rollback chain:** `revert P4b` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)` -> restore "Verify & Test" check if set
 
 ### [ ] P5 — Docs restructure
 - **Branch:** `plan/mono-p5-docs`
 - **PR:** `pending`
 - **Merge method:** `rebase`
-- **Commit SHAs (first..last):** `pending`
+- **Commit SHAs (first..last):** `b921c27..197e1e0`
 - **Owner decisions used:** None
-- **Verification evidence:** `pending`
+- **Verification evidence:**
+  - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 39 repo-level tests).
+  - `node scripts/migration/compare-results.mjs --phase P5`: All metrics match or improve upon baseline (Jest 264 passed [0 missing], Vitest 14 passed, TS 0 errors, ESLint 0 errors / 1 warning, production smoke 11/11 passed).
+  - `scripts/repo-tests/docs-links.test.mjs`: Passed all 4 checks (first ## in root README is Workflows, zero `documentation/` references outside allowed files, all relative links & @imports resolve, all active docs reachable from `docs/README.md`).
+  - Monorepo Safety: `git diff --exit-code main -- '**/__snapshots__/**'` verified with 0 diff.
+  - Documentation Restructure: Moved all 54 legacy files in pure `git mv` commit 1 (`b921c27`), created `backend/README.md`, `backend/docs/testing.md`, `frontend/docs/testing.md`, `frontend/docs/known-issues.md`, and updated root `README.md` and `docs/README.md`.
+  - Architecture Decision Records: Added ADR-0013 (monorepo layout), ADR-0014 (Vercel split, WAF, trust proxy), ADR-0015 (type contract and fixtures); updated `docs/decisions/README.md`.
+  - Fixer Scope Hardening: Allowed `docs/bug-fix-log.md`, `docs/decisions/`, `docs/runs/`, `backend/docs/known-issues.md`, `backend/docs/testing.md`; ensured `frontend/docs/` remains strictly forbidden.
 - **Owner actions:** None
-- **Rollback command:** `git revert --no-edit <first>^..<last>`
-- **Rollback chain:** `revert P5` -> `revert P4b` -> ...
+- **Rollback command:** `git revert --no-edit b921c27^..197e1e0`
+- **Rollback chain:** `revert P5` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
 ### [ ] P6a — Agents canonical + generated shells
 - **Branch:** `plan/mono-p6a-agents-canonical`

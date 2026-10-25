@@ -155,11 +155,12 @@ test('fixer-scope: every file fix-from-error-report skill tells fixer to write p
   const skillWrittenFiles = [
     'backend/src/lib/AshbyClient.ts',
     'backend/tests/unit/AshbyClient.test.ts',
-    'documentation/10-bug-fix-and-improvement-log.md',
-    'documentation/09-known-issues-and-tech-debt.md',
-    'documentation/decisions/ADR-0013-test-decision.md',
+    'docs/bug-fix-log.md',
+    'backend/docs/known-issues.md',
+    'backend/docs/testing.md',
+    'docs/decisions/ADR-0016-test-decision.md',
     'CHANGELOG.md',
-    'documentation/runs/run-2026-03-01.md',
+    'docs/runs/run-2026-03-01.md',
     'backend/docs/project-explorer.html',
   ];
 
@@ -182,5 +183,21 @@ test('fixer-scope: every file fix-from-error-report skill tells fixer to write p
     } finally {
       repo.cleanup();
     }
+  }
+});
+
+test('fixer-scope: frontend/docs modification fails', () => {
+  const repo = createTempGitRepo();
+  try {
+    fs.mkdirSync(path.join(repo.dir, 'frontend/docs'), { recursive: true });
+    fs.writeFileSync(path.join(repo.dir, 'frontend/docs/known-issues.md'), '# Edit\n');
+    execFileSync('git', ['add', '.'], { cwd: repo.dir });
+    execFileSync('git', ['commit', '-m', 'edit frontend doc'], { cwd: repo.dir });
+
+    const res = repo.runCheck('HEAD~1');
+    assert.notEqual(res.status, 0, 'Expected failure for frontend/docs modification');
+    assert.ok(res.output.includes('Forbidden file modified'));
+  } finally {
+    repo.cleanup();
   }
 });

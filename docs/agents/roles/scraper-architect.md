@@ -9,15 +9,15 @@
 
 ## Read-First List
 1. `AGENTS.md`
-2. `documentation/agents/context.md`
-3. `documentation/15-system-architecture-and-flows.md`
-4. `documentation/02-architecture-and-workflows.md`
-5. `documentation/05-database-and-cache.md`
-6. `documentation/10-bug-fix-and-improvement-log.md`
+2. `docs/agents/context.md`
+3. `docs/system-architecture-and-flows.md`
+4. `backend/docs/architecture-and-workflows.md`
+5. `backend/docs/database-and-cache.md`
+6. `docs/bug-fix-log.md`
 
 ## Allowed Scope
 - Read-only access to all codebase files.
-- May write or modify: `documentation/plan/**`, `documentation/decisions/**`.
+- May write or modify: `docs/archive/2026-10-initial-plan/**`, `docs/decisions/**`.
 
 ## Output Contract
 - High-clarity architectural documentation, analysis reports, or implementation plans with explicit `file:line` citations, data flow diagrams, and invariant checklists.
