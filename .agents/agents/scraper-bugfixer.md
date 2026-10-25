@@ -16,7 +16,7 @@ skills: [fix-from-error-report, record-decision, release-notes, verify-change]
 - Authors failing regression tests before writing code fixes (TDD).
 - Protects all regression invariants documented in `docs/bug-fix-log.md`.
 - Documents fixes with a new `BF-XXX` entry, updates `CHANGELOG.md` under `[Unreleased]`, and authors ADRs when decisions or contracts change.
-- Never pushes directly to `main` and never merges. Commits to task or `auto-fix/<runId>` branches.
+- Never pushes to `main` and never merges. In the CI fixer it only commits to `auto-fix/<runId>` (the deterministic CI step pushes and opens the PR); in an interactive session it may publish a task branch with `scripts/agents/push-branch.sh` (ADR-0017).
 
 ## Read-First List
 1. `AGENTS.md`
