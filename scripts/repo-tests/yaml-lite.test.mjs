@@ -48,3 +48,15 @@ test('parseYaml parses discover-weekly.yml accurately', () => {
   assert.ok(parsed.jobs.discover, 'Expected discover job');
   assert.equal(parsed.jobs.discover.if, "vars.DISCOVERY_ENABLED != 'false'");
 });
+
+test('parseYaml parses backend-ci.yml, frontend-ci.yml, and repo-ci.yml accurately', () => {
+  const root = getRepoRoot();
+  for (const wf of ['backend-ci.yml', 'frontend-ci.yml', 'repo-ci.yml']) {
+    const filePath = path.join(root, '.github/workflows', wf);
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const parsed = parseYaml(content);
+
+    assert.ok(parsed.jobs, `Expected jobs in ${wf}`);
+    assert.ok(Object.keys(parsed.jobs).length >= 3, `Expected at least 3 jobs in ${wf}`);
+  }
+});

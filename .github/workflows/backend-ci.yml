@@ -1,0 +1,123 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'plan/**'
+      - 'auto-fix/**'
+  push:
+    branches:
+      - main
+      - 'plan/**'
+      - 'auto-fix/**'
+  workflow_dispatch:
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check for backend changes
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.ref_name }}" = "main" ] || [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            echo "Full run triggered (event: ${{ github.event_name }}, ref: ${{ github.ref_name }})"
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+            if echo "$CHANGED_FILES" | grep -qE '^backend/|^\.nvmrc$|^\.github/workflows/backend-ci\.yml$'; then
+              echo "Backend changes detected in PR"
+              echo "backend=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "No backend changes detected in PR"
+              echo "backend=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            CHANGED_FILES=$(git diff --name-only "${{ github.event.before }}..HEAD")
+            if echo "$CHANGED_FILES" | grep -qE '^backend/|^\.nvmrc$|^\.github/workflows/backend-ci\.yml$'; then
+              echo "Backend changes detected in push"
+              echo "backend=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "No backend changes detected in push"
+              echo "backend=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  verify:
+    name: Backend Verify & Test
+    needs:
+      - changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: backend
+
+      - name: Type-check backend
+        run: npm run typecheck
+        working-directory: backend
+
+      - name: Type-check tests
+        run: npm run typecheck:test
+        working-directory: backend
+
+      - name: Lint backend
+        run: npm run lint
+        working-directory: backend
+
+      - name: Run backend unit and contract tests
+        run: npm test
+        working-directory: backend
+
+      - name: Build backend
+        run: npm run build
+        working-directory: backend
+
+      - name: Verify docs generation
+        run: npm --prefix backend run docs:check
+
+  backend-gate:
+    name: backend-gate
+    needs:
+      - changes
+      - verify
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check gate status
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "❌ backend-gate failed: one or more dependent jobs failed or were cancelled."
+            exit 1
+          fi
+          echo "✅ backend-gate passed."

@@ -1,0 +1,90 @@
+name: Repo CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'plan/**'
+      - 'auto-fix/**'
+  push:
+    branches:
+      - main
+      - 'plan/**'
+      - 'auto-fix/**'
+  workflow_dispatch:
+
+concurrency:
+  group: repo-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repo-tests:
+    name: Repo-Level Tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Syntax check repo scripts
+        run: find scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check
+
+      - name: Run repo-level tests
+        run: node --test 'scripts/repo-tests/**/*.test.mjs'
+
+  actionlint:
+    name: Workflow Lint (actionlint)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download & verify actionlint
+        run: |
+          ACTIONLINT_VERSION="1.7.12"
+          ACTIONLINT_SHA256="8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+          curl -sSLO "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" | sha256sum -c -
+          tar -xzf "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" actionlint
+          sudo mv actionlint /usr/local/bin/
+
+      - name: Run actionlint
+        run: actionlint
+
+  fixer-scope:
+    name: Check Fixer Scope
+    if: startsWith(github.head_ref || github.ref_name, 'auto-fix/')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Run fixer scope check
+        run: scripts/ci/check-fixer-scope.sh
+
+  repo-gate:
+    name: repo-gate
+    needs:
+      - repo-tests
+      - actionlint
+      - fixer-scope
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check gate status
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "❌ repo-gate failed: one or more dependent jobs failed or were cancelled."
+            exit 1
+          fi
+          echo "✅ repo-gate passed."

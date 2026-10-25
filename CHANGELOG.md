@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Parallel Monorepo CI Split (P4a):** Added separate workflow files `.github/workflows/backend-ci.yml`, `.github/workflows/frontend-ci.yml`, and `.github/workflows/repo-ci.yml` alongside `ci.yml`. Workflows include path-based change detection via `changes` jobs, scoped dependency caching, and uniquely named gates (`backend-gate`, `frontend-gate`, `repo-gate`) using `if: always()` to verify that no dependencies failed or were cancelled. In `repo-ci.yml`, pinned `actionlint` v1.7.12 with SHA-256 verification and added `fixer-scope` check on `auto-fix/*` branches.
+- **Workflow Gate Test (P4a):** Added `scripts/repo-tests/gate-needs.test.mjs` verifying that each CI gate job covers every other job in its workflow and enforces `if: always()` with status checks.
+
 - **docs(monorepo)**: P3b review fixes: README quick start now runs from `backend/`, README repo tree no longer double-prefixes `backend/`, and `AGENTS.md` / `documentation/agents/context.md` entry-point paths carry the `backend/` prefix.
 
 ### Added
