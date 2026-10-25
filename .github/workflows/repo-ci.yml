@@ -9,8 +9,6 @@ on:
   push:
     branches:
       - main
-      - 'plan/**'
-      - 'auto-fix/**'
   workflow_dispatch:
 
 concurrency:
