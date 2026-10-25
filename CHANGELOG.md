@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **chore(monorepo)**: add `frontend/README.md`. The change under `frontend/` lets Vercel's ignoreCommand run the first frontend-rooted build after the P3a backend split.
+
 ### Changed
 - **Backend Move & Vercel Split (P3a):** Moved backend application into `backend/` workspace via pure `git mv` (Commit 1), followed by complete configuration, workflow, script, and test updates (Commit 2). Split monolithic Vercel deployment into standalone API (`backend/vercel.json`, root `backend`, rewrites `/v1/*` and `/health`, security headers) and SPA (`frontend/vercel.json`, root `frontend`, Vite framework, proxy rewrites to API). Removed static asset serving from Express `Server.ts` (API serves only JSON/404s). Updated GitHub Actions (`ci.yml`, `scrape-daily.yml`, `discover-weekly.yml`) with `working-directory: backend`, sparse-checkout, dual cache keys (`scrape-history-v2-`), and fixer allow-listed tools with deterministic gate. Updated fixer scope script and repo tests. Added architectural boundaries (`no-api-imports-scraper` repo test & ESLint `no-restricted-imports` forbidding `src/core`, `src/discovery`, `child_process` in `src/api/**`). Added `single-check-command` and `fixer-allowed-tools` repo tests. Realigned `InstallReportFixture` path resolution. Added directory and deleted file entries to `scripts/migration/move-map.json`.
 
