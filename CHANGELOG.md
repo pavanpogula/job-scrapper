@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Repo-Level Test Migration (P1):** Migrated `AgentShells.test.ts` to `scripts/repo-tests/agent-shells.test.mjs` and `FixerScope.test.ts` to `scripts/repo-tests/fixer-scope.test.mjs` under native Node 24 test runner. Added integration test coverage against temporary git repositories verifying allowed files, forbidden files, dependency version bumps, script edits, and all files written by the `fix-from-error-report` protocol.
+- **Test Migration Tracking (P1):** Recorded moved test mappings in `scripts/migration/moved-tests.json` and deleted files in `scripts/migration/move-map.json`.
 - **Golden API Snapshot Tests (P0b):** Added `tests/unit/ApiGolden.test.ts` with 17 golden snapshot comparisons for Express REST endpoints (`/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, `/v1/meta`, `/health`, 404s) covering both DB MISS and Redis cache HIT states.
 - **Import & Path Resolution Safety Tests (P0b):** Added `tests/unit/PathResolution.test.ts` asserting import-time path isolation and current working directory resolution rules (`output/`, `apikeys/`, `extracted-slugs.json`).
 - **Static Asset Routing Fallback Test (P0b):** Added `ApiNoStatic` test suite to `tests/unit/ApiServer.test.ts` verifying API 404 behavior when static frontend `dist` is missing.
@@ -22,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unified Check Script:** Added layout-aware `scripts/check-all.sh` providing single-command verification across root and backend layouts.
 
 ### Changed
+- **Fixer Scope Hardening (A19, O13, P1):** Updated `scripts/ci/check-fixer-scope.sh` to enforce AST-level JSON comparison (`node -e`) across `scripts`, `dependencies`, `devDependencies`, and `overrides` on any modified `package.json` between base ref and HEAD, failing immediately on alterations.
+- **Baseline Metrics Capture (P1):** Updated `capture-baseline.mjs` to force `--rule '@typescript-eslint/no-explicit-any: error'` when measuring explicit any occurrences, re-capturing 148 occurrences across 21 source files in `docs/monorepo-migration/baseline/any-counts.json`.
+- **PathResolution Safety Test Hardening (P1):** Enhanced `tests/unit/PathResolution.test.ts` to actively spy on `fs.existsSync` calls issued by `GoogleDriveOAuth`, `GoogleDriveUserOAuth`, `Seed`, and `ErrorTracker` under a temporary `process.chdir(tmpDir)`.
+- **Prisma Factory Mock Accuracy (P1):** Refined `tests/helpers/prismaFactory.ts` to restrict `w.OR` in-memory filtering strictly to clauses containing `id` or `ashbyId` matching, leaving other OR conditions unfiltered.
 - **GenerateDocs Library Export (P0b):** Refactored `scripts/GenerateDocs.ts` into a callable `generate({ root, outFile })` function with a `require.main === module` CLI guard to support both pre- and post-P3a monorepo layouts.
 - **CI Workflow Script Syntax Check (P0b):** Fixed recursive `.mjs` check in `.github/workflows/ci.yml` using `find scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check`.
 

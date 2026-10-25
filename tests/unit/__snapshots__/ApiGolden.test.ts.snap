@@ -50,8 +50,8 @@ exports[`ApiGolden Snapshot Tests (P0b) Cache HIT (Redis Seeded Path) matches sn
     },
   ],
   "hasSalary": {
-    "no": 5,
-    "yes": 0,
+    "no": 0,
+    "yes": 5,
   },
   "workplaceTypes": [
     {
@@ -212,7 +212,7 @@ exports[`ApiGolden Snapshot Tests (P0b) Cache HIT (Redis Seeded Path) matches sn
   "generation": "g20260301T120000Z-c5a0",
   "hiringCompanies": 2,
   "lastScrapeAt": "2026-03-01T12:00:00.000Z",
-  "withSalary": 0,
+  "withSalary": 5,
 }
 `;
 
@@ -339,8 +339,8 @@ exports[`ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snaps
     },
   ],
   "hasSalary": {
-    "no": 5,
-    "yes": 0,
+    "no": 0,
+    "yes": 5,
   },
   "workplaceTypes": [
     {
@@ -971,6 +971,6 @@ exports[`ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snaps
   "generation": "live_db",
   "hiringCompanies": 2,
   "lastScrapeAt": "2026-03-01T12:00:00.000Z",
-  "withSalary": 0,
+  "withSalary": 5,
 }
 `;

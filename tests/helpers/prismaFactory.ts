@@ -70,13 +70,18 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
                     result = result.filter(j => j.ashbyId === w.ashbyId);
                 }
                 if (Array.isArray(w.OR)) {
-                    result = result.filter(j => {
-                        return w.OR.some((cond: any) => {
-                            if (cond.id && j.id === cond.id) return true;
-                            if (cond.ashbyId && j.ashbyId === cond.ashbyId) return true;
-                            return false;
+                    const isIdOrAshbyIdCondition =
+                        w.OR.length > 0 &&
+                        w.OR.every((cond: any) => cond && (cond.id !== undefined || cond.ashbyId !== undefined));
+                    if (isIdOrAshbyIdCondition) {
+                        result = result.filter(j => {
+                            return w.OR.some((cond: any) => {
+                                if (cond.id && j.id === cond.id) return true;
+                                if (cond.ashbyId && j.ashbyId === cond.ashbyId) return true;
+                                return false;
+                            });
                         });
-                    });
+                    }
                 }
                 if (w.ashbyId?.in) {
                     const set = new Set(w.ashbyId.in);

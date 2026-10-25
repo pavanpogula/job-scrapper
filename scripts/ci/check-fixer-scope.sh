@@ -62,11 +62,45 @@ while IFS= read -r file; do
     VIOLATIONS=$((VIOLATIONS + 1))
   fi
 
-  # Check if package.json was modified: dependencies must not change
-  if [ "$file" = "package.json" ]; then
-    DEP_DIFF=$(git diff -U0 "$BASE_REF"...HEAD package.json 2>/dev/null | grep -E '^\+[ ]*"(dependencies|devDependencies)"' || true)
-    if [ -n "$DEP_DIFF" ]; then
-      echo "❌ package.json dependencies cannot be modified by automated fixer."
+  # Check if package.json was modified: scripts, dependencies, devDependencies, overrides must not change (A19, O13)
+  if [ "$(basename "$file")" = "package.json" ]; then
+    if ! node -e '
+      const { execFileSync } = require("child_process");
+      const fs = require("fs");
+      const baseRef = process.argv[1];
+      const filePath = process.argv[2];
+      let mergeBase = baseRef;
+      try {
+        mergeBase = execFileSync("git", ["merge-base", baseRef, "HEAD"], { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] }).trim();
+      } catch {}
+      let baseJson = {}, headJson = {};
+      try {
+        const baseRaw = execFileSync("git", ["show", `${mergeBase}:${filePath}`], { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] });
+        baseJson = JSON.parse(baseRaw);
+      } catch {
+        console.error(`❌ Cannot read base version of ${filePath} from ${mergeBase}`);
+        process.exit(1);
+      }
+      try {
+        const headRaw = fs.existsSync(filePath)
+          ? fs.readFileSync(filePath, "utf-8")
+          : execFileSync("git", ["show", `HEAD:${filePath}`], { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] });
+        headJson = JSON.parse(headRaw);
+      } catch {
+        console.error(`❌ Cannot read HEAD version of ${filePath}`);
+        process.exit(1);
+      }
+
+      const forbiddenKeys = ["scripts", "dependencies", "devDependencies", "overrides"];
+      for (const key of forbiddenKeys) {
+        const baseVal = JSON.stringify(baseJson[key] || {});
+        const headVal = JSON.stringify(headJson[key] || {});
+        if (baseVal !== headVal) {
+          console.error(`❌ package.json ${key} cannot be modified by automated fixer in ${filePath}.`);
+          process.exit(1);
+        }
+      }
+    ' "$BASE_REF" "$file"; then
       VIOLATIONS=$((VIOLATIONS + 1))
     fi
   fi

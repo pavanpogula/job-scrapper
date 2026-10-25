@@ -1,1 +1,23 @@
-{}
+{
+  "src/api/Server.ts": 10,
+  "src/api/cache/ReadThrough.ts": 18,
+  "src/api/contract.ts": 6,
+  "src/api/db/queries.ts": 7,
+  "src/api/middleware/cacheControl.ts": 2,
+  "src/api/middleware/dbGuard.ts": 2,
+  "src/cache/CacheCli.ts": 3,
+  "src/cache/Publisher.ts": 20,
+  "src/core/ClusterScraper.ts": 5,
+  "src/core/Scraper.ts": 36,
+  "src/core/ScraperCSV.ts": 1,
+  "src/database/DbInspect.ts": 3,
+  "src/database/DbMenu.ts": 2,
+  "src/database/NormalizeCountries.ts": 2,
+  "src/lib/AshbyClient.ts": 5,
+  "src/lib/ErrorTracker.ts": 6,
+  "src/lib/GoogleDriveOAuth.ts": 4,
+  "src/lib/GoogleDriveUserOAuth.ts": 5,
+  "src/lib/Sanitizer.ts": 6,
+  "src/lib/cache/keys.ts": 4,
+  "src/utils/EnrichCompanies.ts": 1
+}

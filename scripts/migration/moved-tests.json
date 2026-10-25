@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "from": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test every role in roster has canonical role file, claude shell, and antigravity shell",
+    "to": "scripts/repo-tests/agent-shells.test.mjs > every role in roster has canonical role file, claude shell, and antigravity shell"
+  },
+  {
+    "from": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test both shells for each role have identical name and description",
+    "to": "scripts/repo-tests/agent-shells.test.mjs > both shells for each role have identical name and description"
+  },
+  {
+    "from": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test every shell body references its canonical role file",
+    "to": "scripts/repo-tests/agent-shells.test.mjs > every shell body references its canonical role file"
+  },
+  {
+    "from": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test every entry in .claude/skills/ is a symlink resolving into .agents/skills/",
+    "to": "scripts/repo-tests/agent-shells.test.mjs > every entry in .claude/skills/ is a symlink resolving into .agents/skills/"
+  },
+  {
+    "from": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test every .agents/rules/*.md file has a valid trigger, and glob rules specify globs",
+    "to": "scripts/repo-tests/agent-shells.test.mjs > every .agents/rules/*.md file has a valid trigger, and glob rules specify globs"
+  },
+  {
+    "from": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test file byte budgets for AGENTS.md and context.md are respected",
+    "to": "scripts/repo-tests/agent-shells.test.mjs > file byte budgets for AGENTS.md and context.md are respected"
+  },
+  {
+    "from": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test CLAUDE.md is <= 40 lines and imports AGENTS.md and context.md",
+    "to": "scripts/repo-tests/agent-shells.test.mjs > CLAUDE.md is <= 40 lines and imports AGENTS.md and context.md"
+  },
+  {
+    "from": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test .claude/settings.local.json is gitignored and not tracked",
+    "to": "scripts/repo-tests/agent-shells.test.mjs > .claude/settings.local.json is gitignored and not tracked"
+  },
+  {
+    "from": "tests/unit/FixerScope.test.ts > P4-T08: Fixer Scope Checker check-fixer-scope.sh script exists and is executable",
+    "to": "scripts/repo-tests/fixer-scope.test.mjs > check-fixer-scope.sh script exists and is executable"
+  },
+  {
+    "from": "tests/unit/FixerScope.test.ts > P4-T08: Fixer Scope Checker script passes on clean worktree without diffs against HEAD",
+    "to": "scripts/repo-tests/fixer-scope.test.mjs > script passes on clean worktree without diffs against HEAD"
+  }
+]
