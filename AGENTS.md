@@ -1,12 +1,12 @@
 # AGENTS.md
 
-The **Ashby Job Scraper** is a batch TypeScript CLI scraper feeding Neon PostgreSQL and Upstash Redis (`jc:v1:*` cache-first architecture), an Express REST API deployed on Vercel (`api/index.ts` invoking `src/api/Server.ts`), and a React 19 web application in `frontend/` for browsing public Ashby job postings. Users only browse and click Apply (no logins).
+The **Ashby Job Scraper** is a batch TypeScript CLI scraper feeding Neon PostgreSQL and Upstash Redis (`jc:v1:*` cache-first architecture), an Express REST API deployed on Vercel (`backend/api/index.ts` invoking `backend/src/api/Server.ts`), and a React 19 web application in `frontend/` for browsing public Ashby job postings. Users only browse and click Apply (no logins).
 
 ## Flow
 1. **Discover & Seed:** `npm run discover` / `npm run seed [-- --all]` populates `Company` rows from Ashby ATS slugs.
 2. **Scrape:** `npm run scrape:parallel [-- --workers=N]` scrapes active boards with adaptive concurrency, retry/backoff, and GraphQL fallback. (Scheduled daily by GitHub Actions: `.github/workflows/scrape-daily.yml`).
 3. **Persist & Publish:** Writes companies, departments, locations, and jobs to PostgreSQL (Prisma). On clean scrape, atomically publishes double-buffered cache generations to Upstash Redis (`jc:v1:*`) with details diffing and a 30% drop sanity gate.
-4. **API:** Express 5 server in `src/api/Server.ts` (invoked via `api/index.ts` on Vercel) serves `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, `/v1/meta`, and `/health` via `ReadThroughService` with CircuitBreaker, DbGuard backpressure, and edge CDN headers.
+4. **API:** Express 5 server in `backend/src/api/Server.ts` (invoked via `backend/api/index.ts` on Vercel) serves `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, `/v1/meta`, and `/health` via `ReadThroughService` with CircuitBreaker, DbGuard backpressure, and edge CDN headers.
 5. **UI:** React 19 + TypeScript + Vite + Redux Toolkit application in `frontend/` queries the API. See system flows in `documentation/15-system-architecture-and-flows.md`.
 
 ## Hard Rules

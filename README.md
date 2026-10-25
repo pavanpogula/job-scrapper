@@ -62,7 +62,8 @@ The application is deployed full-stack on **Vercel** with a serverless Express R
 Prerequisites: Node.js (developed on v24), a PostgreSQL database (Neon works well), and optionally Redis.
 
 ```bash
-# 1. Install dependencies
+# 1. Install dependencies (the backend is its own npm project; run every command below from backend/)
+cd backend
 npm install
 
 # 2. Configure environment
@@ -75,7 +76,7 @@ npx prisma db push
 
 # 4. Seed companies
 npm run seed             # 7 sample slugs from src/config/Companies.ts
-npm run seed -- --all    # all 3,072 slugs from extracted-slugs.json
+npm run seed -- --all       # all 3,072 slugs from extracted-slugs.json
 
 # 5. Scrape
 npm run scrape                          # single process → PostgreSQL
@@ -103,6 +104,8 @@ GOOGLE_DRIVE_FOLDER_ID="your_folder_id"
 > `.env.example` still labels Redis as "Required", but the code treats it as optional.
 
 ## NPM Scripts
+
+Run these from `backend/` (or from the repo root as `npm --prefix backend run <script>`). The web app lives in `frontend/` (`npm --prefix frontend run check`).
 
 | Command | Description |
 |---------|-------------|
@@ -186,55 +189,26 @@ user-OAuth uploader (`src/lib/GoogleDriveUserOAuth.ts`, credentials in `apikeys/
 
 ```
 job-scrapper/
-├── src/
-│   ├── config/Companies.ts         # TARGET_COMPANIES (7 sample slugs)
-│   ├── core/
-│   │   ├── Scraper.ts              # AshbyScraper: DB + Redis scraper (also --ipc-worker mode)
-│   │   ├── ClusterScraper.ts       # Multi-process coordinator (child_process.fork + IPC)
-│   │   └── ScraperCSV.ts           # Streaming CSV scraper + Drive upload
-│   ├── discovery/CdxWorker.ts      # Wayback CDX / CommonCrawl discovery, slug validation, enrichment
-│   ├── database/
-│   │   ├── DbMenu.ts               # Interactive readline explorer
-│   │   ├── DbInspect.ts            # information_schema dump
-│   │   └── DbClean.ts              # Invalid-slug cleanup (dry-run by default)
-│   ├── lib/
-│   │   ├── AshbyClient.ts          # REST + GraphQL fallback client, retry, salary parser
-│   │   ├── Sanitizer.ts            # Job validation & sanitization
-│   │   ├── Concurrency.ts          # Adaptive createLimiter(), chunk()
-│   │   ├── ErrorTracker.ts         # Telemetry / error report writer & multi-worker merger
-│   │   ├── Redis.ts                # Shared lazy ioredis client
-│   │   ├── GoogleDriveOAuth.ts     # Service-account Drive upload (misnamed)
-│   │   └── GoogleDriveUserOAuth.ts # User OAuth2 Drive upload
-│   └── utils/
-│       ├── Seed.ts                 # Seeder (--all)
-│       ├── ProcessCdxData.ts       # Raw CDX JSON → extracted-slugs.json
-│       └── Verify.ts               # Database health & integrity auditor
-├── scripts/
-│   ├── GenerateDocs.ts             # → docs/project-explorer.html
-│   └── generate-readme.ts          # newest CSV → JOBS.md
-├── tests/
-│   ├── unit/                       # 14 unit suites
-│   ├── e2e/                        # 2 pipeline suites
-│   └── fixtures/                   # sample Ashby / CDX payloads
-├── __mocks__/@prisma/client.ts     # Jest Prisma mock (no DB needed for tests)
-├── prisma/schema.prisma
-├── documentation/                  # Project context docs (01–11)
-├── docs/                           # GOOGLE_DRIVE_SETUP.md, project-explorer.html
-├── output/                         # CSV + telemetry (gitignored)
-├── apikeys/                        # Google credentials (gitignored)
-├── extracted-slugs.json
-├── JOBS.md                         # generated
-├── AGENTS.md / CLAUDE.md          # agent rules / quick map
-└── package.json / tsconfig.json / jest.config.js / .eslintrc.json
+├── backend/
+│   ├── src/                    # config, core, discovery, database, lib, api, utils
+│   ├── scripts/                # GenerateDocs.ts, generate-readme.ts
+│   ├── tests/                  # unit/, e2e/, fixtures/
+│   ├── prisma/schema.prisma
+│   └── package.json
+├── frontend/                           # React 19 + TypeScript + Vite web application
+├── documentation/                      # System documentation (01–16)
+├── docs/                               # Monorepo migration docs & project explorer
+└── scripts/                            # repo-tests, ci, migration, smoke scripts
 ```
 
 ## Development
 
 ```bash
-npx tsc --noEmit -p .   # type-check (tsconfig only includes src/)
-npm run lint            # ESLint on src/ (only warns on functions/classes without JSDoc)
-npm test                # Jest (Prisma mocked; no DB/Redis/network needed)
-npm run docs:generate   # refresh docs/project-explorer.html
+npm --prefix backend run typecheck      # type-check backend
+npm --prefix backend run lint           # ESLint on backend
+npm --prefix backend test               # Jest test suite
+npm --prefix backend run docs:generate  # refresh backend/docs/project-explorer.html
+./scripts/check-all.sh --no-install     # run full monorepo verification
 ```
 
 Every new file and function needs a JSDoc `@file` / `@summary` / `@tags` block. Bug fixes follow the Bug-Fix Agent

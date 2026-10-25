@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **docs(monorepo)**: P3b review fixes: README quick start now runs from `backend/`, README repo tree no longer double-prefixes `backend/`, and `AGENTS.md` / `documentation/agents/context.md` entry-point paths carry the `backend/` prefix.
+
+### Added
+- **Monorepo Root Layout Verification (P3b):** Added `scripts/repo-tests/layout.test.mjs` asserting that forbidden legacy root files/directories (`src`, `tests`, `package.json`, `package-lock.json`, `vercel.json`, `prisma`, `api`, `__mocks__`, etc.) do not exist at root and that all tracked root entries belong to an explicit allow-list.
+
+### Changed
+- **Backend Path & Permission Follow-ups (P3b):** Updated `.claude/settings.json` permissions to prefix command forms (`npm --prefix backend run *`, `npm --prefix frontend run *`, `scripts/check-all.sh*`) and added explicit deny rules for `./backend/.env*` and `./backend/apikeys/**`. Updated `scripts/repo-tests/secrets-ignore.test.mjs` to assert the new deny rules. Aligned all remaining legacy root path strings (`src/`, `tests/`, `prisma/`, `api/`) in `README.md` and across all `documentation/` guides to their canonical `backend/` locations.
+
 - **docs(monorepo)**: close out P3a in `PROGRESS.md` (cutover result, incidents, rollback range) and add `docs/monorepo-migration/BACKLOG.md` (weekly discovery decision B1 and other deferred items).
 
 - **chore(monorepo)**: add `frontend/README.md`. The change under `frontend/` lets Vercel's ignoreCommand run the first frontend-rooted build after the P3a backend split.

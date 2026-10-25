@@ -25,7 +25,7 @@ on:
         type: boolean
         default: false
       fixture_report:
-        description: 'Repo path of a v2 report fixture, e.g. tests/fixtures/reports/actionable.json; skips scraping'
+        description: 'Repo path of a v2 report fixture, e.g. backend/tests/fixtures/reports/actionable.json; skips scraping'
         default: ''
 
 permissions:

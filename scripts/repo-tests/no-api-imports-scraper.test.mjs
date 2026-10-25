@@ -13,7 +13,7 @@ import { getRepoRoot } from './_lib.mjs';
 
 const root = getRepoRoot();
 
-test('no-api-imports-scraper: src/api/** and api/** never import src/core, src/discovery, or child_process', () => {
+test('no-api-imports-scraper: backend API never imports scraper core, discovery, or child_process', () => {
   const backendDir = path.join(root, 'backend');
   const apiDirs = [
     path.join(backendDir, 'src/api'),

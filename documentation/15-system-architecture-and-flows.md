@@ -13,7 +13,7 @@ flowchart LR
   end
   subgraph Vercel["Vercel (Hobby)"]
     CDN["Vercel CDN + WAF rate-limit rule"]
-    FN["Serverless function api/index.ts<br/>→ src/api/Server.ts (Express 5)"]
+    FN["Serverless function backend/api/index.ts<br/>→ backend/src/api/Server.ts (Express 5)"]
     STATIC["Static SPA frontend/dist"]
   end
   subgraph Data
@@ -52,7 +52,7 @@ sequenceDiagram
   participant W as Workers ×4 (--ipc-worker)
   participant A as Ashby
   participant PG as Neon Postgres
-  participant P as Publisher (src/cache/Publisher.ts)
+  participant P as Publisher (backend/src/cache/Publisher.ts)
   participant R as Upstash Redis
   participant ET as ErrorTracker v2
   Cron->>Co: npm run scrape:parallel -- --workers=4
@@ -112,7 +112,7 @@ sequenceDiagram
         R-->>F: gzip body
         F-->>C: 200 X-Cache: HIT (or STALE if snapshot old)
       else MISS (view/page not cached, field missing)
-        F->>PG: same query via src/api/db/queries.ts
+        F->>PG: same query via backend/src/api/db/queries.ts
         F-->>C: 200 X-Cache: MISS + reason
       else Redis down / timeout / breaker open / budget exceeded
         F->>PG: query

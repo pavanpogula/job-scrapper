@@ -66,16 +66,16 @@ The matrix below documents where every secret is configured and consumed:
 
 ---
 
-## 4. Vercel & Edge Deployment (`vercel.json`)
+## 4. Vercel & Edge Deployment (`backend/vercel.json`)
 
 ```json
 {
   "version": 2,
   "regions": ["iad1"],
   "buildCommand": "npm run build",
-  "outputDirectory": "frontend/dist",
+  "outputDirectory": "public",
   "functions": {
-    "api/index.ts": {
+    "backend/api/index.ts": {
       "maxDuration": 15
     }
   },

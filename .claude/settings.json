@@ -1,13 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc --noEmit -p .)",
-      "Bash(npm run lint)",
-      "Bash(npm test)",
-      "Bash(npm test *)",
-      "Bash(npx jest *)",
-      "Bash(npm run verify:ui)",
-      "Bash(npm run docs:generate)",
+      "Bash(scripts/check-all.sh*)",
+      "Bash(./scripts/check-all.sh*)",
+      "Bash(npm --prefix backend run *)",
+      "Bash(npm --prefix backend test*)",
+      "Bash(npm --prefix frontend run *)",
+      "Bash(npm --prefix frontend test*)",
+      "Bash(node scripts/*)",
       "Bash(git status*)",
       "Bash(git diff*)",
       "Bash(git log*)"
@@ -17,6 +17,8 @@
       "Read(**/apikeys/**)",
       "Read(**/.vercel/**)",
       "Read(**/output/**)",
+      "Read(./backend/.env*)",
+      "Read(./backend/apikeys/**)",
       "Bash(git push *)"
     ]
   },
