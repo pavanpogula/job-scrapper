@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **docs(monorepo)**: close out P3a in `PROGRESS.md` (cutover result, incidents, rollback range) and add `docs/monorepo-migration/BACKLOG.md` (weekly discovery decision B1 and other deferred items).
+
 - **chore(monorepo)**: add `frontend/README.md`. The change under `frontend/` lets Vercel's ignoreCommand run the first frontend-rooted build after the P3a backend split.
 
 ### Changed

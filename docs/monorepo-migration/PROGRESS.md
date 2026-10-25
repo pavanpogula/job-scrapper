@@ -8,8 +8,8 @@
 
 ### Stop-the-Line Toggles (O11)
 - `SCRAPE_ENABLED`: `true`
-- `FIXER_ENABLED`: `true`
-- `DISCOVERY_ENABLED`: `true`
+- `FIXER_ENABLED`: owner to set back to `true` (fixer auto-skips without `ANTHROPIC_API_KEY`)
+- `DISCOVERY_ENABLED`: `false` on purpose (see `BACKLOG.md`: weekly discovery only sees 1,000 archived URLs per run)
 
 ### Owner Decisions (Recorded)
 | # | Decision | Selected Value / Policy |
@@ -103,11 +103,11 @@
 - **Rollback command:** `git revert --no-edit 88848da` (+ Vercel instant rollback if prod affected)
 - **Rollback chain:** `revert P2` -> `revert P1`
 
-### [ ] P3a — Backend move + Vercel split
+### [x] P3a — Backend move + Vercel split (merged 2026-10-25, PR #6 rebase + PR #7 deploy trigger)
 - **Branch:** `plan/mono-p3a-backend-move`
 - **PR:** #6
 - **Merge method:** `rebase` (rebase-merge rewrites SHAs: record the new first..last from `git log origin/main` right after merging)
-- **Commit SHAs (first..last), branch:** `7b86503..` branch tip (commits: move, edits, domain fix, smoke fix)
+- **Commit SHAs (first..last), on main:** `750394d..14a2608` (move, edits, domain fix, smoke fix, PROGRESS note); follow-up PR #7 squash `e91e778` (frontend README)
 - **Owner decisions used:** O1, O2, O8, O9
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed all steps cleanly (`backend check:all`, `frontend check`, and 29 repo-level tests).
@@ -116,7 +116,10 @@
   - Fixer Safety: Added `scripts/repo-tests/fixer-allowed-tools.test.mjs` and updated `scripts/ci/check-fixer-scope.sh` for `backend/` paths.
   - Unified Checks: Added `scripts/repo-tests/single-check-command.test.mjs` verifying canonical check commands.
 - **Owner actions:** Follow Vercel cutover runbook. Done: created `job-scrapper-api` (Root `backend`), backend preview verified, promoted to production. Pending: staging frontend project `job-scrapper-web-staging` check, toggles off, merge, set old project Root Directory to `frontend`, single redeploy, prod smoke.
-- **Rollback command:** See PLAN.md runbook §8 (Instant Rollback frontend, root to `.`, `git revert --no-edit <first>^..<last>` (the rebased SHAs on main))
+- **Rollback command:** See PLAN.md runbook §8 (Instant Rollback frontend, root to `.`, `git revert --no-edit 750394d^..e91e778` (revert PR #7 and the range together); then Vercel: old project Root Directory back to `.` and promote the pre-P3 deployment)
+- **Cutover result (2026-10-25):** backend project `job-scrapper-api` (`https://job-scrapper-api-eight.vercel.app`) promoted before merge; old project Root Directory set to `frontend`; prod smoke 11/11 on `https://job-scrapper-ui.vercel.app` (CSP/XFO/nosniff/Permissions-Policy present through the proxy); `scrape-daily` fixture dispatch green (`tests/fixtures/reports/actionable.json`, skip_publish, skip_fixer).
+- **Incidents / lessons:** (1) plain `job-scrapper-api.vercel.app` was taken, so the frontend rewrite uses the `-eight` domain. (2) After the merge the old project cancelled every build because `ignoreCommand` saw no change under `frontend/` (manual Redeploy is cancelled too); a real change under `frontend/` (PR #7) fixed it, and the site was down about 30 minutes with no users. If a redeploy is ever needed without changes, touch a file under `frontend/`. (3) A Vercel project must exist BEFORE the branch is pushed, or it never builds a preview.
+- **Not verified:** `discover-weekly` dispatch (owner chose to defer; see `BACKLOG.md`). Soak (O10) counts from 2026-10-26: 2 scheduled scrapes + 1 fixture dispatch before P4b.
 - **Rollback chain:** `revert P3a` -> `revert P2` -> `revert P1`
 
 ### [ ] P3b — Backend follow-ups
