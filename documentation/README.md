@@ -72,10 +72,10 @@ Every fact has a single canonical source of truth. Consult the owner doc:
 1. **Architecture Stack:**
    - **Backend API:** `src/api/Server.ts` (Express 5, runs locally on port 3001 and as a Vercel serverless function via `api/index.ts`).
    - **Frontend UI:** `frontend/` (Vite, React 19, Redux Toolkit, Material UI).
-   - **Scrapers:** `src/core/Scraper.ts` (core DB scraper), `src/core/ClusterScraper.ts` (multi-process coordinator), `src/core/ScraperCSV.ts` (CSV streaming).
-2. **Scraper Pipeline:** All scraping uses `src/lib/AshbyClient.ts` (`fetchAshbyBoardWithFallback` with browser headers, retries, and GraphQL fallback on 404/403/400).
-3. **Adaptive Concurrency:** `createLimiter()` in `src/lib/Concurrency.ts` throttles request rates dynamically on 429 rate limits.
-4. **Execution on Import:** `src/database/DbMenu.ts`, `src/database/DbInspect.ts`, and `scripts/GenerateDocs.ts` run on import—never import them into other modules.
+   - **Scrapers:** `backend/src/core/Scraper.ts` (core DB scraper), `backend/src/core/ClusterScraper.ts` (multi-process coordinator), `backend/src/core/ScraperCSV.ts` (CSV streaming).
+2. **Scraper Pipeline:** All scraping uses `backend/src/lib/AshbyClient.ts` (`fetchAshbyBoardWithFallback` with browser headers, retries, and GraphQL fallback on 404/403/400).
+3. **Adaptive Concurrency:** `createLimiter()` in `backend/src/lib/Concurrency.ts` throttles request rates dynamically on 429 rate limits.
+4. **Execution on Import:** `backend/src/database/DbMenu.ts`, `backend/src/database/DbInspect.ts`, and `backend/scripts/GenerateDocs.ts` run on import—never import them into other modules.
 5. **Secrets & Safety:** Secrets live in `.env` (gitignored). Never read, print, or commit secret keys or `output/` values. Agents never push to `main` and never merge.
-6. **Verification Scope:** `npx tsc --noEmit -p .` and `npm run lint` cover `src/` only today (expansion planned: P3-T01). Tests use a global Prisma manual mock (`__mocks__/@prisma/client.ts`).
-7. **Default Change Rule:** Every change must: (a) update docs and `AGENTS.md`, (b) run `npm run docs:generate`, (c) pass all tests/lint/tsc, and (d) commit with a Conventional Commit and bulleted body.
+6. **Verification Scope:** Typecheck and lint cover `backend/src/` only today. Tests use a global Prisma manual mock (`backend/__mocks__/@prisma/client.ts`).
+7. **Default Change Rule:** Every change must: (a) update docs and `AGENTS.md`, (b) run `npm --prefix backend run docs:generate`, (c) pass all checks (test/lint/tsc), and (d) commit with a Conventional Commit and bulleted body.

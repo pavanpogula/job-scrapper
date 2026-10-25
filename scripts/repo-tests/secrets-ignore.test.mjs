@@ -56,6 +56,8 @@ test('.claude/settings.json denies access to sensitive path patterns', () => {
     'Read(**/apikeys/**)',
     'Read(**/.vercel/**)',
     'Read(**/output/**)',
+    'Read(./backend/.env*)',
+    'Read(./backend/apikeys/**)',
   ];
 
   for (const rule of requiredDenies) {

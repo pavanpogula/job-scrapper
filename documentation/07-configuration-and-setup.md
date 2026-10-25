@@ -62,7 +62,7 @@ npm install
 cp .env.example .env               # fill DATABASE_URL (and REDIS_URL if available)
 npx prisma generate                # (also run automatically by npm install via @prisma/client postinstall)
 npx prisma db push                 # creates tables/enum/indexes from schema.prisma
-npm run seed                       # seeds TARGET_COMPANIES (7 slugs in src/config/Companies.ts)
+npm run seed                       # seeds TARGET_COMPANIES (7 slugs in backend/src/config/Companies.ts)
 npm run seed -- --all              # or: seed all 3,072 slugs from extracted-slugs.json
 npm run verify                     # sanity-check counts
 npm run scrape                     # or: npm run scrape:parallel -- --workers=8
@@ -133,7 +133,7 @@ Step-by-step instructions live in [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE
 
 - **`tsconfig.json`**: `target es2020`, `module commonjs`, `lib [es2020, dom]`, `strict`, `esModuleInterop`,
   `skipLibCheck`, `forceConsistentCasingInFileNames`, `types [node]`, `rootDir ./src`, `outDir ./dist`,
-  `include ["src/**/*"]`. ⇒ `npx tsc --noEmit -p .` type-checks **only `src/`**; `scripts/`, `tests/` and `__mocks__/`
+  `include ["./src/**/*"]` (relative to backend). ⇒ `npm --prefix backend run typecheck` type-checks **only `backend/src/`**; `backend/scripts/`, `backend/tests/` and `backend/__mocks__/`
   are not type-checked by it (ts-node still runs `scripts/`).
 - **`.eslintrc.json`**: `eslint:recommended` + `plugin:@typescript-eslint/recommended` + `eslint-plugin-jsdoc`;
   env `node`, `es2022`. JSDoc rules: `jsdoc/require-jsdoc` (functions, methods, classes; not arrows/constructors) and

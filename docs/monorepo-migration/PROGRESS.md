@@ -126,9 +126,15 @@
 - **Branch:** `plan/mono-p3b-backend-followups`
 - **PR:** `pending`
 - **Merge method:** `squash`
-- **Commit SHAs:** `pending`
+- **Commit SHAs:** `efb8e93`
 - **Owner decisions used:** None
-- **Verification evidence:** `pending`
+- **Verification evidence:**
+  - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 31 repo-level tests including layout invariants).
+  - `node scripts/migration/compare-results.mjs --phase P3b`: All metrics match or improve upon baseline (Jest 264 passed [0 missing], Vitest 14 passed, TS 0 errors, ESLint 0 errors / 1 warning).
+  - Monorepo Layout Test: `scripts/repo-tests/layout.test.mjs` verifies no legacy root files/directories exist and all tracked root entries are allow-listed.
+  - Secret Hygiene & Prefix Settings: `.claude/settings.json` updated with prefix-form allow-list and explicit deny rules for `./backend/.env*` and `./backend/apikeys/**`; verified by `secrets-ignore.test.mjs`.
+  - Documentation & Path Cleanup: Verified `git grep -nE '(^|[ "\x27(\x60])(src|tests|prisma|api|scripts/GenerateDocs)/' documentation/ README.md ':!documentation/plan'` returns empty.
+  - Explorer Documentation: `npm --prefix backend run docs:check` verified with 0 git diff.
 - **Owner actions:** None
 - **Rollback command:** `git revert <squash-sha>`
 - **Rollback chain:** `revert P3b` -> `revert P3a`

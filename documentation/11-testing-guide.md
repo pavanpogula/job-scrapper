@@ -15,13 +15,13 @@
 | Whole suite (unit + e2e) | `npm test` (runs `jest`) |
 | Verbose list of test names | `npx jest --verbose` (`npm test -- --verbose` works too) |
 | Quiet run (hide the many `console.log` lines from source modules) | `npx jest --silent` |
-| One file | `npx jest tests/unit/Sanitizer.test.ts` |
-| One folder | `npx jest tests/e2e` |
+| One file | `npm --prefix backend test -- backend/tests/unit/Sanitizer.test.ts` |
+| One folder | `npm --prefix backend test -- backend/tests/e2e` |
 | One test or `describe` (regex on the full name) | `npx jest -t "three-strike NOT_FOUND"` |
-| One test inside one file | `npx jest tests/unit/ScraperCore.test.ts -t "P2002"` |
+| One test inside one file | `npm --prefix backend test -- backend/tests/unit/ScraperCore.test.ts -t "P2002"` |
 | Watch mode | `npx jest --watch` |
 | Coverage, terminal only | `npx jest --coverage --coverageReporters=text-summary --coverageReporters=text` |
-| Coverage including files no test imports | add `--roots='<rootDir>' --collectCoverageFrom='src/**/*.ts' --collectCoverageFrom='scripts/**/*.ts'`. Without `--roots`, `collectCoverageFrom` alone changes nothing: `roots: ['<rootDir>/tests']` keeps unimported `src/` files out of Jest's file map, so the totals stay the same |
+| Coverage including files no test imports | add `--roots='<rootDir>' --collectCoverageFrom='backend/src/**/*.ts' --collectCoverageFrom='backend/scripts/**/*.ts'`. Without `--roots`, `collectCoverageFrom` alone changes nothing: `roots: ['<rootDir>/tests']` keeps unimported `backend/src/` files out of Jest's file map, so the totals stay the same |
 | Machine-readable results | `npx jest --json --outputFile=/tmp/jest.json` |
 
 > ⚠️ `--coverage` writes a `coverage/` directory at the repo root, and **`coverage/` is not in `.gitignore`**.
@@ -33,10 +33,10 @@ The mandatory verification gate (`AGENTS.md`) is:
 npx tsc --noEmit -p . && npm run lint && npm test
 ```
 
-**This gate does not type-check or lint the tests.** `tsconfig.json` sets `include: ["src/**/*"]`, `npm run lint`
-only lints `src/`, and ts-jest runs with `isolatedModules: true` (transpile only). A type error in `tests/`,
-`__mocks__/` or `scripts/` will not fail any step. To type-check tests by hand, run
-`npx tsc --noEmit --esModuleInterop --skipLibCheck --target es2020 --module commonjs --types node,jest tests/**/*.ts __mocks__/@prisma/client.ts`
+**This gate does not type-check or lint the tests.** `backend/tsconfig.json` sets `include: ["./src/**/*"]`, `npm run lint`
+only lints `backend/src/`, and ts-jest runs with `isolatedModules: true` (transpile only). A type error in `backend/tests/`,
+`backend/__mocks__/` or `backend/scripts/` will not fail any step. To type-check tests by hand, run
+`npm --prefix backend run typecheck:test`
 (it passed with 0 errors on 2026-10-22).
 
 ### 1.1 Jest / ts-jest configuration (`jest.config.js`)

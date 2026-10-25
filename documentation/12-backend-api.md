@@ -262,14 +262,14 @@ The server listens on `http://localhost:3001`. The Vite frontend proxy routes `/
 ### Running Test Suites
 ```bash
 # Server endpoint and snapshot tests
-npx jest tests/unit/ApiServer.test.ts
+npm --prefix backend test -- backend/tests/unit/ApiServer.test.ts
 
 # Shallow health and meta tests
-npx jest tests/unit/HealthMeta.test.ts
+npm --prefix backend test -- backend/tests/unit/HealthMeta.test.ts
 
 # Edge caching, CORS, and hardening tests
-npx jest tests/unit/Hardening.test.ts
+npm --prefix backend test -- backend/tests/unit/Hardening.test.ts
 
 # Read-through cache integration tests
-npx jest tests/unit/ReadThrough.test.ts
+npm --prefix backend test -- backend/tests/unit/ReadThrough.test.ts
 ```
