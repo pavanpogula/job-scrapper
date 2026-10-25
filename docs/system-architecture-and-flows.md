@@ -175,22 +175,22 @@ flowchart TD
   O --> N[Next run uses fixed code; next fixer reads the new CHANGELOG/ADR first]
 ```
 
-Full details and the 9-step workflow are documented in [`documentation/16-self-healing-loop.md`](./16-self-healing-loop.md).
+Full details and the 9-step workflow are documented in [`docs/self-healing-loop.md`](./self-healing-loop.md).
 
 ---
 
 ## 7. Agent Routing Table
 
-Agents coordinate work according to specialized domains defined in [`documentation/agents/roster.md`](./agents/roster.md):
+Agents coordinate work according to specialized domains defined in [`docs/agents/roster.md`](./agents/roster.md):
 
 | Role | Scope / Allowed Paths | Primary Responsibilities |
 |---|---|---|
-| `scraper-architect` | Read-only across codebase; writes `documentation/plan/**`, ADRs | System design, architectural evolution, and performance modeling |
-| `run-reviewer` | `output/reports/**`, `documentation/runs/**` | Triaging scrape run telemetry, distinguishing noise from actionable S1/S2 regressions |
-| `scraper-bugfixer` | `src/lib/**`, `src/core/**`, `src/database/**`, `tests/**`, `documentation/decisions/**`, `CHANGELOG.md` | Diagnosing root causes, implementing bug fixes, and authoring regression invariant guards |
+| `scraper-architect` | Read-only across codebase; writes `docs/archive/2026-10-initial-plan/**`, ADRs | System design, architectural evolution, and performance modeling |
+| `run-reviewer` | `output/reports/**`, `docs/runs/**` | Triaging scrape run telemetry, distinguishing noise from actionable S1/S2 regressions |
+| `scraper-bugfixer` | `src/lib/**`, `src/core/**`, `src/database/**`, `tests/**`, `docs/decisions/**`, `CHANGELOG.md` | Diagnosing root causes, implementing bug fixes, and authoring regression invariant guards |
 | `api-cache` | `src/api/**`, `src/cache/**`, `api/**`, `vercel.json`, `tests/unit/{ApiServer,ReadThrough,Breaker}*` | Express API, Upstash Redis caching, circuit breakers, rate limits, edge CDN headers |
 | `frontend` | `frontend/**` | React 19 UI, Redux Toolkit, accessibility, search UX, and Tailwind styling |
-| `docs-release-keeper` | `documentation/**`, `CHANGELOG.md`, `README.md`, `AGENTS.md` | Maintaining documentation sync, release changelogs, agent prompts, and explorer tools |
+| `docs-release-keeper` | `docs/**`, `CHANGELOG.md`, `README.md`, `AGENTS.md` | Maintaining documentation sync, release changelogs, agent prompts, and explorer tools |
 
 ---
 

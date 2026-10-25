@@ -10,10 +10,10 @@
 
 ## Read-First List
 1. `AGENTS.md`
-2. `documentation/agents/context.md`
-3. `documentation/16-self-healing-loop.md`
-4. `documentation/08-outputs-and-artifacts.md`
-5. `documentation/09-known-issues-and-tech-debt.md`
+2. `docs/agents/context.md`
+3. `docs/self-healing-loop.md`
+4. `backend/docs/outputs-and-artifacts.md`
+5. `backend/docs/known-issues.md`
 6. `CHANGELOG.md`
 
 ## Allowed Scope

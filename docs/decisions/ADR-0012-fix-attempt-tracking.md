@@ -19,4 +19,4 @@ Track automated fix attempts using GitHub Issues labelled `fix-failed` indexed b
 ## Consequences
 - Prevents runaway token and CI minute consumption on stubborn errors.
 - Clean audit trail directly within GitHub Issues visible to repository maintainers.
-- Implemented in `scripts/ci/record-fix-attempt.sh` and documented in `documentation/16-self-healing-loop.md`.
+- Implemented in `scripts/ci/record-fix-attempt.sh` and documented in `docs/self-healing-loop.md`.

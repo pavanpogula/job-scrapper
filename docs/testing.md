@@ -1,10 +1,24 @@
-# 11 · Testing Guide (Jest Suite, Mocks, Coverage & Regression Map)
+# Testing Guide & Repository Test Map
 
-> **Purpose:** One place that describes how the test suite works: how to run it, how every external dependency is
-> mocked, what each test file covers, how much of the source it reaches, and which `BF-*` Regression Invariants
-> (see [10-bug-fix-and-improvement-log.md](./10-bug-fix-and-improvement-log.md)) have a test behind them and which don't.
->
-> _Measured 2026-10-22 against the working tree: **16 suites / 79 tests, all passing**, about 2 s wall time._
+> **Purpose:** The comprehensive map and execution guide for the testing pyramid across all monorepo workspaces:
+> - Backend Jest Suite: [`backend/docs/testing.md`](../backend/docs/testing.md)
+> - Frontend Vitest Suite: [`frontend/docs/testing.md`](../frontend/docs/testing.md)
+> - Repo-Level Node 24 Native Test Harness: `scripts/repo-tests/`
+> - Regression Invariants & BF Tracking: [`docs/bug-fix-log.md`](./bug-fix-log.md)
+
+---
+
+## 0. Testing Map Across Workspaces
+
+The monorepo enforces verification at three distinct tiers:
+1. **Backend (`backend/`):** 37 Jest suites (264 tests, 22 snapshots) covering scrapers, clustering, sanitizers, Redis cache, database operations, and Express REST endpoints. Details in [`backend/docs/testing.md`](../backend/docs/testing.md).
+2. **Frontend (`frontend/`):** 5 Vitest suites (14 tests) covering React components, Redux state slices, MSW network mocking, and URL parameter handling. Details in [`frontend/docs/testing.md`](../frontend/docs/testing.md).
+3. **Repository Harness (`scripts/repo-tests/`):** Zero-dependency Node 24 native tests (`node --test`) validating root layout invariants, secrets hygiene, CI workflow gate triggers, fixer tool permissions, and file tracking manifests.
+
+The single canonical check command for all workspaces is:
+```bash
+scripts/check-all.sh --no-install
+```
 
 ---
 
@@ -30,14 +44,15 @@
 The mandatory verification gate (`AGENTS.md`) is:
 
 ```bash
-npx tsc --noEmit -p . && npm run lint && npm test
+scripts/check-all.sh --no-install
 ```
 
-**This gate does not type-check or lint the tests.** `backend/tsconfig.json` sets `include: ["./src/**/*"]`, `npm run lint`
-only lints `backend/src/`, and ts-jest runs with `isolatedModules: true` (transpile only). A type error in `backend/tests/`,
-`backend/__mocks__/` or `backend/scripts/` will not fail any step. To type-check tests by hand, run
-`npm --prefix backend run typecheck:test`
-(it passed with 0 errors on 2026-10-22).
+This gate runs `backend check:all` (`build`, `typecheck`, `typecheck:test`, `lint`, `test`, `docs:check`), `frontend check` (`typecheck`, `lint`, `test`, `build`), and all `repo-tests`. A type error in `backend/tests/`, `backend/__mocks__/` or `backend/scripts/` will fail the `typecheck:test` step. To run individual checks:
+```bash
+npm --prefix backend run typecheck:test
+npm --prefix frontend run check
+node --test scripts/repo-tests/*.test.mjs
+```
 
 ### 1.1 Jest / ts-jest configuration (`jest.config.js`)
 

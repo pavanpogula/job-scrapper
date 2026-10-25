@@ -10,10 +10,10 @@ Maintaining independent sets of prompt files, instructions, and rules for multip
 
 ## Options Considered
 1. **Separate agent configurations**: Maintain `.claude/` instructions and Antigravity `.agents/` instructions separately. Leads to drift and duplicate maintenance overhead.
-2. **Canonical documentation core with thin platform shells**: Maintain one authoritative set of agent roles, skills, and constraints in `AGENTS.md`, `documentation/agents/**`, and `.agents/skills/**`. Provide lightweight adapter shells in `.claude/agents/` and `.agents/agents/` referencing the canonical sources, verified by automated parity tests.
+2. **Canonical documentation core with thin platform shells**: Maintain one authoritative set of agent roles, skills, and constraints in `AGENTS.md`, `docs/agents/**`, and `.agents/skills/**`. Provide lightweight adapter shells in `.claude/agents/` and `.agents/agents/` referencing the canonical sources, verified by automated parity tests.
 
 ## Decision
-Establish `AGENTS.md` and `documentation/agents/**` as the single canonical context for all agent environments. Thin adapter shells map tool-specific interfaces to these shared definitions, and an automated parity test guarantees synchronization.
+Establish `AGENTS.md` and `docs/agents/**` as the single canonical context for all agent environments. Thin adapter shells map tool-specific interfaces to these shared definitions, and an automated parity test guarantees synchronization.
 
 ## Consequences
 - Single source of truth for all agent personas and operational invariants.

@@ -15,7 +15,7 @@ export interface CreateRedisOptions {
 
 /**
  * Calculates retry delay with linear backoff capped at 2000ms.
- * Resolves issue #48 from documentation/09-known-issues-and-tech-debt.md.
+ * Resolves issue #48 from backend/docs/known-issues.md.
  * @param times Attempt counter
  */
 export function calculateRetryDelay(times: number): number {

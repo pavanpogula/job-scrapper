@@ -1,81 +1,140 @@
-# 📚 Job Scraper — Project Context Documentation
+# Documentation Routing Guide & Index
 
-> **Purpose of this folder:** A single, authoritative source of context for humans *and AI agents*
-> working on this repository. Read this index first, then open only the file(s) relevant to your task.
->
-> _Last full analysis: 2026-10-24 (BF-019: cache/DB body parity, full companies cache, API Redis cold-start connect, fixer workflow fixes)._
+> **Purpose:** Authoritative documentation index for humans and AI agents.
+> Every document has a single clear purpose and owner. Consult this index to find the exact documentation file needed.
 
 ---
 
-## ⚡ TL;DR (30-second summary)
+## 1. Workflows & Pipelines
 
-- **What it is:** A batch TypeScript CLI scraper feeding Neon PostgreSQL and Upstash Redis (planned: P2), an Express REST API deployed on Vercel, and a React 19 SPA frontend in `frontend/` for exploring public Ashby job boards.
-- **How it works:**
-  1. **Discover** company slugs from Wayback Machine CDX API (`npm run discover`) or load seeds (`npm run seed [-- --all]`).
-  2. **Scrape** active boards via Ashby's Posting API with adaptive rate limiting and hosted GraphQL fallback (`npm run scrape:parallel`).
-  3. **Persist** to PostgreSQL in 100-job streaming batches. (Cache generation publishing to Upstash Redis `jc:v1:*` is planned: P2).
-  4. **Serve** via Express REST API (`/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, `/health`) running as a Vercel serverless function.
-  5. **Display** in React 19 UI with debounced search, facet filtering, and Redux Toolkit caching.
-- **Stack:** TypeScript 5 · Prisma 5 (PostgreSQL / Neon) · Express 5 · React 19 · Vite 6 · Redux Toolkit · Material UI · ioredis · axios.
-- **Scale:** ~3,072 discovered slugs → 33,997 collected / 34,023 active jobs across ~1,747 hiring companies scraped in 76.3s via 4 workers.
+| Workflow | Schedule / Trigger | Purpose | Workflow File | Primary Documentation |
+|---|---|---|---|---|
+| **Daily Scrape & Publish** | Cron `17 6 * * *` (06:17 UTC) / manual `workflow_dispatch` | Scrapes active boards with adaptive concurrency, writes PostgreSQL, atomically publishes generations to Upstash Redis (`jc:v1:*`), uploads telemetry report | [`.github/workflows/scrape-daily.yml`](../.github/workflows/scrape-daily.yml) | [`docs/deployment-and-operations.md`](./deployment-and-operations.md), [`backend/docs/architecture-and-workflows.md`](../backend/docs/architecture-and-workflows.md) |
+| **Weekly Discovery** | Cron `30 3 * * 0` (03:30 UTC Sun) / manual `workflow_dispatch` | Discovers new Ashby ATS slugs from Wayback Machine CDX API, validates patterns, updates seeds | [`.github/workflows/discover-weekly.yml`](../.github/workflows/discover-weekly.yml) | [`backend/docs/cli-commands.md`](../backend/docs/cli-commands.md), [`backend/docs/external-apis.md`](../backend/docs/external-apis.md) |
+| **Backend CI** | PRs / pushes (`backend/**`) | Verifies Prisma generation, typecheck, lint, Jest test suite (37 suites / 264 tests), and docs sync | [`.github/workflows/backend-ci.yml`](../.github/workflows/backend-ci.yml) | [`backend/docs/testing.md`](../backend/docs/testing.md) |
+| **Frontend CI** | PRs / pushes (`frontend/**`) | Verifies TypeScript, ESLint, Vitest component suite (5 suites / 14 tests), and Vite production build | [`.github/workflows/frontend-ci.yml`](../.github/workflows/frontend-ci.yml) | [`frontend/docs/testing.md`](../frontend/docs/testing.md) |
+| **Repo CI** | PRs / pushes (all) | Runs zero-dependency Node 24 native repo tests, pinned actionlint, and fixer scope checks | [`.github/workflows/repo-ci.yml`](../.github/workflows/repo-ci.yml) | [`docs/testing.md`](./testing.md) |
 
 ---
 
-## 🗂️ Document Index
+## 2. Repository Map
 
-| # | File | Read it when you need… |
-|---|------|------------------------|
-| 01 | [01-overview.md](./01-overview.md) | Purpose, tech stack, directory layout, git/repo state |
-| 02 | [02-architecture-and-workflows.md](./02-architecture-and-workflows.md) | End-to-end data flow, sequence diagrams, workflow details |
-| 03 | [03-external-apis.md](./03-external-apis.md) | External APIs consumed (Ashby REST/GraphQL, Wayback CDX, Drive) |
-| 04 | [04-cli-commands.md](./04-cli-commands.md) | CLI commands, arguments, flags, and outputs |
-| 05 | [05-database-and-cache.md](./05-database-and-cache.md) | Prisma schema, relations, indexes, Redis keys, field mapping |
-| 06 | [06-module-reference.md](./06-module-reference.md) | Module-by-module reference with symbol links |
-| 07 | [07-configuration-and-setup.md](./07-configuration-and-setup.md) | Environment variables, credentials, auth setup |
-| 08 | [08-outputs-and-artifacts.md](./08-outputs-and-artifacts.md) | CSV format, JOBS.md, extracted-slugs.json, reports |
-| 09 | [09-known-issues-and-tech-debt.md](./09-known-issues-and-tech-debt.md) | Verified bugs, technical debt, and improvement items |
-| 10 | [10-bug-fix-and-improvement-log.md](./10-bug-fix-and-improvement-log.md) | Bug fix log, Regression Guard Registry (`BF-001`…`BF-013`) |
-| 11 | [11-testing-guide.md](./11-testing-guide.md) | Testing strategy, mocking, invariant guard status |
-| 12 | [12-backend-api.md](./12-backend-api.md) | Backend REST API contract and cache read path |
-| 13 | [13-frontend-ui.md](./13-frontend-ui.md) | Frontend routes, state, and UI component architecture |
-| 14 | [14-deployment-and-operations.md](./14-deployment-and-operations.md) | Vercel, GitHub Actions, Neon, Upstash operations & runbook |
-| 15 | [15-system-architecture-and-flows.md](./15-system-architecture-and-flows.md) | End-to-end Mermaid architecture and sequence flows |
-| 16 | 16-self-healing-loop.md *(planned: P4-T03)* | The automated error report, triage, fix, and release loop |
-| plan | [plan/00-README.md](./plan/00-README.md) | Phased enhancement plan (P0–P5 roadmap) |
+```
+job-scrapper/
+├── backend/                  # Node.js batch scraper, Prisma ORM, Express REST API
+│   ├── api/index.ts          # Vercel serverless entry point
+│   ├── src/                  # Scraper core, discovery, API Server, cache read-through
+│   ├── prisma/               # Schema and migrations (PostgreSQL Neon)
+│   ├── tests/                # Jest unit and e2e test suites
+│   ├── vercel.json           # API serverless deployment configuration
+│   ├── README.md             # Backend setup and local developer guide
+│   └── docs/                 # Backend-specific architecture and guides
+├── frontend/                 # React 19 SPA (Vite + TypeScript + Redux Toolkit + MUI)
+│   ├── src/                  # Components, Redux store, RTK Query API, pages
+│   ├── vercel.json           # Frontend SPA configuration and API proxy rewrites
+│   ├── README.md             # Frontend setup and local developer guide
+│   └── docs/                 # Frontend-specific UI and component guides
+├── docs/                     # Central repository documentation
+│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0015)
+│   ├── agents/               # Canonical agent context, roster, and role definitions
+│   ├── archive/              # Preserved historical planning documentation
+│   ├── monorepo-migration/   # Monorepo migration plan, progress, and backlog
+│   └── README.md             # This central index
+└── scripts/                  # Cross-workspace automation and verification
+    ├── check-all.sh          # Single canonical verification script
+    └── repo-tests/           # Zero-dependency Node 24 invariant test harness
+```
 
 ---
 
-## 🏛️ Fact-Owner Table
+## 3. "If You Need X → Look in Y" (Agent Fact-Owner Table)
 
-Every fact has a single canonical source of truth. Consult the owner doc:
-
-| Fact | Owner Document |
+| If you need to know about… | Look in… |
 |---|---|
-| Database schema, contentHash fields, field mapping | `documentation/05-database-and-cache.md` |
-| Redis key schema and cache semantics | `documentation/05-database-and-cache.md` (summary), `plan/03-cache-design.md` |
-| External APIs called (Ashby, CDX, Drive) | `documentation/03-external-apis.md` |
-| Internal REST API contract | `documentation/plan/04-backend-api-plan.md` (planned: `12-backend-api.md`) |
-| UI routes, state, and API client | `documentation/13-frontend-ui.md` |
-| Environment variables | `documentation/07-configuration-and-setup.md` |
-| CLI commands | `documentation/04-cli-commands.md` |
-| Deployment, schedule, secrets, runbook | `documentation/plan/02-target-architecture.md` (planned: `14-deployment-and-operations.md`) |
-| System flows | `documentation/plan/02-target-architecture.md` (planned: `15-system-architecture-and-flows.md`) |
-| Self-healing protocol | `documentation/plan/07-error-report-and-self-healing-loop.md` (planned: `16-self-healing-loop.md`) |
-| BF invariants and guard status | `documentation/10-bug-fix-and-improvement-log.md` (registry) + `11-testing-guide.md` §6 |
-| Known issues | `documentation/09-known-issues-and-tech-debt.md` |
-| History | Commit history (planned: `CHANGELOG.md` + `documentation/decisions/`) |
+| End-to-end architecture and sequence flows | [`docs/system-architecture-and-flows.md`](./system-architecture-and-flows.md) |
+| Central high-level system overview | [`docs/overview.md`](./overview.md) |
+| Daily scraping, concurrency limits, and retry logic | [`backend/docs/architecture-and-workflows.md`](../backend/docs/architecture-and-workflows.md) |
+| External APIs (Ashby REST/GraphQL, Wayback CDX, Drive) | [`backend/docs/external-apis.md`](../backend/docs/external-apis.md) |
+| CLI commands, parameters, and flags | [`backend/docs/cli-commands.md`](../backend/docs/cli-commands.md) |
+| Database schema, Prisma relations, and Redis keys | [`backend/docs/database-and-cache.md`](../backend/docs/database-and-cache.md) |
+| Module-by-module code reference and exports | [`backend/docs/module-reference.md`](../backend/docs/module-reference.md) |
+| Environment variables and configuration | [`backend/docs/configuration.md`](../backend/docs/configuration.md) |
+| Output artifacts, CSV format, and error reports | [`backend/docs/outputs-and-artifacts.md`](../backend/docs/outputs-and-artifacts.md) |
+| Backend bugs, debt, and gotchas | [`backend/docs/known-issues.md`](../backend/docs/known-issues.md) |
+| Frontend bugs, debt, and contract alignments | [`frontend/docs/known-issues.md`](../frontend/docs/known-issues.md) |
+| Bug fix invariants (`BF-001` through `BF-019+`) | [`docs/bug-fix-log.md`](./bug-fix-log.md) |
+| Testing pyramid, mocks, and repo tests | [`docs/testing.md`](./testing.md), [`backend/docs/testing.md`](../backend/docs/testing.md), [`frontend/docs/testing.md`](../frontend/docs/testing.md) |
+| Express REST API contract & endpoints | [`backend/docs/api.md`](../backend/docs/api.md) |
+| Frontend UI routes, Redux store, and components | [`frontend/docs/frontend-ui.md`](../frontend/docs/frontend-ui.md) |
+| Vercel deployment, branch protection, and operations | [`docs/deployment-and-operations.md`](./deployment-and-operations.md) |
+| Self-healing loop and bugfix protocol | [`docs/self-healing-loop.md`](./self-healing-loop.md) |
+| Canonical agent roles and permissions | [`docs/agents/roster.md`](./agents/roster.md), [`docs/agents/context.md`](./agents/context.md) |
 
 ---
 
-## 🤖 Guidance for AI Agents
+## 4. Full Documentation Index
 
-1. **Architecture Stack:**
-   - **Backend API:** `src/api/Server.ts` (Express 5, runs locally on port 3001 and as a Vercel serverless function via `api/index.ts`).
-   - **Frontend UI:** `frontend/` (Vite, React 19, Redux Toolkit, Material UI).
-   - **Scrapers:** `backend/src/core/Scraper.ts` (core DB scraper), `backend/src/core/ClusterScraper.ts` (multi-process coordinator), `backend/src/core/ScraperCSV.ts` (CSV streaming).
-2. **Scraper Pipeline:** All scraping uses `backend/src/lib/AshbyClient.ts` (`fetchAshbyBoardWithFallback` with browser headers, retries, and GraphQL fallback on 404/403/400).
-3. **Adaptive Concurrency:** `createLimiter()` in `backend/src/lib/Concurrency.ts` throttles request rates dynamically on 429 rate limits.
-4. **Execution on Import:** `backend/src/database/DbMenu.ts`, `backend/src/database/DbInspect.ts`, and `backend/scripts/GenerateDocs.ts` run on import—never import them into other modules.
-5. **Secrets & Safety:** Secrets live in `.env` (gitignored). Never read, print, or commit secret keys or `output/` values. Agents never push to `main` and never merge.
-6. **Verification Scope:** Typecheck and lint cover `backend/src/` only today. Tests use a global Prisma manual mock (`backend/__mocks__/@prisma/client.ts`).
-7. **Default Change Rule:** Every change must: (a) update docs and `AGENTS.md`, (b) run `npm --prefix backend run docs:generate`, (c) pass all checks (test/lint/tsc), and (d) commit with a Conventional Commit and bulleted body.
+### Repository Root Docs (`docs/`)
+- [`overview.md`](./overview.md): High-level system overview and architectural stack.
+- [`system-architecture-and-flows.md`](./system-architecture-and-flows.md): Complete Mermaid architecture, sequence flows, and subsystem interactions.
+- [`deployment-and-operations.md`](./deployment-and-operations.md): Deployment runbooks for Vercel, Neon, Upstash, and GitHub Actions.
+- [`self-healing-loop.md`](./self-healing-loop.md): Autonomous error triage, bug-fix protocol, and invariant validation.
+- [`bug-fix-log.md`](./bug-fix-log.md): Central registry of bug fixes (`BF-*`) and regression invariants.
+- [`testing.md`](./testing.md): Monorepo-wide testing guide and test harness map.
+
+### Backend Documentation (`backend/docs/`)
+- [`architecture-and-workflows.md`](../backend/docs/architecture-and-workflows.md): Scraper pipeline, concurrency throttling, and publishing workflows.
+- [`external-apis.md`](../backend/docs/external-apis.md): Specifications for Ashby Posting API, hosted GraphQL, and Wayback CDX.
+- [`cli-commands.md`](../backend/docs/cli-commands.md): Complete reference for all CLI commands (`scrape`, `discover`, `seed`, `verify`).
+- [`database-and-cache.md`](../backend/docs/database-and-cache.md): PostgreSQL Prisma schema, indexing strategy, and Upstash Redis schema.
+- [`module-reference.md`](../backend/docs/module-reference.md): Source module reference, public methods, and dependency relationships.
+- [`configuration.md`](../backend/docs/configuration.md): Environment variables, credentials, and configuration guidelines.
+- [`outputs-and-artifacts.md`](../backend/docs/outputs-and-artifacts.md): Scraper output formats, CSV schemas, and telemetry reports.
+- [`known-issues.md`](../backend/docs/known-issues.md): Active and resolved technical debt items for backend systems.
+- [`api.md`](../backend/docs/api.md): Express REST API contracts, routes, and query parameters.
+- [`testing.md`](../backend/docs/testing.md): Backend Jest test suite, Prisma/Redis mocking, and execution instructions.
+- [`google-drive-setup.md`](../backend/docs/google-drive-setup.md): Google Drive API credentials and cloud upload configuration.
+
+### Frontend Documentation (`frontend/docs/`)
+- [`frontend-ui.md`](../frontend/docs/frontend-ui.md): React 19 component hierarchy, Redux RTK Query state, and responsive layout.
+- [`known-issues.md`](../frontend/docs/known-issues.md): UI technical debt and contract alignment tracking.
+- [`testing.md`](../frontend/docs/testing.md): Vitest component test suites, MSW network mocking, and setup guide.
+
+---
+
+## 5. Architecture Decision Records (ADRs)
+
+All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
+- [ADR Index & Guidelines](./decisions/README.md)
+- [ADR-0000: Architecture Decision Record Template](./decisions/ADR-0000-template.md)
+- [ADR-0001: Postgres as Source of Truth](./decisions/ADR-0001-postgres-source-of-truth.md)
+- [ADR-0002: Upstash Redis with No HMAC](./decisions/ADR-0002-upstash-redis-no-hmac.md)
+- [ADR-0003: Immutable Cache Generations](./decisions/ADR-0003-immutable-cache-generations.md)
+- [ADR-0004: PostgreSQL DB ContentHash Detection](./decisions/ADR-0004-db-content-hash-detection.md)
+- [ADR-0005: CI Fixer on Claude Code Action](./decisions/ADR-0005-ci-fixer-claude-code.md)
+- [ADR-0006: Fixer Uses Branches and Pull Requests](./decisions/ADR-0006-fixer-branch-and-pr.md)
+- [ADR-0007: Salary Interval Semantics](./decisions/ADR-0007-salary-interval-semantics.md)
+- [ADR-0008: Canonical Agent Context](./decisions/ADR-0008-canonical-agent-context.md)
+- [ADR-0009: Company Health and Quarantine](./decisions/ADR-0009-company-health-and-quarantine.md)
+- [ADR-0010: Daily Scheduled Scrape Pipeline](./decisions/ADR-0010-daily-scheduled-scrape.md)
+- [ADR-0011: Rate Limiting via WAF and DbGuard](./decisions/ADR-0011-rate-limiting-waf-and-dbguard.md)
+- [ADR-0012: Fix Attempt Tracking via GitHub Issues](./decisions/ADR-0012-fix-attempt-tracking.md)
+- [ADR-0013: Monorepo Layout with Root Orchestration](./decisions/ADR-0013-monorepo-layout.md)
+- [ADR-0014: Independent Vercel Projects and WAF Risk](./decisions/ADR-0014-vercel-split-and-waf.md)
+- [ADR-0015: Synchronized API Contract Fixtures](./decisions/ADR-0015-type-contract-and-fixtures.md)
+
+---
+
+## 6. Archives & Migration
+
+- **Initial Enhancement Plan Archive:** [`docs/archive/2026-10-initial-plan/`](./archive/2026-10-initial-plan/00-README.md) (preserved historical planning documents).
+- **Monorepo Migration Documentation:**
+  - Plan: [`docs/monorepo-migration/PLAN.md`](./monorepo-migration/PLAN.md)
+  - Progress: [`docs/monorepo-migration/PROGRESS.md`](./monorepo-migration/PROGRESS.md)
+  - Backlog: [`docs/monorepo-migration/BACKLOG.md`](./monorepo-migration/BACKLOG.md)
+
+---
+
+## 7. Known Follow-Ups
+
+- **Weekly Discovery CDX Cap (Backlog Item B1):** The weekly slug discovery workflow is currently throttled by the Wayback Machine CDX API 1,000-result page cap. Documented and tracked for evaluation in [`docs/monorepo-migration/BACKLOG.md`](./monorepo-migration/BACKLOG.md#b1-weekly-discovery-only-sees-1000-archived-urls-per-run).

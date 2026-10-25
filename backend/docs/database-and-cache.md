@@ -1,6 +1,6 @@
 # 05 · Database & Cache
 
-Schema file: [backend/prisma/schema.prisma](backend/prisma/schema.prisma) ·
+Schema file: [../prisma/schema.prisma](../prisma/schema.prisma) ·
 Provider: **PostgreSQL** (`url = env("DATABASE_URL")`) · Generator: `prisma-client-js` (Prisma 5.22) ·
 Sync method: `npx prisma db push` (no `prisma/migrations/` folder).
 

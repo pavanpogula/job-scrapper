@@ -80,7 +80,7 @@ flowchart LR
 `DATABASE_URL`**.
 
 **Shared fetch path:** every Ashby board request — DB, cluster and CSV — goes through
-`fetchAshbyBoardWithFallback()` in `src/lib/AshbyClient.ts` (see [03-external-apis.md](./03-external-apis.md) §1–2b),
+`fetchAshbyBoardWithFallback()` in `src/lib/AshbyClient.ts` (see [03-external-apis.md](./external-apis.md) §1–2b),
 which always runs `sanitizeJobBatch()` (`src/lib/Sanitizer.ts`) on the REST response before returning.
 
 ---
@@ -89,7 +89,7 @@ which always runs `sanitizeJobBatch()` (`src/lib/Sanitizer.ts`) on the REST resp
 
 <a id="workflow-a1"></a>
 
-### A1. Automatic: `npm run discover [-- --common-crawl] [-- --enrich]` → [CdxWorker.ts](backend/src/discovery/CdxWorker.ts)
+### A1. Automatic: `npm run discover [-- --common-crawl] [-- --enrich]` → [CdxWorker.ts](../src/discovery/CdxWorker.ts)
 
 Entry: `runDiscovery({ includeCommonCrawl, enrichMetadata })`. Flags are read from `process.argv` inside the
 `require.main` guard (`--common-crawl` → `includeCommonCrawl`, `--enrich` → `enrichMetadata`).
@@ -113,16 +113,16 @@ Entry: `runDiscovery({ includeCommonCrawl, enrichMetadata })`. Flags are read fr
 ### A2. Manual / bulk: download CDX JSON → `npm run process:cdx -- <file.json>` → `npm run seed -- --all`
 
 1. User downloads the full CDX JSON (array-of-arrays) manually from the Wayback CDX endpoint (no limit).
-2. [ProcessCdxData.ts](backend/src/utils/ProcessCdxData.ts)
+2. [ProcessCdxData.ts](../src/utils/ProcessCdxData.ts)
    `processRawCDXData(rows)` skips the `original` header row and bare `https://jobs.ashbyhq.com/` roots, then rejects
    `.well-known*`, `$`/`%` prefixes, wildcards (`*`), pure numbers, UUIDs, ≥20-char hex strings, CSS units
    (`px|em|rem|vh|vw|ms|s|%`), and < 2 chars, before finally applying `isValidSlug()`. Unparseable URLs are silently skipped.
 3. Prints a ready-to-paste `export const TARGET_COMPANIES = [...]` block and writes **`extracted-slugs.json`** (sorted)
    in the current working directory. With no file argument it only prints usage.
-4. [Seed.ts](backend/src/utils/Seed.ts) `seed({ useExtractedSlugs })`:
+4. [Seed.ts](../src/utils/Seed.ts) `seed({ useExtractedSlugs })`:
    - `loadTargetSlugs(useExtractedFile)` — with `--all`, reads `<cwd>/extracted-slugs.json` if it exists and is an array;
      otherwise (or without `--all`) returns `TARGET_COMPANIES` from
-     [Companies.ts](backend/src/config/Companies.ts)
+     [Companies.ts](../src/config/Companies.ts)
      (currently 7 slugs: `deel, remote, reddit, multiverse, 1password, abridge, go-augment`).
    - Loads all existing slugs (1 query), diffs in memory, then `company.createMany({ data: [{ slug, name: slug, status: 'ACTIVE' }], skipDuplicates: true })`
      for new ones (1 query). Skips the insert entirely when nothing is new.
@@ -133,7 +133,7 @@ Entry: `runDiscovery({ includeCommonCrawl, enrichMetadata })`. Flags are read fr
 
 ## 3. Workflow B — Scrape to Database: `npm run scrape`
 
-File: [Scraper.ts](backend/src/core/Scraper.ts) — class `AshbyScraper`, entry `runAll(options?)`.
+File: [Scraper.ts](../src/core/Scraper.ts) — class `AshbyScraper`, entry `runAll(options?)`.
 
 ```mermaid
 sequenceDiagram
@@ -222,7 +222,7 @@ sequenceDiagram
   companies if that pre-load failed). Errors return `0`.
 - **3-strike quarantine:** `recordNotFoundStrike(slug, 3)` increments an **in-memory, per-`AshbyScraper`-instance** counter
   and sets `Company.status = NOT_FOUND` on the 3rd strike (errors ignored). A successful fetch clears the counter. Note that
-  `runAll()` fetches each company once, so see [09-known-issues](./09-known-issues-and-tech-debt.md) on whether the
+  `runAll()` fetches each company once, so see [09-known-issues](./known-issues.md) on whether the
   threshold is reachable within one run. The private `fetchJobs()` helper (used by unit tests, not by `runAll()`) uses
   `maxNotFoundStrikes = 1`, i.e. immediate quarantine.
 - **Department/Location race safety:** `getOrCreateDepartment()` / `getOrCreateLocation()` check the resolved cache, then
@@ -239,7 +239,7 @@ sequenceDiagram
 
 ## 4. Workflow B2 — Multi-Process Scrape: `npm run scrape:parallel [-- --workers=N]`
 
-File: [ClusterScraper.ts](backend/src/core/ClusterScraper.ts), entry `runClusterScrape(argv)`.
+File: [ClusterScraper.ts](../src/core/ClusterScraper.ts), entry `runClusterScrape(argv)`.
 
 1. Query `ACTIVE` companies, then `prisma.$disconnect()` (the coordinator never touches the DB again). If none → prints
    "Run: npm run seed" and returns `null`.
@@ -248,7 +248,7 @@ File: [ClusterScraper.ts](backend/src/core/ClusterScraper.ts), entry `runCluster
 3. `partitionSlugs(slugs, workerCount)`: round-robin (`slug[i] → shard[i % count]`), empty shards dropped.
 4. Per-worker HTTP concurrency: `12` if more than 100 companies, else `max(5, ceil(20 / shards))`.
 5. `runWorkerShard(workerId, slugs, concurrency)` for every shard in parallel:
-   `child_process.fork('backend/src/core/Scraper.ts', ['--ipc-worker'], { execArgv, stdio: ['inherit','inherit','inherit','ipc'] })`.
+   `child_process.fork('../src/core/Scraper.ts', ['--ipc-worker'], { execArgv, stdio: ['inherit','inherit','inherit','ipc'] })`.
    `execArgv` reuses the parent's when it already contains `ts-node`, otherwise appends `-r ts-node/register`.
 6. **IPC protocol:**
    - parent → child (once): `{ workerId, slugs, concurrency }`.
@@ -266,7 +266,7 @@ File: [ClusterScraper.ts](backend/src/core/ClusterScraper.ts), entry `runCluster
 
 ## 5. Workflow C — Scrape to CSV: `npm run scrape:csv [-- --upload-cloud]`
 
-File: [ScraperCSV.ts](backend/src/core/ScraperCSV.ts), entry `scrapeToCSV()`.
+File: [ScraperCSV.ts](../src/core/ScraperCSV.ts), entry `scrapeToCSV()`.
 
 1. `--upload-cloud` flag read from `process.argv`.
 2. Load `ACTIVE` companies from DB. If none → prints "Run: npm run seed", disconnects and returns.
@@ -312,7 +312,7 @@ File: [ScraperCSV.ts](backend/src/core/ScraperCSV.ts), entry `scrapeToCSV()`.
 
 ## 8. Workflow F — Docs Generation: `npm run docs:generate`
 
-[GenerateDocs.ts](scripts/GenerateDocs.ts) recursively walks the
+[GenerateDocs.ts](../scripts/GenerateDocs.ts) recursively walks the
 repo root (`discoverFiles()`, excluding directories named `node_modules, dist, .git, docs, output, .vscode, apikeys`) and
 collects every `.ts` (not `.d.ts`) and `.prisma` file — this includes `tests/`, `__mocks__/` and `scripts/`.
 `parseJSDoc()` reads the `@file` block at the very top of the file (`@summary` overrides `@file`, `@tags` comma-split)

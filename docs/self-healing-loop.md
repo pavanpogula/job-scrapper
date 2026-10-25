@@ -50,11 +50,11 @@ Every bugfix must be executed in this strict 9-step order:
 
 1. **Read history:**
    - Inspect `CHANGELOG.md` (`[Unreleased]` and the last 2 releases).
-   - Inspect `documentation/decisions/README.md` and read any ADR whose BF or GAP IDs match the issue.
+   - Inspect `docs/decisions/README.md` and read any ADR whose BF or GAP IDs match the issue.
 2. **Read the guards:**
-   - Inspect the BF invariants in `documentation/10-bug-fix-and-improvement-log.md`.
-   - Check guard status in `documentation/11-testing-guide.md` §6.
-   - Review open debt in `documentation/09-known-issues-and-tech-debt.md`.
+   - Inspect the BF invariants in `docs/bug-fix-log.md`.
+   - Check guard status in `docs/testing.md` §6.
+   - Review open debt in `backend/docs/known-issues.md`.
 3. **Read the error doc:**
    - Read the issues list in `output/reports/<YYYY-MM>/<runId>.issues.json` in exact priority order.
    - Read the full error report `output/reports/<YYYY-MM>/<runId>.json` when additional event context or payload data is required.
@@ -66,11 +66,11 @@ Every bugfix must be executed in this strict 9-step order:
    - Implement the minimal fix in code.
    - Verify the regression test transitions from failing to passing.
 6. **Record:**
-   - Add a `BF-XXX` entry in `documentation/10-bug-fix-and-improvement-log.md`.
-   - Update `documentation/09-known-issues-and-tech-debt.md` status if resolving an open debt item.
-   - Write an Architecture Decision Record in `documentation/decisions/ADR-XXXX-*.md` if an architectural choice or invariant changed.
+   - Add a `BF-XXX` entry in `docs/bug-fix-log.md`.
+   - Update `backend/docs/known-issues.md` status if resolving an open debt item.
+   - Write an Architecture Decision Record in `docs/decisions/ADR-XXXX-*.md` if an architectural choice or invariant changed.
    - Add an entry under `[Unreleased]` in `CHANGELOG.md`.
-   - Write run documentation in `documentation/runs/<runId>.md`.
+   - Write run documentation in `docs/runs/<runId>.md`.
    - Regenerate the project explorer via `npm run docs:generate`.
 7. **Verify:**
    - Run the mandatory verification suite:
@@ -134,5 +134,5 @@ Fixes automated scrape issue from run `<runId>`.
 8. **Available REST endpoints:** `/health`, `/v1/jobs`, `/v1/jobs/:id`, `/v1/facets`, `/v1/companies`, `/v1/meta`. Page size ≤ 100. Emits `X-Cache` CDN and read-through telemetry headers.
 9. **Rate limiting architecture:** Vercel WAF rule of 120 req / 60 s / IP on `/v1/`; per-instance `dbGuard` limiting active queries to 3 with queue of 10 and 503 backpressure; client-side rate gate removed.
 10. **Forbidden targets & Git permissions:** Never read/stage/commit `.env`, `apikeys/`, or `output/` values. Agents work on feature/fix branches and commit only. Deterministic CI step pushes `auto-fix/*` and opens PRs. Never push to `main`, never merge.
-11. **Actionable issues workflow:** Scrape triggers fixer job (`claude-code-action` on Claude Code). Reads `CHANGELOG.md`, `documentation/decisions/`, doc 10 + 11 §6, doc 09, and error doc. Fixes at most 3 issues with tests, updates BF registry, ADR, CHANGELOG, and creates PR.
+11. **Actionable issues workflow:** Scrape triggers fixer job (`claude-code-action` on Claude Code). Reads `CHANGELOG.md`, `docs/decisions/`, doc 10 + 11 §6, doc 09, and error doc. Fixes at most 3 issues with tests, updates BF registry, ADR, CHANGELOG, and creates PR.
 12. **Mandatory verification gate:** `npx tsc --noEmit -p . && npx tsc --noEmit -p tsconfig.test.json && npm run lint && npm test && npm run verify:ui && npm run docs:generate`.

@@ -6,4 +6,4 @@ model: inherit
 maxTurns: 60
 skills: [fix-from-error-report, record-decision, release-notes, verify-change]
 ---
-Read documentation/agents/roles/scraper-bugfixer.md first and follow it exactly. Never push, never switch to main, never edit files outside the allowed scope listed there.
+Read docs/agents/roles/scraper-bugfixer.md first and follow it exactly. Never push, never switch to main, never edit files outside the allowed scope listed there.

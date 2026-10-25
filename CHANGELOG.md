@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Monorepo Documentation Restructure (P5):** Reorganized project documentation into distinct operational layers: `docs/` (repo-wide entry, workflows, architecture, testing, and operations), `backend/docs/` (CLI, scraper, database, cache, backend testing, and known issues), `frontend/docs/` (UI testing and known contract issues), and `docs/decisions/` (ADR repository). Pure moves applied in Commit 1 (`b921c27`).
+- **New Architecture Decision Records (P5):** Added `docs/decisions/ADR-0013-monorepo-layout.md` (independent multi-app repository structure), `docs/decisions/ADR-0014-vercel-split-and-waf.md` (standalone API and SPA Vercel project segregation), and `docs/decisions/ADR-0015-type-contract-and-fixtures.md` (shared type contract governance and mock fixture sync).
+- **Workspace Guides & Testing Docs (P5):** Created `backend/README.md`, `backend/docs/testing.md` (backend Jest suites and database mocking), `frontend/docs/testing.md` (Vitest, React Testing Library, MSW network mocking), and `frontend/docs/known-issues.md` (frontend contract debt O3/O4 and MUI deprecations). Updated `docs/testing.md` as overarching repo-level guide.
+- **Documentation Link & Reachability Test (P5):** Added `scripts/repo-tests/docs-links.test.mjs` verifying that the root `README.md` opens with `## Workflows & Pipelines`, that zero active references point to the retired `documentation/` prefix, that all markdown relative links and `@import` directives resolve to existing targets, and that all active documentation files are reachable from `docs/README.md`.
+
+### Changed
+- **Fixer Scope & Agent Rules Realignment (P5):** Updated `scripts/ci/check-fixer-scope.sh` and `scripts/repo-tests/fixer-scope.test.mjs` to allow `docs/bug-fix-log.md`, `docs/decisions/`, `docs/runs/`, `backend/docs/known-issues.md`, and `backend/docs/testing.md`, while removing legacy `documentation/` and strictly forbidding `frontend/docs/`. Realigned agent shells, rules, skills, and context imports across `.agents/` and `.claude/` to point to `docs/agents/roles/` and `docs/agents/context.md`.
+- **Root README & Documentation Hub (P5):** Rewrote root `README.md` to ~75 lines prioritizing developer workflows and pipelines first, followed by monorepo layout and documentation index links. Updated `docs/README.md` into a 7-section index covering workflows, directory maps, agent fact-ownership, ADR index, archives, and backlog. Added historical archive banner to `docs/archive/2026-10-initial-plan/00-README.md`.
+- **Migration Move Manifest (P5):** Registered all 54 moved documentation file paths in `scripts/migration/move-map.json` and updated `scripts/repo-tests/layout.test.mjs` to forbid `documentation/` at monorepo root.
+
 ### Removed
 - **Legacy Monolithic CI Workflow (P4b):** Deleted `.github/workflows/ci.yml` and retired the legacy `Verify & Test` status check. The monorepo now runs exclusively on parallel split workflows (`backend-ci.yml`, `frontend-ci.yml`, and `repo-ci.yml`) with required gates `backend-gate`, `frontend-gate`, and `repo-gate`. Updated `scripts/repo-tests/workflows.test.mjs` to assert `ci.yml` non-existence, removed `ci.yml` test from `scripts/repo-tests/yaml-lite.test.mjs`, registered `.github/workflows/ci.yml` in `scripts/migration/move-map.json`, and updated `documentation/14-deployment-and-operations.md`.
 
