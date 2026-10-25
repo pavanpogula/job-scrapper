@@ -58,18 +58,13 @@ export async function compareResults(phase) {
   const currVitest = loadJson(resultsDir, 'vitest-tests.json') || [];
 
   /**
-   * Maps a baseline key to current expected key using moveMap and movedTests
+   * Maps a baseline key to current expected key using movedTests
    * @param {string} key
    */
   function mapKey(key) {
     for (const mt of movedTests) {
       if (mt.from === key) {
         return mt.to;
-      }
-    }
-    for (const pref of moveMap.prefixes || []) {
-      if (key.startsWith(pref.from)) {
-        return pref.to + key.slice(pref.from.length);
       }
     }
     return key;
@@ -80,7 +75,7 @@ export async function compareResults(phase) {
    */
   function isDeleted(key) {
     for (const d of moveMap.deleted || []) {
-      if (key.startsWith(d.path)) {
+      if (key.startsWith(d.path) || d.path.startsWith(key)) {
         return true;
       }
     }
@@ -143,7 +138,13 @@ export async function compareResults(phase) {
   const baseAny = loadJson(baselineDir, 'any-counts.json') || {};
   const currAny = loadJson(resultsDir, 'any-counts.json') || {};
   for (const [file, count] of Object.entries(currAny)) {
-    const mappedBaseFile = file; // unless moved
+    let mappedBaseFile = file;
+    for (const pref of moveMap.prefixes || []) {
+      if (file.startsWith(pref.to)) {
+        mappedBaseFile = pref.from + file.slice(pref.to.length);
+        break;
+      }
+    }
     const prev = baseAny[mappedBaseFile] || 0;
     if (count > prev) {
       errors.push(`'any' count in ${file} increased: ${count} > ${prev}`);

@@ -3,6 +3,78 @@
     {
       "from": "job-scrapper-ui/",
       "to": "frontend/"
+    },
+    {
+      "from": "src/",
+      "to": "backend/src/"
+    },
+    {
+      "from": "tests/",
+      "to": "backend/tests/"
+    },
+    {
+      "from": "prisma/",
+      "to": "backend/prisma/"
+    },
+    {
+      "from": "__mocks__/",
+      "to": "backend/__mocks__/"
+    },
+    {
+      "from": "api/",
+      "to": "backend/api/"
+    },
+    {
+      "from": "scripts/GenerateDocs.ts",
+      "to": "backend/scripts/GenerateDocs.ts"
+    },
+    {
+      "from": "scripts/generate-readme.ts",
+      "to": "backend/scripts/generate-readme.ts"
+    },
+    {
+      "from": "docs/project-explorer.html",
+      "to": "backend/docs/project-explorer.html"
+    },
+    {
+      "from": "docs/GOOGLE_DRIVE_SETUP.md",
+      "to": "backend/docs/GOOGLE_DRIVE_SETUP.md"
+    },
+    {
+      "from": "jest.config.js",
+      "to": "backend/jest.config.js"
+    },
+    {
+      "from": "tsconfig.json",
+      "to": "backend/tsconfig.json"
+    },
+    {
+      "from": "tsconfig.test.json",
+      "to": "backend/tsconfig.test.json"
+    },
+    {
+      "from": ".eslintrc.json",
+      "to": "backend/.eslintrc.json"
+    },
+    {
+      "from": "package.json",
+      "to": "backend/package.json"
+    },
+    {
+      "from": "package-lock.json",
+      "to": "backend/package-lock.json"
+    },
+    {
+      "from": ".env.example",
+      "to": "backend/.env.example"
+    },
+    {
+      "from": "extracted-slugs.json",
+      "to": "backend/extracted-slugs.json"
+    },
+    {
+      "from": "JOBS.md",
+      "to": "backend/JOBS.md"
     }
   ],
   "deleted": [
@@ -13,6 +85,14 @@
     {
       "path": "tests/unit/FixerScope.test.ts",
       "reason": "Moved to scripts/repo-tests/fixer-scope.test.mjs"
+    },
+    {
+      "path": "vercel.json",
+      "reason": "Root vercel.json split into backend/vercel.json and frontend/vercel.json in P3a"
+    },
+    {
+      "path": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests ApiNoStatic: Static Asset Serving Isolation (P0b) serves SPA index.html when dist exists",
+      "reason": "Removed SPA static serving from Express in P3a per PLAN.md line 308"
     }
   ]
 }

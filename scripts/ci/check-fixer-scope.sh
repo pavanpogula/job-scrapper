@@ -19,20 +19,21 @@ FORBIDDEN_PATTERNS=(
   "^\.github/"
   "^\.claude/settings\.json"
   "^\.agents/hooks\.json"
-  "^vercel\.json"
+  "vercel\.json$"
+  "^frontend/"
+  "package(-lock)?\.json$"
 )
 
 ALLOWED_PATTERNS=(
-  "^src/"
-  "^tests/"
-  "^prisma/schema\.prisma"
+  "^backend/src/"
+  "^backend/tests/"
+  "^backend/prisma/schema\.prisma"
+  "^backend/docs/project-explorer\.html"
+  "^backend/AGENTS\.md"
   "^documentation/"
   "^CHANGELOG\.md"
   "^README\.md"
   "^AGENTS\.md"
-  "^docs/project-explorer\.html"
-  "^package\.json"
-  "^skills-lock\.json"
 )
 
 VIOLATIONS=0

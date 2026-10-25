@@ -8,7 +8,7 @@ RUN_ID="${1:-unknown}"
 
 echo "⚠️ Recording failed fix attempt for run $RUN_ID..."
 
-ISSUES_FILE=$(find output/reports -name "${RUN_ID}.issues.json" 2>/dev/null | head -n 1 || true)
+ISSUES_FILE=$(find backend/output/reports output/reports -name "${RUN_ID}.issues.json" 2>/dev/null | head -n 1 || true)
 if [ -z "$ISSUES_FILE" ] || [ ! -f "$ISSUES_FILE" ]; then
   echo "ℹ️ No issues file found for run $RUN_ID. Nothing to record."
   exit 0

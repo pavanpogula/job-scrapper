@@ -477,7 +477,7 @@ function generateTreeHTML(docs: FileDoc[]): string {
         <div class="tree-item folder" onclick="toggleFolder(this)">
             <span class="material-icons-round arrow">chevron_right</span>
             <span class="material-icons-round folder-icon">folder</span>
-            <span>job-scrapper</span>
+            <span>backend</span>
         </div>
         <ul>${renderTree(tree, 1)}</ul>
     </li>`;

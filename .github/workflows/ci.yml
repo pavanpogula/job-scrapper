@@ -31,36 +31,46 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
-      - name: Install root dependencies
+      - name: Install backend dependencies
         run: npm ci
+        working-directory: backend
 
-      - name: Install UI dependencies
-        run: npm ci --prefix frontend
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
 
       - name: Generate Prisma client
         run: npx prisma generate
+        working-directory: backend
 
-      - name: Type-check root and API
-        run: npx tsc --noEmit -p .
+      - name: Type-check backend
+        run: npm run typecheck
+        working-directory: backend
 
       - name: Type-check tests
-        run: npx tsc --noEmit -p tsconfig.test.json
+        run: npm run typecheck:test
+        working-directory: backend
 
-      - name: Lint root and API
+      - name: Lint backend
         run: npm run lint
+        working-directory: backend
 
-      - name: Run root unit and contract tests
+      - name: Run backend unit and contract tests
         run: npm test
+        working-directory: backend
 
-      - name: Verify UI (typecheck, lint, test)
-        run: npm run verify:ui
+      - name: Check frontend (typecheck, lint, test, build)
+        run: npm --prefix frontend run check
 
-      - name: Build application
+      - name: Build backend
         run: npm run build
+        working-directory: backend
 
       - name: Verify docs generation
-        run: npm run docs:generate && git diff --exit-code -I 'Auto-generated on' -- docs/
+        run: npm --prefix backend run docs:check
 
       - name: Check fixer scope (auto-fix branches)
         if: startsWith(github.head_ref || github.ref_name, 'auto-fix/')

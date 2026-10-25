@@ -20,4 +20,4 @@
 
 ## Output Contract
 - High-quality, polished React components and Redux Toolkit state slices.
-- UI changes verified by `npm run verify:ui` (`typecheck`, `lint`, `test`).
+- UI changes verified by `npm --prefix frontend run check` or `scripts/check-all.sh --no-install`.

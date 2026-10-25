@@ -37,6 +37,7 @@ dist/
 # Google Drive credentials (sensitive!)
 google-credentials.json
 /extracted-slugs*
+/backend/extracted-slugs*
 .DS_Store
 
 # Claude Code personal settings

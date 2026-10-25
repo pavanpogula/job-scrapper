@@ -29,4 +29,16 @@ describe('InstallReportFixture CLI (P3-T02)', () => {
     expect(installedData.run.exitCode).toBe(1);
     expect(installedData.summary.companiesFailed).toBe(40);
   });
+
+  it('A8: strips leading backend/ from fixture path when running in backend cwd', () => {
+    const exitCode = installReportFixture(`backend/${testFixturePath}`);
+    expect(exitCode).toBe(1);
+
+    const fixtureData = JSON.parse(fs.readFileSync(testFixturePath, 'utf8'));
+    const runId = fixtureData.run.runId;
+    const month = fixtureData.run.startedAt.substring(0, 7);
+
+    const installedReportPath = path.resolve(process.cwd(), 'output', 'reports', month, `${runId}.json`);
+    expect(fs.existsSync(installedReportPath)).toBe(true);
+  });
 });

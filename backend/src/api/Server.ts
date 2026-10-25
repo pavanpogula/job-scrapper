@@ -6,8 +6,6 @@
 
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import path from 'path';
-import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
 import {
   queryJobs,
@@ -330,18 +328,6 @@ app.get('/v1/meta', async (_req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch meta' });
   }
 });
-
-// Serve static UI production build if available
-const distPath = path.resolve(__dirname, '../../frontend/dist');
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  app.use((req: Request, res: Response, next) => {
-    if ((req.method === 'GET' || req.method === 'HEAD') && !req.path.startsWith('/v1') && req.path !== '/health' && req.accepts('html')) {
-      return res.sendFile(path.join(distPath, 'index.html'));
-    }
-    next();
-  });
-}
 
 // Start server
 if (require.main === module) {

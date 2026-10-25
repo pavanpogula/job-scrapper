@@ -13,8 +13,5 @@
 
 ### Verification
 - Mandatory checks:
-  - `npx tsc --noEmit -p . && npx tsc --noEmit -p tsconfig.test.json` (0 errors)
-  - `npm run lint` (0 errors)
-  - `npm test` (all tests pass)
-  - `npm run verify:ui` (clean)
+  - `scripts/check-all.sh --no-install` (clean)
 - Docs: `CHANGELOG.md` [Unreleased] updated.

@@ -86,8 +86,8 @@ function createTempGitRepo() {
 test('fixer-scope: an allowed file passes', () => {
   const repo = createTempGitRepo();
   try {
-    fs.mkdirSync(path.join(repo.dir, 'src'), { recursive: true });
-    fs.writeFileSync(path.join(repo.dir, 'src/allowed.ts'), 'export const a = 1;\n');
+    fs.mkdirSync(path.join(repo.dir, 'backend/src'), { recursive: true });
+    fs.writeFileSync(path.join(repo.dir, 'backend/src/allowed.ts'), 'export const a = 1;\n');
     execFileSync('git', ['add', '.'], { cwd: repo.dir });
     execFileSync('git', ['commit', '-m', 'add allowed file'], { cwd: repo.dir });
 
@@ -153,14 +153,14 @@ test('fixer-scope: a scripts edit fails (A19, O13)', () => {
 
 test('fixer-scope: every file fix-from-error-report skill tells fixer to write passes', () => {
   const skillWrittenFiles = [
-    'src/lib/AshbyClient.ts',
-    'tests/unit/AshbyClient.test.ts',
+    'backend/src/lib/AshbyClient.ts',
+    'backend/tests/unit/AshbyClient.test.ts',
     'documentation/10-bug-fix-and-improvement-log.md',
     'documentation/09-known-issues-and-tech-debt.md',
     'documentation/decisions/ADR-0013-test-decision.md',
     'CHANGELOG.md',
     'documentation/runs/run-2026-03-01.md',
-    'docs/project-explorer.html',
+    'backend/docs/project-explorer.html',
   ];
 
   for (const relPath of skillWrittenFiles) {

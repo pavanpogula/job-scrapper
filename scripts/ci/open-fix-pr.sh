@@ -25,8 +25,8 @@ else
   echo "⚠️ GH_TOKEN or GITHUB_REPOSITORY not set. Skipping git push in dry-run/local mode."
 fi
 
-# Locate issues file
-ISSUES_FILE=$(find output/reports -name "${RUN_ID}.issues.json" 2>/dev/null | head -n 1 || true)
+# Locate issues file (backend/output/reports first, fallback to output/reports until P10)
+ISSUES_FILE=$(find backend/output/reports output/reports -name "${RUN_ID}.issues.json" 2>/dev/null | head -n 1 || true)
 FINGERPRINTS=""
 if [ -n "$ISSUES_FILE" ] && [ -f "$ISSUES_FILE" ]; then
   FINGERPRINTS=$(grep -o '"fingerprint": *"[^"]*"' "$ISSUES_FILE" | sed -E 's/.*"([^"]+)".*/<!-- fp:\1 -->/' || true)
@@ -42,10 +42,7 @@ $FINGERPRINTS
 
 ### Verification
 - Mandatory checks passed:
-  - TypeScript typecheck (0 errors)
-  - ESLint (0 errors)
-  - Jest & Vitest unit suites (clean)
-  - UI build verification
+  - \`scripts/check-all.sh --no-install\`
 - CHANGELOG.md [Unreleased] updated.
 
 *Note: This PR was created by the autonomous fixer workflow. Requires human review before merging.*

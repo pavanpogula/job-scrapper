@@ -75,44 +75,49 @@
 - **Rollback command:** `git revert --no-edit fa3a3a6`
 - **Rollback chain:** `revert P0b`
 
-### [ ] P1 — Repo-level tests out of jest + fixer-scope hardening
+### [x] P1 — Repo-level tests out of jest + fixer-scope hardening (merged)
 - **Branch:** `plan/mono-p1-repo-tests`
-- **PR:** `pending`
+- **PR:** #4
 - **Merge method:** `squash`
-- **Commit SHAs:** `c718161`
+- **Commit SHAs:** `6323c7b`
 - **Owner decisions used:** O13
 - **Verification evidence:**
   - `node scripts/migration/compare-results.mjs --phase P1`: Jest 264/274 (0 missing, 10 moved), Vitest 14/14, TS root=0/tests=0, ESLint 0 err/1 warn.
   - `node --test scripts/repo-tests/*.test.mjs`: 25/25 tests passed (including 8 agent-shells tests and 7 fixer-scope tests).
   - `./scripts/check-all.sh --no-install`: All 9 steps passed cleanly.
 - **Owner actions:** None
-- **Rollback command:** `git revert <squash-sha>`
+- **Rollback command:** `git revert --no-edit 6323c7b`
 - **Rollback chain:** `revert P1`
 
-### [ ] P2 — Frontend rename
+### [x] P2 — Frontend rename (merged)
 - **Branch:** `plan/mono-p2-frontend-rename`
-- **PR:** `pending`
+- **PR:** #5
 - **Merge method:** `rebase`
-- **Commit SHAs (first..last):** `50d5248..b397907`
+- **Commit SHAs (first..last):** `88848da`
 - **Owner decisions used:** None
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed all 9 verification steps cleanly (Prisma generate, root typecheck, test typecheck, lint, Jest [37 suites / 264 tests], Vitest UI verify [5 suites / 14 tests], build, docs check, repo-tests [25/25 tests]).
   - `node scripts/migration/compare-results.mjs --phase P2`: Passed (Jest 264, Vitest 14, TS 0 errors, ESLint 0 errors / 1 warning, dist inspected, production smoke verified).
-  - Grep verification: `git grep -n 'job-scrapper-ui/'` and `git grep -n 'job-scrapper-ui' | grep -v 'vercel.app'` return only the required move-map prefix entry in `scripts/migration/move-map.json` outside frozen baseline.
+  - Production DB Schema Alignment: On 2026-10-25, owner executed `npx prisma db push` applying `CompanyHealth` table to Neon PostgreSQL. Smoke check verified 11/11 endpoints passed (`/v1/companies` returned 200).
 - **Owner actions:** Local cleanup `rm -rf job-scrapper-ui`
-- **Rollback command:** `git revert --no-edit <first>^..<last>` (+ Vercel instant rollback if prod affected)
-- **Rollback chain:** `revert P2`
+- **Rollback command:** `git revert --no-edit 88848da` (+ Vercel instant rollback if prod affected)
+- **Rollback chain:** `revert P2` -> `revert P1`
 
 ### [ ] P3a — Backend move + Vercel split
 - **Branch:** `plan/mono-p3a-backend-move`
 - **PR:** `pending`
 - **Merge method:** `rebase`
-- **Commit SHAs (first..last):** `pending`
+- **Commit SHAs (first..last):** `7b86503..6c5447f`
 - **Owner decisions used:** O1, O2, O8, O9
-- **Verification evidence:** `pending`
+- **Verification evidence:**
+  - `scripts/check-all.sh --no-install`: Passed all steps cleanly (`backend check:all`, `frontend check`, and 29 repo-level tests).
+  - `node scripts/migration/compare-results.mjs --phase P3a`: Passed (Jest 264/274 [0 missing, 10 moved], Vitest 14/14, TS root=0/tests=0, ESLint 0 errors / 1 warning, production smoke 11/11 passed).
+  - Architectural Invariants: Added `scripts/repo-tests/no-api-imports-scraper.test.mjs` and ESLint `no-restricted-imports` preventing API coupling to scraper/discovery modules.
+  - Fixer Safety: Added `scripts/repo-tests/fixer-allowed-tools.test.mjs` and updated `scripts/ci/check-fixer-scope.sh` for `backend/` paths.
+  - Unified Checks: Added `scripts/repo-tests/single-check-command.test.mjs` verifying canonical check commands.
 - **Owner actions:** Follow Vercel cutover runbook (promote backend, toggle vars, set root to frontend)
-- **Rollback command:** See PLAN.md runbook §8 (Instant Rollback frontend, root to `.`, `git revert --no-edit <first>^..<last>`)
-- **Rollback chain:** `revert P3a`
+- **Rollback command:** See PLAN.md runbook §8 (Instant Rollback frontend, root to `.`, `git revert --no-edit 7b86503^..6c5447f`)
+- **Rollback chain:** `revert P3a` -> `revert P2` -> `revert P1`
 
 ### [ ] P3b — Backend follow-ups
 - **Branch:** `plan/mono-p3b-backend-followups`
