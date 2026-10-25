@@ -46,7 +46,7 @@ documentation/agents/roles/<role>.md        CANONICAL: one file per role (respon
 .agents/rules/10-secrets-and-git.md         SHELL: trigger: always_on; the hard rules (short, inline)
 .agents/rules/20-scraper-invariants.md      SHELL: trigger: glob; globs: src/core/**,src/lib/**; short invariant index + link to doc 10 (doc 10 is 27 KB > 24 KB cap)
 .agents/rules/30-api-cache.md               SHELL: trigger: glob; globs: src/api/**,api/**,src/lib/cache/**,src/cache/**
-.agents/rules/40-frontend.md                SHELL: trigger: glob; globs: job-scrapper-ui/**
+.agents/rules/40-frontend.md                SHELL: trigger: glob; globs: frontend/**
 .agents/agents/<role>.md                    SHELL: same pointer body as the Claude shell
 .agents/hooks.json                          SHELL: calls the same scripts/hooks/*.sh
 scripts/hooks/post-commit-reminder.sh       shared hook logic (handles both tools' stdin shapes)
@@ -64,7 +64,7 @@ Explicitly **not** created:
 ### 3.1 `AGENTS.md` (rewrite in P1-T02, ≤ 6 KB, so its tokens fit the always-on budget)
 
 1. **What it is (3 lines).** An Ashby job scraper (CLI) feeds Neon Postgres and an Upstash Redis cache. An Express API
-   on Vercel reads the cache first, with Postgres as fail-safe. A React UI in `job-scrapper-ui/` calls the API.
+   on Vercel reads the cache first, with Postgres as fail-safe. A React UI in `frontend/` calls the API.
    Users only browse and click Apply.
 2. **Flow (5 bullets):** discover/seed → `scrape:parallel` (daily GitHub Actions) → DB write → cache publish →
    API → UI. Link `documentation/15-system-architecture-and-flows.md`.
@@ -85,7 +85,7 @@ Explicitly **not** created:
   - `src/cache/Publisher.ts`
   - `src/api/Server.ts`
   - `api/index.ts`
-  - `job-scrapper-ui/src/*`
+  - `frontend/src/*`
 - **Commands:** `scrape:parallel [-- --workers=N]`, `cache:publish`, `report:classify`, `verify`, `api:start`,
   `verify:ui`.
 - **Data facts:**
@@ -110,7 +110,7 @@ Every role reads `AGENTS.md`, then `documentation/agents/context.md`, then its o
 | `run-reviewer` | Triages an error doc: actionable vs noise, and gates the fixer. Never edits. | 16, 08, 09, `CHANGELOG.md` | nothing | `{actionable, issues[]}` with BF and 09 refs |
 | `scraper-bugfixer` | Runs the fix protocol (07 §8) | `CHANGELOG.md`, `decisions/README.md`, 16, 10, 11 §6, 09, the error doc | the scope in 07 §7 | Commits on the current branch, plus a BF entry, ADR, CHANGELOG entry and run summary |
 | `api-cache` | Owns `src/api/**`, `api/**`, `src/lib/cache/**`, `src/cache/**`, `vercel.json` and API tests | 12, 05 (cache section), plan 03/04, 14 | its paths | Code, tests, docs 12/05/07 |
-| `frontend` | Owns `job-scrapper-ui/**` only; may use `impeccable` in audit mode | 13, 12, `job-scrapper-ui/src/types/api.ts` | its paths | UI code, UI tests, doc 13 |
+| `frontend` | Owns `frontend/**` only; may use `impeccable` in audit mode | 13, 12, `frontend/src/types/api.ts` | its paths | UI code, UI tests, doc 13 |
 | `docs-release-keeper` | Keeps docs and agent files true, cuts releases (`/release`), keeps the ADR index, runs `docs:generate` and the parity test, refreshes verification stamps | `documentation/README.md` fact-owner table, `CHANGELOG.md`, `decisions/README.md`, `documentation/agents/**` | `documentation/**`, `CHANGELOG.md`, `README.md`, `AGENTS.md`, `CLAUDE.md`, agent shells | Doc edits, release PRs |
 
 **Routing:**
@@ -220,7 +220,7 @@ trigger: always_on
    - `Bash(git push *)` in `deny` is a convenience, **not a security boundary**: `git -C . push` would not match it.
      The real guards are in 07 §7.
    - The impeccable hooks from the old local file move to each developer's own `settings.local.json`. If they are
-     kept in the shared file, they must be scoped to `job-scrapper-ui/**` and skipped when `CI=true`, because they
+     kept in the shared file, they must be scoped to `frontend/**` and skipped when `CI=true`, because they
      download a binary.
 3. `scripts/hooks/post-commit-reminder.sh`:
    - It reads the hook JSON from stdin.
@@ -274,7 +274,7 @@ The test asserts that:
 Expected answers describe the state **after P1–P4**.
 
 1. **What are the three runtime parts and how do they connect?**
-   - The UI `job-scrapper-ui/` calls `/v1/*`.
+   - The UI `frontend/` calls `/v1/*`.
    - Vercel routes `/v1/*` to `api/index.ts`, which runs `src/api/Server.ts`.
    - The API reads Upstash first (`jc:v1:*`), with Neon Postgres as fail-safe.
    - The scraper (`scrape:parallel`, daily in GitHub Actions) writes Postgres, then publishes a cache generation.

@@ -41,7 +41,6 @@ describe('GenerateDocs refactoring (P0b)', () => {
         expect(html).not.toContain('node_modules/');
         expect(html).not.toContain('.claude/');
         expect(html).not.toContain('.agents/');
-        expect(html).not.toContain('job-scrapper-ui/src');
         expect(html).not.toContain('frontend/src');
     });
 });

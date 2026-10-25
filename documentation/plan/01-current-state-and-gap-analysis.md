@@ -17,7 +17,7 @@
 |---|---|---|
 | Scraper | `src/core/Scraper.ts`, `ClusterScraper.ts`, `ScraperCSV.ts`, `src/lib/*` | Works. The last run (2026-10-23) scraped 3,072 companies in 76.3 s with 4 workers and collected 33,997 jobs. The DB holds 34,458 jobs, 34,023 of them active. Redis is optional, and it is not configured in this environment. |
 | Backend API | `src/api/Server.ts` (Express 5), `api/index.ts`, `vercel.json` | Live on Vercel at `https://job-scrapper-ui.vercel.app/` (`/health` returns `{"status":"ok","activeJobs":34023}`). It reads **Postgres only**; there is no cache. |
-| Frontend | `job-scrapper-ui/` (React 19.3.1, MUI 9.5.0, RTK Query, Vite 6.4.5) | Live. It has no tests, no lint, and no URL state. |
+| Frontend | `frontend/` (React 19.3.1, MUI 9.5.0, RTK Query, Vite 6.4.5) | Live. It has no tests, no lint, and no URL state. |
 | Cache | `src/lib/Redis.ts` | Holds only `job:<ashbyId>:hash` change-detection keys (`Scraper.ts:265-269, 425-431`). The API never reads them. |
 | Scheduling/CI | none | There is no `.github/`. Every scrape is run by hand. |
 | Error loop | `src/lib/ErrorTracker.ts` → `output/latest-error-report.json` | Each run overwrites the previous report. Doc 10 has a protocol, but nothing automates it, and there is no decision log or changelog. |
@@ -97,7 +97,7 @@
 | GAP-API-20 | S3 | There is no serverless Prisma/Neon pooling config. | `Server.ts:13` | P2-T09 |
 | GAP-API-21 | S4 | A module-scope `setInterval` runs in a serverless function. | `Server.ts:60-68` | P2-T08 |
 | GAP-API-22 | S2 | No composite index matches `active AND isListed (+filter) ORDER BY publishedAt DESC`. | `schema.prisma:85-95` | P1-T18 |
-| GAP-API-23 | S4 | The UI types declare filters the server ignores (`company`, `department`, `location`, `city`). | `job-scrapper-ui/src/types/api.ts:92-103` | P5-T10 |
+| GAP-API-23 | S4 | The UI types declare filters the server ignores (`company`, `department`, `location`, `city`). | `frontend/src/types/api.ts:92-103` | P5-T10 |
 
 ### 3.3 Cache (GAP-CACHE)
 
@@ -123,7 +123,7 @@
 | GAP-FE-06 | S2 | Every detail error shows "not found", and there is no Retry anywhere. | `JobDetailPage.tsx:42-61` | P5-T02 |
 | GAP-FE-07 | S2 | The mobile drawer dispatches on every tap, and "Apply Filters" only closes it. | `BrowsePage.tsx:115-165, 556-563` | P5-T01 |
 | GAP-FE-08 | S2 | The SPA document has no security headers. | live `GET /` | P2-T08 |
-| GAP-FE-09 | S2 | There is no UI test runner, so the BF-013 DOMPurify invariant has no test. | `job-scrapper-ui/package.json:6-10` | P1-T19 |
+| GAP-FE-09 | S2 | There is no UI test runner, so the BF-013 DOMPurify invariant has no test. | `frontend/package.json:6-10` | P1-T19 |
 | GAP-FE-10 | S2 | There is no UI lint or typecheck script, and the AGENTS.md checks skip the UI. | — | P1-T19 |
 | GAP-FE-11 | S3 | Counts are hard-coded (34,0xx / 1,74x), and the UI says "Updated Daily" but shows no freshness. | `Header.tsx:98, 231`; `BrowsePage.tsx:207`; `CompaniesPage.tsx:42`; `AboutPage.tsx:73`; `index.html:8` (2 numbers); "Updated Daily" at `Footer.tsx:56` | P5-T04 |
 | GAP-FE-12 | S3 | WCAG 2.2 AA failures: missing labels, no h1, no `aria-pressed`/`aria-expanded`, no skip link. | see 06 §2 | P5-T05 |
@@ -133,7 +133,7 @@
 | GAP-FE-16 | S3 | No scroll-to-top on page change, no mobile loading indicator, and no sort UI. | `BrowsePage.tsx:284-288, 520` | P5-T01 |
 | GAP-FE-17 | S3 | The UI types drift from the real contract, and the JSDoc cites the deleted `documentation/frontend-design/08-…`. | `types/api.ts:1-3` | P5-T10 |
 | GAP-FE-18 | S3 | The root build runs `npm install` rather than `npm ci` for the UI. | `package.json:24` | P3-T01 |
-| GAP-FE-19 | S3 | A duplicate `job-scrapper-ui/vercel.json` catch-all would break `/v1` if that folder were deployed on its own. | `job-scrapper-ui/vercel.json:1-8` | P2-T08 |
+| GAP-FE-19 | S3 | A duplicate `frontend/vercel.json` catch-all would break `/v1` if that folder were deployed on its own. | `frontend/vercel.json:1-8` | P2-T08 |
 | GAP-FE-20 | S3 | The Vite dev server binds to `0.0.0.0` with `allowedHosts: true`. | `vite.config.ts:11-12` | P5-T08 |
 | GAP-FE-21 | S3 | The UI ships as one 221 kB gzip chunk with no lazy routes, and fonts block rendering. | build output | P5-T08 |
 | GAP-FE-22 | S4 | The `.dark` class isn't applied on first load, and dead Tailwind classes remain in `index.html`. | `themeSlice.ts`; `index.html:14` | P5-T08 |

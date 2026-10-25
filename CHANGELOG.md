@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Frontend Workspace Rename (P2):** Moved React 19 web application from `job-scrapper-ui/` to `frontend/` using pure `git mv`. Updated root `package.json` (`verify:ui`, `build`), `vercel.json` (`outputDirectory: frontend/dist`), `src/api/Server.ts` (`distPath`), `tsconfig.json`, `tsconfig.test.json`, `scripts/GenerateDocs.ts`, CI workflows, all agent rules/shells, and documentation. Set `frontend/package.json` `name: "frontend"`, added `"check"` script and Node `>=24.0.0` engine constraint. Preserved `job-scrapper-ui.vercel.app` production domain in CORS defaults, `Hardening.test.ts`, and `robots.txt`. Recorded directory prefix mapping in `scripts/migration/move-map.json`.
+
 ### Added
 - **Repo-Level Test Migration (P1):** Migrated `AgentShells.test.ts` to `scripts/repo-tests/agent-shells.test.mjs` and `FixerScope.test.ts` to `scripts/repo-tests/fixer-scope.test.mjs` under native Node 24 test runner. Added integration test coverage against temporary git repositories verifying allowed files, forbidden files, dependency version bumps, script edits, and all files written by the `fix-from-error-report` protocol.
 - **Test Migration Tracking (P1):** Recorded moved test mappings in `scripts/migration/moved-tests.json` and deleted files in `scripts/migration/move-map.json`.
@@ -53,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **API Redis client never connected (BF-019):** The `lazyConnect` + `enableOfflineQueue:false` API client rejected every command on a cold start, sending early requests to Postgres and counting toward the circuit breaker. `ReadThroughService` now connects an idle client once (shared promise) before issuing commands.
 - **Fixer job could not run:** `if: env.X` conditions in `scrape-daily.yml` read variables defined only on the same step, so the Claude and PR steps were always skipped. A `Detect fixer secrets` step now exposes outputs; also pinned `download-artifact@v8` and added a docs-diff gate (ignoring the generated-date line) to `ci.yml` and the fixer gate.
 - `/v1/meta` DB fallback now counts `hiringCompanies` over listed jobs, matching the publisher.
-- **DOMPurify Hook & Closed-Job Banner (BF-013, FE-14, FE-15):** Implemented strict DOMPurify hook setting `target="_blank" rel="noopener noreferrer nofollow ugc"` and stripping inline styles; displayed closed-job banner and disabled both desktop and mobile Apply buttons when `active: false`. Guarded by `job-scrapper-ui/src/test/sanitize.test.ts`.
+- **DOMPurify Hook & Closed-Job Banner (BF-013, FE-14, FE-15):** Implemented strict DOMPurify hook setting `target="_blank" rel="noopener noreferrer nofollow ugc"` and stripping inline styles; displayed closed-job banner and disabled both desktop and mobile Apply buttons when `active: false`. Guarded by `frontend/src/test/sanitize.test.ts`.
 - **Double-Buffered Cache Generations (`jc:v1:*`):** Atomic cache publication pipeline swapping active generation pointers upon verified completion with 30% drop sanity gate (P2-T01, P2-T02, P2-T04, ADR-0003, GAP-CAC-02).
 - **API Read-Through Service:** Express read-through service for jobs, companies, facets, and metadata backed by Upstash Redis with in-process LRU cache and circuit breaker fallback to Neon PostgreSQL (P2-T05, P2-T06, ADR-0001, ADR-0002, BF-018, GAP-API-03).
 - **Detail Sharding & Negative Caching:** Detail queries mapped to 8 CRC32 shards with index fallback and 10-minute in-process negative LRU caching for confirmed 404 lookups (P2-T06, BF-018).
@@ -84,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multi-Process Cluster Scraper (BF-008):** Parallel scraping across multiple OS worker processes with watchdog timeouts, SIGTERM handling, and aggregated telemetry output.
 - **Verification Auditor (BF-009):** CLI command `npm run verify` (`src/utils/Verify.ts`) verifying database counts, salary distribution, and data integrity.
 - **REST API Server (BF-012, BF-013):** Express REST API in `src/api/Server.ts` serving `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, and `/health`.
-- **React 19 Web UI (BF-012, BF-013):** Modern web frontend in `job-scrapper-ui/` built with React 19, TypeScript, Vite, Tailwind CSS, and Redux Toolkit.
+- **React 19 Web UI (BF-012, BF-013):** Modern web frontend in `frontend/` built with React 19, TypeScript, Vite, Tailwind CSS, and Redux Toolkit.
 - **Company Enrichment & Discovery (BF-011):** CommonCrawl CDX index scraping (`src/discovery/CdxWorker.ts`) and logo/domain metadata extraction from Ashby board HTML.
 - **Bulk Upsert & DB Optimization (BF-010):** Batch `createMany` fast path and database indexing.
 

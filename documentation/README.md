@@ -9,7 +9,7 @@
 
 ## ⚡ TL;DR (30-second summary)
 
-- **What it is:** A batch TypeScript CLI scraper feeding Neon PostgreSQL and Upstash Redis (planned: P2), an Express REST API deployed on Vercel, and a React 19 SPA frontend in `job-scrapper-ui/` for exploring public Ashby job boards.
+- **What it is:** A batch TypeScript CLI scraper feeding Neon PostgreSQL and Upstash Redis (planned: P2), an Express REST API deployed on Vercel, and a React 19 SPA frontend in `frontend/` for exploring public Ashby job boards.
 - **How it works:**
   1. **Discover** company slugs from Wayback Machine CDX API (`npm run discover`) or load seeds (`npm run seed [-- --all]`).
   2. **Scrape** active boards via Ashby's Posting API with adaptive rate limiting and hosted GraphQL fallback (`npm run scrape:parallel`).
@@ -71,7 +71,7 @@ Every fact has a single canonical source of truth. Consult the owner doc:
 
 1. **Architecture Stack:**
    - **Backend API:** `src/api/Server.ts` (Express 5, runs locally on port 3001 and as a Vercel serverless function via `api/index.ts`).
-   - **Frontend UI:** `job-scrapper-ui/` (Vite, React 19, Redux Toolkit, Material UI).
+   - **Frontend UI:** `frontend/` (Vite, React 19, Redux Toolkit, Material UI).
    - **Scrapers:** `src/core/Scraper.ts` (core DB scraper), `src/core/ClusterScraper.ts` (multi-process coordinator), `src/core/ScraperCSV.ts` (CSV streaming).
 2. **Scraper Pipeline:** All scraping uses `src/lib/AshbyClient.ts` (`fetchAshbyBoardWithFallback` with browser headers, retries, and GraphQL fallback on 404/403/400).
 3. **Adaptive Concurrency:** `createLimiter()` in `src/lib/Concurrency.ts` throttles request rates dynamically on 429 rate limits.

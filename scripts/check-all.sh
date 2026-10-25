@@ -57,7 +57,7 @@ else
 
   if [ "$NO_INSTALL" = false ]; then
     run_step "root dependencies" npm ci
-    UI_DIR="job-scrapper-ui"
+    UI_DIR="frontend"
     [ -d "frontend" ] && UI_DIR="frontend"
     run_step "UI dependencies" npm --prefix "$UI_DIR" ci
   fi

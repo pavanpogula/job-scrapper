@@ -134,26 +134,26 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 ### BF-012: React UI with RTK Query and Backend REST API with Dual Rate Limiting
 - **Symptom:** No web UI or REST API existed to query the 34,000+ jobs directly; un-debounced search fired rapid-fire queries that overwhelmed rate limits; duplicate in-flight queries occurred in React StrictMode.
 - **Root cause & fix:**
-  1. Built React 19 + TypeScript + Vite 6 + Redux Toolkit + RTK Query + MUI v6 UI (`job-scrapper-ui/`) with responsive desktop ledger and mobile drawer layouts.
+  1. Built React 19 + TypeScript + Vite 6 + Redux Toolkit + RTK Query + MUI v6 UI (`frontend/`) with responsive desktop ledger and mobile drawer layouts.
   2. Built Express REST API (`src/api/Server.ts`, `npm run api:start`) connecting directly to Neon PostgreSQL with structured pagination, filtering, facets, and SPA static serving.
   3. Enforced a dual-layer rolling rate limit of 10 requests / 60 seconds (backend sliding window middleware + frontend `rateLimitSlice` in Redux and `baseQueryWithRateLimit`).
   4. Implemented 400ms search input debouncing on Browse and Companies pages to eliminate keystroke spam.
   5. Implemented 10-minute Redux caching (`keepUnusedDataFor: 600`) so revisited pages consume zero rate limit quota.
   6. Added security hardening: HTTP security headers, DoS query capping at 100 chars, trust proxy configuration, and periodic rate-limiter map pruning.
-- **Implemented in:** `src/api/Server.ts`, `job-scrapper-ui/` (`src/store/`, `src/pages/`, `src/components/`, `src/theme/`).
+- **Implemented in:** `src/api/Server.ts`, `frontend/` (`src/store/`, `src/pages/`, `src/components/`, `src/theme/`).
 - **Regression Invariant:** `baseQueryWithRateLimit` gates requests based on `state.rateLimit.timestamps`; `jobsApi` endpoints cache for 600 seconds; Express server enforces 10 req/min with `Retry-After` header.
-- **Guarding tests:** Unit tests pass (79 tests). Frontend verified via production build (`npm --prefix job-scrapper-ui run build`).
+- **Guarding tests:** Unit tests pass (79 tests). Frontend verified via production build (`npm --prefix frontend run build`).
 
 ### BF-013: Security hardening, facets API implementation, and filter OR-clobber fix
 - **Symptom:** Combining `search` with `hasSalary` clobbered the Prisma `where.OR` clause, returning broken search results; `/v1/facets` was defined in types and API contract but not implemented in Express; client IP resolution was vulnerable to header spoofing; `descriptionHtml` lacked client-side DOMPurify sanitization.
 - **Root cause & fix:**
   1. Refactored `src/api/Server.ts` query builder to accumulate conditions in `where.AND = andConditions`, preserving both multi-field search and `hasSalary` filters simultaneously.
   2. Implemented `GET /v1/facets` using Prisma `groupBy` across workplace types, employment types, top 20 countries, and salary counts.
-  3. Installed `dompurify` in `job-scrapper-ui` and wrapped all HTML description injection in `DOMPurify.sanitize()` for defense-in-depth against Stored XSS.
+  3. Installed `dompurify` in `frontend` and wrapped all HTML description injection in `DOMPurify.sanitize()` for defense-in-depth against Stored XSS.
   4. Added Content-Security-Policy (CSP) headers to Express responses.
   5. Fixed SPA routing fallback in Express to support `HEAD` requests and check `req.accepts('html')`.
   6. Corrected client IP resolution to prioritize `req.ip` under `trust proxy` to prevent client header spoofing.
-- **Implemented in:** `src/api/Server.ts`, `job-scrapper-ui/src/pages/JobDetailPage.tsx`, `job-scrapper-ui/package.json`.
+- **Implemented in:** `src/api/Server.ts`, `frontend/src/pages/JobDetailPage.tsx`, `frontend/package.json`.
 - **Regression Invariant:** Combined search + salary filters use `where.AND` and do not clobber; `/v1/facets` returns workplaceTypes, employmentTypes, countries, and hasSalary; `JobDetailPage` sanitizes HTML via DOMPurify.
 - **Guarding tests:** Verified via Jest unit suites (79 tests) and live API endpoint verification.
 

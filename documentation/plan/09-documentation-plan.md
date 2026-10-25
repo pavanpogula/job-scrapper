@@ -24,7 +24,7 @@ AGENTS.md                                       canonical agent entry (08 §3.1)
 CLAUDE.md                                       shim (08 §2)
 CHANGELOG.md                                    NEW release doc (07 §5)
 .env.example                                    fixed: REDIS_URL optional (rediss:// Upstash), PORT, CORS_ORIGINS, HEALTH_TOKEN, CACHE_*
-job-scrapper-ui/.env.example                    NEW: VITE_API_BASE_URL
+frontend/.env.example                    NEW: VITE_API_BASE_URL
 documentation/
   README.md                                     index + fact-owner table + TL;DR (rewrite)
   agents/context.md · roster.md · roles/*.md    NEW (08)
@@ -68,7 +68,7 @@ The README should have these sections, in this order:
 4. **Quick start.**
    - (a) A database-only scrape: `npm install`, then `cp .env.example .env`, `npx prisma db push`,
      `npm run seed -- --all`, `npm run scrape:parallel`, `npm run verify`.
-   - (b) Run the API and UI locally: `npm run api:start` on :3001, plus `npm --prefix job-scrapper-ui run dev` on
+   - (b) Run the API and UI locally: `npm run api:start` on :3001, plus `npm --prefix frontend run dev` on
      :3000, which proxies `/v1`.
 5. **Environment table.** Links to 07.
 6. **Scripts table.** Include `build`, `api:start`, `cache:*`, `report:classify`, `db:normalize-countries`,
@@ -100,14 +100,14 @@ Line numbers below are at `22afd64`. Search for the quoted text if they have shi
 | 05 | :121 `country` → ISO-3166 alpha-2 after P1-T15; :150-161 BF-011 field mapping; :165-192 Redis section → `jc:v1:*` (03); add the index/query table (04 §7) |
 | 06 | Add `Server.ts`, `EnrichCompanies.ts`, `api/index.ts`, `src/cache/*`, `src/lib/cache/*`; drop line numbers; :50 hash; :107 `extractSalary` returns `interval`; deleted-script rows |
 | 07 | Env vars `PORT`, `VITE_API_BASE_URL`, `CORS_ORIGINS`, `HEALTH_TOKEN`, `CACHE_*`, Upstash `rediss://`; :152-160 manual cron → Actions (link 14); deleted-script refs |
-| 08 | Error report v2 and the history layout (07 §2); `job-scrapper-ui/dist`; remove `test-upload.txt` |
+| 08 | Error report v2 and the history layout (07 §2); `frontend/dist`; remove `test-upload.txt` |
 | 09 | Mark stale items (01 §4); add API/UI/Ops sections; add new items found by this audit that aren't fixed in P1 |
 | 10 | Registry only: rows for BF-011 (`2cdced2`), BF-012 (`831ae95`), BF-013 (`632c83c`) with honest guard status (BF-011 ⚠️ until P1-T06; BF-012 ❌ until P1-T16; BF-013 ❌ until P1-T16 and P5-T07); remove `BackfillJobFields.ts`/`db:backfill`; MUI 9; the protocol moves to 16 (P4-T03) |
 | 11 | :273 untested-modules list; §6 BF-011…013 rows; new suites as they land |
 | `docs/GOOGLE_DRIVE_SETUP.md` | :121, :128 deleted-script refs |
-| 08 :86 and 09 #55 | The `EXCLUDED_DIRS` list leaves out `job-scrapper-ui` and `web`, which the code does exclude (`scripts/GenerateDocs.ts:46`) |
+| 08 :86 and 09 #55 | The `EXCLUDED_DIRS` list leaves out `frontend` and `web`, which the code does exclude (`scripts/GenerateDocs.ts:46`) |
 | `.env.example` | :5 "Required" → optional; add the new vars |
-| `job-scrapper-ui/src/types/api.ts:3` | Repoint to `documentation/12-backend-api.md` (P5-T10) |
+| `frontend/src/types/api.ts:3` | Repoint to `documentation/12-backend-api.md` (P5-T10) |
 
 ## 6. Doc 15 outline (`15-system-architecture-and-flows.md`)
 

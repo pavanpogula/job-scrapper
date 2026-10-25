@@ -1,6 +1,6 @@
 # 13 · Frontend Web Application
 
-The **Ashby Job Scraper** web frontend (`job-scrapper-ui/`) is a high-density, performant, achromatic job browsing portal built with **React 19**, **TypeScript**, **Vite**, **Redux Toolkit (RTK Query)**, and **Material UI (MUI 6)**.
+The **Ashby Job Scraper** web frontend (`frontend/`) is a high-density, performant, achromatic job browsing portal built with **React 19**, **TypeScript**, **Vite**, **Redux Toolkit (RTK Query)**, and **Material UI (MUI 6)**.
 
 ---
 
@@ -67,6 +67,6 @@ Run the full UI verification suite from repository root:
 npm run verify:ui
 ```
 This executes:
-1. `npm --prefix job-scrapper-ui run typecheck` (`tsc -b --noEmit`)
-2. `npm --prefix job-scrapper-ui run lint` (ESLint 9 with react-hooks and jsx-a11y)
-3. `npm --prefix job-scrapper-ui run test` (Vitest suites covering facet formatting, default query parameters, DOMPurify sanitization, and API contract parity)
+1. `npm --prefix frontend run typecheck` (`tsc -b --noEmit`)
+2. `npm --prefix frontend run lint` (ESLint 9 with react-hooks and jsx-a11y)
+3. `npm --prefix frontend run test` (Vitest suites covering facet formatting, default query parameters, DOMPurify sanitization, and API contract parity)

@@ -332,7 +332,7 @@ app.get('/v1/meta', async (_req: Request, res: Response) => {
 });
 
 // Serve static UI production build if available
-const distPath = path.resolve(__dirname, '../../job-scrapper-ui/dist');
+const distPath = path.resolve(__dirname, '../../frontend/dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
   app.use((req: Request, res: Response, next) => {

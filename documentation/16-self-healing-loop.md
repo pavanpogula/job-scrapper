@@ -124,7 +124,7 @@ Fixes automated scrape issue from run `<runId>`.
 - **Result:** 100% Pass (24/24 total across both environments)
 
 ### Test Questions & Verified Canon Truth
-1. **Three runtime parts connection:** Web UI (`job-scrapper-ui/`) queries `/v1/*` routed by Vercel (`api/index.ts` -> `Server.ts`). API reads Upstash Redis (`jc:v1:*`) read-through with Neon PostgreSQL fail-safe. Scraper (`scrape:parallel` on daily Actions) writes PostgreSQL then publishes cache generations.
+1. **Three runtime parts connection:** Web UI (`frontend/`) queries `/v1/*` routed by Vercel (`api/index.ts` -> `Server.ts`). API reads Upstash Redis (`jc:v1:*`) read-through with Neon PostgreSQL fail-safe. Scraper (`scrape:parallel` on daily Actions) writes PostgreSQL then publishes cache generations.
 2. **Scheduled scrape command & workers:** `npm run scrape:parallel -- --workers=4` at 06:17 UTC via `.github/workflows/scrape-daily.yml`. Default concurrency `min(4, max(2, cpus))`.
 3. **Job change detection:** Deterministic `contentHash` over 16 explicit core fields + metadata compared in PostgreSQL; `createMany` for new jobs, upsert for modifications, zero Redis queries in scrape loop.
 4. **Redis data contents & writers:** `jc:v1:active_gen`, `jc:v1:gen:<gen>`, `jc:v1:details:<0..7>` sharded by CRC32(id) % 8, `jc:v1:details:index`, `jc:v1:meta:*`, `jc:v1:lock:publish`. Scraper/publisher is the sole writer. API only reads.

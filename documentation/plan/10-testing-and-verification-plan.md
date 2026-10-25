@@ -1,7 +1,7 @@
 # 10 · Testing and Verification Plan
 
 > **Baseline at `22afd64`:** 16 Jest suites and 79 tests, all passing. `tsc` reports 0 errors. Lint reports 0 errors
-> and 1 warning (`DbInspect.ts:56`). These checks cover `src/` only. Nothing tests `src/api/**` or `job-scrapper-ui/**`
+> and 1 warning (`DbInspect.ts:56`). These checks cover `src/` only. Nothing tests `src/api/**` or `frontend/**`
 > (BF-012 and BF-013 have no test that imports them).
 > **Rule:** a fix is not done until a test fails without it and passes with it. Every new BF invariant names the test
 > that guards it.
@@ -11,7 +11,7 @@
 | Where | Command |
 |---|---|
 | Every change, run locally by any agent | `npx tsc --noEmit -p . && npx tsc --noEmit -p tsconfig.test.json && npm run lint && npm test && npm run verify:ui && npm run docs:generate` |
-| PR CI (`ci.yml`) | All of the above, plus `npx tsc --noEmit -p tsconfig.test.json` (type-checks `tests/`, `scripts/` and `api/`) and `npm run build`. If the PR touches `job-scrapper-ui/**`, `src/api/**` or `vercel.json`, also run `npm --prefix job-scrapper-ui run test:e2e`. On `auto-fix/*` branches, also run `scripts/ci/check-fixer-scope.sh`. |
+| PR CI (`ci.yml`) | All of the above, plus `npx tsc --noEmit -p tsconfig.test.json` (type-checks `tests/`, `scripts/` and `api/`) and `npm run build`. If the PR touches `frontend/**`, `src/api/**` or `vercel.json`, also run `npm --prefix frontend run test:e2e`. On `auto-fix/*` branches, also run `scripts/ci/check-fixer-scope.sh`. |
 | Daily scrape (`scrape-daily.yml`) | `npx tsc --noEmit -p .` before scraping. The classifier also acts as a runtime assertion. |
 
 ## 2. New and extended backend suites (Jest, `tests/`)
@@ -43,7 +43,7 @@ in-memory Redis fake (`tests/helpers/fakeRedis.ts`) that implements `get`, `getB
 `hgetall`, `hset`, `hdel`, `hlen`, `set`, `del`, `unlink`, `expire`, `persist`, `multi`/`exec`, `pipeline`, `eval`,
 `scan`, `info`, `dbsize` and `quit`, and counts the commands it receives. Don't use `ioredis-mock`.
 
-## 3. UI suites (Vitest and Playwright, `job-scrapper-ui/`)
+## 3. UI suites (Vitest and Playwright, `frontend/`)
 
 These are listed in 06 §5: `jobsApi`, `BrowsePage`, `JobDetailPage` (which guards the BF-013 DOMPurify invariant),
 `CompaniesPage`, the contract test (shares fixtures with `ApiServer.test.ts`), and the Playwright suites `browse`,

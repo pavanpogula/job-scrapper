@@ -1,6 +1,6 @@
-# 06 · Frontend Plan (`job-scrapper-ui/`)
+# 06 · Frontend Plan (`frontend/`)
 
-> **Decision D-12:** `job-scrapper-ui/` (React 19.3.1, MUI 9.5.0, RTK Query, Vite 6.4.5) is the only frontend. The old
+> **Decision D-12:** `frontend/` (React 19.3.1, MUI 9.5.0, RTK Query, Vite 6.4.5) is the only frontend. The old
 > Next.js design package `documentation/frontend-design/` was retired in commit `22afd64`, so do not plan a second app.
 > This plan comes from a read-only audit plus an impeccable critique of the UI (score 12/20: a11y 2, performance 2,
 > theming 3, responsive 3, implementation integrity 2).
@@ -8,7 +8,7 @@
 
 ## 1. Current state
 
-**Stack** (installed versions from the lockfile; `job-scrapper-ui/package.json:11-31` declares caret ranges): react 19.3.1, @mui/material 9.5.0, @reduxjs/toolkit 2.13.0,
+**Stack** (installed versions from the lockfile; `frontend/package.json:11-31` declares caret ranges): react 19.3.1, @mui/material 9.5.0, @reduxjs/toolkit 2.13.0,
 react-router-dom 7.18.4, dompurify 3.4.17, vite 6.4.5, typescript 5.9.3.
 
 **Routes** (`App.tsx:23-28`): `/`, `/jobs/:id`, `/companies`, `/about`. There is no `*` route and no lazy loading.
@@ -20,7 +20,7 @@ react-router-dom 7.18.4, dompurify 3.4.17, vite 6.4.5, typescript 5.9.3.
 - `theme`
 - `rateLimit`
 
-**Missing tooling:** no tests, no lint, no typecheck script. `npx tsc --noEmit -p job-scrapper-ui` exits 0.
+**Missing tooling:** no tests, no lint, no typecheck script. `npx tsc --noEmit -p frontend` exits 0.
 
 **Bundle:** a single JS chunk of 695,742 B (221,068 B gzip). Fonts load render-blocking from Google Fonts.
 
@@ -73,7 +73,7 @@ WAF, and the CDN absorbs repeat calls. **The client gate must then go away** (P5
 #### P1-T19: UI tooling
 
 **Files:**
-- `job-scrapper-ui/package.json`, with the scripts `typecheck` (`tsc -b --noEmit`), `lint`, `test`, `test:e2e`
+- `frontend/package.json`, with the scripts `typecheck` (`tsc -b --noEmit`), `lint`, `test`, `test:e2e`
 - `eslint.config.js`
 - `vitest.config.ts`
 - `src/test/setup.ts`
@@ -92,7 +92,7 @@ against the installed Vite 6.4.5:
 
 **AGENTS.md:** add `npm run verify:ui` to the mandatory checks.
 
-**Acceptance:** `npm --prefix job-scrapper-ui run typecheck`, `run lint` and `test` each exit 0, and so does
+**Acceptance:** `npm --prefix frontend run typecheck`, `run lint` and `test` each exit 0, and so does
 `npm run verify:ui`.
 
 #### P1-T20: the default view shows all jobs (FE-01)
@@ -117,7 +117,7 @@ together with `salaryMin`.
 **Acceptance:**
 - An MSW-mocked facet value renders as an option, and choosing it sends `country=<code>`.
 - A raw value such as "United States" renders without crashing.
-- `grep -rnE '"(US|GB|CA|DE|FR)"' job-scrapper-ui/src/pages` finds nothing. Mocks are excluded until P5-T10.
+- `grep -rnE '"(US|GB|CA|DE|FR)"' frontend/src/pages` finds nothing. Mocks are excluded until P5-T10.
 
 ### P5 (after the P2 API contract is frozen)
 
@@ -132,7 +132,7 @@ together with `salaryMin`.
 | P5-T07 | Sanitize once with `useMemo`, add a DOMPurify hook that sets `target=_blank rel="noopener noreferrer nofollow ugc"`, `FORBID_ATTR:['style']`. If `active:false`, show a "This job is closed" banner and disable **both** Apply buttons, desktop (`:226-239`) and mobile sticky bar (`:284-312`) (FE-14, 15) | `JobDetailPage.tsx`, `lib/sanitize.ts` | Unit tests: anchors get `rel`/`target`; `onerror` and `<script>` are stripped (this guards the BF-013 invariant); `active:false` disables Apply |
 | P5-T08 | Performance and hygiene: `React.lazy` routes, a `manualChunks` split for MUI, self-hosted `@fontsource-variable/geist`, `loading="lazy"` logos, apply `.dark` on first load, remove dead Tailwind classes, make the dev server default to localhost, correct the About copy (FE-20, 21, 22, 24) | `App.tsx`, `vite.config.ts`, `index.html`, `main.tsx`, `AboutPage.tsx` | Entry chunk ≤160 kB gzip; `fonts.googleapis` is absent from `index.html` |
 | P5-T09 | UI doc `documentation/13-frontend-ui.md`: routes, state, the API calls each page makes, env (`VITE_API_BASE_URL`), testing (DOC-03) | docs | The doc exists and is linked from `documentation/README.md` |
-| P5-T10 | Types match `04` §2 exactly. Repoint the JSDoc in `types/api.ts:1-3` to `documentation/12-backend-api.md`. Move the mocks into `src/test/fixtures/` with real shapes. Add a contract test that shares fixtures with `tests/unit/ApiServer.test.ts` (FE-17, 23, API-23) | `types/api.ts`, fixtures | `grep -rn "frontend-design" job-scrapper-ui/src` finds nothing; the contract test passes |
+| P5-T10 | Types match `04` §2 exactly. Repoint the JSDoc in `types/api.ts:1-3` to `documentation/12-backend-api.md`. Move the mocks into `src/test/fixtures/` with real shapes. Add a contract test that shares fixtures with `tests/unit/ApiServer.test.ts` (FE-17, 23, API-23) | `types/api.ts`, fixtures | `grep -rn "frontend-design" frontend/src` finds nothing; the contract test passes |
 
 **Serialization:**
 - P5-T01, T05, T06 and T08 all touch most pages, so run them one after another in that order.
@@ -149,7 +149,7 @@ Test files to add:
 - `e2e/browse.spec.ts`, `e2e/detail.spec.ts`, `e2e/a11y.spec.ts`: Playwright against `vite preview`, with `/v1` mocked
   through `page.route` fixtures
 
-CI runs these in `ci.yml` (P3-T01) on Node 24 whenever a PR touches `job-scrapper-ui/**`, `src/api/**` or `vercel.json`.
+CI runs these in `ci.yml` (P3-T01) on Node 24 whenever a PR touches `frontend/**`, `src/api/**` or `vercel.json`.
 
 ## 6. Design constraints for the implementer
 

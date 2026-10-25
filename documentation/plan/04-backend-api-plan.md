@@ -20,7 +20,7 @@ Every new file gets a JSDoc `@file` / `@summary` / `@tags` header.
 
 ## 2. Response contract to preserve (the UI depends on it)
 
-The source of truth is the frontend audit (06 §1) together with `job-scrapper-ui/src/types/api.ts` and the UI call
+The source of truth is the frontend audit (06 §1) together with `frontend/src/types/api.ts` and the UI call
 sites. Snapshot tests in P1-T16 pin these shapes **before** any refactor.
 
 ### `GET /v1/jobs`
@@ -218,7 +218,7 @@ Default request: no DB call, `Cache-Control: no-store`, always 200. Example resp
   - `Referrer-Policy: strict-origin-when-cross-origin`;
   - `X-Content-Type-Options: nosniff`;
   - `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
-- Delete `job-scrapper-ui/vercel.json` (GAP-FE-19).
+- Delete `frontend/vercel.json` (GAP-FE-19).
 
 ### Type-checking `api/`
 
