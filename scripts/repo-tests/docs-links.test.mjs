@@ -37,7 +37,8 @@ test('docs-links: documentation/ is absent from tracked files outside archive an
       relFile.startsWith('docs/archive/') ||
       relFile.startsWith('docs/monorepo-migration/') ||
       relFile === 'CHANGELOG.md' ||
-      relFile === 'scripts/migration/move-map.json'
+      relFile === 'scripts/migration/move-map.json' ||
+      relFile === 'scripts/repo-tests/docs-links.test.mjs' // this test must name the banned string
     ) {
       continue;
     }

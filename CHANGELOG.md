@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **docs(monorepo)**: P5 review fixes: the docs-links test no longer flags its own header, and the READMEs now state the real weekly-discovery schedule (`0 4 * * 0`, 04:00 UTC Sunday).
+
 ### Added
 - **Monorepo Documentation Restructure (P5):** Reorganized project documentation into distinct operational layers: `docs/` (repo-wide entry, workflows, architecture, testing, and operations), `backend/docs/` (CLI, scraper, database, cache, backend testing, and known issues), `frontend/docs/` (UI testing and known contract issues), and `docs/decisions/` (ADR repository). Pure moves applied in Commit 1 (`b921c27`).
 - **New Architecture Decision Records (P5):** Added `docs/decisions/ADR-0013-monorepo-layout.md` (independent multi-app repository structure), `docs/decisions/ADR-0014-vercel-split-and-waf.md` (standalone API and SPA Vercel project segregation), and `docs/decisions/ADR-0015-type-contract-and-fixtures.md` (shared type contract governance and mock fixture sync).
