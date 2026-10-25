@@ -1,6 +1,6 @@
 # ADR-0006: The fixer works on a branch and opens a PR; it never touches main
 
-- Status: Accepted
+- Status: Accepted (interactive agents may publish non-`main` branches via a guarded script: see ADR-0017)
 - Date: 2026-10-24
 - Deciders: owner, scraper-architect agent
 - Related: D-08, D-09, GAP-CI-02
