@@ -8,6 +8,7 @@ The backend application comprises:
 1. **Batch CLI Scraper:** TypeScript CLI scraper feeding Neon PostgreSQL and Upstash Redis (`jc:v1:*` cache generations).
 2. **REST API Server:** Express 5 server deployed on Vercel serverless (`backend/api/index.ts` invoking `backend/src/api/Server.ts`), protected by `CircuitBreaker`, `DbGuard`, and edge caching headers.
 3. **Database & Cache:** Prisma ORM models against PostgreSQL and atomic double-buffered Redis publishing (`src/cache/Publisher.ts`).
+4. **Deploys:** manual only via `.github/workflows/deploy.yml` (ADR-0016); keep `git.deploymentEnabled: false` in `vercel.json`.
 
 ## Verification & Commands
 Run from `backend/`:

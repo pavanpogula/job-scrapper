@@ -10,4 +10,7 @@ React 19 + TypeScript + Vite + Redux Toolkit + MUI web app for browsing Ashby jo
 Deployed as its own Vercel project (Root Directory `frontend`). `vercel.json` proxies `/v1/*` and `/health`
 to the backend project, so the browser only ever talks to this site.
 
+Deploys are manual: pushes and merges do not deploy. Run the **Deploy to Vercel** workflow
+(`.github/workflows/deploy.yml`); runbook in `docs/deployment-and-operations.md` §3.3.
+
 Full docs arrive with the P5 docs restructure (`docs/README.md`).

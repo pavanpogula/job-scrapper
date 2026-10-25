@@ -18,7 +18,7 @@ Any HTTP response-shape change MUST, in the same PR, do all of the following. A 
 3. Run `node scripts/contract/sync-fixtures.mjs` (available from P8a) and commit the frontend copy.
 4. Update `frontend/src/types/api.ts` until `npm --prefix frontend run check` passes.
 5. Add a CHANGELOG entry tagged `contract`.
-6. If cached bodies change, the PR notes that the owner must deploy the backend and then dispatch `scrape-daily publish_only=true`.
+6. If cached bodies change, the PR notes that the owner must deploy the backend (run **Deploy to Vercel** with `app=backend`) and then dispatch `scrape-daily publish_only=true`.
 
 ## Guiding Invariants
 - **Additive First:** Always make API response shape changes additive first.

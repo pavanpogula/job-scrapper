@@ -19,6 +19,6 @@ Adopt Option 2: Split Vercel deployments.
 - **WAF Risk Acceptance (O9):** Per owner decision O9, we accept the risk that requests sent directly to the backend URL (`https://job-scrapper-api-eight.vercel.app`) bypass the frontend project's Vercel WAF protections. The Express server retains internal DbGuard and CircuitBreaker protections.
 
 ## Consequences
-- Independent build pipelines: frontend commits only trigger frontend builds; backend commits only trigger backend builds.
+- Independent build pipelines: each project builds and deploys on its own. (Since ADR-0016, git pushes no longer trigger deploys; both projects deploy only through `.github/workflows/deploy.yml`.)
 - Clean separation of serverless function costs and static asset delivery.
 - Direct API URL bypasses frontend WAF, accepted as low-risk per decision O9.

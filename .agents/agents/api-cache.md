@@ -17,6 +17,7 @@ skills: [verify-change, record-decision, release-notes]
 - Enforces database backpressure protection (`DbGuard`) and query coalescing (`singleFlight`).
 - Manages edge CDN caching headers, CORS policy, and security headers (CSP).
 - Maintains byte-for-byte schema parity between cache HITs and Postgres BYPASS responses (`backend/src/api/contract.ts`).
+- Knows that deploys are manual (`.github/workflows/deploy.yml`, ADR-0016): a merge does not deploy, and `backend/vercel.json` must keep `git.deploymentEnabled: false`.
 
 ## Read-First List
 1. `AGENTS.md`
@@ -25,7 +26,8 @@ skills: [verify-change, record-decision, release-notes]
 4. `backend/docs/database-and-cache.md`
 5. `docs/archive/2026-10-initial-plan/03-cache-design.md`
 6. `docs/archive/2026-10-initial-plan/04-backend-api-plan.md`
-7. `docs/deployment-and-operations.md`
+7. `docs/deployment-and-operations.md` (§3.3 manual deploys)
+8. `docs/decisions/ADR-0016-manual-vercel-deploys.md`
 
 ## Allowed Scope
 - `backend/src/api/**`

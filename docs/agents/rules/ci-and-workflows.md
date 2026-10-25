@@ -13,3 +13,4 @@ description: "CI workflows, path filtering, and status gate invariants"
 3. **Actionlint Pinning:** `actionlint` runs exclusively in `repo-ci` with a pinned version and SHA-256 verification; never add actionlint to `scripts/check-all.sh`.
 4. **Fixer Scope Verification:** `scripts/ci/check-fixer-scope.sh` enforces file modification boundaries on `auto-fix/*` branches.
 5. **Feature Toggles:** Scheduled workflows include feature flags (`SCRAPE_ENABLED`, `FIXER_ENABLED`, `DISCOVERY_ENABLED`) controlled by repository variables.
+6. **Manual Deploys Only:** `.github/workflows/deploy.yml` is the only path to Vercel (ADR-0016). It stays `workflow_dispatch`-only, runs `verify` (`scripts/check-all.sh`) before any deploy, deploys backend before frontend with the pinned Vercel CLI, and keeps `VERCEL_*` secrets in the `vercel-production` environment of the deploy jobs. Both `vercel.json` files keep `git.deploymentEnabled: false` and no `ignoreCommand`.

@@ -8,6 +8,7 @@ The **Ashby Job Scraper** is a batch TypeScript CLI scraper feeding Neon Postgre
 3. **Persist & Publish:** Writes companies, departments, locations, and jobs to PostgreSQL (Prisma). On clean scrape, atomically publishes double-buffered cache generations to Upstash Redis (`jc:v1:*`) with details diffing and a 30% drop sanity gate.
 4. **API:** Express 5 server in `backend/src/api/Server.ts` (invoked via `backend/api/index.ts` on Vercel) serves `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, `/v1/meta`, and `/health` via `ReadThroughService` with CircuitBreaker, DbGuard backpressure, and edge CDN headers.
 5. **UI:** React 19 + TypeScript + Vite + Redux Toolkit application in `frontend/` queries the API. See system flows in `docs/system-architecture-and-flows.md`.
+6. **Deploy:** Deploys are manual: Vercel git deploys are off, so a push or merge never changes the live site; the owner runs the **Deploy to Vercel** workflow (`.github/workflows/deploy.yml`, ADR-0016).
 
 ## Hard Rules
 - **Secrets & Outputs:** Never read, print, stage, or commit `.env`, `apikeys/`, or `output/` values.

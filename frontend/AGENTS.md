@@ -25,6 +25,7 @@ Run from `frontend/`:
 - **Security (XSS):** All raw HTML rendering of job descriptions must be sanitized with DOMPurify.
 - **Accessibility & Localization:** Maintain accessible keyboard navigation and WCAG AA contrast standards. Country facets must use `Intl.DisplayNames` for localized display.
 - **Design & Polish:** Consult the `impeccable` skill for visual hierarchy, typography, motion, and design system tokens.
+- **Deploys:** manual only via `.github/workflows/deploy.yml` (ADR-0016); a merge does not publish the site. Keep `git.deploymentEnabled: false` in `vercel.json`.
 
 ## Working Directory & Git Safety
 - **CWD:** All commands in this workspace run with `frontend/` as the current working directory.

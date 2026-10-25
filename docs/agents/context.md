@@ -53,3 +53,4 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (BF-0
 2. **Verification commands:** `scripts/check-all.sh --no-install` runs verification across backend and frontend.
 3. **Exit codes:** Scrapers exit 0 on clean success, 1 on hard failure, 2 on scrape success with cache publication failure or sanity gate tripping.
 4. **`JOBS.md`:** 5 MB committed snapshot—never read entirely into memory.
+5. **Deploys:** Deploys are manual: Vercel git deploys are off, so a push or merge never changes the live site; the owner runs the **Deploy to Vercel** workflow (`.github/workflows/deploy.yml`, ADR-0016). Never re-enable git deploys or add a push trigger to `deploy.yml`.
