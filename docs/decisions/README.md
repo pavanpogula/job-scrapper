@@ -26,6 +26,7 @@ Every ADR follows the template defined in [ADR-0000-template.md](./ADR-0000-temp
 | [ADR-0013](./ADR-0013-monorepo-layout.md) | Monorepo layout with nested workspaces and root orchestration | Accepted | 2026-10-25 | O12, P0a-P3b |
 | [ADR-0014](./ADR-0014-vercel-split-and-waf.md) | Independent Vercel projects for backend API and frontend SPA with WAF risk acceptance | Accepted | 2026-10-25 | O9, P3a, PR #6, PR #7 |
 | [ADR-0015](./ADR-0015-type-contract-and-fixtures.md) | Synchronized API contract fixtures and type parity between backend and frontend | Accepted | 2026-10-25 | O3, O4, O5, O6, O14, P8a |
+| [ADR-0016](./ADR-0016-manual-vercel-deploys.md) | Manual Vercel deploys from a GitHub Actions workflow | Accepted | 2026-10-26 | ADR-0014, P3a |
 
 ---
 

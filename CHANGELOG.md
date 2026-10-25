@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(deploy)**: deploys are now manual. Both `vercel.json` files set `git.deploymentEnabled: false` (pushes to `main` or any branch no longer deploy) and drop `ignoreCommand`. New `.github/workflows/deploy.yml` (manual dispatch: `app`, `target`, `ref`) runs `scripts/check-all.sh`, then deploys backend before frontend with the pinned Vercel CLI and smoke-tests production. ADR-0016; runbook in `docs/deployment-and-operations.md` §3.3. Guarded by `vercel-config` and `workflows` repo tests.
+
 - **fix(agents)**: Claude allow-lists no longer auto-approve every backend npm script. Only `typecheck`, `typecheck:test`, `lint`, `lint:fix`, `build`, `docs:generate`, `docs:check` and `check:all` run without a prompt; `db:clean`, `scrape*`, `seed`, `cache:publish` and the rest ask first because they act on the production database.
 
 ### Added

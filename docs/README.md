@@ -14,6 +14,7 @@
 | **Backend CI** | PRs / pushes (`backend/**`) | Verifies Prisma generation, typecheck, lint, Jest test suite (37 suites / 264 tests), and docs sync | [`.github/workflows/backend-ci.yml`](../.github/workflows/backend-ci.yml) | [`backend/docs/testing.md`](../backend/docs/testing.md) |
 | **Frontend CI** | PRs / pushes (`frontend/**`) | Verifies TypeScript, ESLint, Vitest component suite (5 suites / 14 tests), and Vite production build | [`.github/workflows/frontend-ci.yml`](../.github/workflows/frontend-ci.yml) | [`frontend/docs/testing.md`](../frontend/docs/testing.md) |
 | **Repo CI** | PRs / pushes (all) | Runs zero-dependency Node 24 native repo tests, pinned actionlint, and fixer scope checks | [`.github/workflows/repo-ci.yml`](../.github/workflows/repo-ci.yml) | [`docs/testing.md`](./testing.md) |
+| **Deploy to Vercel** | Manual dispatch only | Runs all checks on the chosen commit, then deploys backend and/or frontend to Vercel (production or preview) and smoke-tests production. Vercel git auto-deploys are off | [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) | [`docs/deployment-and-operations.md`](./deployment-and-operations.md) |
 
 ---
 
@@ -35,7 +36,7 @@ job-scrapper/
 │   ├── README.md             # Frontend setup and local developer guide
 │   └── docs/                 # Frontend-specific UI and component guides
 ├── docs/                     # Central repository documentation
-│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0015)
+│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0016)
 │   ├── agents/               # Canonical agent context, roster, and role definitions
 │   ├── archive/              # Preserved historical planning documentation
 │   ├── monorepo-migration/   # Monorepo migration plan, progress, and backlog
@@ -144,6 +145,7 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
 - [ADR-0013: Monorepo Layout with Root Orchestration](./decisions/ADR-0013-monorepo-layout.md)
 - [ADR-0014: Independent Vercel Projects and WAF Risk](./decisions/ADR-0014-vercel-split-and-waf.md)
 - [ADR-0015: Synchronized API Contract Fixtures](./decisions/ADR-0015-type-contract-and-fixtures.md)
+- [ADR-0016: Manual Vercel Deploys](./decisions/ADR-0016-manual-vercel-deploys.md)
 
 ---
 

@@ -11,7 +11,7 @@ These are the **only** environment variables read anywhere in `src/`, `scripts/`
 | `REDIS_URL` | optional (Upstash Redis for `jc:v1:*` generation read-through caching; if omitted, API falls back to PostgreSQL via `dbGuard`) | `src/lib/cache/RedisClient.ts`, `src/lib/Redis.ts` | `null` for API; if unreachable, cache disabled | `rediss://default:xxx@xxx.upstash.io:6379` |
 | `CORS_ORIGINS` | optional (comma-separated origins allowed to access the REST API) | `src/api/Server.ts` | `https://job-scrapper-ui.vercel.app,http://localhost:3000` | `https://my-app.vercel.app,http://localhost:3000` |
 | `HEALTH_TOKEN` | optional (secret token required to run deep database inspection via `GET /health?deep=1`) | `src/api/Server.ts` | `undefined` (deep ping disabled) | `sec-xxxx-yyyy` |
-| `VERCEL_TOKEN` | deprecated / unused (removed from scrape workflow in P3a; CDN purge not used in split Vercel architecture) | `src/cache/Publisher.ts` | `undefined` (purge skipped) | — |
+| `VERCEL_TOKEN` | not set for the backend (removed from the scrape workflow in P3a; CDN purge not used). A separate token lives only in the GitHub `vercel-production` environment for `.github/workflows/deploy.yml` | `src/cache/Publisher.ts` | `undefined` (purge skipped) | — |
 | `VERCEL_PROJECT_ID` | deprecated / unused (removed from scrape workflow in P3a) | `src/cache/Publisher.ts` | `undefined` (purge skipped) | — |
 | `GOOGLE_DRIVE_FOLDER_ID` | optional; only with `scrape:csv -- --upload-cloud` | `src/core/ScraperCSV.ts` → `uploadToGoogleDrive()` | `undefined` → file goes to the service account's own My Drive root (not visible to you) | ID from `drive.google.com/drive/folders/<ID>` |
 
