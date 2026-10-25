@@ -91,7 +91,7 @@
     <header class="header">
         <h1><span class="material-icons-round">folder_special</span> Job Scraper Project Explorer</h1>
         <p>Click any file to see details and functions</p>
-        <div class="generated">Auto-generated on 2026-10-24</div>
+        <div class="generated">Auto-generated on 2026-10-25</div>
     </header>
     <div class="main">
         <aside class="sidebar">
@@ -560,6 +560,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_CacheKeys_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>CacheKeys.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_CacheParity_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>CacheParity.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1038,7 +1044,7 @@
       },
       {
         "label": "Functions",
-        "value": "9"
+        "value": "10"
       }
     ],
     "functions": [
@@ -1057,6 +1063,10 @@
       {
         "name": "getClient()",
         "desc": "Resolves the active Redis client."
+      },
+      {
+        "name": "getReadyClient()",
+        "desc": "Resolves the API Redis client and connects it first when it is idle. The API client is lazyConnect with"
       },
       {
         "name": "getPointer()",
@@ -1280,7 +1290,7 @@
       },
       {
         "label": "Functions",
-        "value": "6"
+        "value": "7"
       }
     ],
     "functions": [
@@ -1295,6 +1305,10 @@
       {
         "name": "recordScrapeFinished()",
         "desc": "Records the scrape finished timestamp to meta:lastScrapeAt"
+      },
+      {
+        "name": "fetchAllCompanies()",
+        "desc": "Reads every ACTIVE company by paging queryCompanies at its maximum page size"
       },
       {
         "name": "publishCacheGeneration()",
@@ -2566,6 +2580,31 @@
     "summary": "Validates canonicalJobsKey, isCacheableView, detailsShard, and key constants (P2-T01)",
     "tags": [
       "Undocumented"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_CacheParity_test_ts": {
+    "name": "CacheParity.test.ts",
+    "path": "tests/unit/CacheParity.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Guards BF-019: every published cache body is byte-equivalent to what the DB fallback returns for the same request",
+    "tags": [
+      "Testing",
+      "Cache",
+      "Parity",
+      "Publisher",
+      "ReadThrough"
     ],
     "info": [
       {

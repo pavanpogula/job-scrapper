@@ -60,7 +60,7 @@ jobs:
         run: npm run build
 
       - name: Verify docs generation
-        run: npm run docs:generate
+        run: npm run docs:generate && git diff --exit-code -I 'Auto-generated on' -- docs/
 
       - name: Check fixer scope (auto-fix branches)
         if: startsWith(github.head_ref || github.ref_name, 'auto-fix/')

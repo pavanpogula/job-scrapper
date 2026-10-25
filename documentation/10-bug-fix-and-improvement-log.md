@@ -10,7 +10,7 @@
 
 ## 🤖 Bug-Fix Agent Protocol
 
-All bug-fix workflows follow the mandatory 9-step self-healing protocol documented in [`documentation/16-self-healing-loop.md`](./16-self-healing-loop.md). This registry serves as the authoritative checklist of Regression Invariants (`BF-001` through `BF-018+`). Every fix must check and preserve all invariants below before committing.
+All bug-fix workflows follow the mandatory 9-step self-healing protocol documented in [`documentation/16-self-healing-loop.md`](./16-self-healing-loop.md). This registry serves as the authoritative checklist of Regression Invariants (`BF-001` through `BF-019+`). Every fix must check and preserve all invariants below before committing.
 
 ---
 
@@ -208,6 +208,17 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Implemented in:** `src/api/cache/ReadThrough.ts`, `src/api/middleware/dbGuard.ts`, `src/api/middleware/cacheControl.ts`, `src/api/Server.ts`.
 - **Regression Invariant:** All cacheable views return identical payload contract to direct DB queries; detail queries lookup CRC32 shard hashes; confirmed 404s are negatively cached for 10 minutes; non-UUID IDs execute zero I/O; concurrent DB queries are capped at 3 with single-flight deduplication.
 - **Guarding tests:** `tests/unit/ReadThrough.test.ts`, `tests/unit/Hardening.test.ts`, `tests/unit/HealthMeta.test.ts`, `tests/unit/ApiServer.test.ts`.
+
+### BF-019: Cache/DB body parity, full companies cache, and API Redis cold-start connect
+- **Symptom:** Once a cache generation was live, the UI would receive `{data: facets}` / `{data: meta}` instead of the bare objects the DB path returns, cached job pages lacked `hasNext`/`hasPrev`, `/v1/companies` used a different `meta` layout, and later company pages came back empty. After every serverless cold start the first Redis commands were rejected.
+- **Root cause & fix:**
+  1. `Publisher.ts` serialized bodies in its own shape; it now stores exactly what `queryJobs`, `computeFacets` and `queryCompanies` return (bare facets/meta, top-level company paging, `hasNext`/`hasPrev` on every job page).
+  2. `queryCompanies` was called once with `pageSize: 100`; `fetchAllCompanies()` now pages until `totalPages`.
+  3. The API client is `lazyConnect` with `enableOfflineQueue:false`; `ReadThroughService.getReadyClient()` connects an idle (`wait`/`end`) client once through a shared promise and records a breaker failure if connecting fails.
+  4. `/v1/meta` DB fallback counts `hiringCompanies` over `active AND isListed` jobs, like the publisher.
+- **Implemented in:** `src/cache/Publisher.ts`, `src/api/cache/ReadThrough.ts`, `src/api/Server.ts`.
+- **Regression Invariant:** For every cached view, the gunzipped cache body equals the DB-path body for the same request (ignoring `meta.lastScrapeAt`/`generation`); every ACTIVE company page is cached; an idle API Redis client is connected before the first command.
+- **Guarding tests:** `tests/unit/CacheParity.test.ts`, `tests/unit/HealthMeta.test.ts`.
 
 ---
 

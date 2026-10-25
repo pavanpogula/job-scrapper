@@ -48,13 +48,11 @@ describe('Health v2 and /v1/meta (P2-T07)', () => {
       await fakeRedis.hset(genKey(gen), '__manifest', JSON.stringify(manifest));
 
       const metaData = {
-        data: {
-          activeJobs: 34023,
-          hiringCompanies: 1500,
-          withSalary: 12000,
-          lastScrapeAt: scrapeTime,
-          generation: gen,
-        },
+        activeJobs: 34023,
+        hiringCompanies: 1500,
+        withSalary: 12000,
+        lastScrapeAt: scrapeTime,
+        generation: gen,
       };
       await fakeRedis.hset(genKey(gen), 'meta', zlib.gzipSync(Buffer.from(JSON.stringify(metaData))));
 
@@ -143,13 +141,11 @@ describe('Health v2 and /v1/meta (P2-T07)', () => {
       await fakeRedis.hset(genKey(gen), '__manifest', JSON.stringify(manifest));
 
       const metaPayload = {
-        data: {
-          activeJobs: 34100,
-          hiringCompanies: 1720,
-          withSalary: 14500,
-          lastScrapeAt: '2026-10-24T12:00:00Z',
-          generation: gen,
-        },
+        activeJobs: 34100,
+        hiringCompanies: 1720,
+        withSalary: 14500,
+        lastScrapeAt: '2026-10-24T12:00:00Z',
+        generation: gen,
       };
       await fakeRedis.hset(genKey(gen), 'meta', zlib.gzipSync(Buffer.from(JSON.stringify(metaPayload))));
 
@@ -159,10 +155,10 @@ describe('Health v2 and /v1/meta (P2-T07)', () => {
 
       expect(res.status).toBe(200);
       expect(res.headers['x-cache']).toBe('HIT');
-      expect(res.body.data.activeJobs).toBe(34100);
-      expect(res.body.data.hiringCompanies).toBe(1720);
-      expect(res.body.data.withSalary).toBe(14500);
-      expect(res.body.data.generation).toBe(gen);
+      expect(res.body.activeJobs).toBe(34100);
+      expect(res.body.hiringCompanies).toBe(1720);
+      expect(res.body.withSalary).toBe(14500);
+      expect(res.body.generation).toBe(gen);
     });
   });
 });

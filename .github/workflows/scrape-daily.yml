@@ -164,7 +164,7 @@ jobs:
         run: npm ci && npm --prefix job-scrapper-ui ci && npx prisma generate
 
       - name: Download scrape report artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: scrape-report-${{ needs.scrape.outputs.run_id }}
           path: output/reports
@@ -172,12 +172,20 @@ jobs:
       - name: Checkout fix branch
         run: git checkout -b "auto-fix/${{ needs.scrape.outputs.run_id }}"
 
+      - name: Detect fixer secrets
+        id: cfg
+        env:
+          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          HAS_APP: ${{ secrets.FIXER_APP_CLIENT_ID }}
+        run: |
+          [ -n "$HAS_KEY" ] && echo "has_key=true" >> "$GITHUB_OUTPUT" || echo "has_key=false" >> "$GITHUB_OUTPUT"
+          [ -n "$HAS_APP" ] && echo "has_app=true" >> "$GITHUB_OUTPUT" || echo "has_app=false" >> "$GITHUB_OUTPUT"
+
       - name: Claude fixer
-        if: env.ANTHROPIC_API_KEY != ''
+        if: steps.cfg.outputs.has_key == 'true'
         uses: anthropics/claude-code-action@v1
         env:
           CLAUDE_BRANCH: auto-fix/${{ needs.scrape.outputs.run_id }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
@@ -191,14 +199,12 @@ jobs:
             --allowedTools "Read,Edit,Write,Grep,Glob,Bash(npx tsc --noEmit -p .),Bash(npm run lint),Bash(npm test),Bash(npm test *),Bash(npx jest *),Bash(npm run verify:ui),Bash(npm run docs:generate),Bash(git status*),Bash(git diff*),Bash(git log*),Bash(git add *),Bash(git commit *)"
 
       - name: Deterministic gate
-        run: npx tsc --noEmit -p . && npx tsc --noEmit -p tsconfig.test.json && npm run lint && npm test && npm run verify:ui && npm run docs:generate
+        run: npx tsc --noEmit -p . && npx tsc --noEmit -p tsconfig.test.json && npm run lint && npm test && npm run verify:ui && npm run docs:generate && git diff --exit-code -I 'Auto-generated on' -- docs/
 
       - name: Generate GitHub App token
-        if: env.FIXER_APP_CLIENT_ID != ''
+        if: steps.cfg.outputs.has_app == 'true'
         uses: actions/create-github-app-token@v3
         id: app
-        env:
-          FIXER_APP_CLIENT_ID: ${{ secrets.FIXER_APP_CLIENT_ID }}
         with:
           client-id: ${{ secrets.FIXER_APP_CLIENT_ID }}
           private-key: ${{ secrets.FIXER_APP_PRIVATE_KEY }}
