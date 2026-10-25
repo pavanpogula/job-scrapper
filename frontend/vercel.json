@@ -34,11 +34,11 @@
   "rewrites": [
     {
       "source": "/v1/:path*",
-      "destination": "https://job-scrapper-api.vercel.app/v1/:path*"
+      "destination": "https://job-scrapper-api-eight.vercel.app/v1/:path*"
     },
     {
       "source": "/health",
-      "destination": "https://job-scrapper-api.vercel.app/health"
+      "destination": "https://job-scrapper-api-eight.vercel.app/health"
     },
     {
       "source": "/(.*)",
