@@ -38,19 +38,13 @@ The matrix below documents where every secret is configured and consumed:
 
 ## 3. Workflows
 
-### 3.1 PR Continuous Integration (`.github/workflows/ci.yml`)
-- **Triggers:** Pull requests and pushes targeting `main` or `plan/**`, plus manual `workflow_dispatch`.
+### 3.1 PR Continuous Integration (`.github/workflows/backend-ci.yml`, `frontend-ci.yml`, `repo-ci.yml`)
+- **Triggers:** Pull requests and pushes targeting `main`, `plan/**`, or `auto-fix/**`.
 - **Environment:** Node 24 (`.nvmrc`), Ubuntu 24.04 runner.
-- **Steps:**
-  1. `npm ci` (root and `frontend`)
-  2. `npx prisma generate`
-  3. `npx tsc --noEmit -p .` (root + serverless API)
-  4. `npx tsc --noEmit -p tsconfig.test.json` (all test suites)
-  5. `npm run lint`
-  6. `npm test` (root test suite)
-  7. `npm run verify:ui` (UI typecheck, lint, and Vitest suite)
-  8. `npm run build`
-  9. `npm run docs:generate` (documentation parity check)
+- **Architecture:** Split monorepo workflows with path-based change detection and gate jobs:
+  1. `backend-ci.yml`: Runs on `backend/**` changes -> `backend-gate`.
+  2. `frontend-ci.yml`: Runs on `frontend/**` changes -> `frontend-gate`.
+  3. `repo-ci.yml`: Always runs root repo-tests, pinned actionlint, and fixer scope checks -> `repo-gate`.
 
 ### 3.2 Daily Scheduled Scraper (`.github/workflows/scrape-daily.yml`)
 - **Triggers:** Cron schedule `17 6 * * *` (06:17 UTC daily) and manual `workflow_dispatch`.
@@ -109,7 +103,7 @@ The matrix below documents where every secret is configured and consumed:
 
 ### Branch Protection (`main`)
 - Require pull request before merging (1 approving review).
-- Require status checks to pass before merging (`Verify & Test` from `ci.yml`).
+- Require status checks to pass before merging (`backend-gate`, `frontend-gate`, `repo-gate`).
 - Require branches to be up to date before merging.
 - Restrict direct pushes (no bypass for apps or administrators).
 

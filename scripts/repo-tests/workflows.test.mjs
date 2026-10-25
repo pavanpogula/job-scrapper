@@ -58,19 +58,27 @@ test('workflows structure, paths, and fixer constraints adhere to invariants', (
   assert.ok(discoverJob, 'discover job must exist');
   assert.ok(String(discoverJob.if).includes('DISCOVERY_ENABLED'), 'discover job must check DISCOVERY_ENABLED');
 
-  // 3. ci.yml
+  // 3. Legacy ci.yml must be deleted
   const ciPath = path.join(workflowsDir, 'ci.yml');
-  if (fs.existsSync(ciPath)) {
-    const ciYaml = parseYaml(fs.readFileSync(ciPath, 'utf-8'));
-    const verifyJob = ciYaml.jobs?.verify;
-    assert.ok(verifyJob, 'verify job must exist in ci.yml');
+  assert.strictEqual(
+    fs.existsSync(ciPath),
+    false,
+    'Legacy ci.yml must not exist (retired in P4b in favor of split CI workflows)'
+  );
 
-    for (const step of verifyJob.steps || []) {
-      if (step.run && typeof step.run === 'string') {
-        const match = step.run.match(/scripts\/ci\/([a-zA-Z0-9_-]+\.sh)/);
-        if (match) {
-          const scriptPath = path.join(root, 'scripts/ci', match[1]);
-          assert.ok(fs.existsSync(scriptPath), `Script referenced in ci.yml must exist: ${scriptPath}`);
+  // 4. Split CI workflows (backend-ci.yml, frontend-ci.yml, repo-ci.yml)
+  for (const splitWf of ['backend-ci.yml', 'frontend-ci.yml', 'repo-ci.yml']) {
+    const wfPath = path.join(workflowsDir, splitWf);
+    assert.ok(fs.existsSync(wfPath), `${splitWf} must exist`);
+    const wfYaml = parseYaml(fs.readFileSync(wfPath, 'utf-8'));
+    for (const job of Object.values(wfYaml.jobs || {})) {
+      for (const step of job.steps || []) {
+        if (step.run && typeof step.run === 'string') {
+          const match = step.run.match(/scripts\/ci\/([a-zA-Z0-9_-]+\.sh)/);
+          if (match) {
+            const scriptPath = path.join(root, 'scripts/ci', match[1]);
+            assert.ok(fs.existsSync(scriptPath), `Script referenced in ${splitWf} must exist: ${scriptPath}`);
+          }
         }
       }
     }

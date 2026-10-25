@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Legacy Monolithic CI Workflow (P4b):** Deleted `.github/workflows/ci.yml` and retired the legacy `Verify & Test` status check. The monorepo now runs exclusively on parallel split workflows (`backend-ci.yml`, `frontend-ci.yml`, and `repo-ci.yml`) with required gates `backend-gate`, `frontend-gate`, and `repo-gate`. Updated `scripts/repo-tests/workflows.test.mjs` to assert `ci.yml` non-existence, removed `ci.yml` test from `scripts/repo-tests/yaml-lite.test.mjs`, registered `.github/workflows/ci.yml` in `scripts/migration/move-map.json`, and updated `documentation/14-deployment-and-operations.md`.
+
 - **ci(monorepo)**: `repo-ci` actionlint now ignores four reviewed findings in existing workflows (two shellcheck SC2086 hints on intentional flag splitting, two stale-metadata false positives for `create-github-app-token@v3`); any new finding still fails the check.
 
 - **ci(monorepo)**: the split workflows (`backend-ci`, `frontend-ci`, `repo-ci`) now run on `pull_request` for all branches and on `push` only for `main`, which removes the duplicate push + pull_request run on every PR commit.

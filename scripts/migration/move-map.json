@@ -93,6 +93,10 @@
     {
       "path": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests ApiNoStatic: Static Asset Serving Isolation (P0b) serves SPA index.html when dist exists",
       "reason": "Removed SPA static serving from Express in P3a per PLAN.md line 308"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "reason": "Legacy monolithic CI deleted in P4b; split into backend-ci.yml, frontend-ci.yml, and repo-ci.yml in P4a"
     }
   ]
 }
