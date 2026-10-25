@@ -17,7 +17,13 @@ export function installReportFixture(fixtureRelativePath: string): number {
     process.exit(1);
   }
 
-  const fixturePath = path.resolve(process.cwd(), fixtureRelativePath);
+  // A8: Strip leading backend/ so paths relative to repo root work when running from backend/ cwd
+  const cleanPath = fixtureRelativePath.replace(/^backend\//, '');
+  let fixturePath = path.resolve(process.cwd(), cleanPath);
+  if (!fs.existsSync(fixturePath)) {
+    fixturePath = path.resolve(process.cwd(), fixtureRelativePath);
+  }
+
   if (!fs.existsSync(fixturePath)) {
     console.error(`❌ Error: Fixture file not found: ${fixturePath}`);
     process.exit(1);

@@ -77,6 +77,24 @@
         "no-empty": "warn",
         "prefer-const": "warn"
     },
+    "overrides": [
+        {
+            "files": ["src/api/**/*.ts", "api/**/*.ts"],
+            "rules": {
+                "no-restricted-imports": [
+                    "error",
+                    {
+                        "patterns": [
+                            {
+                                "group": ["*core*", "*discovery*", "child_process", "node:child_process"],
+                                "message": "API routes and helpers must never import scraper core, discovery, or child_process (guards D2)."
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ],
     "ignorePatterns": [
         "node_modules/",
         "dist/",

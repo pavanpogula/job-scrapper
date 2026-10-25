@@ -25,7 +25,7 @@ on:
         type: boolean
         default: false
       fixture_report:
-        description: 'Repo path of a v2 report fixture; skips scraping (for testing alerts/fixer)'
+        description: 'Repo path of a v2 report fixture, e.g. tests/fixtures/reports/actionable.json; skips scraping'
         default: ''
 
 permissions:
@@ -44,6 +44,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: production
+    defaults:
+      run:
+        working-directory: backend
     outputs:
       actionable: ${{ steps.classify.outputs.actionable }}
       run_id: ${{ steps.classify.outputs.run_id }}
@@ -56,18 +59,21 @@ jobs:
       GIT_SHA: ${{ github.sha }}
       CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       SCRAPE_WORKER_TIMEOUT_MS: '900000'
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            backend
+            scripts/ci
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -76,7 +82,7 @@ jobs:
         run: npx prisma generate
 
       - name: Type-check scraper
-        run: npx tsc --noEmit -p .
+        run: npm run typecheck
 
       - name: Sync database schema
         run: npx prisma db push --skip-generate
@@ -84,9 +90,11 @@ jobs:
       - name: Restore run history cache
         uses: actions/cache/restore@v6
         with:
-          path: output/run-history.json
-          key: scrape-history-${{ github.run_id }}
-          restore-keys: scrape-history-
+          path: backend/output/run-history.json
+          key: scrape-history-v2-${{ github.run_id }}
+          restore-keys: |
+            scrape-history-v2-
+            scrape-history-
 
       - name: Enrich active companies metadata
         if: inputs.fixture_report == '' || inputs.fixture_report == null
@@ -119,19 +127,26 @@ jobs:
         if: always()
         with:
           name: scrape-report-${{ steps.classify.outputs.run_id || github.run_id }}
-          path: output/reports/**
+          path: backend/output/reports/**
           retention-days: 30
 
-      - name: Save run history cache
+      - name: Save run history cache (v2)
         uses: actions/cache/save@v6
         if: always()
         with:
-          path: output/run-history.json
+          path: backend/output/run-history.json
+          key: scrape-history-v2-${{ github.run_id }}
+
+      - name: Save run history cache (legacy dual-save)
+        uses: actions/cache/save@v6
+        if: always()
+        with:
+          path: backend/output/run-history.json
           key: scrape-history-${{ github.run_id }}
 
       - name: Create or update alert issue on failure
         if: steps.scrape.outputs.exit_code == '1' || steps.classify.outputs.infra_alert == 'true'
-        run: scripts/ci/alert-issue.sh "$CI_RUN_URL" "${{ steps.scrape.outputs.exit_code }}"
+        run: ../scripts/ci/alert-issue.sh "$CI_RUN_URL" "${{ steps.scrape.outputs.exit_code }}"
 
       - name: Propagate scraper exit code
         if: steps.scrape.outputs.exit_code == '1'
@@ -161,15 +176,18 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci && npm --prefix frontend ci && npx prisma generate
+        run: npm --prefix backend ci && npm --prefix frontend ci && npm --prefix backend exec prisma generate
 
       - name: Download scrape report artifact
         uses: actions/download-artifact@v8
         with:
           name: scrape-report-${{ needs.scrape.outputs.run_id }}
-          path: output/reports
+          path: backend/output/reports
 
       - name: Checkout fix branch
         run: git checkout -b "auto-fix/${{ needs.scrape.outputs.run_id }}"
@@ -192,16 +210,16 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
           prompt: |
-            /fix-from-error-report output/reports/*/${{ needs.scrape.outputs.run_id }}.issues.json (full report: same folder, <runId>.json)
+            /fix-from-error-report backend/output/reports/*/${{ needs.scrape.outputs.run_id }}.issues.json (full report: same folder, <runId>.json)
             Do not push. Do not change branches. Stop after at most 3 issues.
           claude_args: |
             --max-turns 60
             --max-budget-usd 5
             --permission-mode dontAsk
-            --allowedTools "Read,Edit,Write,Grep,Glob,Bash(npx tsc --noEmit -p .),Bash(npm run lint),Bash(npm test),Bash(npm test *),Bash(npx jest *),Bash(npm run verify:ui),Bash(npm run docs:generate),Bash(git status*),Bash(git diff*),Bash(git log*),Bash(git add *),Bash(git commit *)"
+            --allowedTools "Read,Edit,Write,Grep,Glob,Bash(npm --prefix backend run typecheck),Bash(npm --prefix backend run typecheck:test),Bash(npm --prefix backend run lint),Bash(npm --prefix backend test),Bash(npm --prefix backend test -- *),Bash(npm --prefix frontend run check),Bash(npm --prefix backend run docs:generate),Bash(git status*),Bash(git diff*),Bash(git log*),Bash(git add *),Bash(git commit *)"
 
       - name: Deterministic gate
-        run: npx tsc --noEmit -p . && npx tsc --noEmit -p tsconfig.test.json && npm run lint && npm test && npm run verify:ui && npm run docs:generate && git diff --exit-code -I 'Auto-generated on' -- docs/
+        run: scripts/check-all.sh --no-install
 
       - name: Generate GitHub App token
         if: steps.cfg.outputs.has_app == 'true'

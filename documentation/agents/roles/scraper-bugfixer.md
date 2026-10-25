@@ -38,4 +38,4 @@
   3. `BF-XXX` entry in `documentation/10-bug-fix-and-improvement-log.md`.
   4. `ADR-XXXX` in `documentation/decisions/` (if architectural or invariant change).
   5. `[Unreleased]` entry in `CHANGELOG.md`.
-  6. Passing Definition of Done checks: `npx tsc --noEmit -p . && npx tsc --noEmit -p tsconfig.test.json && npm run lint && npm test && npm run verify:ui`.
+  6. Passing Definition of Done checks: `scripts/check-all.sh --no-install`.

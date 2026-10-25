@@ -18,7 +18,7 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (BF-0
 - `npm run cache:status`: Inspect active generation, last scrape, and last publish telemetry.
 - `npm run cache:purge-legacy`: Clean up un-namespaced historical keys.
 - `npm run report:classify`: Classify scrape report into actionable vs noise.
-- `npm run verify:ui`: Run UI typecheck, lint, and tests.
+- `npm --prefix frontend run check`: Run UI typecheck, lint, tests, and build.
 
 ## Data & Cache Facts
 - **Change Detection:** PostgreSQL `contentHash` comparison over 17 explicit fields in `batchUpsertJobs` (Redis change detection removed in P1-T04 per D-06).
@@ -50,6 +50,6 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (BF-0
 
 ## Top Gotchas
 1. **Modules executing on import:** `DbMenu.ts`, `DbInspect.ts`, `GenerateDocs.ts` run on import—never import them into other modules.
-2. **Typecheck & lint scope:** `tsc -p .` and `npm run lint` cover `src/` and `api/`.
+2. **Verification commands:** `scripts/check-all.sh --no-install` runs verification across backend and frontend.
 3. **Exit codes:** Scrapers exit 0 on clean success, 1 on hard failure, 2 on scrape success with cache publication failure or sanity gate tripping.
 4. **`JOBS.md`:** 5 MB committed snapshot—never read entirely into memory.

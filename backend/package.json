@@ -1,7 +1,7 @@
 {
-  "name": "job-scrapper",
-  "version": "1.3.0",
-  "description": "Batch TypeScript CLI scraper for Ashby ATS feeding Neon PostgreSQL & Upstash Redis, Express REST API on Vercel, and React 19 UI.",
+  "name": "backend",
+  "version": "0.1.0",
+  "description": "Batch TypeScript CLI scraper for Ashby ATS feeding Neon PostgreSQL & Upstash Redis, Express REST API on Vercel.",
   "scripts": {
     "test": "jest",
     "seed": "npx ts-node src/utils/Seed.ts",
@@ -15,19 +15,22 @@
     "enrich:companies": "npx ts-node src/utils/EnrichCompanies.ts",
     "prisma:studio": "npx prisma studio",
     "docs:generate": "npx ts-node scripts/GenerateDocs.ts",
+    "docs:check": "npm run docs:generate && git diff --exit-code -I 'Auto-generated on' -- docs/",
     "lint": "npx eslint src/ api/ --ext .ts",
     "lint:fix": "npx eslint src/ api/ --ext .ts --fix",
+    "typecheck": "tsc --noEmit -p .",
+    "typecheck:test": "tsc --noEmit -p tsconfig.test.json",
+    "check:all": "npm run build && npm run typecheck && npm run typecheck:test && npm run lint && npm test && npm run docs:check",
     "process:cdx": "npx ts-node src/utils/ProcessCdxData.ts",
     "db:normalize-countries": "npx ts-node src/database/NormalizeCountries.ts",
     "report:classify": "npx ts-node src/utils/ReportClassifyCli.ts",
     "report:install-fixture": "npx ts-node src/utils/InstallReportFixture.ts",
     "verify": "npx ts-node src/utils/Verify.ts",
-    "verify:ui": "npm --prefix frontend run typecheck && npm --prefix frontend run lint && npm --prefix frontend run test",
     "cache:publish": "npx ts-node src/cache/CacheCli.ts publish",
     "cache:status": "npx ts-node src/cache/CacheCli.ts status",
     "cache:purge-legacy": "npx ts-node src/cache/CacheCli.ts purge-legacy",
     "api:start": "npx ts-node src/api/Server.ts",
-    "build": "npx prisma generate && npm ci --prefix frontend && npm --prefix frontend run build"
+    "build": "npx prisma generate"
   },
   "engines": {
     "node": ">=24.0.0"

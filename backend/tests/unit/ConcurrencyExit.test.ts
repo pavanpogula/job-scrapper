@@ -10,9 +10,9 @@ import * as path from 'path';
 describe('Concurrency Limiter Process Exit (P1-T09 / SCR-09)', () => {
     test('limiter must not let the process exit early when paused (tasksDone=4/4 and exit 0)', () => {
         const fixturePath = path.resolve(__dirname, '../fixtures/limiter-exit.ts');
-        const tsNodeBin = path.resolve(__dirname, '../../node_modules/.bin/ts-node');
+        const tsNodeScript = require.resolve('ts-node/dist/bin.js');
 
-        const result = spawnSync(tsNodeBin, [fixturePath], {
+        const result = spawnSync(process.execPath, [tsNodeScript, fixturePath], {
             encoding: 'utf8',
             timeout: 10000
         });
