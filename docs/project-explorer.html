@@ -539,6 +539,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ApiGolden_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ApiGolden.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_ApiServer_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ApiServer.test.ts</span>
@@ -641,6 +647,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_GenerateDocs_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GenerateDocs.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_GenerateReadme_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GenerateReadme.test.ts</span>
@@ -668,6 +680,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_InstallReportFixture_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>InstallReportFixture.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_PathResolution_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>PathResolution.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -895,10 +913,15 @@
       },
       {
         "label": "Functions",
-        "value": "0"
+        "value": "1"
       }
     ],
-    "functions": []
+    "functions": [
+      {
+        "name": "generate()",
+        "desc": "Generates interactive HTML documentation for all project files"
+      }
+    ]
   },
   "scripts_generate-readme_ts": {
     "name": "generate-readme.ts",
@@ -2499,6 +2522,31 @@
       }
     ]
   },
+  "tests_unit_ApiGolden_test_ts": {
+    "name": "ApiGolden.test.ts",
+    "path": "tests/unit/ApiGolden.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Golden API snapshot tests for Express REST endpoints (/v1/* and /health) across MISS (stateful Prisma) and HIT (FakeRedis) cache states.",
+    "tags": [
+      "golden",
+      "snapshots",
+      "api",
+      "contract",
+      "parity"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_unit_ApiServer_test_ts": {
     "name": "ApiServer.test.ts",
     "path": "tests/unit/ApiServer.test.ts",
@@ -2913,6 +2961,29 @@
     ],
     "functions": []
   },
+  "tests_unit_GenerateDocs_test_ts": {
+    "name": "GenerateDocs.test.ts",
+    "path": "tests/unit/GenerateDocs.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit test validating GenerateDocs refactoring, custom root/outFile options, and exclusion logic.",
+    "tags": [
+      "documentation",
+      "generator",
+      "unit-test"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_unit_GenerateReadme_test_ts": {
     "name": "GenerateReadme.test.ts",
     "path": "tests/unit/GenerateReadme.test.ts",
@@ -3023,6 +3094,30 @@
       "Fixtures",
       "Telemetry",
       "Reports"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_PathResolution_test_ts": {
+    "name": "PathResolution.test.ts",
+    "path": "tests/unit/PathResolution.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Asserts path resolution semantics: GoogleDrive credentials and output resolve under process.cwd(), while generate-readme is __dirname-relative.",
+    "tags": [
+      "safety",
+      "paths",
+      "cwd",
+      "import-isolation"
     ],
     "info": [
       {

@@ -1,0 +1,1098 @@
+[
+  {
+    "key": "tests/e2e/DiscoveryPipeline.test.ts > E2E: Discovery to Seeding & Clean Pipeline should run end-to-end: parse CDX data -> seed new companies -> verify clean database state",
+    "status": "passed"
+  },
+  {
+    "key": "tests/e2e/ScraperPipeline.test.ts > E2E: Scraper to CSV to Markdown Pipeline should execute E2E fallback, data sanitization, and ErrorTracker telemetry for bug-fix agent",
+    "status": "passed"
+  },
+  {
+    "key": "tests/e2e/ScraperPipeline.test.ts > E2E: Scraper to CSV to Markdown Pipeline should execute end-to-end flow: fetch from Ashby -> format CSV -> parse CSV -> render JOBS.md table",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test .claude/settings.local.json is gitignored and not tracked",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test both shells for each role have identical name and description",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test CLAUDE.md is <= 40 lines and imports AGENTS.md and context.md",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test every .agents/rules/*.md file has a valid trigger, and glob rules specify globs",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test every entry in .claude/skills/ is a symlink resolving into .agents/skills/",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test every role in roster has canonical role file, claude shell, and antigravity shell",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test every shell body references its canonical role file",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AgentShells.test.ts > P4-T07: Agent Shells Parity Test file byte budgets for AGENTS.md and context.md are respected",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache HIT (Redis Seeded Path) matches snapshot for GET /v1/companies on cache HIT",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache HIT (Redis Seeded Path) matches snapshot for GET /v1/facets on cache HIT",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache HIT (Redis Seeded Path) matches snapshot for GET /v1/jobs on cache HIT",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache HIT (Redis Seeded Path) matches snapshot for GET /v1/meta on cache HIT",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /health with token",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /health without token",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/companies",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/companies empty result",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/facets",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/jobs (default)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/jobs pagination edges",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/jobs with capped pageSize",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/jobs with filters",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/jobs/:id (valid)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/jobs/:id missing UUID (404)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/jobs/:id non-UUID (404)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiGolden.test.ts > ApiGolden Snapshot Tests (P0b) Cache MISS (Database Path) matches snapshot for GET /v1/meta",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests ApiNoStatic: Static Asset Serving Isolation (P0b) returns 404 on GET / and 200 on /v1/jobs when dist does not exist",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests ApiNoStatic: Static Asset Serving Isolation (P0b) serves SPA index.html when dist exists",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /health ignores client-supplied X-Forwarded-Uri header",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /health returns 200 with status degraded when cache is not configured, counts active AND isListed, and caches for 10 minutes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/companies applies search filter on companies",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/companies returns 200 with company list and matches snapshot",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/companies returns 200 with empty list when no companies match",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/facets returns 200 with facet groups and matches snapshot",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs applies country filter",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs applies employmentType filter",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs applies salaryInterval when salaryMin is a valid number",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs applies search filter across title, department, location, company",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs applies workplaceType filter",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs findMany args have select with no metadata and orderBy ends with id asc and nulls last",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs ignores salaryInterval alone when salaryMin is absent",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs returns 200 with paginated jobs matching contract snapshot",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs returns valid meta pagination when results are empty",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs supports sortBy=company and appends id asc tie-breaker",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs/:id returns 200 with job details when found by ashbyId fallback",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs/:id returns 200 with job details when found by id and matches snapshot",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs/:id returns 404 immediately for non-UUID id without calling database",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests GET /v1/jobs/:id returns 404 when job does not exist in database",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests Middleware & Error Handling allows more than 10 requests from one IP as in-memory limiter is removed (P2-T08)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests Middleware & Error Handling returns 500 when database query throws an error",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ApiServer.test.ts > API Server Contract & Snapshot Tests Middleware & Error Handling sets standard security headers on responses",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests extractSalary should extract salary from Ashby summaryComponents",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests extractSalary should fall back to compensationTiers components when summaryComponents is missing",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests extractSalary should return empty object when no compensation is present",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests extractSalary should support legacy compensationTier shape",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests fetchAshbyBoardWithFallback should fall back to GraphQL on 403 and 400 without setting rateLimited",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests fetchAshbyBoardWithFallback should honor Retry-After header and cap at 10 seconds",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests fetchAshbyBoardWithFallback should recover jobs via GraphQL when Posting API returns 404 (e.g. go-augment)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests fetchAshbyBoardWithFallback should retry on HTTP 429 and succeed on subsequent attempt",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests fetchAshbyBoardWithFallback should return failure info http/503/3 when 503 retries are exhausted",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests fetchAshbyBoardWithFallback should return failure info timeout when request times out",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests fetchAshbyBoardWithFallback should send BROWSER_HEADERS on GET and POST requests",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests fetchFromAshbyGraphQL should map GraphQL jobPostings and teams into AshbyJob objects",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests isRetryableError should return false for 404 or generic errors",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/AshbyClient.test.ts > AshbyClient Unit Tests isRetryableError should return true for 429 and 5xx HTTP status codes and timeout codes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Breaker.test.ts > CircuitBreaker detects max concurrent connections exceeded and trips budget exhaustion",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Breaker.test.ts > CircuitBreaker detects Upstash max daily/monthly request limits and marks budget exhausted until UTC midnight",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Breaker.test.ts > CircuitBreaker opens circuit after 3 consecutive failures",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Breaker.test.ts > CircuitBreaker re-opens circuit if probe in HALF_OPEN fails",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Breaker.test.ts > CircuitBreaker remains closed when errors are below threshold",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Breaker.test.ts > CircuitBreaker starts in CLOSED state and reports ok",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Breaker.test.ts > CircuitBreaker supports manual reset",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Breaker.test.ts > CircuitBreaker transitions to HALF_OPEN probe after cooldownMs expires",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > Cache Key Constants defines the standard jc:v1 key prefixes and names",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 1: Default UI view (empty query)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 10: Unknown params dropped",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 11: Search query present",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 12: Two filters together (workplaceType + country)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 13: Non-default sort (sortBy=salary)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 14: Non-default sortOrder (sortOrder=asc)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 15: Non-default pageSize (pageSize=50)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 16: salaryMin provided",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 17: salaryInterval alone dropped",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 18: salaryInterval kept with salaryMin",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 19: Page clamped to 5000",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 2: Explicit default values",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 20: Value trimming and alphabetical key sorting",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 3: WorkplaceType Remote, page 3",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 4: WorkplaceType Hybrid",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 5: WorkplaceType OnSite",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 6: Country US, page 1",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 7: EmploymentType FullTime",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 8: hasSalary=true",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > canonicalJobsKey and isCacheableView (20-case test table) Case 9: hasSalary=\"1\"",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > CRC32 and detailsShard computes standard IEEE 802.3 CRC32 hashes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheKeys.test.ts > CRC32 and detailsShard maps UUIDs deterministically into shards 0..7",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheParity.test.ts > Cache and DB response parity (BF-019) caches every company page, not just the first 100 companies",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheParity.test.ts > Cache and DB response parity (BF-019) companies pages use the DB-path top-level shape",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheParity.test.ts > Cache and DB response parity (BF-019) connects an idle lazyConnect client before the first command instead of falling back",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheParity.test.ts > Cache and DB response parity (BF-019) facets are stored as the bare object the DB path returns",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheParity.test.ts > Cache and DB response parity (BF-019) jobs pages match the DB path exactly, including meta.hasNext and meta.hasPrev",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheParity.test.ts > Cache and DB response parity (BF-019) meta is stored bare with the DB-path field set",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CacheParity.test.ts > Cache and DB response parity (BF-019) serves a cache hit with the same body the database fallback would return",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CdxWorker.test.ts > CdxWorker isValidSlug should accept valid company slugs",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CdxWorker.test.ts > CdxWorker isValidSlug should reject blocklisted keywords",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CdxWorker.test.ts > CdxWorker isValidSlug should reject purely numeric strings",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CdxWorker.test.ts > CdxWorker isValidSlug should reject slugs that are too short or too long",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CdxWorker.test.ts > CdxWorker isValidSlug should reject slugs violating regex pattern",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CdxWorker.test.ts > CdxWorker runDiscovery should fetch CDX URLs, extract valid slugs, and upsert each slug into Prisma",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CdxWorker.test.ts > CdxWorker runDiscovery should handle CDX API network failures gracefully without crashing",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ClusterScraper.test.ts > ClusterScraper Unit Tests ErrorTracker.mergeReports should aggregate metrics and events across multiple OS worker reports",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ClusterScraper.test.ts > ClusterScraper Unit Tests P1-T11 Fault Tolerance and Watchdog Tests 1 of 2 fails → report saved, exit 1",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ClusterScraper.test.ts > ClusterScraper Unit Tests P1-T11 Fault Tolerance and Watchdog Tests 1 worker fails -> publishCacheGeneration not called, exit 1",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ClusterScraper.test.ts > ClusterScraper Unit Tests P1-T11 Fault Tolerance and Watchdog Tests 2 workers ok -> publishCacheGeneration called once, exit 0",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ClusterScraper.test.ts > ClusterScraper Unit Tests P1-T11 Fault Tolerance and Watchdog Tests publish fails -> exit 2",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ClusterScraper.test.ts > ClusterScraper Unit Tests P1-T11 Fault Tolerance and Watchdog Tests skip-publish -> recordScrapeFinished called, publisher not called, exit 0",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ClusterScraper.test.ts > ClusterScraper Unit Tests P1-T11 Fault Tolerance and Watchdog Tests timeout → SIGTERM then SIGKILL",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ClusterScraper.test.ts > ClusterScraper Unit Tests partitionSlugs should distribute slugs evenly across shards using round-robin partitioning",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ClusterScraper.test.ts > ClusterScraper Unit Tests resolveWorkerCount should default to min(4, cpuCount) when no --workers flag is passed",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ClusterScraper.test.ts > ClusterScraper Unit Tests resolveWorkerCount should parse --workers=N flag and cap at total company count",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CompanyHealth.test.ts > Company Health Unit Tests (P1-T07 / SCR-05, SCR-06, SCR-21; D-10) quarantine after 3 consecutive runs with 404",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CompanyHealth.test.ts > Company Health Unit Tests (P1-T07 / SCR-05, SCR-06, SCR-21; D-10) reaching 7 failures emits company_unreachable without deactivating",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CompanyHealth.test.ts > Company Health Unit Tests (P1-T07 / SCR-05, SCR-06, SCR-21; D-10) success resets counters and sets status ACTIVE",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/CompanyHealth.test.ts > Company Health Unit Tests (P1-T07 / SCR-05, SCR-06, SCR-21; D-10) sunday recheck includes NOT_FOUND",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Concurrency.test.ts > Concurrency Utilities chunk should handle exact division",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Concurrency.test.ts > Concurrency Utilities chunk should return a single chunk when size is greater than array length",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Concurrency.test.ts > Concurrency Utilities chunk should return an empty array when given an empty array",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Concurrency.test.ts > Concurrency Utilities chunk should split an array into chunks of the specified size",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Concurrency.test.ts > Concurrency Utilities createLimiter should dynamically throttle concurrency on rate limit and recover after consecutive successes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Concurrency.test.ts > Concurrency Utilities createLimiter should limit maximum concurrent executions to the specified limit",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Concurrency.test.ts > Concurrency Utilities createLimiter should propagate errors from tasks and continue processing subsequent tasks",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ConcurrencyExit.test.ts > Concurrency Limiter Process Exit (P1-T09 / SCR-09) limiter must not let the process exit early when paused (tasksDone=4/4 and exit 0)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 01: produces consistent 32-character MD5 hex hash for identical inputs",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 02: is invariant to key order in input objects (stable serialization)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 03: alters hash when title changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 04: alters hash when location changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 05: alters hash when department changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 06: alters hash when salary min changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 07: alters hash when salary max changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 08: alters hash when salary currency changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 09: alters hash when salary interval changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 10: alters hash when isRemote changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 11: alters hash when workplaceType changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 12: alters hash when employmentType changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 13: alters hash when publishedAt changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 14: alters hash when applyUrl changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 15: alters hash when isListed changes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 16: alters hash when address fields (country, region, city) change",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ContentHash.test.ts > Content Hash Unit Tests (P1-T06 / BF-011) case 17: alters hash when description, team, or secondaryLocations change, but ignores volatile _source",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Country.test.ts > Country Normalization Unit Tests (P1-T15 / SCR-23) satisfies all 79 country normalization test cases (≥ 30 required)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/DbClean.test.ts > DbClean Unit Tests should delete dependent jobs first, then delete companies when --execute is passed",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/DbClean.test.ts > DbClean Unit Tests should do nothing if all companies have valid slugs",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/DbClean.test.ts > DbClean Unit Tests should identify invalid slugs in dry-run mode without deleting any records",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/EnrichCompanies.test.ts > Company Enrichment & 429 Backoff (P3-T03) enrichActiveCompanies enrich backs off on 429",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/EnrichCompanies.test.ts > Company Enrichment & 429 Backoff (P3-T03) fetchOrganizationMetadata returns status: not_found when page returns 404 or missing appData",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/EnrichCompanies.test.ts > Company Enrichment & 429 Backoff (P3-T03) fetchOrganizationMetadata returns status: ok with name and logoUrl when hosted board HTML contains window.__appData",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/EnrichCompanies.test.ts > Company Enrichment & 429 Backoff (P3-T03) fetchOrganizationMetadata returns status: rate_limited with retryAfterSeconds on 429",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ErrorTracker.test.ts > ErrorTracker Unit Tests should record validation issues, fallback events, and counters into a structured report",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ErrorTracker.test.ts > ErrorTracker Unit Tests should write latest-error-report.json and dated report to disk",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ErrorTrackerV2.test.ts > ErrorTracker v2 Suite (P1-T10 / TEST-07) numeric merge sums every field across worker reports",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ErrorTrackerV2.test.ts > ErrorTracker v2 Suite (P1-T10 / TEST-07) per-category caps with exact counts (100 events max stored, counts exact)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ErrorTrackerV2.test.ts > ErrorTracker v2 Suite (P1-T10 / TEST-07) run-id naming matches standard pattern",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ErrorTrackerV2.test.ts > ErrorTracker v2 Suite (P1-T10 / TEST-07) two saves in the same second in different modes give two distinct files without collision",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/FixerScope.test.ts > P4-T08: Fixer Scope Checker check-fixer-scope.sh script exists and is executable",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/FixerScope.test.ts > P4-T08: Fixer Scope Checker script passes on clean worktree without diffs against HEAD",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GenerateDocs.test.ts > GenerateDocs refactoring (P0b) generate() writes documentation to custom outFile and includes key project files",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GenerateReadme.test.ts > GenerateReadme Unit Tests generateMarkdownTable should generate markdown table with total count and apply links",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GenerateReadme.test.ts > GenerateReadme Unit Tests generateMarkdownTable should truncate fields exceeding column character limits",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GenerateReadme.test.ts > GenerateReadme Unit Tests generateMarkdownTable should unescape doubled quotes in CSV and escape pipe characters in Markdown cells",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GenerateReadme.test.ts > GenerateReadme Unit Tests parseCSV should correctly handle commas inside quoted field values",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GenerateReadme.test.ts > GenerateReadme Unit Tests parseCSV should ignore empty lines in CSV",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GenerateReadme.test.ts > GenerateReadme Unit Tests parseCSV should parse standard CSV content into structured JobRow objects",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GoogleDrive.test.ts > GoogleDrive Upload Helpers GoogleDriveOAuth (Service Account JWT) should handle storage quota error and return null",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GoogleDrive.test.ts > GoogleDrive Upload Helpers GoogleDriveOAuth (Service Account JWT) should return null with helpful setup instructions if credentials file is missing",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GoogleDrive.test.ts > GoogleDrive Upload Helpers GoogleDriveOAuth (Service Account JWT) should upload CSV and return webViewLink when credentials are present",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GoogleDrive.test.ts > GoogleDrive Upload Helpers GoogleDriveUserOAuth (User OAuth Consent Flow) should return null if oauth-credentials.json is missing",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/GoogleDrive.test.ts > GoogleDrive Upload Helpers GoogleDriveUserOAuth (User OAuth Consent Flow) should upload file and return link when credentials and token exist",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Hardening.test.ts > API Hardening and CDN Caching (P2-T08) Cache-Control headers sets 3600s s-maxage and tag for 200 job detail view",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Hardening.test.ts > API Hardening and CDN Caching (P2-T08) Cache-Control headers sets no-store on /health",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Hardening.test.ts > API Hardening and CDN Caching (P2-T08) Cache-Control headers sets public 300s s-maxage and Vercel-Cache-Tag for 200 list view",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Hardening.test.ts > API Hardening and CDN Caching (P2-T08) Cache-Control headers sets public, s-maxage=300 on 404 job detail",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Hardening.test.ts > API Hardening and CDN Caching (P2-T08) Cache-Control headers sets shorter s-maxage (60s) without Vercel-Cache-Tag for BYPASS",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Hardening.test.ts > API Hardening and CDN Caching (P2-T08) CORS allow-list exposes the required headers in CORS response",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Hardening.test.ts > API Hardening and CDN Caching (P2-T08) CORS allow-list omits Access-Control-Allow-Origin for unlisted origin",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Hardening.test.ts > API Hardening and CDN Caching (P2-T08) CORS allow-list sets Access-Control-Allow-Origin for allowed origin",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Hardening.test.ts > API Hardening and CDN Caching (P2-T08) CORS allow-list sets Access-Control-Allow-Origin for localhost:3000",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Hardening.test.ts > API Hardening and CDN Caching (P2-T08) Rate Limiter Removal allows 11 consecutive requests from one IP without 429",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/HealthMeta.test.ts > Health v2 and /v1/meta (P2-T07) GET /health v2 returns 200 with cache.state=ok, generation, and data.ageHours when cache is warm",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/HealthMeta.test.ts > Health v2 and /v1/meta (P2-T07) GET /health v2 returns status=degraded when no generation exists and falls back to cached DB count",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/HealthMeta.test.ts > Health v2 and /v1/meta (P2-T07) GET /health v2 runs deep DB ping when ?deep=1 is passed with valid X-Health-Token",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/HealthMeta.test.ts > Health v2 and /v1/meta (P2-T07) GET /v1/meta returns activeJobs, hiringCompanies, withSalary, lastScrapeAt, and generation from cache",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/InstallReportFixture.test.ts > InstallReportFixture CLI (P3-T02) installs failed-run fixture and returns exit code 1",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/PathResolution.test.ts > PathResolution Safety Tests (P0b) generate-readme.ts paths are __dirname-relative to repo scripts directory",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/PathResolution.test.ts > PathResolution Safety Tests (P0b) GoogleDrive OAuth modules resolve credentials under process.cwd() at import time",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ProcessCdxData.test.ts > ProcessCdxData should decode URI components and strip quotes from slugs",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ProcessCdxData.test.ts > ProcessCdxData should filter out system paths, wildcards, numbers, UUIDs, hex strings, and CSS units",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Publisher.test.ts > Publisher - publishCacheGeneration (P2-T03) CLI Helpers runs cache:purge-legacy and unlinks legacy keys",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Publisher.test.ts > Publisher - publishCacheGeneration (P2-T03) CLI Helpers runs cache:status and formats report",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Publisher.test.ts > Publisher - publishCacheGeneration (P2-T03) Detail Diffing and Purging purges removed jobs from details shards and details index",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Publisher.test.ts > Publisher - publishCacheGeneration (P2-T03) performs dry-run without writing any keys to Redis",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Publisher.test.ts > Publisher - publishCacheGeneration (P2-T03) publishes a full cache generation and executes atomic swap",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Publisher.test.ts > Publisher - publishCacheGeneration (P2-T03) recordScrapeFinished records timestamp to meta:lastScrapeAt",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Publisher.test.ts > Publisher - publishCacheGeneration (P2-T03) Sanity Gate (GAP-SCR-18) bypasses sanity gate when force option is true",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Publisher.test.ts > Publisher - publishCacheGeneration (P2-T03) Sanity Gate (GAP-SCR-18) trips sanity gate when active jobs drop by > 30% from last publish",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Publisher.test.ts > Publisher - publishCacheGeneration (P2-T03) skips publication when publish lock is held by another process",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Publisher.test.ts > Publisher - publishCacheGeneration (P2-T03) skips publication when REDIS_URL is not configured and no redis client is provided",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) Details Shard Reader & Negative 404 Cache (P2-T06) absorbs unknown UUID with 404 negative cache on second request returning X-Cache: HIT",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) Details Shard Reader & Negative 404 Cache (P2-T06) falls back to Postgres on shard miss returning 200 with X-Cache: MISS and reason field_missing",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) Details Shard Reader & Negative 404 Cache (P2-T06) returns 404 immediately for non-UUID id with 0 commands",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) Details Shard Reader & Negative 404 Cache (P2-T06) returns X-Cache: HIT when job detail is cached in shard hash",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) returns X-Cache: BYPASS with reason circuit_open when breaker is open",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) returns X-Cache: BYPASS with reason not_configured when Redis client is null",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) returns X-Cache: HIT after a mock publish",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) returns X-Cache: MISS with reason page_not_cached when page exceeds pagesCached",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) returns X-Cache: MISS with reason view_not_cached for search queries without calling Redis",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) Single-flight & dbGuard deduplicates identical in-flight DB fallback queries",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) Single-flight & dbGuard returns 503 with Retry-After: 5 when dbGuard queue is full",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReadThrough.test.ts > API Cache ReadThrough (P2-T05) synthesizes empty page with X-Cache: HIT when page exceeds totalPages",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/RedisClient.test.ts > RedisClient calculateRetryDelay implements linear backoff capped at 2000ms (resolving 09 #48)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/RedisClient.test.ts > RedisClient createRedis({ role: \"api\" }) returns null when REDIS_URL is unset",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/RedisClient.test.ts > RedisClient createRedis({ role: \"publisher\" }) returns null when REDIS_URL is unset",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/RedisClient.test.ts > RedisClient creates an ioredis client with API configuration when REDIS_URL is set",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/RedisClient.test.ts > RedisClient creates an ioredis client with publisher configuration when REDIS_URL is set",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/RedisClient.test.ts > RedisClient reuses singleton instance via getRedisClient",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) fingerprint normalisation is stable across UUIDs, numbers, URLs, and hex hashes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) issues list is capped at 3 actionable items",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) R-API-1 vs R-API-2: transient api_error on 1 company is noise, > 5% is actionable S2",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) R-CO-1: company_error triggers actionable S2",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) R-DB-1: db_error triggers actionable S1",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) R-INFRA-1: Prisma connection errors trigger infra_alert and suppress fixer",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) R-RECUR-1: open PR matching fingerprint suppresses fixer trigger",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) R-REGRESS-1: previously resolved fingerprint triggers regressed S1 priority",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) R-RUN-1: non-success outcome triggers actionable S1",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) R-VAL-1: new validation_filtered issue triggers actionable S2",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ReportClassifier.test.ts > ReportClassifier Unit Tests (P1-T10 / LOOP-05) R-VAL-2: new validation_sanitized with count >= 50 triggers actionable S3",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Sanitizer.test.ts > Sanitizer & Validator Unit Tests sanitizeJobDescriptionHtml should strip script, style, iframe tags, inline event handlers, null bytes, and huge base64 strings",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Sanitizer.test.ts > Sanitizer & Validator Unit Tests sanitizeJobDescriptionPlain should fallback to stripping HTML when plain text is missing and remove null bytes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Sanitizer.test.ts > Sanitizer & Validator Unit Tests sanitizeJobUrl should fallback to canonical Ashby URL and record issue when URL is missing, unsafe, or malformed",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Sanitizer.test.ts > Sanitizer & Validator Unit Tests sanitizeJobUrl should keep valid https URLs and resolve relative paths against jobs.ashbyhq.com",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Sanitizer.test.ts > Sanitizer & Validator Unit Tests sanitizeJsonMetadata should recursively strip null bytes and sanitize nested descriptionHtml/descriptionPlain",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Sanitizer.test.ts > Sanitizer & Validator Unit Tests sanitizePublishedDate should extract valid YYYY-MM-DD and reject invalid dates",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Sanitizer.test.ts > Sanitizer & Validator Unit Tests sanitizeText should strip lone UTF-16 surrogates without affecting valid emoji pairs",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Sanitizer.test.ts > Sanitizer & Validator Unit Tests sanitizeText should strip null bytes, control chars, decode HTML entities, and collapse whitespace",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Sanitizer.test.ts > Sanitizer & Validator Unit Tests validateAndSanitizeJob & sanitizeJobBatch should filter out malformed jobs (missing id/title, placeholder id, duplicates) and sanitize valid ones",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCore.test.ts > AshbyScraper Unit Tests batchUpsertJobs should batch database transactions into chunks of BATCH_SIZE (100)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCore.test.ts > AshbyScraper Unit Tests batchUpsertJobs should fall back to per-job upserts and isolate failing job when a batch transaction throws",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCore.test.ts > AshbyScraper Unit Tests generateHash should generate consistent md5 hash for identical job payloads",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCore.test.ts > AshbyScraper Unit Tests getOrCreateDepartment and getOrCreateLocation in-memory caching should query Prisma on first department lookup, then hit memory cache on second",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCore.test.ts > AshbyScraper Unit Tests getOrCreateDepartment and getOrCreateLocation in-memory caching should recover from cross-process P2002 unique constraint race via findUnique fallback",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCore.test.ts > AshbyScraper Unit Tests getOrCreateDepartment and getOrCreateLocation in-memory caching should return null if department or location name is empty or undefined",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCSV.test.ts > ScraperCSV Unit Tests escapeCSV should escape double quotes by doubling them and wrapping in quotes",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCSV.test.ts > ScraperCSV Unit Tests escapeCSV should handle combination of commas, quotes, and newlines",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCSV.test.ts > ScraperCSV Unit Tests escapeCSV should quote values containing commas",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCSV.test.ts > ScraperCSV Unit Tests escapeCSV should quote values containing newlines",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCSV.test.ts > ScraperCSV Unit Tests escapeCSV should return unquoted string when no special characters exist",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCSV.test.ts > ScraperCSV Unit Tests fetchJobsForCompany should fetch jobs from Ashby API and map to JobRecord format",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCSV.test.ts > ScraperCSV Unit Tests fetchJobsForCompany should return empty array when Ashby API request fails (404, 500, network)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCSV.test.ts > ScraperCSV Unit Tests formatCSVRow should format a JobRecord into an escaped 6-column CSV line",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperCSV.test.ts > ScraperCSV Unit Tests scrapeToCSV saves report after stream finish",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperRunAll.test.ts > AshbyScraper runAll() Harness (P1-T03) 250 jobs flush in 3 chunks (100, 100, 50) and populate via createMany fast path",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperRunAll.test.ts > AshbyScraper runAll() Harness (P1-T03) clears removed salary and sets postalAddress to Prisma.DbNull",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperRunAll.test.ts > AshbyScraper runAll() Harness (P1-T03) deactivates stale jobs by calling updateMany with ashbyId notIn live IDs",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperRunAll.test.ts > AshbyScraper runAll() Harness (P1-T03) empty board deferred one run",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperRunAll.test.ts > AshbyScraper runAll() Harness (P1-T03) flush failure does not drop later batches (P1-T08 / SCR-08)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperRunAll.test.ts > AshbyScraper runAll() Harness (P1-T03) graphql does not overwrite rest content",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperRunAll.test.ts > AshbyScraper runAll() Harness (P1-T03) isolates a failing company (P1-T08 / SCR-07)",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperRunAll.test.ts > AshbyScraper runAll() Harness (P1-T03) P2-T04: standalone runAll honors publish: true and skipPublish",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperRunAll.test.ts > AshbyScraper runAll() Harness (P1-T03) reactivates inactive job with same hash",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/ScraperRunAll.test.ts > AshbyScraper runAll() Harness (P1-T03) records api_error event when posting API request fails",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Seed.test.ts > Seed Unit Tests should find existing companies, diff in memory, and insert only new companies",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Seed.test.ts > Seed Unit Tests should skip createMany if all target companies already exist in the database",
+    "status": "passed"
+  },
+  {
+    "key": "tests/unit/Verify.test.ts > Verify Database Auditor Unit Tests should return accurate table counts and 0 integrity issues for clean jobs",
+    "status": "passed"
+  }
+]

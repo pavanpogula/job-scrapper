@@ -3,13 +3,13 @@
 ## Global Status & Context
 
 ### Vercel Deployment IDs
-- **Pre-P3 Production Deployment ID (frontend/current):** `pending` (to be recorded by owner after P0a merge)
+- **Pre-P3 Production Deployment ID (frontend/current):** `https://job-scrapper-ha6lchynl-boolean6.vercel.app`
 - **Backend Promotion ID (P3a):** `pending`
 
 ### Stop-the-Line Toggles (O11)
-- `SCRAPE_ENABLED`: `pending` (owner to set to `true` in repo Variables)
-- `FIXER_ENABLED`: `pending` (owner to set to `true` in repo Variables)
-- `DISCOVERY_ENABLED`: `pending` (owner to set to `true` in repo Variables)
+- `SCRAPE_ENABLED`: `true`
+- `FIXER_ENABLED`: `true`
+- `DISCOVERY_ENABLED`: `true`
 
 ### Owner Decisions (Recorded)
 | # | Decision | Selected Value / Policy |
@@ -44,31 +44,33 @@
 
 ## Phase Execution Checklist
 
-### [x] P0a — Foundation
+### [x] P0a — Foundation (merged)
 - **Branch:** `plan/mono-p0a-foundation`
-- **PR:** `pending`
+- **PR:** `PR #2`
 - **Merge method:** `squash`
-- **Commit SHAs (first..last):** `eede3eb..941b8bf`
+- **Commit SHAs (first..last):** `429c26d`
 - **Owner decisions used:** O11
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed 9/9 steps (Prisma generate, root typecheck, test typecheck, lint, Jest test suite [36 suites / 252 tests], UI verify, build, docs check, repo-tests [7/7 tests]).
   - `node scripts/smoke/smoke.mjs https://job-scrapper-ui.vercel.app`: 10/11 endpoints verified (`/` 200, `/jobs/sample-slug` 200, `/v1/jobs?pageSize=1` 200, `/v1/jobs/:id` 200, `/v1/jobs/not-a-uuid` 404, `/v1/facets` 200, `/v1/meta` 200, `/health` 200, `/v1/nope` 404, `/v1/companies` 500 on currently deployed Vercel instance, security headers verified).
   - `node --test 'scripts/repo-tests/**/*.test.mjs'`: Passed 7/7 tests in 129ms (`secrets-ignore`, `toggles`, `_yaml-lite`).
 - **Owner actions:**
-  - [ ] Set GitHub repo Variables: `SCRAPE_ENABLED=true`, `FIXER_ENABLED=true`, `DISCOVERY_ENABLED=true`
-  - [ ] Record current Vercel production deployment ID in PROGRESS.md
-  - [ ] Note whether "Verify & Test" is a required check in branch protection
-  - [ ] Close or record any open `auto-fix/*` PRs
-- **Rollback command:** `git revert <squash-sha>`
+  - [x] Set GitHub repo Variables: `SCRAPE_ENABLED=true`, `FIXER_ENABLED=true`, `DISCOVERY_ENABLED=true`
+  - [x] Record current Vercel production deployment ID in PROGRESS.md
+  - [x] Note whether "Verify & Test" is a required check in branch protection (none on main)
+  - [x] Close or record any open `auto-fix/*` PRs (none open)
+- **Rollback command:** `git revert --no-edit 429c26d`
 - **Rollback chain:** N/A (first phase)
 
 ### [ ] P0b — Safety tests + official baseline
 - **Branch:** `plan/mono-p0b-safety-tests`
 - **PR:** `pending`
 - **Merge method:** `squash`
-- **Commit SHAs:** `pending`
+- **Commit SHAs:** `5ba96e0`
 - **Owner decisions used:** None
-- **Verification evidence:** `pending`
+- **Verification evidence:**
+  - `node scripts/migration/compare-results.mjs --phase P0b`: Jest 274/274 (0 missing), Vitest 14/14, TS root=0/tests=0, ESLint 0 err/1 warn.
+  - `./scripts/check-all.sh --no-install`: All 9 steps passed (Prisma generate, Root typecheck, Test typecheck, Lint root and API, Jest test suite, Verify UI, Build application, Docs generate & diff check, Repo-level tests [10 passed]).
 - **Owner actions:** `git tag pre-monorepo <squash-sha> && git push origin pre-monorepo`
 - **Rollback command:** `git revert <squash-sha>`
 - **Rollback chain:** `revert P0b`

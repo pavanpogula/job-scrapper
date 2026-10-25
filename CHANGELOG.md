@@ -10,10 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Golden API Snapshot Tests (P0b):** Added `tests/unit/ApiGolden.test.ts` with 17 golden snapshot comparisons for Express REST endpoints (`/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, `/v1/meta`, `/health`, 404s) covering both DB MISS and Redis cache HIT states.
+- **Import & Path Resolution Safety Tests (P0b):** Added `tests/unit/PathResolution.test.ts` asserting import-time path isolation and current working directory resolution rules (`output/`, `apikeys/`, `extracted-slugs.json`).
+- **Static Asset Routing Fallback Test (P0b):** Added `ApiNoStatic` test suite to `tests/unit/ApiServer.test.ts` verifying API 404 behavior when static frontend `dist` is missing.
+- **Documentation Generator Test Suite (P0b):** Added `tests/unit/GenerateDocs.test.ts` testing custom root, output target, and exclusion logic.
+- **Infrastructure & Configuration Verification Tests (P0b):** Added `scripts/repo-tests/vercel-config.test.mjs` (Vercel rewrite order, headers, function targets), `scripts/repo-tests/workflows.test.mjs` (action toggles, fixer permissions, working directories), and `scripts/repo-tests/move-manifest.test.mjs` (file tracking invariant across restructuring).
+- **Official Migration Baseline (P0b):** Captured and committed official pre-migration verification baseline in `docs/monorepo-migration/baseline/` (Jest, Vitest, TypeScript, ESLint, any-counts, strict flags, production smoke).
 - **Monorepo Migration Foundation (P0a):** Added migration blueprint `docs/monorepo-migration/PLAN.md`, progress tracker `docs/monorepo-migration/PROGRESS.md`, baseline capture and comparison tools (`scripts/migration/{capture-baseline,compare-results}.mjs`, `move-map.json`, `moved-tests.json`).
 - **Production Smoke Script:** Added zero-body, read-only GET smoke verification script `scripts/smoke/smoke.mjs` checking health, jobs, facets, companies, and edge security headers.
 - **Repo-Level Test Harness:** Added zero-dependency Node 24 test harness in `scripts/repo-tests/` with `_yaml-lite.mjs`, `secrets-ignore.test.mjs` (A18), and `toggles.test.mjs` (O11).
 - **Unified Check Script:** Added layout-aware `scripts/check-all.sh` providing single-command verification across root and backend layouts.
+
+### Changed
+- **GenerateDocs Library Export (P0b):** Refactored `scripts/GenerateDocs.ts` into a callable `generate({ root, outFile })` function with a `require.main === module` CLI guard to support both pre- and post-P3a monorepo layouts.
+- **CI Workflow Script Syntax Check (P0b):** Fixed recursive `.mjs` check in `.github/workflows/ci.yml` using `find scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check`.
 
 ### Changed
 - **Secret Hygiene & Permission Hardening (A18):** Hardened `.gitignore` to cover `.env*`, `!.env.example`, `.vercel/`, `**/apikeys/`, `**/output/`, and updated `.claude/settings.json` to deny reading sensitive patterns.

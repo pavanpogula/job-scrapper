@@ -456,4 +456,46 @@ describe('API Server Contract & Snapshot Tests', () => {
       expect(res.body).toEqual({ error: 'Failed to fetch jobs' });
     });
   });
+
+  describe('ApiNoStatic: Static Asset Serving Isolation (P0b)', () => {
+    it('returns 404 on GET / and 200 on /v1/jobs when dist does not exist', async () => {
+      let isolatedApp: any;
+      jest.isolateModules(() => {
+        const realFs = jest.requireActual('fs');
+        jest.spyOn(realFs, 'existsSync').mockImplementation((p: any) => {
+          if (String(p).includes('dist')) return false;
+          return realFs.existsSync(p);
+        });
+        mockJob.findMany.mockResolvedValueOnce([]);
+        mockJob.count.mockResolvedValueOnce(0);
+        isolatedApp = require('../../src/api/Server').default;
+      });
+
+      const resRoot = await request(isolatedApp).get('/');
+      expect(resRoot.status).toBe(404);
+
+      const resApi = await request(isolatedApp)
+        .get('/v1/jobs')
+        .set('X-Forwarded-For', getNextIp());
+      expect(resApi.status).toBe(200);
+    });
+
+    it('serves SPA index.html when dist exists', async () => {
+      let isolatedApp: any;
+      jest.isolateModules(() => {
+        const realFs = jest.requireActual('fs');
+        jest.spyOn(realFs, 'existsSync').mockImplementation((p: any) => {
+          if (String(p).includes('dist')) return true;
+          return realFs.existsSync(p);
+        });
+        isolatedApp = require('../../src/api/Server').default;
+      });
+
+      const res = await request(isolatedApp)
+        .get('/')
+        .set('Accept', 'text/html');
+      // When dist exists and index.html exists, returns 200 or sendFile
+      expect([200, 304]).toContain(res.status);
+    });
+  });
 });
