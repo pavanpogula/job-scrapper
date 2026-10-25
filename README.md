@@ -62,7 +62,8 @@ The application is deployed full-stack on **Vercel** with a serverless Express R
 Prerequisites: Node.js (developed on v24), a PostgreSQL database (Neon works well), and optionally Redis.
 
 ```bash
-# 1. Install dependencies
+# 1. Install dependencies (the backend is its own npm project; run every command below from backend/)
+cd backend
 npm install
 
 # 2. Configure environment
@@ -74,8 +75,8 @@ npx prisma generate
 npx prisma db push
 
 # 4. Seed companies
-npm --prefix backend run seed             # 7 sample slugs from backend/src/config/Companies.ts
-npm --prefix backend run seed -- --all    # all 3,072 slugs from extracted-slugs.json
+npm run seed             # 7 sample slugs from src/config/Companies.ts
+npm run seed -- --all       # all 3,072 slugs from extracted-slugs.json
 
 # 5. Scrape
 npm run scrape                          # single process → PostgreSQL
@@ -103,6 +104,8 @@ GOOGLE_DRIVE_FOLDER_ID="your_folder_id"
 > `.env.example` still labels Redis as "Required", but the code treats it as optional.
 
 ## NPM Scripts
+
+Run these from `backend/` (or from the repo root as `npm --prefix backend run <script>`). The web app lives in `frontend/` (`npm --prefix frontend run check`).
 
 | Command | Description |
 |---------|-------------|
@@ -187,11 +190,11 @@ user-OAuth uploader (`src/lib/GoogleDriveUserOAuth.ts`, credentials in `apikeys/
 ```
 job-scrapper/
 ├── backend/
-│   ├── backend/src/                    # config, core, discovery, database, lib, api, utils
-│   ├── backend/scripts/                # GenerateDocs.ts, generate-readme.ts
-│   ├── backend/tests/                  # unit/, e2e/, fixtures/
-│   ├── backend/prisma/schema.prisma
-│   └── backend/package.json
+│   ├── src/                    # config, core, discovery, database, lib, api, utils
+│   ├── scripts/                # GenerateDocs.ts, generate-readme.ts
+│   ├── tests/                  # unit/, e2e/, fixtures/
+│   ├── prisma/schema.prisma
+│   └── package.json
 ├── frontend/                           # React 19 + TypeScript + Vite web application
 ├── documentation/                      # System documentation (01–16)
 ├── docs/                               # Monorepo migration docs & project explorer

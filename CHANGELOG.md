@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **docs(monorepo)**: P3b review fixes: README quick start now runs from `backend/`, README repo tree no longer double-prefixes `backend/`, and `AGENTS.md` / `documentation/agents/context.md` entry-point paths carry the `backend/` prefix.
+
 ### Added
 - **Monorepo Root Layout Verification (P3b):** Added `scripts/repo-tests/layout.test.mjs` asserting that forbidden legacy root files/directories (`src`, `tests`, `package.json`, `package-lock.json`, `vercel.json`, `prisma`, `api`, `__mocks__`, etc.) do not exist at root and that all tracked root entries belong to an explicit allow-list.
 

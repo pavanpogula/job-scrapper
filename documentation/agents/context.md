@@ -3,9 +3,9 @@
 Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (BF-019 cache parity fix).
 
 ## Components & Entry Points
-- **Scraper:** `src/core/Scraper.ts` (single process / IPC worker), `src/core/ClusterScraper.ts` (parallel OS worker coordinator), `src/core/ScraperCSV.ts` (streaming CSV exporter).
-- **Cache Publisher:** `src/cache/Publisher.ts` (atomic generation swap, sanity gating, details diffing), `src/cache/CacheCli.ts`.
-- **Backend API:** `src/api/Server.ts` (Express 5 REST API), `src/api/contract.ts`, `src/api/db/queries.ts`, `src/api/cache/ReadThrough.ts` (LRU + Redis read-through), `src/api/middleware/dbGuard.ts` (concurrency guard & deduplication), `src/api/middleware/cacheControl.ts` (CDN caching headers), `api/index.ts` (Vercel serverless entry point).
+- **Scraper:** `backend/src/core/Scraper.ts` (single process / IPC worker), `backend/src/core/ClusterScraper.ts` (parallel OS worker coordinator), `backend/src/core/ScraperCSV.ts` (streaming CSV exporter).
+- **Cache Publisher:** `backend/src/cache/Publisher.ts` (atomic generation swap, sanity gating, details diffing), `backend/src/cache/CacheCli.ts`.
+- **Backend API:** `backend/src/api/Server.ts` (Express 5 REST API), `backend/src/api/contract.ts`, `backend/src/api/db/queries.ts`, `backend/src/api/cache/ReadThrough.ts` (LRU + Redis read-through), `backend/src/api/middleware/dbGuard.ts` (concurrency guard & deduplication), `backend/src/api/middleware/cacheControl.ts` (CDN caching headers), `backend/api/index.ts` (Vercel serverless entry point).
 - **Frontend UI:** `frontend/` (React 19, TypeScript, Vite, Redux Toolkit, MUI 9).
 
 ## CLI Commands
