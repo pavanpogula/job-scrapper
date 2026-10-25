@@ -122,11 +122,11 @@
 - **Not verified:** `discover-weekly` dispatch (owner chose to defer; see `BACKLOG.md`). Soak (O10) counts from 2026-10-26: 2 scheduled scrapes + 1 fixture dispatch before P4b.
 - **Rollback chain:** `revert P3a` -> `revert P2` -> `revert P1`
 
-### [ ] P3b — Backend follow-ups
+### [x] P3b — Backend follow-ups (merged 2026-10-25, PR #9 squash)
 - **Branch:** `plan/mono-p3b-backend-followups`
-- **PR:** `pending`
+- **PR:** #9
 - **Merge method:** `squash`
-- **Commit SHAs:** `efb8e93`
+- **Commit SHAs:** `af99478`
 - **Owner decisions used:** None
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 31 repo-level tests including layout invariants).
@@ -136,17 +136,21 @@
   - Documentation & Path Cleanup: Verified `git grep -nE '(^|[ "\x27(\x60])(src|tests|prisma|api|scripts/GenerateDocs)/' documentation/ README.md ':!documentation/plan'` returns empty.
   - Explorer Documentation: `npm --prefix backend run docs:check` verified with 0 git diff.
 - **Owner actions:** None
-- **Rollback command:** `git revert <squash-sha>`
+- **Rollback command:** `git revert --no-edit af99478`
 - **Rollback chain:** `revert P3b` -> `revert P3a`
 
 ### [ ] P4a — CI split
 - **Branch:** `plan/mono-p4a-ci-split`
 - **PR:** `pending`
 - **Merge method:** `squash`
-- **Commit SHAs:** `pending`
+- **Commit SHAs:** `41731bd`
 - **Owner decisions used:** None
-- **Verification evidence:** `pending`
-- **Owner actions:** Update branch protection to require `backend-gate`, `frontend-gate`, `repo-gate`
+- **Verification evidence:**
+  - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 35 repo-level tests).
+  - `node scripts/migration/compare-results.mjs --phase P4a`: All metrics match or improve upon baseline (Jest 264 passed [0 missing], Vitest 14 passed, TS 0 errors, ESLint 0 errors / 1 warning).
+  - CI Workflow Structure: Added `.github/workflows/backend-ci.yml`, `.github/workflows/frontend-ci.yml`, `.github/workflows/repo-ci.yml` with path-based changes filtering, unique gates (`backend-gate`, `frontend-gate`, `repo-gate`), and pinned `actionlint` v1.7.12.
+  - Gate Coverage Invariant: `scripts/repo-tests/gate-needs.test.mjs` asserts that every gate's `needs` covers every other job in its workflow and enforces `if: always()` with status checks.
+- **Owner actions:** Update branch protection to require `backend-gate`, `frontend-gate`, `repo-gate` (after PR merge)
 - **Rollback command:** `git revert <squash-sha>`
 - **Rollback chain:** `revert P4a` -> `revert P3b` -> `revert P3a`
 
