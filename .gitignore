@@ -41,3 +41,6 @@ google-credentials.json
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Monorepo migration test run results
+docs/monorepo-migration/results/

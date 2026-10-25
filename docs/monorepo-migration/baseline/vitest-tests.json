@@ -1,0 +1,58 @@
+[
+  {
+    "key": "src/test/contract.test.ts > P5-T10: Frontend API Contract Parity validates required fields exist on list and detail structures",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/contract.test.ts > P5-T10: Frontend API Contract Parity validates sample-company.json adheres to CompanySummary contract",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/contract.test.ts > P5-T10: Frontend API Contract Parity validates sample-job.json adheres to JobDetail and JobListItem contracts",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/countryFacets.test.tsx > P1-T21: Country options from facets with Intl.DisplayNames BrowsePage Country Filter Integration with MSW renders facet options formatted with display names and dispatches country selection",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/countryFacets.test.tsx > P1-T21: Country options from facets with Intl.DisplayNames formatCountryOption falls back to raw value for malformed region codes without crashing",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/countryFacets.test.tsx > P1-T21: Country options from facets with Intl.DisplayNames formatCountryOption formats ISO-2 code using Intl.DisplayNames",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/defaultQuery.test.ts > P1-T20: Default Query String generates exactly page=1&pageSize=25&sortBy=publishedAt&sortOrder=desc for default filter state",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/defaultQuery.test.ts > P1-T20: Default Query String includes salaryInterval when salaryMin is present",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/defaultQuery.test.ts > P1-T20: Default Query String omits salaryInterval when salaryMin is absent even if salaryInterval is set",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/sanitize.test.ts > P5-T07: DOMPurify Sanitization & Invariants enforces target=\"_blank\" and rel=\"noopener noreferrer nofollow ugc\" on anchors",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/sanitize.test.ts > P5-T07: DOMPurify Sanitization & Invariants handles empty or non-string inputs safely",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/sanitize.test.ts > P5-T07: DOMPurify Sanitization & Invariants strips inline style attributes",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/sanitize.test.ts > P5-T07: DOMPurify Sanitization & Invariants strips script tags and dangerous event handlers",
+    "status": "passed"
+  },
+  {
+    "key": "src/test/smoke.test.ts > UI Smoke Test runs vitest with jsdom environment",
+    "status": "passed"
+  }
+]

@@ -1,0 +1,193 @@
+{
+  "baseUrl": "https://job-scrapper-ui.vercel.app",
+  "mode": "frontend",
+  "timestamp": "2026-10-25T10:38:04.855Z",
+  "overallPass": false,
+  "endpoints": [
+    {
+      "path": "/",
+      "status": 200,
+      "pass": true,
+      "contentType": "text/html; charset=utf-8",
+      "vercelCache": "MISS",
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    },
+    {
+      "path": "/jobs/sample-slug",
+      "status": 200,
+      "pass": true,
+      "contentType": "text/html; charset=utf-8",
+      "vercelCache": "MISS",
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    },
+    {
+      "path": "/v1/jobs?pageSize=1",
+      "status": 200,
+      "pass": true,
+      "contentType": "application/json; charset=utf-8",
+      "vercelCache": "MISS",
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    },
+    {
+      "path": "/v1/jobs/7c9b54d8-df84-4875-8c58-ce2fa3582b2a",
+      "status": 200,
+      "pass": true,
+      "contentType": "application/json; charset=utf-8",
+      "vercelCache": "MISS",
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    },
+    {
+      "path": "/v1/jobs/not-a-uuid",
+      "status": 404,
+      "pass": true,
+      "contentType": "application/json; charset=utf-8",
+      "vercelCache": "MISS",
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    },
+    {
+      "path": "/v1/facets",
+      "status": 200,
+      "pass": true,
+      "contentType": "application/json; charset=utf-8",
+      "vercelCache": "MISS",
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    },
+    {
+      "path": "/v1/companies",
+      "status": 500,
+      "pass": false,
+      "contentType": "application/json; charset=utf-8",
+      "vercelCache": "MISS",
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    },
+    {
+      "path": "/v1/meta",
+      "status": 200,
+      "pass": true,
+      "contentType": "application/json; charset=utf-8",
+      "vercelCache": "MISS",
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "pass": true,
+      "contentType": "application/json; charset=utf-8",
+      "vercelCache": "MISS",
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    },
+    {
+      "path": "/v1/nope",
+      "status": 404,
+      "pass": true,
+      "contentType": "text/html; charset=utf-8",
+      "vercelCache": "MISS",
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    },
+    {
+      "path": "[HEADER CHECKS /v1/jobs]",
+      "status": 200,
+      "pass": true,
+      "headers": [
+        "cache-control",
+        "content-security-policy",
+        "content-type",
+        "permissions-policy",
+        "referrer-policy",
+        "x-content-type-options",
+        "x-frame-options",
+        "x-vercel-cache"
+      ]
+    }
+  ]
+}

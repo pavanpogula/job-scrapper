@@ -67,7 +67,7 @@ jobs:
         run: scripts/ci/check-fixer-scope.sh
 
       - name: Syntax check repo scripts
-        run: for f in scripts/**/*.mjs; do [ -f "$f" ] && node --check "$f"; done
+        run: find scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check
 
       - name: Run repo-level tests
         run: node --test 'scripts/repo-tests/**/*.test.mjs'

@@ -78,10 +78,6 @@ function discoverFiles(dir: string, baseDir: string = dir): { path: string; icon
     return results;
 }
 
-// Get files to document (auto-discovered)
-const PROJECT_ROOT = path.resolve(__dirname, '..');
-const FILES_TO_DOCUMENT = discoverFiles(PROJECT_ROOT);
-
 function parseJSDoc(content: string): { fileSummary: string; fileTags: string[]; functions: FunctionDoc[] } {
     let fileSummary = '';
     let fileTags: string[] = [];
@@ -487,14 +483,22 @@ function generateTreeHTML(docs: FileDoc[]): string {
     </li>`;
 }
 
-// Main execution
-async function main() {
+export interface GenerateDocsOptions {
+    root?: string;
+    outFile?: string;
+}
+
+/**
+ * @summary Generates interactive HTML documentation for all project files
+ */
+export async function generate(options: GenerateDocsOptions = {}): Promise<{ fileCount: number; outputPath: string }> {
     console.log('📄 Generating documentation...\n');
 
-    const projectRoot = path.resolve(__dirname, '..');
+    const projectRoot = options.root ? path.resolve(options.root) : path.resolve(__dirname, '..');
+    const filesToDocument = discoverFiles(projectRoot);
     const docs: FileDoc[] = [];
 
-    for (const file of FILES_TO_DOCUMENT) {
+    for (const file of filesToDocument) {
         const filePath = path.join(projectRoot, file.path);
 
         if (!fs.existsSync(filePath)) {
@@ -528,18 +532,21 @@ async function main() {
     // Generate HTML
     const html = generateHTML(docs);
 
-    // Ensure docs directory exists
-    const docsDir = path.join(projectRoot, 'docs');
+    // Write HTML
+    const outputPath = options.outFile ? path.resolve(options.outFile) : path.join(projectRoot, 'docs', 'project-explorer.html');
+    const docsDir = path.dirname(outputPath);
     if (!fs.existsSync(docsDir)) {
         fs.mkdirSync(docsDir, { recursive: true });
     }
 
-    // Write HTML
-    const outputPath = path.join(docsDir, 'project-explorer.html');
     fs.writeFileSync(outputPath, html);
 
-    console.log(`\n🎉 Documentation generated: docs/project-explorer.html`);
-    console.log(`   Open with: open docs/project-explorer.html`);
+    console.log(`\n🎉 Documentation generated: ${path.relative(projectRoot, outputPath)}`);
+    console.log(`   Open with: open ${path.relative(projectRoot, outputPath)}`);
+
+    return { fileCount: docs.length, outputPath };
 }
 
-main().catch(console.error);
+if (require.main === module) {
+    generate().catch(console.error);
+}
