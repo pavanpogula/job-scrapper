@@ -23,7 +23,7 @@ Run from `backend/`:
 ## Working Directory & Secret Invariants
 - **CWD:** All commands in this workspace run with `backend/` as the current working directory.
 - **Secrets & Outputs:** Never read, print, stage, or commit `.env*`, `apikeys/`, `output/`, or `.vercel/` values.
-- **Git Operations:** Never push to `main` and never merge. Commit only on task/phase branches with Conventional Commits.
+- **Git Operations:** Commit only on task/phase branches with Conventional Commits. Agents never push to `main`/`master`, never merge, never force-push, push tags or delete branches, and never run raw `git push` or `gh`. Publish or update a task branch only with `../scripts/agents/push-branch.sh` (from `backend/`) (fast-forward only; it prints the pull-request link). The owner reviews and merges.
 
 ## Type Synchronization Summary
 When modifying HTTP response shapes in `src/api/`:

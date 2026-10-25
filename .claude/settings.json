@@ -15,6 +15,8 @@
       "Bash(npm --prefix frontend run *)",
       "Bash(npm --prefix frontend test*)",
       "Bash(node scripts/*)",
+      "Bash(scripts/agents/push-branch.sh*)",
+      "Bash(./scripts/agents/push-branch.sh*)",
       "Bash(git status*)",
       "Bash(git diff*)",
       "Bash(git log*)"
@@ -26,7 +28,8 @@
       "Read(**/output/**)",
       "Read(./backend/.env*)",
       "Read(./backend/apikeys/**)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(gh *)"
     ]
   },
   "hooks": {

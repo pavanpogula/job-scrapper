@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(agents)**: agents can publish and update task branches with `scripts/agents/push-branch.sh` (new branch or fast-forward update, also `local:remote`; never `main`/`master`, force, tags, deletes or mirror; refuses dirty trees and diffs touching `.env*`/`apikeys/`/`output/`/`.vercel/`; prints the PR link). Claude settings (root and nested) allow only that script to push, keep raw `git push` denied and now deny `gh`. Rules regenerated from `docs/agents/rules/secrets-and-git.md`. Guarded by `scripts/repo-tests/agent-push-guard.test.mjs` (real pushes to a local bare remote).
+
 - **fix(agents)**: Claude allow-lists no longer auto-approve every backend npm script. Only `typecheck`, `typecheck:test`, `lint`, `lint:fix`, `build`, `docs:generate`, `docs:check` and `check:all` run without a prompt; `db:clean`, `scrape*`, `seed`, `cache:publish` and the rest ask first because they act on the production database.
 
 ### Added
