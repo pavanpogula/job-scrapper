@@ -26,16 +26,16 @@ replay_pid*
 node_modules
 dist/
 *.tsbuildinfo
+.vitest/
 
-.env
+.env*
+!.env.example
+.vercel/
+**/apikeys/
+**/output/
 
 # Google Drive credentials (sensitive!)
 google-credentials.json
-
-# CSV output folder
-output/
-
-apikeys/
 /extracted-slugs*
 .DS_Store
 

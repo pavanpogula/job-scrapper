@@ -21,6 +21,7 @@ concurrency:
 jobs:
   discover:
     name: Discover & Seed New Companies
+    if: vars.DISCOVERY_ENABLED != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: production

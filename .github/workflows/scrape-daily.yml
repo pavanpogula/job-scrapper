@@ -40,6 +40,7 @@ concurrency:
 jobs:
   scrape:
     name: Scrape & Publish
+    if: vars.SCRAPE_ENABLED != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: production
@@ -88,6 +89,7 @@ jobs:
           restore-keys: scrape-history-
 
       - name: Enrich active companies metadata
+        if: inputs.fixture_report == '' || inputs.fixture_report == null
         run: npm run enrich:companies
         continue-on-error: true
 
@@ -138,7 +140,7 @@ jobs:
   fixer:
     name: Autonomous Bugfixer
     needs: scrape
-    if: always() && needs.scrape.outputs.actionable == 'true' && inputs.skip_fixer != true
+    if: always() && needs.scrape.outputs.actionable == 'true' && inputs.skip_fixer != true && vars.FIXER_ENABLED != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: fixer
