@@ -130,7 +130,7 @@ export async function captureBaseline(targetDir) {
   };
   fs.writeFileSync(path.join(targetDir, 'tsc.json'), JSON.stringify(tscData, null, 2) + '\n', 'utf-8');
 
-  // 5. lint.json & 6. any-counts.json
+  // 5. lint.json
   console.log('  -> Running ESLint with JSON format...');
   const lintCmd = isBackendLayout
     ? 'npx eslint src/ api/ -f json'
@@ -146,13 +146,37 @@ export async function captureBaseline(targetDir) {
 
   let totalErrors = 0;
   let totalWarnings = 0;
-  /** @type {Record<string, number>} */
-  const anyCounts = {};
-
   if (Array.isArray(lintParsed)) {
     for (const item of lintParsed) {
       totalErrors += item.errorCount || 0;
       totalWarnings += item.warningCount || 0;
+    }
+  }
+
+  fs.writeFileSync(
+    path.join(targetDir, 'lint.json'),
+    JSON.stringify({ errors: totalErrors, warnings: totalWarnings }, null, 2) + '\n',
+    'utf-8'
+  );
+
+  // 6. any-counts.json (force @typescript-eslint/no-explicit-any on)
+  console.log('  -> Measuring no-explicit-any occurrences with ESLint...');
+  const anyCmd = isBackendLayout
+    ? "npx eslint src/ api/ --rule '@typescript-eslint/no-explicit-any: error' -f json"
+    : "npx eslint src/ api/ --rule '@typescript-eslint/no-explicit-any: error' -f json";
+  const anyRaw = runCmd(anyCmd, { cwd: backendRoot, allowFailure: true });
+  let anyParsed = [];
+  try {
+    const jsonStart = anyRaw.indexOf('[');
+    anyParsed = JSON.parse(jsonStart >= 0 ? anyRaw.slice(jsonStart) : anyRaw);
+  } catch (e) {
+    console.error('Failed to parse ESLint any JSON output:', e);
+  }
+
+  /** @type {Record<string, number>} */
+  const anyCounts = {};
+  if (Array.isArray(anyParsed)) {
+    for (const item of anyParsed) {
       const relFile = path.relative(root, item.filePath).replace(/\\/g, '/');
       const anyInFile = (item.messages || []).filter(
         (/** @type {any} */ m) => m.ruleId === '@typescript-eslint/no-explicit-any'
@@ -163,11 +187,6 @@ export async function captureBaseline(targetDir) {
     }
   }
 
-  fs.writeFileSync(
-    path.join(targetDir, 'lint.json'),
-    JSON.stringify({ errors: totalErrors, warnings: totalWarnings }, null, 2) + '\n',
-    'utf-8'
-  );
   fs.writeFileSync(path.join(targetDir, 'any-counts.json'), JSON.stringify(anyCounts, null, 2) + '\n', 'utf-8');
 
   // 7. strict-flags.json

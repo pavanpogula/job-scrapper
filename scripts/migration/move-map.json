@@ -1,4 +1,13 @@
 {
   "prefixes": [],
-  "deleted": []
+  "deleted": [
+    {
+      "path": "tests/unit/AgentShells.test.ts",
+      "reason": "Moved to scripts/repo-tests/agent-shells.test.mjs"
+    },
+    {
+      "path": "tests/unit/FixerScope.test.ts",
+      "reason": "Moved to scripts/repo-tests/fixer-scope.test.mjs"
+    }
+  ]
 }

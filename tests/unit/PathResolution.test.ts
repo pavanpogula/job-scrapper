@@ -25,28 +25,47 @@ describe('PathResolution Safety Tests (P0b)', () => {
         }
     });
 
-    test('GoogleDrive OAuth modules resolve credentials under process.cwd() at import time', () => {
-        jest.isolateModules(() => {
-            // Requiring GoogleDriveOAuth evaluates CREDENTIALS_PATH against process.cwd()
-            const gdriveOAuth = require('../../src/lib/GoogleDriveOAuth');
-            expect(gdriveOAuth).toBeDefined();
-
-            // When imported inside tmpDir, credentials must resolve to tmpDir/apikeys/...
-            // We verify by inspecting path resolution in GoogleDriveUserOAuth as well
-            const gdriveUserOAuth = require('../../src/lib/GoogleDriveUserOAuth');
-            expect(gdriveUserOAuth).toBeDefined();
-
-            // Verify process.cwd() is indeed tmpDir
-            expect(process.cwd()).toBe(tmpDir);
-            const expectedApiKeyPath = path.join(tmpDir, 'apikeys', 'google-credentials.json');
-            expect(path.resolve('apikeys/google-credentials.json')).toBe(expectedApiKeyPath);
-
-            const expectedExtractedPath = path.join(tmpDir, 'extracted-slugs.json');
-            expect(path.resolve('extracted-slugs.json')).toBe(expectedExtractedPath);
-
-            const expectedOutputPath = path.join(tmpDir, 'output');
-            expect(path.resolve('output')).toBe(expectedOutputPath);
+    test('GoogleDrive OAuth modules resolve credentials under process.cwd() at import time', async () => {
+        const checkedPaths: string[] = [];
+        const realFs = jest.requireActual('fs');
+        const existsSpy = jest.spyOn(realFs, 'existsSync').mockImplementation((p: any) => {
+            checkedPaths.push(String(p));
+            return false;
         });
+
+        let gdriveOAuth: any;
+        let gdriveUserOAuth: any;
+        let seed: any;
+        let ErrorTracker: any;
+
+        jest.isolateModules(() => {
+            gdriveOAuth = require('../../src/lib/GoogleDriveOAuth');
+            gdriveUserOAuth = require('../../src/lib/GoogleDriveUserOAuth');
+            seed = require('../../src/utils/Seed');
+            ErrorTracker = require('../../src/lib/ErrorTracker').ErrorTracker;
+        });
+
+        try {
+            // Trigger runtime path resolutions in the isolated cwd
+            await gdriveOAuth.uploadWithOAuth('test.csv');
+            await gdriveUserOAuth.uploadWithUserOAuth('test.csv');
+            seed.loadTargetSlugs(true);
+
+            const tracker = new ErrorTracker('test-run', 'test-mode');
+            tracker.saveReport();
+
+            const expectedGdriveCreds = path.join(tmpDir, 'apikeys', 'google-credentials.json');
+            const expectedGdriveUserCreds = path.join(tmpDir, 'apikeys', 'oauth-credentials.json');
+            const expectedExtractedSlugs = path.join(tmpDir, 'extracted-slugs.json');
+            const expectedOutputDir = path.join(tmpDir, 'output');
+
+            expect(checkedPaths).toContain(expectedGdriveCreds);
+            expect(checkedPaths).toContain(expectedGdriveUserCreds);
+            expect(checkedPaths).toContain(expectedExtractedSlugs);
+            expect(checkedPaths.some(p => p.startsWith(expectedOutputDir))).toBe(true);
+        } finally {
+            existsSpy.mockRestore();
+        }
     });
 
     test('generate-readme.ts paths are __dirname-relative to repo scripts directory', () => {

@@ -62,26 +62,29 @@
 - **Rollback command:** `git revert --no-edit 429c26d`
 - **Rollback chain:** N/A (first phase)
 
-### [ ] P0b — Safety tests + official baseline
+### [x] P0b — Safety tests + official baseline (merged)
 - **Branch:** `plan/mono-p0b-safety-tests`
-- **PR:** `pending`
+- **PR:** #3
 - **Merge method:** `squash`
-- **Commit SHAs:** `5ba96e0`
+- **Commit SHAs:** `fa3a3a6`
 - **Owner decisions used:** None
 - **Verification evidence:**
   - `node scripts/migration/compare-results.mjs --phase P0b`: Jest 274/274 (0 missing), Vitest 14/14, TS root=0/tests=0, ESLint 0 err/1 warn.
   - `./scripts/check-all.sh --no-install`: All 9 steps passed (Prisma generate, Root typecheck, Test typecheck, Lint root and API, Jest test suite, Verify UI, Build application, Docs generate & diff check, Repo-level tests [10 passed]).
-- **Owner actions:** `git tag pre-monorepo <squash-sha> && git push origin pre-monorepo`
-- **Rollback command:** `git revert <squash-sha>`
+- **Owner actions:** `git tag pre-monorepo fa3a3a6 && git push origin pre-monorepo` (completed)
+- **Rollback command:** `git revert --no-edit fa3a3a6`
 - **Rollback chain:** `revert P0b`
 
 ### [ ] P1 — Repo-level tests out of jest + fixer-scope hardening
 - **Branch:** `plan/mono-p1-repo-tests`
 - **PR:** `pending`
 - **Merge method:** `squash`
-- **Commit SHAs:** `pending`
+- **Commit SHAs:** `c718161`
 - **Owner decisions used:** O13
-- **Verification evidence:** `pending`
+- **Verification evidence:**
+  - `node scripts/migration/compare-results.mjs --phase P1`: Jest 264/274 (0 missing, 10 moved), Vitest 14/14, TS root=0/tests=0, ESLint 0 err/1 warn.
+  - `node --test scripts/repo-tests/*.test.mjs`: 25/25 tests passed (including 8 agent-shells tests and 7 fixer-scope tests).
+  - `./scripts/check-all.sh --no-install`: All 9 steps passed cleanly.
 - **Owner actions:** None
 - **Rollback command:** `git revert <squash-sha>`
 - **Rollback chain:** `revert P1`
