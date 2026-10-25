@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Canonical Agent Roles and Rules (P6a):** Established single-source-of-truth canonical definitions for all 6 agent roles (`docs/agents/roles/*.md`) and 10 agent rules (`docs/agents/rules/*.md`) with structured frontmatter (`id`, `scope`, `always`, `applies_to[]`, `description`).
+- **Deterministic Shell Generator (P6a):** Added `scripts/agents/sync-shells.mjs` generating Claude Code (`.claude/agents/*.md`, `.claude/rules/*.md`) and Google Antigravity (`.agents/agents/*.md`, `.agents/rules/*.md`) configurations with `GENERATED from <canonical path>` provenance banners and inlined bodies. Impeccable skill files are explicitly exempt. Included `--check` mode performing byte-level verification.
+- **Agent Shell Parity & Invariant Guard (P6a):** Updated `scripts/repo-tests/agent-shells.test.mjs` to execute `sync-shells.mjs --check`, assert byte-for-byte fidelity and provenance banners, verify `.claude/rules/` path arrays, verify `.claude/rules/context.md` non-generation (avoiding duplicate context loads), and assert that all `skills-lock.json` entries exist in `.agents/skills/`.
+
+### Changed
+- **Stack & Path Realignment in Agent Rules (P6a):** Corrected legacy path strings across roles to canonical `backend/` locations. Eliminated Tailwind CSS drift across `frontend.md` role and roster to reflect Material UI (MUI). Authored canonical `api-contract-sync` protocol specifying steps 1 through 6, additive-first changes, and autonomous fixer boundaries.
+
 - **docs(monorepo)**: P5 review fixes: the docs-links test no longer flags its own header, and the READMEs now state the real weekly-discovery schedule (`0 4 * * 0`, 04:00 UTC Sunday).
 
 ### Added

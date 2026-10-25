@@ -155,6 +155,22 @@
     {
       "from": "JOBS.md",
       "to": "backend/JOBS.md"
+    },
+    {
+      "from": ".agents/rules/00-scraper-context.md",
+      "to": ".agents/rules/00-context.md"
+    },
+    {
+      "from": ".agents/rules/20-scraper-invariants.md",
+      "to": ".agents/rules/50-scraper-invariants.md"
+    },
+    {
+      "from": ".agents/rules/30-api-cache.md",
+      "to": ".agents/rules/60-api-cache.md"
+    },
+    {
+      "from": ".agents/rules/40-frontend.md",
+      "to": ".agents/rules/80-frontend-invariants.md"
     }
   ],
   "deleted": [

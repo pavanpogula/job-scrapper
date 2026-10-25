@@ -100,6 +100,28 @@ job-scrapper/
 - [`known-issues.md`](../frontend/docs/known-issues.md): UI technical debt and contract alignment tracking.
 - [`testing.md`](../frontend/docs/testing.md): Vitest component test suites, MSW network mocking, and setup guide.
 
+### Canonical Agent Documentation (`docs/agents/`)
+- [`roster.md`](./agents/roster.md): Canonical agent roster and routing guide.
+- [`context.md`](./agents/context.md): Authoritative quick context for AI coding agents.
+- **Roles:**
+  - [`api-cache.md`](./agents/roles/api-cache.md)
+  - [`docs-release-keeper.md`](./agents/roles/docs-release-keeper.md)
+  - [`frontend.md`](./agents/roles/frontend.md)
+  - [`run-reviewer.md`](./agents/roles/run-reviewer.md)
+  - [`scraper-architect.md`](./agents/roles/scraper-architect.md)
+  - [`scraper-bugfixer.md`](./agents/roles/scraper-bugfixer.md)
+- **Rules:**
+  - [`context.md`](./agents/rules/context.md)
+  - [`secrets-and-git.md`](./agents/rules/secrets-and-git.md)
+  - [`changelog-and-commits.md`](./agents/rules/changelog-and-commits.md)
+  - [`api-contract-sync.md`](./agents/rules/api-contract-sync.md)
+  - [`ci-and-workflows.md`](./agents/rules/ci-and-workflows.md)
+  - [`scraper-invariants.md`](./agents/rules/scraper-invariants.md)
+  - [`api-cache.md`](./agents/rules/api-cache.md)
+  - [`prisma-schema.md`](./agents/rules/prisma-schema.md)
+  - [`frontend-invariants.md`](./agents/rules/frontend-invariants.md)
+  - [`frontend-design.md`](./agents/rules/frontend-design.md)
+
 ---
 
 ## 5. Architecture Decision Records (ADRs)
