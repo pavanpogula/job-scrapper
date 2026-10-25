@@ -13,9 +13,10 @@
       "Bash(git log*)"
     ],
     "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
-      "Read(./apikeys/**)",
+      "Read(**/.env*)",
+      "Read(**/apikeys/**)",
+      "Read(**/.vercel/**)",
+      "Read(**/output/**)",
       "Bash(git push *)"
     ]
   },

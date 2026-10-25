@@ -44,16 +44,16 @@
 
 ## Phase Execution Checklist
 
-### [ ] P0a — Foundation
+### [x] P0a — Foundation
 - **Branch:** `plan/mono-p0a-foundation`
 - **PR:** `pending`
 - **Merge method:** `squash`
-- **Commit SHAs (first..last):** `pending`
+- **Commit SHAs (first..last):** `eede3eb..HEAD`
 - **Owner decisions used:** O11
 - **Verification evidence:**
-  - `scripts/check-all.sh`: `pending`
-  - `node scripts/smoke/smoke.mjs https://job-scrapper-ui.vercel.app`: `pending`
-  - `node --test 'scripts/repo-tests/**/*.test.mjs'`: `pending`
+  - `scripts/check-all.sh --no-install`: Passed 9/9 steps (Prisma generate, root typecheck, test typecheck, lint, Jest test suite [36 suites / 252 tests], UI verify, build, docs check, repo-tests [7/7 tests]).
+  - `node scripts/smoke/smoke.mjs https://job-scrapper-ui.vercel.app`: 10/11 endpoints verified (`/` 200, `/jobs/sample-slug` 200, `/v1/jobs?pageSize=1` 200, `/v1/jobs/:id` 200, `/v1/jobs/not-a-uuid` 404, `/v1/facets` 200, `/v1/meta` 200, `/health` 200, `/v1/nope` 404, `/v1/companies` 500 on currently deployed Vercel instance, security headers verified).
+  - `node --test 'scripts/repo-tests/**/*.test.mjs'`: Passed 7/7 tests in 129ms (`secrets-ignore`, `toggles`, `_yaml-lite`).
 - **Owner actions:**
   - [ ] Set GitHub repo Variables: `SCRAPE_ENABLED=true`, `FIXER_ENABLED=true`, `DISCOVERY_ENABLED=true`
   - [ ] Record current Vercel production deployment ID in PROGRESS.md

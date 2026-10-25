@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Monorepo Migration Foundation (P0a):** Added migration blueprint `docs/monorepo-migration/PLAN.md`, progress tracker `docs/monorepo-migration/PROGRESS.md`, baseline capture and comparison tools (`scripts/migration/{capture-baseline,compare-results}.mjs`, `move-map.json`, `moved-tests.json`).
+- **Production Smoke Script:** Added zero-body, read-only GET smoke verification script `scripts/smoke/smoke.mjs` checking health, jobs, facets, companies, and edge security headers.
+- **Repo-Level Test Harness:** Added zero-dependency Node 24 test harness in `scripts/repo-tests/` with `_yaml-lite.mjs`, `secrets-ignore.test.mjs` (A18), and `toggles.test.mjs` (O11).
+- **Unified Check Script:** Added layout-aware `scripts/check-all.sh` providing single-command verification across root and backend layouts.
+
+### Changed
+- **Secret Hygiene & Permission Hardening (A18):** Hardened `.gitignore` to cover `.env*`, `!.env.example`, `.vercel/`, `**/apikeys/`, `**/output/`, and updated `.claude/settings.json` to deny reading sensitive patterns.
+- **Workflow Stop-the-Line Toggles (O11):** Guarded daily scrape and weekly discovery workflows with `vars.SCRAPE_ENABLED`, `vars.FIXER_ENABLED`, and `vars.DISCOVERY_ENABLED`, and skipped company enrichment during fixture replay.
 - **Frontend URL Filter Synchronization & Mobile Drawer Draft:** Bidirectional URL query synchronization (`useJobFilters`), mobile filter drawer draft applying once, scroll-to-top with h1 focus on page change, and server-aligned sort options (P5-T01, FE-03, FE-07, FE-16).
 - **Shared QueryState Component & 429 Auto-Refetch:** Added `<QueryState>` handling loading indicators, 404 states, 5xx retries, and automatic countdown refetch based on `Retry-After` headers (P5-T02, FE-05, FE-06).
 - **Companies Directory Pagination & Dynamic Total:** Paginated companies view with server-side paging, dynamic total count, and empty state search feedback (P5-T03, FE-04).
