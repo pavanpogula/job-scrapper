@@ -458,36 +458,70 @@ describe('API Server Contract & Snapshot Tests', () => {
   });
 
   describe('ApiNoStatic: Static Asset Serving Isolation (P0b)', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const distDir = path.join(process.cwd(), 'job-scrapper-ui', 'dist');
+    const indexHtml = path.join(distDir, 'index.html');
+    let createdDistDir = false;
+    let createdIndexHtml = false;
+
+    const cleanup = () => {
+      if (createdIndexHtml && fs.existsSync(indexHtml)) {
+        try {
+          fs.unlinkSync(indexHtml);
+        } catch {}
+        createdIndexHtml = false;
+      }
+      if (createdDistDir && fs.existsSync(distDir)) {
+        try {
+          fs.rmdirSync(distDir);
+        } catch {}
+        createdDistDir = false;
+      }
+    };
+
+    afterEach(cleanup);
+    afterAll(cleanup);
+
     it('returns 404 on GET / and 200 on /v1/jobs when dist does not exist', async () => {
       let isolatedApp: any;
-      jest.isolateModules(() => {
-        const realFs = jest.requireActual('fs');
-        jest.spyOn(realFs, 'existsSync').mockImplementation((p: any) => {
-          if (String(p).includes('dist')) return false;
-          return realFs.existsSync(p);
-        });
-        mockJob.findMany.mockResolvedValueOnce([]);
-        mockJob.count.mockResolvedValueOnce(0);
-        isolatedApp = require('../../src/api/Server').default;
+      const realFs = jest.requireActual('fs');
+      const spy = jest.spyOn(realFs, 'existsSync').mockImplementation((p: any) => {
+        if (String(p).includes('dist')) return false;
+        return realFs.existsSync(p);
       });
 
-      const resRoot = await request(isolatedApp).get('/');
-      expect(resRoot.status).toBe(404);
+      try {
+        jest.isolateModules(() => {
+          mockJob.findMany.mockResolvedValueOnce([]);
+          mockJob.count.mockResolvedValueOnce(0);
+          isolatedApp = require('../../src/api/Server').default;
+        });
 
-      const resApi = await request(isolatedApp)
-        .get('/v1/jobs')
-        .set('X-Forwarded-For', getNextIp());
-      expect(resApi.status).toBe(200);
+        const resRoot = await request(isolatedApp).get('/');
+        expect(resRoot.status).toBe(404);
+
+        const resApi = await request(isolatedApp)
+          .get('/v1/jobs')
+          .set('X-Forwarded-For', getNextIp());
+        expect(resApi.status).toBe(200);
+      } finally {
+        spy.mockRestore();
+      }
     });
 
     it('serves SPA index.html when dist exists', async () => {
+      if (!fs.existsSync(distDir)) {
+        fs.mkdirSync(distDir, { recursive: true });
+        createdDistDir = true;
+      }
+      if (!fs.existsSync(indexHtml)) {
+        fs.writeFileSync(indexHtml, '<!doctype html><title>test</title>');
+        createdIndexHtml = true;
+      }
+
       let isolatedApp: any;
       jest.isolateModules(() => {
-        const realFs = jest.requireActual('fs');
-        jest.spyOn(realFs, 'existsSync').mockImplementation((p: any) => {
-          if (String(p).includes('dist')) return true;
-          return realFs.existsSync(p);
-        });
         isolatedApp = require('../../src/api/Server').default;
       });
 
