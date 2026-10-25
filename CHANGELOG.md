@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **fix(agents)**: Claude allow-lists no longer auto-approve every backend npm script. Only `typecheck`, `typecheck:test`, `lint`, `lint:fix`, `build`, `docs:generate`, `docs:check` and `check:all` run without a prompt; `db:clean`, `scrape*`, `seed`, `cache:publish` and the rest ask first because they act on the production database.
+
 ### Added
 - **Nested Workspace Agent Guides (P6b):** Created `backend/AGENTS.md` (2,517 bytes), `backend/CLAUDE.md` (5 lines), `frontend/AGENTS.md` (2,255 bytes), and `frontend/CLAUDE.md` (5 lines). Both pairs recommend launching sessions at the monorepo root, outline workspace-specific check commands (`npm run check:all` vs `npm run check`), document secret and git invariants, and provide pointers to relevant documentation and design systems (including the `impeccable` skill for frontend).
 - **Workspace-Level Claude Launch Protection (P6b):** Added `backend/.claude/settings.json` and `frontend/.claude/settings.json` mirroring the root deny list (`Read(**/.env*)`, `Read(**/apikeys/**)`, `Read(**/.vercel/**)`, `Read(**/output/**)`, `Read(./backend/.env*)`, `Read(./backend/apikeys/**)`, `Bash(git push *)`).
