@@ -23,7 +23,7 @@
 | **O7** | Playwright config & tests | **default** (add Playwright config + one smoke e2e) |
 | **O8** | Versioning without root `package.json` | **default** (single repo version in CHANGELOG + tag; app `package.json` versions kept equal; `release` skill updated) |
 | **O9** | Backend Vercel env scope & WAF | **default** (backend Vercel env in Production + Preview; WAF-bypass risk accepted in ADR-0014) |
-| **O10** | Soak before point of no return | **default** (2 scheduled scrapes + 1 fixture dispatch after P3a before P4b) |
+| **O10** | Soak before point of no return | **default** (2 scheduled scrapes + 1 fixture dispatch after P3a before P4b; waived by owner on 2026-10-25) |
 | **O11** | Stop-the-line toggles manager | **default** (owner flips `SCRAPE_ENABLED` / `FIXER_ENABLED` / `DISCOVERY_ENABLED` repo Variables) |
 | **O12** | Codex integration style | **default** (Codex = nested `AGENTS.md` + skills only; recorded in ADR-0013) |
 | **O13** | Fixer package.json edit permission | **default** (fixer may NOT edit any `package.json`) |
@@ -139,11 +139,11 @@
 - **Rollback command:** `git revert --no-edit af99478`
 - **Rollback chain:** `revert P3b` -> `revert P3a`
 
-### [ ] P4a — CI split
+### [x] P4a — CI split (merged 2026-10-25, PR #10 squash)
 - **Branch:** `plan/mono-p4a-ci-split`
-- **PR:** `pending`
+- **PR:** #10
 - **Merge method:** `squash`
-- **Commit SHAs:** `41731bd`
+- **Commit SHAs:** `7fd7ad6`
 - **Owner decisions used:** None
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 35 repo-level tests).
@@ -151,19 +151,25 @@
   - CI Workflow Structure: Added `.github/workflows/backend-ci.yml`, `.github/workflows/frontend-ci.yml`, `.github/workflows/repo-ci.yml` with path-based changes filtering, unique gates (`backend-gate`, `frontend-gate`, `repo-gate`), and pinned `actionlint` v1.7.12.
   - Gate Coverage Invariant: `scripts/repo-tests/gate-needs.test.mjs` asserts that every gate's `needs` covers every other job in its workflow and enforces `if: always()` with status checks.
 - **Owner actions:** Update branch protection to require `backend-gate`, `frontend-gate`, `repo-gate` (after PR merge)
-- **Rollback command:** `git revert <squash-sha>`
+- **Rollback command:** `git revert --no-edit 7fd7ad6`
 - **Rollback chain:** `revert P4a` -> `revert P3b` -> `revert P3a`
 
 ### [ ] P4b — CI remove legacy (Point of no return)
 - **Branch:** `plan/mono-p4b-ci-remove-legacy`
 - **PR:** `pending`
 - **Merge method:** `squash`
-- **Commit SHAs:** `pending`
-- **Owner decisions used:** O10 (soak verification)
-- **Verification evidence:** `pending`
-- **Owner actions:** None
+- **Commit SHAs:** `a4251d5`
+- **Owner decisions used:** O10 (soak verification waived by owner)
+- **O10 Soak Waiver:** O10 waived by owner on 2026-10-25; evidence available: manual real scrape green from backend/ (workers=4, 33,995 jobs), fixture dispatch green, prod smoke 11/11, split CI green on PR #10. No scheduled run since P3a yet. Scheduled scrape runs after this merge are the real soak and must be watched.
+- **Verification evidence:**
+  - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all` with 264 Jest tests / 22 snapshots / typecheck / lint / docs check, `frontend check` with 14 Vitest tests / typecheck / lint / build, and 34 repo-level tests).
+  - `node scripts/migration/compare-results.mjs --phase P4b`: All metrics match or improve upon baseline (Jest 264 passed [0 missing], Vitest 14 passed, TS 0 errors, ESLint 0 errors / 1 warning, production smoke 11/11 passed).
+  - Monorepo Safety: `git diff --exit-code main -- '**/__snapshots__/**'` verified with 0 diff.
+  - Move Manifest: `.github/workflows/ci.yml` registered in `scripts/migration/move-map.json` under `deleted`.
+  - Invariant Guard: `scripts/repo-tests/workflows.test.mjs` asserts `.github/workflows/ci.yml` does not exist and asserts split workflows existence.
+- **Owner actions:** Remove `Verify & Test` from required status checks in branch protection if present; confirm `backend-gate`, `frontend-gate`, `repo-gate` are required.
 - **Rollback command:** `git revert <squash-sha>`
-- **Rollback chain:** `revert P4b` -> `revert P4a` -> `revert P3b` -> `revert P3a`
+- **Rollback chain:** `revert P4b` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)` -> restore "Verify & Test" check if set
 
 ### [ ] P5 — Docs restructure
 - **Branch:** `plan/mono-p5-docs`

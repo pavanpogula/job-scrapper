@@ -27,17 +27,6 @@ test('parseYaml parses scrape-daily.yml accurately', () => {
   assert.ok(parsed.jobs.scrape.steps.length > 5, 'Expected multiple steps');
 });
 
-test('parseYaml parses ci.yml accurately', () => {
-  const root = getRepoRoot();
-  const filePath = path.join(root, '.github/workflows/ci.yml');
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const parsed = parseYaml(content);
-
-  assert.ok(parsed.jobs, 'Expected jobs object');
-  assert.ok(parsed.jobs.verify, 'Expected verify job');
-  assert.ok(Array.isArray(parsed.jobs.verify.steps), 'Expected steps array');
-});
-
 test('parseYaml parses discover-weekly.yml accurately', () => {
   const root = getRepoRoot();
   const filePath = path.join(root, '.github/workflows/discover-weekly.yml');
