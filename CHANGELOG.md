@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Nested Workspace Agent Guides (P6b):** Created `backend/AGENTS.md` (2,517 bytes), `backend/CLAUDE.md` (5 lines), `frontend/AGENTS.md` (2,255 bytes), and `frontend/CLAUDE.md` (5 lines). Both pairs recommend launching sessions at the monorepo root, outline workspace-specific check commands (`npm run check:all` vs `npm run check`), document secret and git invariants, and provide pointers to relevant documentation and design systems (including the `impeccable` skill for frontend).
+- **Workspace-Level Claude Launch Protection (P6b):** Added `backend/.claude/settings.json` and `frontend/.claude/settings.json` mirroring the root deny list (`Read(**/.env*)`, `Read(**/apikeys/**)`, `Read(**/.vercel/**)`, `Read(**/output/**)`, `Read(./backend/.env*)`, `Read(./backend/apikeys/**)`, `Bash(git push *)`).
+- **Hook Lifecycle & Invariant Suite (P6b):** Added `scripts/repo-tests/hooks.test.mjs` verifying stdin filtering for post-commit reminders, Codex root evaluation when running from `frontend/`, Antigravity `hooks.json` schema validation, and nested settings deny list parity.
+
+### Changed
+- **Lifecycle Hook Robustness (P6b):** Fixed `scripts/hooks/post-commit-reminder.sh` to parse stdin JSON (`tool_input.command` and `toolCall.args.CommandLine`), suppressing output unless a `git commit` command is executed. Dropped the ineffective `if:` filter from `.claude/settings.json`.
+- **Antigravity Hooks Schema (P6b):** Rewrote `.agents/hooks.json` to conform to the official Antigravity `PostToolUse` schema with matcher `run_command` and handler wrapper.
+- **Codex CWD Resilience (P6b):** Updated `.codex/hooks.json` to resolve the root via `$(git rev-parse --show-toplevel 2>/dev/null || pwd)`, ensuring impeccable hooks execute accurately even when Codex runs from `frontend/`.
+- **Local Settings Gitignore (P6b):** Added `**/.claude/settings.local.json` to `.gitignore` to prevent accidental commits of developer-local settings in nested workspaces.
+
+### Added
 - **Canonical Agent Roles and Rules (P6a):** Established single-source-of-truth canonical definitions for all 6 agent roles (`docs/agents/roles/*.md`) and 10 agent rules (`docs/agents/rules/*.md`) with structured frontmatter (`id`, `scope`, `always`, `applies_to[]`, `description`).
 - **Deterministic Shell Generator (P6a):** Added `scripts/agents/sync-shells.mjs` generating Claude Code (`.claude/agents/*.md`, `.claude/rules/*.md`) and Google Antigravity (`.agents/agents/*.md`, `.agents/rules/*.md`) configurations with `GENERATED from <canonical path>` provenance banners and inlined bodies. Impeccable skill files are explicitly exempt. Included `--check` mode performing byte-level verification.
 - **Agent Shell Parity & Invariant Guard (P6a):** Updated `scripts/repo-tests/agent-shells.test.mjs` to execute `sync-shells.mjs --check`, assert byte-for-byte fidelity and provenance banners, verify `.claude/rules/` path arrays, verify `.claude/rules/context.md` non-generation (avoiding duplicate context loads), and assert that all `skills-lock.json` entries exist in `.agents/skills/`.

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npm test*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)"
+    ],
+    "deny": [
+      "Read(**/.env*)",
+      "Read(**/apikeys/**)",
+      "Read(**/.vercel/**)",
+      "Read(**/output/**)",
+      "Read(./backend/.env*)",
+      "Read(./backend/apikeys/**)",
+      "Bash(git push *)"
+    ]
+  }
+}
