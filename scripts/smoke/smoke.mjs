@@ -235,7 +235,8 @@ export async function runSmoke(baseUrl, options = {}) {
     const hasXFO = !!h['x-frame-options'];
     const hasNosniff = h['x-content-type-options'] === 'nosniff';
     const hasReferrer = !!h['referrer-policy'];
-    const hasPermissions = !!h['permissions-policy'];
+    // The frontend project adds Permissions-Policy to everything it serves (including proxied /v1/*), so the bare backend URL is exempt.
+    const hasPermissions = isBackend || !!h['permissions-policy'];
     const hasCacheControl = !!h['cache-control'];
 
     const passHeaders = hasXFO && hasNosniff && hasReferrer && hasPermissions && hasCacheControl;
