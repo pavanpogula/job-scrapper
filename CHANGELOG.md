@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **ci(monorepo)**: `repo-ci` actionlint now ignores four reviewed findings in existing workflows (two shellcheck SC2086 hints on intentional flag splitting, two stale-metadata false positives for `create-github-app-token@v3`); any new finding still fails the check.
+
 - **ci(monorepo)**: the split workflows (`backend-ci`, `frontend-ci`, `repo-ci`) now run on `pull_request` for all branches and on `push` only for `main`, which removes the duplicate push + pull_request run on every PR commit.
 
 ### Added

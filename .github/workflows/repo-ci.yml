@@ -52,8 +52,15 @@ jobs:
           tar -xzf "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" actionlint
           sudo mv actionlint /usr/local/bin/
 
+      # Known, reviewed findings in existing workflows (kept out of scope for P4a):
+      #  - SC2086: the ARGS flag lists are intentionally word-split
+      #  - create-github-app-token@v3 'client-id': actionlint's bundled action metadata is out of date
       - name: Run actionlint
-        run: actionlint
+        run: |
+          actionlint \
+            -ignore 'SC2086' \
+            -ignore 'missing input "app-id" which is required by action "actions/create-github-app-token@v3"' \
+            -ignore 'input "client-id" is not defined in action "actions/create-github-app-token@v3"'
 
   fixer-scope:
     name: Check Fixer Scope
