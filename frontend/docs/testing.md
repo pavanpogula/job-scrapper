@@ -35,6 +35,8 @@ All frontend test commands are executed from the repository root with `npm --pre
 - `src/test/sanitize.test.ts`: Tests HTML sanitization and safe text rendering.
 - `src/test/defaultQuery.test.ts`: Verifies search parameter serialization and default query states.
 - `src/test/countryFacets.test.tsx`: Integration test with MSW asserting country display names and filter dispatch.
+- `src/test/formatJobFreshness.test.ts`: Unit tests for the job freshness label helper (Updated / Posted / First seen, relative and absolute dates, clock skew, invalid input; ADR-0018).
+- `src/test/jobFreshness.test.tsx`: Integration test with MSW asserting job cards render the freshness label as `<time>` elements, including the `publishedAt` fallback for cache bodies without the new fields.
 
 ---
 
