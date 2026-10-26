@@ -23,6 +23,7 @@ import BlockIcon from '@mui/icons-material/Block';
 import { useGetJobByIdQuery } from '../store/api/jobsApi';
 import { sanitizeHtml } from '../lib/sanitize';
 import { QueryState } from '../components/QueryState';
+import { formatDetailFreshness } from '../lib/formatJobFreshness';
 
 export const JobDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +35,8 @@ export const JobDetailPage: React.FC = () => {
   const sanitizedDescription = useMemo(() => {
     return descriptionHtml ? sanitizeHtml(descriptionHtml) : '';
   }, [descriptionHtml]);
+
+  const detailFreshness = formatDetailFreshness(job);
 
   const isClosed = job?.active === false;
 
@@ -145,6 +148,18 @@ export const JobDetailPage: React.FC = () => {
                       <Chip label="Active" size="small" color="success" variant="outlined" />
                     )}
                   </Stack>
+
+                  {detailFreshness && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      component="time"
+                      dateTime={detailFreshness.dateTime}
+                      sx={{ display: 'block', mb: 2 }}
+                    >
+                      {detailFreshness.text}
+                    </Typography>
+                  )}
 
                   {(job.salaryMin || job.salaryMax) && (
                     <Box

@@ -56,6 +56,7 @@ export interface AshbyJob {
     descriptionHtml?: string;
     descriptionPlain?: string;
     publishedAt?: string | null;
+    updatedAt?: string | null;
     compensationTier?: {
         min: number;
         max: number;

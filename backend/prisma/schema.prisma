@@ -85,6 +85,8 @@ model Job {
 
   active     Boolean   @default(true)
   lastSeenAt DateTime?
+  lastUpdatedAt     DateTime?
+  lastUpdatedSource String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 

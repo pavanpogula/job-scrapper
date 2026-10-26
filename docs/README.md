@@ -36,7 +36,7 @@ job-scrapper/
 │   ├── README.md             # Frontend setup and local developer guide
 │   └── docs/                 # Frontend-specific UI and component guides
 ├── docs/                     # Central repository documentation
-│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0017)
+│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0018)
 │   ├── agents/               # Canonical agent context, roster, and role definitions
 │   ├── archive/              # Preserved historical planning documentation
 │   ├── monorepo-migration/   # Monorepo migration plan, progress, and backlog

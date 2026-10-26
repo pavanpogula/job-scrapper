@@ -61,6 +61,9 @@
       "location": "San Francisco",         // → Location.name, CSV
       "secondaryLocations": [ { "location": "NYC Office", "address": { "postalAddress": { ... } } } ],
       "publishedAt": "2025-07-11T22:30:33.442+00:00", // → CSV Published Date (YYYY-MM-DD via sanitizePublishedDate)
+      // Note on timestamps: Ashby exposes NO update timestamp on REST (only publishedAt), GraphQL (publishedDate only;
+      // requesting updatedAt is a schema error), or JSON-LD (datePosted only). Job last-updated time is detected
+      // deterministically by the scraper when job contentHash changes (ADR-0018).
       "isListed": true,
       "isRemote": false,                   // sanitizer also forces true when location contains "remote"
       "workplaceType": "Hybrid",           // OnSite | Remote | Hybrid

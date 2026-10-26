@@ -11,7 +11,7 @@ The TypeScript DTOs and query parameters are formally defined in [`src/api/types
 All API responses use standard JSON payloads and HTTP status codes.
 
 ### `GET /v1/jobs`
-Returns a paginated list of active and listed jobs matching filter criteria.
+Returns a paginated list of active and listed jobs matching filter criteria. Includes freshness fields `lastUpdatedAt` (ISO string or null) and `lastUpdatedSource` (`'ashby'`, `'detected'`, `'published'`, or `'firstSeen'`). Legacy rows where `lastUpdatedAt` is null automatically fall back to `publishedAt` with source `'published'`.
 
 - **Parameters:**
   - `page` (number, default: 1): Page number (1-based, max: 5000).
@@ -41,6 +41,8 @@ Returns a paginated list of active and listed jobs matching filter criteria.
         "salaryMax": 240000,
         "salaryCurrency": "USD",
         "publishedAt": "2026-10-20T10:00:00.000Z",
+        "lastUpdatedAt": "2026-10-20T10:00:00.000Z",
+        "lastUpdatedSource": "published",
         "company": {
           "name": "Acme Corp",
           "slug": "acme-corp",

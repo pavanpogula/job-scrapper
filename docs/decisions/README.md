@@ -28,6 +28,7 @@ Every ADR follows the template defined in [ADR-0000-template.md](./ADR-0000-temp
 | [ADR-0015](./ADR-0015-type-contract-and-fixtures.md) | Synchronized API contract fixtures and type parity between backend and frontend | Accepted | 2026-10-25 | O3, O4, O5, O6, O14, P8a |
 | [ADR-0016](./ADR-0016-manual-vercel-deploys.md) | Manual Vercel deploys from a GitHub Actions workflow | Accepted | 2026-10-26 | ADR-0014, P3a |
 | [ADR-0017](./ADR-0017-agent-branch-pushes.md) | Agents publish task branches through a guarded push script | Accepted | 2026-10-26 | ADR-0006, ADR-0016 |
+| [ADR-0018](./ADR-0018-job-last-updated-detection.md) | Job last-updated time is detected by content-hash change | Accepted | 2026-10-26 | BF-011, ADR-0004 |
 
 ---
 

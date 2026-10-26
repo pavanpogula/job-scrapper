@@ -179,6 +179,7 @@ sequenceDiagram
     S->>S: final flush of remaining pendingJobs
     loop each 100-job batch
         S->>DB: job.findMany(ashbyId in batch)
+        S->>S: resolveLastUpdated(prev, job, now) (detect change via contentHash; ADR-0018)
         S->>DB: job.createMany(new, skipDuplicates) + $transaction(upsert changed/inactive)
         Note over S,DB: on error → per-job upsert fallback, db_error event
         S->>R: pipeline SET job:{id}:hash EX 604800

@@ -19,6 +19,7 @@ import {
   Drawer,
   Badge,
   LinearProgress,
+  Tooltip,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
@@ -33,6 +34,7 @@ import { useGetJobsQuery, useGetFacetsQuery } from '../store/api/jobsApi';
 import { WorkplaceType, EmploymentType, JobsQueryParams } from '../types/api';
 import { useJobFilters } from '../hooks/useJobFilters';
 import { QueryState } from '../components/QueryState';
+import { formatJobFreshness } from '../lib/formatJobFreshness';
 
 export function formatCountryOption(code: string): string {
   try {
@@ -403,6 +405,7 @@ export const BrowsePage: React.FC = () => {
           <Paper sx={{ borderTop: 0, borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
             {data.data.map((job, idx) => {
               const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryInterval);
+              const freshness = formatJobFreshness(job);
               return (
                 <Box
                   key={job.id}
@@ -441,6 +444,33 @@ export const BrowsePage: React.FC = () => {
                         >
                           jobs.ashbyhq.com/{job.companySlug}
                         </Typography>
+                        {freshness && (
+                          <>
+                            <Typography variant="caption" color="text.secondary">·</Typography>
+                            {freshness.tooltip ? (
+                              <Tooltip title={freshness.tooltip} arrow>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  component="time"
+                                  dateTime={freshness.dateTime}
+                                  sx={{ cursor: 'help' }}
+                                >
+                                  {freshness.label}
+                                </Typography>
+                              </Tooltip>
+                            ) : (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                component="time"
+                                dateTime={freshness.dateTime}
+                              >
+                                {freshness.label}
+                              </Typography>
+                            )}
+                          </>
+                        )}
                       </Stack>
 
                       <Typography
