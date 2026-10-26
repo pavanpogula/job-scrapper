@@ -4,6 +4,9 @@
  * @tags API, Contract, Types, Validation, Normalization
  */
 
+import type { Prisma } from '@prisma/client';
+import type { JobListItemDTO, JobDetailDTO } from './types';
+
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
@@ -110,19 +113,28 @@ export const DETAIL_SELECT = {
   },
 } as const;
 
+export type JobWithListRelations = Prisma.JobGetPayload<{ select: typeof LIST_SELECT }>;
+export type JobWithDetailRelations = Prisma.JobGetPayload<{ select: typeof DETAIL_SELECT }>;
+
 /**
  * @summary Maps a database job row to the public API list item contract
  */
-export function toJobListItem(job: any) {
+export function toJobListItem(job: JobWithListRelations): JobListItemDTO {
+  const rawJob = job as unknown as Record<string, unknown>;
+  const companyName = job.company?.name ?? (typeof rawJob.companyName === 'string' ? rawJob.companyName : null);
+  const companyLogoUrl = job.company?.logoUrl ?? (typeof rawJob.companyLogoUrl === 'string' ? rawJob.companyLogoUrl : null);
+  const department = job.department?.name ?? (typeof rawJob.department === 'string' ? rawJob.department : null);
+  const location = job.location?.name ?? (typeof rawJob.location === 'string' ? rawJob.location : null);
+
   return {
     id: job.id,
     ashbyId: job.ashbyId,
     title: job.title,
     companySlug: job.companySlug,
-    companyName: job.company?.name ?? job.companyName ?? null,
-    companyLogoUrl: job.company?.logoUrl ?? job.companyLogoUrl ?? null,
-    department: job.department?.name ?? job.department ?? null,
-    location: job.location?.name ?? job.location ?? null,
+    companyName,
+    companyLogoUrl,
+    department,
+    location,
     country: job.country ?? null,
     region: job.region ?? null,
     city: job.city ?? null,
@@ -144,21 +156,42 @@ export function toJobListItem(job: any) {
 /**
  * @summary Maps a database job row to the public API detail contract
  */
-export function toJobDetail(job: any) {
-  const meta = (job.metadata as any) || {};
+export function toJobDetail(job: JobWithDetailRelations): JobDetailDTO {
+  const rawMetadata = job.metadata;
+  const meta: Record<string, unknown> =
+    typeof rawMetadata === 'object' && rawMetadata !== null && !Array.isArray(rawMetadata)
+      ? (rawMetadata as Record<string, unknown>)
+      : {};
 
   const secondaryLocations: string[] = Array.isArray(meta.secondaryLocations)
     ? meta.secondaryLocations
-        .map((loc: any) => (typeof loc === 'string' ? loc : loc?.location ?? loc?.locationName))
-        .filter((loc: any): loc is string => Boolean(loc))
+        .map((loc: unknown) => {
+          if (typeof loc === 'string') return loc;
+          if (typeof loc === 'object' && loc !== null) {
+            const l = loc as Record<string, unknown>;
+            if (typeof l.location === 'string') return l.location;
+            if (typeof l.locationName === 'string') return l.locationName;
+          }
+          return null;
+        })
+        .filter((loc: unknown): loc is string => Boolean(loc))
     : [];
+
+  const jobUrl =
+    typeof meta.jobUrl === 'string' && meta.jobUrl.length > 0
+      ? meta.jobUrl
+      : `https://jobs.ashbyhq.com/${job.companySlug}/${job.ashbyId}`;
+
+  const descriptionHtml = typeof meta.descriptionHtml === 'string' ? meta.descriptionHtml : '';
+  const descriptionPlain = typeof meta.descriptionPlain === 'string' ? meta.descriptionPlain : '';
+  const team = typeof meta.team === 'string' ? meta.team : null;
 
   return {
     id: job.id,
     ashbyId: job.ashbyId,
     title: job.title,
     applyUrl: job.applyUrl,
-    jobUrl: meta.jobUrl || `https://jobs.ashbyhq.com/${job.companySlug}/${job.ashbyId}`,
+    jobUrl,
     companySlug: job.companySlug,
     companyName: job.company?.name ?? null,
     companyLogoUrl: job.company?.logoUrl ?? null,
@@ -177,9 +210,9 @@ export function toJobDetail(job: any) {
     salaryInterval: job.salaryInterval ?? null,
     isListed: job.isListed !== false,
     active: Boolean(job.active),
-    descriptionHtml: meta.descriptionHtml || '',
-    descriptionPlain: meta.descriptionPlain || '',
-    team: meta.team || null,
+    descriptionHtml,
+    descriptionPlain,
+    team,
     secondaryLocations,
     companyJobCount: job.company?._count?.jobs ?? 0,
     company: job.company
@@ -202,7 +235,7 @@ export interface SingleFilter {
 /**
  * @summary Evaluates whether a job item matches a single filter criteria
  */
-export function matchesFilter(item: any, filter: SingleFilter): boolean {
+export function matchesFilter(item: JobListItemDTO, filter: SingleFilter): boolean {
   if (filter.workplaceType && item.workplaceType !== filter.workplaceType) {
     return false;
   }

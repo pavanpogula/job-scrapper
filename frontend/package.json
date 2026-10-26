@@ -9,10 +9,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "check": "npm run typecheck && npm run lint && node scripts/any-ratchet.mjs && npm run test && npm run build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
+    "ratchet:any": "node scripts/any-ratchet.mjs",
+    "ratchet:any:update": "node scripts/any-ratchet.mjs --update",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },

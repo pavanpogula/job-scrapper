@@ -13,12 +13,12 @@ description: "Protocol for API response shape changes and backend/frontend type 
 # API Contract Synchronization Protocol
 
 > [!NOTE]
-> `backend/src/api/types.ts` lands in Phase P7.
+> `backend/src/api/types.ts` is the single source of truth for backend API response and query DTOs.
 > The `contract:fixtures` script and `scripts/contract/sync-fixtures.mjs` land in Phase P8a (commands marked below are available from P8a).
 
 Any HTTP response-shape change MUST, in the same PR, do all of the following. A shape change means adding, removing or renaming a field, or changing its nullability, an enum, pagination, or the error body.
 
-1. Update `backend/src/api/types.ts` (landing in P7) and the mapper.
+1. Update `backend/src/api/types.ts` and the mapper.
 2. Run `npm --prefix backend run contract:fixtures` (available from P8a) and commit `backend/tests/fixtures/contract/*`.
 3. Run `node scripts/contract/sync-fixtures.mjs` (available from P8a) and commit the frontend copy.
 4. Update `frontend/src/types/api.ts` until `npm --prefix frontend run check` passes.

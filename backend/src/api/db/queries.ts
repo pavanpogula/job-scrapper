@@ -4,7 +4,7 @@
  * @tags Database, Queries, Prisma, API, Jobs
  */
 
-import { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import {
   LIST_SELECT,
   DETAIL_SELECT,
@@ -12,35 +12,33 @@ import {
   toJobDetail,
   isValidId,
 } from '../contract';
+import type {
+  JobQueryParams,
+  CompanyQueryParams,
+  JobsResponseDTO,
+  JobDetailDTO,
+  FacetsResponseDTO,
+  CompaniesResponseDTO,
+} from '../types';
 
-export interface JobQueryParams {
-  search?: string;
-  workplaceType?: string;
-  employmentType?: string;
-  country?: string;
-  isRemote?: string | boolean;
-  hasSalary?: string | boolean;
-  salaryMin?: string | number;
-  salaryInterval?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  page?: string | number;
-  pageSize?: string | number;
-}
+export type { JobQueryParams, CompanyQueryParams };
 
 /**
  * @summary Queries paginated jobs matching filters with deterministic sort tie-breakers
  */
-export async function queryJobs(prisma: PrismaClient, params: JobQueryParams = {}) {
+export async function queryJobs(
+  prisma: PrismaClient,
+  params: JobQueryParams = {}
+): Promise<JobsResponseDTO> {
   const pageNum = Math.max(1, Math.min(5000, parseInt(String(params.page || '1'), 10) || 1));
   const limit = Math.max(1, Math.min(100, parseInt(String(params.pageSize || '25'), 10) || 25));
   const skip = (pageNum - 1) * limit;
 
-  const where: any = {
+  const where: Prisma.JobWhereInput = {
     active: true,
     isListed: true,
   };
-  const andConditions: any[] = [];
+  const andConditions: Prisma.JobWhereInput[] = [];
 
   if (params.search && typeof params.search === 'string') {
     const s = params.search.trim().slice(0, 100);
@@ -99,8 +97,8 @@ export async function queryJobs(prisma: PrismaClient, params: JobQueryParams = {
   }
 
   // Determine sort order
-  const sortDirection: 'asc' | 'desc' = params.sortOrder === 'asc' ? 'asc' : 'desc';
-  let orderBy: any[];
+  const sortDirection: Prisma.SortOrder = params.sortOrder === 'asc' ? 'asc' : 'desc';
+  let orderBy: Prisma.JobOrderByWithRelationInput[];
 
   if (params.sortBy === 'company') {
     orderBy = [{ companySlug: sortDirection }, { id: 'asc' }];
@@ -144,7 +142,10 @@ export async function queryJobs(prisma: PrismaClient, params: JobQueryParams = {
 /**
  * @summary Queries a single job by id or ashbyId with company count
  */
-export async function queryJobDetail(prisma: PrismaClient, id: string) {
+export async function queryJobDetail(
+  prisma: PrismaClient,
+  id: string
+): Promise<JobDetailDTO | null> {
   if (!isValidId(id)) {
     return null;
   }
@@ -163,7 +164,7 @@ export async function queryJobDetail(prisma: PrismaClient, id: string) {
 /**
  * @summary Computes faceted counts for filters with deterministic ordering
  */
-export async function computeFacets(prisma: PrismaClient) {
+export async function computeFacets(prisma: PrismaClient): Promise<FacetsResponseDTO> {
   const [workplaceGroups, employmentGroups, countryGroups, deptRows, withSalaryCount, totalActive] =
     await Promise.all([
       prisma.job.groupBy({
@@ -190,7 +191,7 @@ export async function computeFacets(prisma: PrismaClient) {
           },
         },
         take: 50,
-      }).catch(() => []),
+      }).catch((): { name: string; _count: { jobs: number } }[] => []),
       prisma.job.count({
         where: {
           active: true,
@@ -207,8 +208,8 @@ export async function computeFacets(prisma: PrismaClient) {
     .slice(0, 20);
 
   const departments = (deptRows || [])
-    .map((d: any) => ({ value: d.name, count: d._count?.jobs ?? 0 }))
-    .sort((a: any, b: any) => b.count - a.count || a.value.localeCompare(b.value))
+    .map((d) => ({ value: d.name, count: d._count?.jobs ?? 0 }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
     .slice(0, 30);
 
   return {
@@ -228,13 +229,13 @@ export async function computeFacets(prisma: PrismaClient) {
  */
 export async function queryCompanies(
   prisma: PrismaClient,
-  params: { search?: string; page?: string | number; pageSize?: string | number } = {}
-) {
+  params: CompanyQueryParams = {}
+): Promise<CompaniesResponseDTO> {
   const pageNum = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '30'), 10) || 30));
   const skip = (pageNum - 1) * limit;
 
-  const where: any = { status: 'ACTIVE' };
+  const where: Prisma.CompanyWhereInput = { status: 'ACTIVE' };
 
   if (params.search && typeof params.search === 'string') {
     const s = params.search.trim().slice(0, 100);

@@ -28,10 +28,11 @@ export class DbGuard {
     }
 
     if (this.queue.length >= this.maxQueue) {
-      const error: any = new Error('Service temporarily overloaded. Please retry shortly.');
-      error.status = 503;
-      error.code = 'UPSTREAM_UNAVAILABLE';
-      error.retryAfterSeconds = 5;
+      const error = Object.assign(new Error('Service temporarily overloaded. Please retry shortly.'), {
+        status: 503,
+        code: 'UPSTREAM_UNAVAILABLE',
+        retryAfterSeconds: 5,
+      });
       throw error;
     }
 
@@ -81,7 +82,7 @@ export class DbGuard {
 
 export const dbGuard = new DbGuard();
 
-const inFlightQueries = new Map<string, Promise<any>>();
+const inFlightQueries = new Map<string, Promise<unknown>>();
 
 /**
  * @summary Single-flight helper ensuring only one in-flight DB query per cache key
