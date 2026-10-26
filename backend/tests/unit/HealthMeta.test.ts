@@ -128,15 +128,17 @@ describe('Health v2 and /v1/meta (P2-T07)', () => {
 
   describe('GET /v1/meta', () => {
     it('returns activeJobs, hiringCompanies, withSalary, lastScrapeAt, and generation from cache', async () => {
+      // Relative to now: the API marks cache data older than 36h as STALE (fixed dates expire).
+      const builtAt = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
       const gen = 'g20261024T120000Z-meta';
       await fakeRedis.set(KEY_CURRENT, gen);
-      await fakeRedis.set(KEY_LAST_SCRAPE_AT, '2026-10-24T12:00:00Z');
+      await fakeRedis.set(KEY_LAST_SCRAPE_AT, builtAt);
 
       const manifest = {
         schema: 1,
         gen,
-        builtAt: '2026-10-24T12:00:00Z',
-        scrapeFinishedAt: '2026-10-24T12:00:00Z',
+        builtAt,
+        scrapeFinishedAt: builtAt,
       };
       await fakeRedis.hset(genKey(gen), '__manifest', JSON.stringify(manifest));
 
@@ -144,7 +146,7 @@ describe('Health v2 and /v1/meta (P2-T07)', () => {
         activeJobs: 34100,
         hiringCompanies: 1720,
         withSalary: 14500,
-        lastScrapeAt: '2026-10-24T12:00:00Z',
+        lastScrapeAt: builtAt,
         generation: gen,
       };
       await fakeRedis.hset(genKey(gen), 'meta', zlib.gzipSync(Buffer.from(JSON.stringify(metaPayload))));

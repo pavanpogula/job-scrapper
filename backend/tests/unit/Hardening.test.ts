@@ -80,14 +80,16 @@ describe('API Hardening and CDN Caching (P2-T08)', () => {
 
   describe('Cache-Control headers', () => {
     it('sets public 300s s-maxage and Vercel-Cache-Tag for 200 list view', async () => {
+      // Relative to now: the API marks cache data older than 36h as STALE (fixed dates expire).
+      const builtAt = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
       const gen = 'g20261024T120000Z-cdn';
       await fakeRedis.set(KEY_CURRENT, gen);
-      await fakeRedis.set(KEY_LAST_SCRAPE_AT, '2026-10-24T12:00:00Z');
+      await fakeRedis.set(KEY_LAST_SCRAPE_AT, builtAt);
       const manifest = {
         schema: 1,
         gen,
-        builtAt: '2026-10-24T12:00:00Z',
-        scrapeFinishedAt: '2026-10-24T12:00:00Z',
+        builtAt,
+        scrapeFinishedAt: builtAt,
         views: { default: { total: 10, totalPages: 1, pagesCached: 1 } },
       };
       await fakeRedis.hset(genKey(gen), '__manifest', JSON.stringify(manifest));
