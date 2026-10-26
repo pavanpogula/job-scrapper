@@ -12,7 +12,8 @@
       "Bash(npm test*)",
       "Bash(git status*)",
       "Bash(git diff*)",
-      "Bash(git log*)"
+      "Bash(git log*)",
+      "Bash(../scripts/agents/push-branch.sh*)"
     ],
     "deny": [
       "Read(**/.env*)",
@@ -21,7 +22,8 @@
       "Read(**/output/**)",
       "Read(./backend/.env*)",
       "Read(./backend/apikeys/**)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(gh *)"
     ]
   }
 }

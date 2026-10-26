@@ -36,7 +36,7 @@ job-scrapper/
 │   ├── README.md             # Frontend setup and local developer guide
 │   └── docs/                 # Frontend-specific UI and component guides
 ├── docs/                     # Central repository documentation
-│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0016)
+│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0017)
 │   ├── agents/               # Canonical agent context, roster, and role definitions
 │   ├── archive/              # Preserved historical planning documentation
 │   ├── monorepo-migration/   # Monorepo migration plan, progress, and backlog
@@ -146,6 +146,7 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
 - [ADR-0014: Independent Vercel Projects and WAF Risk](./decisions/ADR-0014-vercel-split-and-waf.md)
 - [ADR-0015: Synchronized API Contract Fixtures](./decisions/ADR-0015-type-contract-and-fixtures.md)
 - [ADR-0016: Manual Vercel Deploys](./decisions/ADR-0016-manual-vercel-deploys.md)
+- [ADR-0017: Agents Publish Task Branches via a Guarded Push Script](./decisions/ADR-0017-agent-branch-pushes.md)
 
 ---
 

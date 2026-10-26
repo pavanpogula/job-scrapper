@@ -80,7 +80,7 @@ Every bugfix must be executed in this strict 9-step order:
 8. **Commit:**
    - Commit changes to branch `auto-fix/<runId>` using Conventional Commits with a bulleted body detailing symptom, root cause, code changes, tests, and documentation.
 9. **CI:**
-   - The deterministic CI step (via GitHub App token) pushes the branch and opens a Pull Request using the PR body template below. Agents never push directly or merge to `main`.
+   - The deterministic CI step (via GitHub App token) pushes the branch and opens a Pull Request using the PR body template below. The fixer agent itself never pushes; no agent ever pushes to or merges into `main` (interactive agents may publish other branches only via `scripts/agents/push-branch.sh`, ADR-0017).
 
 ---
 
@@ -133,6 +133,6 @@ Fixes automated scrape issue from run `<runId>`.
 7. **Company quarantine rules:** Quarantined to `NOT_FOUND` after 3 consecutive confirmed 404s, deactivating jobs; rechecked on Sundays. Fetch failures alone never deactivate; 7 consecutive failures trigger actionable `company_unreachable`.
 8. **Available REST endpoints:** `/health`, `/v1/jobs`, `/v1/jobs/:id`, `/v1/facets`, `/v1/companies`, `/v1/meta`. Page size ≤ 100. Emits `X-Cache` CDN and read-through telemetry headers.
 9. **Rate limiting architecture:** Vercel WAF rule of 120 req / 60 s / IP on `/v1/`; per-instance `dbGuard` limiting active queries to 3 with queue of 10 and 503 backpressure; client-side rate gate removed.
-10. **Forbidden targets & Git permissions:** Never read/stage/commit `.env`, `apikeys/`, or `output/` values. Agents work on feature/fix branches and commit only. Deterministic CI step pushes `auto-fix/*` and opens PRs. Never push to `main`, never merge.
+10. **Forbidden targets & Git permissions:** Never read/stage/commit `.env`, `apikeys/`, or `output/` values. The CI fixer works on `auto-fix/*` and commits only; the deterministic CI step pushes and opens PRs. Interactive agents may publish task branches only via `scripts/agents/push-branch.sh` (fast-forward, never `main`). Never push to `main`, never merge.
 11. **Actionable issues workflow:** Scrape triggers fixer job (`claude-code-action` on Claude Code). Reads `CHANGELOG.md`, `docs/decisions/`, doc 10 + 11 §6, doc 09, and error doc. Fixes at most 3 issues with tests, updates BF registry, ADR, CHANGELOG, and creates PR.
 12. **Mandatory verification gate:** `npx tsc --noEmit -p . && npx tsc --noEmit -p tsconfig.test.json && npm run lint && npm test && npm run verify:ui && npm run docs:generate`.

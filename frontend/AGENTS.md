@@ -29,7 +29,7 @@ Run from `frontend/`:
 
 ## Working Directory & Git Safety
 - **CWD:** All commands in this workspace run with `frontend/` as the current working directory.
-- **Git Safety:** Never push to `main` and never merge. Commit only on task/phase branches with Conventional Commits.
+- **Git Safety:** Commit only on task/phase branches with Conventional Commits. Agents never push to `main`/`master`, never merge, never force-push, push tags or delete branches, and never run raw `git push` or `gh`. Publish or update a task branch only with `../scripts/agents/push-branch.sh` (from `frontend/`) (fast-forward only; it prints the pull-request link). The owner reviews and merges.
 
 ## Key Documentation
 - Frontend UI routes & components: `frontend/docs/frontend-ui.md`

@@ -204,7 +204,7 @@ Agents coordinate work according to specialized domains defined in [`docs/agents
 | Payload schema and ordering are byte-identical whether served from cache or Postgres. | API + publisher | `src/api/contract.ts`, `tests/unit/ReadThrough.test.ts` |
 | `salaryInterval` is ignored unless `salaryMin` or `salaryMax` is specified. | API + UI | `tests/unit/ApiServer.test.ts` |
 | List queries never select `metadata`. | API / queries | `src/api/db/queries.ts` |
-| Agents never push to `main` and never merge. Only CI deterministic steps push feature/fix branches. | fixer workflow | `scripts/ci/check-fixer-scope.sh` |
+| Agents never push to `main` and never merge. The CI fixer never pushes (a deterministic CI step pushes `auto-fix/*`); interactive agents publish other branches only via `scripts/agents/push-branch.sh`. | fixer workflow, agents | `scripts/ci/check-fixer-scope.sh`, `scripts/repo-tests/agent-push-guard.test.mjs` |
 | Agent instructions have one canonical copy; tool shells point to it. | docs-release-keeper | `tests/unit/AgentShells.test.ts` |
 
 ---

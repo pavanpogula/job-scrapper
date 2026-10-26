@@ -12,7 +12,7 @@ The **Ashby Job Scraper** is a batch TypeScript CLI scraper feeding Neon Postgre
 
 ## Hard Rules
 - **Secrets & Outputs:** Never read, print, stage, or commit `.env`, `apikeys/`, or `output/` values.
-- **Git Safety:** Agents never push to `main` and never merge. Work on task/phase branches only.
+- **Git Safety:** Agents never push to `main`/`master`, never merge, never force-push, push tags or delete branches, and never run raw `git push` or `gh`. Publish or update a task branch only with `scripts/agents/push-branch.sh` (fast-forward only; it prints the pull-request link). The owner reviews and merges.
 - **Mandatory Checks:** Every change must pass `scripts/check-all.sh --no-install`.
 - **Explorer Sync:** Every change must run `npm --prefix backend run docs:generate` to regenerate `backend/docs/project-explorer.html`.
 - **JSDoc Headers:** Every new file and function gets a JSDoc `@file` / `@summary` / `@tags` block.
