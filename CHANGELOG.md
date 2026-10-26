@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **fix(tests)**: `Hardening.test.ts` and `HealthMeta.test.ts` seeded cache data with a fixed `2026-10-24T12:00:00Z` timestamp; the API marks cache data older than 36 h as `STALE`, so both tests started failing on 2026-10-26 00:00 UTC and broke CI for every branch. They now build the timestamp relative to the current time (2 h ago).
+
 - **feat(agents)**: agents can publish and update task branches with `scripts/agents/push-branch.sh` (new branch or fast-forward update, also `local:remote`; never `main`/`master`, force, tags, deletes or mirror; refuses dirty trees and diffs touching `.env*`/`apikeys/`/`output/`/`.vercel/`; prints the PR link). Claude settings (root and nested) allow only that script to push, keep raw `git push` denied and now deny `gh`. Rules regenerated from `docs/agents/rules/secrets-and-git.md`. Guarded by `scripts/repo-tests/agent-push-guard.test.mjs` (real pushes to a local bare remote). ADR-0017; the `review-run` skill, `scraper-bugfixer` role, self-healing loop, architecture invariants and branch-protection runbook now describe the new flow.
 
 - **fix(agents)**: Claude allow-lists no longer auto-approve every backend npm script. Only `typecheck`, `typecheck:test`, `lint`, `lint:fix`, `build`, `docs:generate`, `docs:check` and `check:all` run without a prompt; `db:clean`, `scrape*`, `seed`, `cache:publish` and the rest ask first because they act on the production database.
