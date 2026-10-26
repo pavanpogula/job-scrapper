@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * @file workflows.test.mjs
- * @summary Validates GitHub Actions workflow structures (toggles, working-directories, script paths, fixer defaults).
+ * @summary Validates GitHub Actions workflow structures (toggles, working-directories, script paths, fixer defaults, manual-only deploys).
  * @tags repo-tests, workflows, ci, validation
  */
 
@@ -83,4 +83,39 @@ test('workflows structure, paths, and fixer constraints adhere to invariants', (
       }
     }
   }
+});
+
+test('deploy.yml is manual-only, verifies before deploying, and keeps Vercel secrets in deploy jobs', () => {
+  const root = getRepoRoot();
+  const deployPath = path.join(root, '.github/workflows/deploy.yml');
+  assert.ok(fs.existsSync(deployPath), 'deploy.yml must exist (Vercel git deploys are disabled)');
+  const raw = fs.readFileSync(deployPath, 'utf-8');
+  const wf = parseYaml(raw);
+
+  // Manual only: no push / pull_request / schedule trigger may ever deploy.
+  assert.deepEqual(Object.keys(wf.on || {}), ['workflow_dispatch'], 'deploy.yml must trigger on workflow_dispatch only');
+
+  // Vercel CLI version is pinned to an exact semver.
+  assert.match(String(wf.env?.VERCEL_CLI_VERSION), /^\d+\.\d+\.\d+$/, 'VERCEL_CLI_VERSION must be an exact version');
+  assert.doesNotMatch(raw, /vercel@latest|npx (--yes )?vercel(\s|$)/, 'every vercel invocation must use the pinned version');
+
+  const jobs = wf.jobs || {};
+  for (const name of ['verify', 'deploy-backend', 'deploy-frontend']) {
+    assert.ok(jobs[name], `deploy.yml must define job ${name}`);
+  }
+
+  // Nothing deploys without a green verify; frontend waits for the backend (it proxies to it).
+  assert.deepEqual(jobs['deploy-backend'].needs, ['verify']);
+  assert.deepEqual(jobs['deploy-frontend'].needs, ['verify', 'deploy-backend']);
+  assert.match(String(jobs['deploy-frontend'].if), /needs\.verify\.result == 'success'/);
+  assert.match(String(jobs['deploy-frontend'].if), /needs\.deploy-backend\.result == 'success'/);
+
+  // Secrets only in the deploy jobs, which run in the vercel-production environment.
+  assert.doesNotMatch(JSON.stringify(jobs.verify), /secrets\./, 'verify job must not see any secret');
+  for (const name of ['deploy-backend', 'deploy-frontend']) {
+    assert.equal(jobs[name].environment, 'vercel-production', `${name} must run in the vercel-production environment`);
+  }
+  assert.match(String(jobs['deploy-backend'].env?.VERCEL_PROJECT_ID), /VERCEL_PROJECT_ID_BACKEND/);
+  assert.match(String(jobs['deploy-frontend'].env?.VERCEL_PROJECT_ID), /VERCEL_PROJECT_ID_FRONTEND/);
+  assert.match(JSON.stringify(jobs.verify.steps), /scripts\/check-all\.sh/, 'verify must run scripts/check-all.sh');
 });

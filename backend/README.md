@@ -1,6 +1,6 @@
 # Ashby Job Scraper — Backend
 
-The backend workspace contains the batch CLI scrapers, Prisma ORM models, Upstash Redis cache-first read-through layer, and Express 5 REST API server deployed as a Vercel serverless function (`api/index.ts`).
+The backend workspace contains the batch CLI scrapers, Prisma ORM models, Upstash Redis cache-first read-through layer, and Express 5 REST API server deployed as a Vercel serverless function (`api/index.ts`). Deploys are manual: run the **Deploy to Vercel** workflow (`.github/workflows/deploy.yml`, see `docs/deployment-and-operations.md` §3.3); pushes and merges do not deploy.
 
 ---
 

@@ -30,8 +30,9 @@ The matrix below documents where every secret is configured and consumed:
 | `FIXER_APP_PRIVATE_KEY` | — | ✅ | — | — | GitHub App private key for authenticating fix PR pushes. |
 | `CORS_ORIGINS` | — | — | ✅ | Optional | Comma-separated list of allowed origins (e.g. `https://job-scrapper-ui.vercel.app,http://localhost:3000`). |
 | `HEALTH_TOKEN` | — | — | ✅ | Optional | Bearer secret enabling deep database ping via `/health?deep=1`. |
-| `VERCEL_TOKEN` | Retired | — | — | — | Unused; removed from scrape environment in P3a. |
-| `VERCEL_PROJECT_ID` | Retired | — | — | — | Unused; removed from scrape environment in P3a. |
+| `VERCEL_TOKEN` | — | — | — | — | Vercel access token used **only** by `deploy.yml`; stored in the GitHub `vercel-production` environment (never in the scraper env). |
+| `VERCEL_ORG_ID` | — | — | — | — | Vercel team ID (`boolean6`) for `deploy.yml`; `vercel-production` environment. |
+| `VERCEL_PROJECT_ID_FRONTEND` / `VERCEL_PROJECT_ID_BACKEND` | — | — | — | — | Project IDs of `job-scrapper-ui` / `job-scrapper-api` for `deploy.yml`; `vercel-production` environment. |
 | `GOOGLE_DRIVE_FOLDER_ID`| — | — | — | Optional | Folder ID for optional cloud CSV uploads (`scrape:csv -- --upload-cloud`). |
 
 ---
@@ -60,36 +61,50 @@ The matrix below documents where every secret is configured and consumed:
 
 ---
 
-## 4. Vercel & Edge Deployment (`backend/vercel.json`)
+### 3.3 Manual Deploys (`.github/workflows/deploy.yml`)
+Vercel's own git deploys are **off** (`"git": { "deploymentEnabled": false }` in `frontend/vercel.json` and
+`backend/vercel.json`), so pushes to `main` or any branch never change the live site. Deploys happen only when
+the owner runs this workflow (ADR-0016).
 
-```json
-{
-  "version": 2,
-  "regions": ["iad1"],
-  "buildCommand": "npm run build",
-  "outputDirectory": "public",
-  "functions": {
-    "backend/api/index.ts": {
-      "maxDuration": 15
-    }
-  },
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https:;"
-        },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
-      ]
-    }
-  ]
-}
-```
+- **Trigger:** GitHub → Actions → **Deploy to Vercel** → Run workflow. Inputs: `app` (`both` / `frontend` /
+  `backend`), `target` (`production` / `preview`), `ref` (branch, tag or commit SHA; default `main`).
+- **Jobs:** `verify` runs `scripts/check-all.sh` (install, builds, typecheck, lint, all tests) on `ref`. Only if it
+  is green, `deploy-backend` then `deploy-frontend` run `vercel pull` → `vercel build` → `vercel deploy --prebuilt`
+  with the pinned Vercel CLI, from the repo root (each project's Root Directory is a Vercel setting). The backend
+  goes first because the frontend proxies `/v1/*` and `/health` to it.
+- **After a production deploy** each job runs `scripts/smoke/smoke.mjs` against
+  `https://job-scrapper-api-eight.vercel.app` (backend) and `https://job-scrapper-ui.vercel.app` (frontend).
+  Preview URLs sit behind Vercel login, so preview runs only print the URL (open it in your browser). A frontend
+  preview still proxies to the **production** backend domain.
+- **Secrets:** GitHub environment `vercel-production` (see §2). Optionally add the owner as a required reviewer
+  there to get an approval click before every deploy.
+
+#### How to deploy
+1. Merge your work to `main` (CI must be green).
+2. Optional: run with `target=preview` and check the printed URL in your browser.
+3. Run with `app=both`, `target=production`. Both smoke steps must print `PASSED`.
+
+#### How to roll back
+- **Fastest:** Vercel dashboard → project → Deployments → previous deployment → **Instant Rollback**
+  (Hobby: only the immediately previous deployment) or **Promote to Production**.
+- **Any commit:** run the workflow again with `ref=<older commit SHA>`.
+- **Turn git deploys back on:** revert the PR that added `deploymentEnabled: false`.
+
+---
+
+## 4. Vercel & Edge Deployment (`frontend/vercel.json`, `backend/vercel.json`)
+
+Two Vercel projects (ADR-0014), both with git deploys disabled (deploys run via §3.3):
+
+- **`job-scrapper-api`** (Root Directory `backend`, `https://job-scrapper-api-eight.vercel.app`): region `iad1`,
+  `buildCommand` = `npm run build` (Prisma generate), serverless function `api/index.ts` (`maxDuration` 15),
+  rewrites `/v1/(.*)` and `/health` → `/api/index`, headers `X-Frame-Options`, `Referrer-Policy`,
+  `X-Content-Type-Options`.
+- **`job-scrapper-ui`** (Root Directory `frontend`, `https://job-scrapper-ui.vercel.app`): Vite build to `dist`,
+  rewrites `/v1/*` and `/health` to the backend domain and everything else to `/index.html`, headers
+  `Content-Security-Policy`, `X-Frame-Options`, `Referrer-Policy`, `X-Content-Type-Options`, `Permissions-Policy`.
+
+The two `vercel.json` files are the source of truth; `scripts/repo-tests/vercel-config.test.mjs` guards them.
 
 ### Edge Caching & Purging
 - **Lists / Facets / Meta:** `s-maxage=300, stale-while-revalidate=3600` with `Vercel-Cache-Tag: jobs-v1`.

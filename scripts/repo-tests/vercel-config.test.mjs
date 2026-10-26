@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * @file vercel-config.test.mjs
- * @summary Validates vercel.json configuration integrity (rewrites order, headers, functions, output directory) across layouts.
+ * @summary Validates vercel.json configuration integrity (rewrites order, headers, functions, output directory, git deploys disabled) across layouts.
  * @tags repo-tests, vercel, configuration
  */
 
@@ -113,6 +113,17 @@ test('every vercel.json file is valid, ordered properly, and matches project str
           `${file}: outputDirectory must match vite build.outDir`
         );
       }
+    }
+
+    // 5. Deploys are manual (.github/workflows/deploy.yml): no git-triggered deployments, no ignoreCommand
+    //    (ignoreCommand also cancelled manual redeploys and caused the P3a outage).
+    if (isBackendLayout) {
+      assert.equal(
+        config.git?.deploymentEnabled,
+        false,
+        `${file}: git.deploymentEnabled must be false (deploys run only via the manual deploy workflow)`
+      );
+      assert.equal(config.ignoreCommand, undefined, `${file}: ignoreCommand must not be set`);
     }
   }
 });
