@@ -6,6 +6,8 @@ The **Ashby Job Scraper REST API** is an Express 5 application deployed on Verce
 
 ## 1. Endpoints & Contract
 
+The TypeScript DTOs and query parameters are formally defined in [`src/api/types.ts`](file:///Users/pavanreddy/Documents/anti-gravity/job-scrapper/backend/src/api/types.ts), providing compile-time type safety for all response schemas, request query parameters, and error envelopes.
+
 All API responses use standard JSON payloads and HTTP status codes.
 
 ### `GET /v1/jobs`

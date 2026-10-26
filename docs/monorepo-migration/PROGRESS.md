@@ -207,11 +207,11 @@
 - **Rollback command:** `git revert --no-edit d53bc12`
 - **Rollback chain:** `revert P6a` -> `revert P5 range (ee71be1^..93981d1)` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
-### [ ] P6b — Nested agent files + hooks
+### [x] P6b — Nested agent files + hooks (merged)
 - **Branch:** `plan/mono-p6b-agents-nested-hooks`
-- **PR:** `pending`
+- **PR:** #14
 - **Merge method:** `squash`
-- **Commit SHAs:** `pending`
+- **Commit SHAs (first..last):** `242840c..873664d`
 - **Owner decisions used:** None
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 47 repo-level tests).
@@ -222,19 +222,25 @@
   - Monorepo Safety: `git diff --exit-code main -- '**/__snapshots__/**'` verified with 0 diff.
   - Backend docs sync: `npm --prefix backend run docs:check` passed with 0 diff on `project-explorer.html`.
 - **Owner actions:** None
-- **Rollback command:** `git revert <squash-sha>`
+- **Rollback command:** `git revert --no-edit 873664d 242840c`
 - **Rollback chain:** `revert P6b` -> `revert P6a (d53bc12)` -> `revert P5 range (ee71be1^..93981d1)` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
 ### [ ] P7 — Backend types + strictness
 - **Branch:** `plan/mono-p7-types-backend`
 - **PR:** `pending`
 - **Merge method:** `squash`
-- **Commit SHAs:** `pending`
-- **Owner decisions used:** None
-- **Verification evidence:** `pending`
+- **Commit SHAs:** `a074fad`
+- **Owner decisions used:** All default
+- **Verification evidence:**
+  - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 59 repo-level tests).
+  - `node scripts/migration/compare-results.mjs --phase P7`: All metrics match or improve upon baseline (Jest 269 passed [0 missing], Vitest 14 passed, TS root=0 tests=0 errors, ESLint 0 errors / 1 warning, production smoke 11/11 passed).
+  - Snapshot Invariant: `git diff --exit-code origin/main -- 'backend/tests/**/__snapshots__/**'` verified with 0 diff.
+  - Type Safety: Added `backend/src/api/types.ts` defining all public DTOs, query parameters, and HttpError guards. Added `backend/tests/unit/ApiTypes.test.ts` with bidirectional `Equal<>` checks run by `typecheck:test`.
+  - Ratchet System: Added `backend/scripts/any-ratchet.mjs` and `frontend/scripts/any-ratchet.mjs` enforcing non-increasing `no-explicit-any` counts against `.any-baseline.json`. ESLint rule `@typescript-eslint/no-explicit-any: error` active on `backend/src/api/**` and `backend/api/**` with 0 errors.
+  - Documentation & Rules: Updated canonical `docs/agents/rules/api-contract-sync.md`, synchronized agent shells via `sync-shells.mjs`, documented `types.ts` in `backend/docs/api.md`, and regenerated `backend/docs/project-explorer.html`.
 - **Owner actions:** None
 - **Rollback command:** `git revert <squash-sha>`
-- **Rollback chain:** `revert P7` -> ...
+- **Rollback chain:** `revert P7` -> `revert P6b (873664d, 242840c)` -> `revert P6a (d53bc12)` -> `revert P5 range (ee71be1^..93981d1)` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
 ### [ ] P8a — Contract fixtures + frontend alignment
 - **Branch:** `plan/mono-p8a-contract-parity`

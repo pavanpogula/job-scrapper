@@ -129,7 +129,7 @@ function parseJSDoc(content: string): { fileSummary: string; fileTags: string[];
         // - async function funcName(
         // - funcName(
         const funcMatch = afterBlock.match(
-            /^\s*(?:export\s+)?(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(?:async\s+)?(?:function\s+)?(\w+)\s*\(/
+            /^\s*(?:export\s+)?(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(?:async\s+)?(?:function\s+)?(\w+)\s*(?:<[^>]+>)?\s*\(/
         );
 
         if (!funcMatch) continue;
@@ -220,7 +220,7 @@ function parsePrismaSchema(content: string): { fileSummary: string; fileTags: st
 
 function generateHTML(docs: FileDoc[]): string {
     const filesJSON = JSON.stringify(docs.reduce((acc, f) => {
-        const key = f.path.replace(/[\/\.]/g, '_');
+        const key = f.path.replace(/[/.]/g, '_');
         acc[key] = {
             name: f.name,
             path: f.path,
@@ -238,12 +238,12 @@ function generateHTML(docs: FileDoc[]): string {
             }))
         };
         return acc;
-    }, {} as Record<string, any>), null, 2);
+    }, {} as Record<string, unknown>), null, 2);
 
     // Generate tree items HTML
     const treeItems = generateTreeHTML(docs);
     const overviewCards = docs.slice(0, 6).map(f => {
-        const key = f.path.replace(/[\/\.]/g, '_');
+        const key = f.path.replace(/[/.]/g, '_');
         return `<div class="overview-card" onclick="showFile('${key}')">
             <div class="card-icon ${f.iconClass}">${f.icon}</div>
             <h4>${f.name}</h4>
@@ -416,9 +416,17 @@ function generateHTML(docs: FileDoc[]): string {
 </html>`;
 }
 
+interface TreeNode {
+    __isFolder?: boolean;
+    __isFile?: boolean;
+    __doc?: FileDoc;
+    __children?: Record<string, TreeNode>;
+    [key: string]: unknown;
+}
+
 function generateTreeHTML(docs: FileDoc[]): string {
     // Build folder structure
-    const tree: Record<string, any> = {};
+    const tree: Record<string, TreeNode> = {};
 
     for (const doc of docs) {
         const parts = doc.path.split('/');
@@ -427,14 +435,15 @@ function generateTreeHTML(docs: FileDoc[]): string {
         for (let i = 0; i < parts.length - 1; i++) {
             const folder = parts[i];
             if (!current[folder]) current[folder] = { __isFolder: true, __children: {} };
-            current = current[folder].__children;
+            const children = current[folder].__children ??= {};
+            current = children;
         }
 
         const fileName = parts[parts.length - 1];
         current[fileName] = { __isFile: true, __doc: doc };
     }
 
-    function renderTree(node: Record<string, any>, depth: number = 0): string {
+    function renderTree(node: Record<string, TreeNode>, depth: number = 0): string {
         let html = '';
         const entries = Object.entries(node).sort((a, b) => {
             // Folders first
@@ -454,11 +463,11 @@ function generateTreeHTML(docs: FileDoc[]): string {
                         <span class="material-icons-round folder-icon">folder</span>
                         <span>${name}</span>
                     </div>
-                    <ul>${renderTree(value.__children, depth + 1)}</ul>
+                    <ul>${renderTree(value.__children || {}, depth + 1)}</ul>
                 </li>`;
             } else if (value.__isFile) {
                 const doc = value.__doc as FileDoc;
-                const key = doc.path.replace(/[\/\.]/g, '_');
+                const key = doc.path.replace(/[/.]/g, '_');
                 const isCore = doc.path.includes('Scraper.ts');
                 html += `<li>
                     <div class="tree-item file" onclick="showFile('${key}')">

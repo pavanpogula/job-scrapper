@@ -75,6 +75,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm --prefix frontend ci
 
+      - name: Enforce any-ratchet
+        run: npm --prefix frontend run ratchet:any
+
       - name: Check frontend (typecheck, lint, test, build)
         run: npm --prefix frontend run check
 

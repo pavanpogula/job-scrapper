@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(types)**: Phase P7 backend types and strictness.
+  - Added `backend/src/api/types.ts` defining all public API DTOs (`JobListItemDTO`, `CompanyDetailDTO`, `JobDetailDTO`, `CompanySummaryDTO`, `CompaniesResponseDTO`, `PaginationMetaDTO`, `JobsResponseDTO`, `FacetCountDTO`, `FacetsResponseDTO`, `MetaResponseDTO`, `HealthResponseDTO`, `ErrorResponseDTO`) and parsed query parameter interfaces (`JobQueryParams`, `CompanyQueryParams`).
+  - Typed API layer: mappers in `backend/src/api/contract.ts` use `Prisma.JobGetPayload` without `Prisma.validator`, typed `queries.ts` returns, generic `ReadThroughService` (`serveView<T>`, `serveDetail<T>`), typed Server route handlers, typed query parameter parsing (`parseJobQueryParams`, `parseCompanyQueryParams`), and `isHttpError(e: unknown)` type guard replacing `catch (err: any)`.
+  - Type-level verification suite: added `backend/tests/unit/ApiTypes.test.ts` asserting bidirectional type equality (`Equal<A, B>`) and runtime query parsing/error guards run via `typecheck:test` and Jest.
+  - Ratchet system: implemented `backend/scripts/any-ratchet.mjs` and `frontend/scripts/any-ratchet.mjs` comparing ESLint `no-explicit-any` counts against `.any-baseline.json`. Added `--update` mode (which may only lower counts). Wired into `backend check:all`, `frontend check`, `.github/workflows/backend-ci.yml`, and `.github/workflows/frontend-ci.yml`.
+  - ESLint rules: set `@typescript-eslint/no-explicit-any: error` for `backend/src/api/**` and `backend/api/**` (0 errors), and added `tests/` and `scripts/` to backend lint with ratcheted baseline.
+  - Synchronized `docs/agents/rules/api-contract-sync.md` to note `types.ts` is current and ran `sync-shells.mjs`. Documented `types.ts` in `backend/docs/api.md`.
+  - Preserved golden snapshots with zero diff against `origin/main`.
+
 - **fix(tests)**: `Hardening.test.ts` and `HealthMeta.test.ts` seeded cache data with a fixed `2026-10-24T12:00:00Z` timestamp; the API marks cache data older than 36 h as `STALE`, so both tests started failing on 2026-10-26 00:00 UTC and broke CI for every branch. They now build the timestamp relative to the current time (2 h ago).
 
 - **feat(deploy)**: deploys are now manual. Both `vercel.json` files set `git.deploymentEnabled: false` (pushes to `main` or any branch no longer deploy) and drop `ignoreCommand`. New `.github/workflows/deploy.yml` (manual dispatch: `app`, `target`, `ref`) runs `scripts/check-all.sh`, then deploys backend before frontend with the pinned Vercel CLI and smoke-tests production. ADR-0016; runbook in `docs/deployment-and-operations.md` §3.3. Guarded by `vercel-config` and `workflows` repo tests. Agent context, `ci-and-workflows` and `api-contract-sync` rules, the `api-cache` role, root/backend/frontend `AGENTS.md`, both app READMEs and ADR-0014 now state that deploys are manual.

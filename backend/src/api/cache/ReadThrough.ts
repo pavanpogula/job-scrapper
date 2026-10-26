@@ -16,8 +16,16 @@ import {
 } from '../../lib/cache/keys';
 import { dbGuard, singleFlight } from '../middleware/dbGuard';
 
+export type RedisClientLike = {
+  status?: string;
+  connect?: () => Promise<unknown>;
+  get(key: string): Promise<string | null>;
+  hget(key: string, field: string): Promise<string | Buffer | null>;
+  hgetBuffer?(key: string, field: string): Promise<Buffer | null>;
+};
+
 interface LruEntry {
-  data: any;
+  data: unknown;
   expiresAt: number;
 }
 
@@ -25,6 +33,28 @@ interface PointerCache {
   gen: string | null;
   lastScrapeAt: string | null;
   expiresAt: number;
+}
+
+interface ViewManifest {
+  total: number;
+  totalPages: number;
+  pagesCached: number;
+  filter?: Record<string, unknown>;
+}
+
+interface ManifestData {
+  builtAt?: string;
+  scrapeFinishedAt?: string;
+  mode?: string;
+  views?: Record<string, ViewManifest>;
+  companies?: {
+    total: number;
+    totalPages: number;
+    pagesCached: number;
+  };
+  details?: {
+    count: number;
+  };
 }
 
 /**
@@ -35,8 +65,8 @@ export class ReadThroughService {
   private connectPromise: Promise<void> | null = null;
   private lru = new Map<string, LruEntry>();
   private pointerCache: PointerCache | null = null;
-  private manifestCache = new Map<string, any>();
-  private customRedisClient: any = null;
+  private manifestCache = new Map<string, ManifestData>();
+  private customRedisClient: RedisClientLike | null = null;
 
   constructor(breaker?: CircuitBreaker) {
     this.breaker = breaker || new CircuitBreaker();
@@ -52,7 +82,7 @@ export class ReadThroughService {
   /**
    * Injects a custom Redis client for testing.
    */
-  public setRedisClient(client: any): void {
+  public setRedisClient(client: RedisClientLike | null): void {
     this.customRedisClient = client;
   }
 
@@ -69,29 +99,31 @@ export class ReadThroughService {
   /**
    * Resolves the active Redis client.
    */
-  private getClient(): any {
+  private getClient(): RedisClientLike | null {
     if (this.customRedisClient) return this.customRedisClient;
-    return getRedisClient('api');
+    return getRedisClient('api') as unknown as RedisClientLike | null;
   }
 
   /**
    * Resolves the API Redis client and connects it first when it is idle. The API client is lazyConnect with
    * enableOfflineQueue:false, so a command on an unconnected client is rejected. Returns null if connecting fails.
    */
-  private async getReadyClient(): Promise<any> {
+  private async getReadyClient(): Promise<RedisClientLike | null> {
     const redis = this.getClient();
     if (!redis) return null;
     const idle = redis.status === 'wait' || redis.status === 'end';
     if (!idle && !this.connectPromise) return redis;
     try {
       if (!this.connectPromise) {
-        this.connectPromise = Promise.resolve(redis.connect()).finally(() => {
-          this.connectPromise = null;
-        });
+        this.connectPromise = (typeof redis.connect === 'function' ? Promise.resolve(redis.connect()) : Promise.resolve())
+          .then(() => {})
+          .finally(() => {
+            this.connectPromise = null;
+          });
       }
       await this.connectPromise;
       return redis;
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.breaker.recordFailure(err);
       return null;
     }
@@ -128,7 +160,7 @@ export class ReadThroughService {
       };
 
       return { gen: gen || null, lastScrapeAt: lastScrapeAt || null };
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.breaker.recordFailure(err);
       return { gen: null, lastScrapeAt: null };
     }
@@ -137,9 +169,9 @@ export class ReadThroughService {
   /**
    * Fetches generation manifest from Redis or in-process cache.
    */
-  private async getManifest(gen: string): Promise<any | null> {
+  private async getManifest(gen: string): Promise<ManifestData | null> {
     if (this.manifestCache.has(gen)) {
-      return this.manifestCache.get(gen);
+      return this.manifestCache.get(gen) || null;
     }
 
     const redis = await this.getReadyClient();
@@ -148,10 +180,11 @@ export class ReadThroughService {
     try {
       const raw = await redis.hget(genKey(gen), '__manifest');
       if (!raw) return null;
-      const manifest = JSON.parse(raw);
+      const rawStr = typeof raw === 'string' ? raw : raw.toString('utf8');
+      const manifest: ManifestData = JSON.parse(rawStr);
       this.manifestCache.set(gen, manifest);
       return manifest;
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.breaker.recordFailure(err);
       return null;
     }
@@ -160,13 +193,13 @@ export class ReadThroughService {
   /**
    * @summary Serves a list, facets, companies, or meta query through cache or DB fallback
    */
-  public async serveView(
+  public async serveView<T>(
     key: string,
     isCacheable: boolean,
     res: Response,
-    fetchDb: () => Promise<any>,
+    fetchDb: () => Promise<T>,
     viewContext?: { viewName?: string; page?: number; totalItems?: number }
-  ): Promise<any> {
+  ): Promise<T> {
 
     // 1. Uncacheable views bypass cache directly
     if (!isCacheable) {
@@ -210,7 +243,7 @@ export class ReadThroughService {
       return result;
     }
 
-    // 2. Fetch generation pointer
+    // 2. Discover Pointer
     const { gen, lastScrapeAt } = await this.getPointer();
     if (!gen) {
       res.setHeader('X-Cache', 'BYPASS');
@@ -223,11 +256,8 @@ export class ReadThroughService {
     }
 
     res.setHeader('X-Cache-Generation', gen);
-    if (lastScrapeAt) {
-      res.setHeader('X-Data-Updated-At', lastScrapeAt);
-    }
 
-    // 3. Look up Manifest
+    // 3. Manifest Check
     const manifest = await this.getManifest(gen);
     if (!manifest) {
       res.setHeader('X-Cache', 'BYPASS');
@@ -277,7 +307,7 @@ export class ReadThroughService {
               hasNext: false,
               hasPrev: requestedPage > 1,
             },
-          };
+          } as unknown as T;
         }
 
         if (requestedPage > viewManifest.pagesCached) {
@@ -302,7 +332,7 @@ export class ReadThroughService {
             page: requestedPage,
             pageSize: 30,
             totalPages: manifest.companies.totalPages,
-          };
+          } as unknown as T;
         }
 
         if (requestedPage > manifest.companies.pagesCached) {
@@ -323,7 +353,7 @@ export class ReadThroughService {
     if (lruCached && lruCached.expiresAt > Date.now()) {
       res.setHeader('X-Cache', 'HIT');
       res.setHeader('Server-Timing', `redis;dur=0`);
-      return lruCached.data;
+      return lruCached.data as T;
     }
 
     // 6. Redis HGET
@@ -335,13 +365,14 @@ export class ReadThroughService {
         rawBuffer = await redis.hgetBuffer(genKey(gen), key);
       } else {
         const val = await redis.hget(genKey(gen), key);
-        rawBuffer = val ? Buffer.isBuffer(val) ? val : Buffer.from(val, 'utf8') : null;
+        rawBuffer = val ? (Buffer.isBuffer(val) ? val : Buffer.from(val, 'utf8')) : null;
       }
       this.breaker.recordSuccess();
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.breaker.recordFailure(err);
       res.setHeader('X-Cache', 'BYPASS');
-      res.setHeader('X-Cache-Reason', err.message?.includes('timeout') ? 'timeout' : 'redis_error');
+      const msg = err instanceof Error ? err.message : String(err);
+      res.setHeader('X-Cache-Reason', msg.includes('timeout') ? 'timeout' : 'redis_error');
       const startDb = Date.now();
       const result = await dbGuard.run(() => singleFlight(key, fetchDb));
       const dbDur = Date.now() - startDb;
@@ -362,7 +393,7 @@ export class ReadThroughService {
     }
 
     // Gunzip and decode
-    let parsed: any;
+    let parsed: unknown;
     try {
       const gunzipped = zlib.gunzipSync(rawBuffer).toString('utf8');
       parsed = JSON.parse(gunzipped);
@@ -395,17 +426,17 @@ export class ReadThroughService {
       expiresAt: Date.now() + 30000, // 30s TTL
     });
 
-    return parsed;
+    return parsed as T;
   }
 
   /**
    * @summary Serves a job detail query through shard hash, negative 404 LRU, or DB fallback
    */
-  public async serveDetail(
+  public async serveDetail<T>(
     id: string,
     res: Response,
-    fetchDb: () => Promise<any>
-  ): Promise<any> {
+    fetchDb: () => Promise<T | null>
+  ): Promise<T | null> {
     const notFoundKey = `detail_404:${id}`;
     const cached404 = this.lru.get(notFoundKey);
     if (cached404 && cached404.expiresAt > Date.now()) {
@@ -419,7 +450,7 @@ export class ReadThroughService {
     if (cachedDetail && cachedDetail.expiresAt > Date.now()) {
       res.setHeader('X-Cache', 'HIT');
       res.setHeader('Server-Timing', 'redis;dur=0');
-      return cachedDetail.data;
+      return cachedDetail.data as T;
     }
 
     const redis = await this.getReadyClient();
@@ -468,10 +499,6 @@ export class ReadThroughService {
       return result;
     }
 
-    const { gen, lastScrapeAt } = await this.getPointer();
-    if (gen) res.setHeader('X-Cache-Generation', gen);
-    if (lastScrapeAt) res.setHeader('X-Data-Updated-At', lastScrapeAt);
-
     const shardKey = detailsShardKey(id);
     const startRedis = Date.now();
     let rawBuffer: Buffer | null = null;
@@ -481,10 +508,10 @@ export class ReadThroughService {
         rawBuffer = await redis.hgetBuffer(shardKey, id);
       } else {
         const val = await redis.hget(shardKey, id);
-        rawBuffer = val ? Buffer.isBuffer(val) ? val : Buffer.from(val, 'utf8') : null;
+        rawBuffer = val ? (Buffer.isBuffer(val) ? val : Buffer.from(val, 'utf8')) : null;
       }
       this.breaker.recordSuccess();
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.breaker.recordFailure(err);
       res.setHeader('X-Cache', 'BYPASS');
       res.setHeader('X-Cache-Reason', 'redis_error');
@@ -522,14 +549,16 @@ export class ReadThroughService {
       return result;
     }
 
-    let parsed: any;
+    let parsed: unknown;
     try {
       parsed = JSON.parse(zlib.gunzipSync(rawBuffer).toString('utf8'));
     } catch {
       parsed = JSON.parse(rawBuffer.toString('utf8'));
     }
 
-    const detailData = parsed.data || parsed;
+    const detailData = (typeof parsed === 'object' && parsed !== null && 'data' in parsed
+      ? (parsed as { data: unknown }).data
+      : parsed) as T;
     this.lru.set(lruDetailKey, {
       data: detailData,
       expiresAt: Date.now() + 30000,

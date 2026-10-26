@@ -64,12 +64,12 @@ export function cacheControlMiddleware(req: Request, res: Response, next: NextFu
     }
   };
 
-  res.json = (body: any) => {
+  res.json = (body: unknown) => {
     applyCacheHeaders();
     return originalJson(body);
   };
 
-  res.send = (body: any) => {
+  res.send = (body: unknown) => {
     applyCacheHeaders();
     return originalSend(body);
   };

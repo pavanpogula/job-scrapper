@@ -17,6 +17,20 @@ import { readThroughService } from './cache/ReadThrough';
 import { canonicalJobsKey, isCacheableView } from '../lib/cache/keys';
 import { isValidId } from './contract';
 import { cacheControlMiddleware } from './middleware/cacheControl';
+import {
+  isHttpError,
+  parseJobQueryParams,
+  parseCompanyQueryParams,
+} from './types';
+import type {
+  JobsResponseDTO,
+  JobDetailDTO,
+  FacetsResponseDTO,
+  CompaniesResponseDTO,
+  MetaResponseDTO,
+  HealthResponseDTO,
+  ErrorResponseDTO,
+} from './types';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -132,12 +146,13 @@ app.get('/health', async (req: Request, res: Response) => {
       try {
         await prisma.$queryRaw`SELECT 1`;
         dbStatus = { checked: true, status: 'ok' };
-      } catch (err: any) {
-        dbStatus = { checked: true, status: 'error', error: err.message };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        dbStatus = { checked: true, status: 'error', error: message };
       }
     }
 
-    const payload = {
+    const payload: HealthResponseDTO = {
       status,
       activeJobs: activeJobs ?? 0,
       version: process.env.VERCEL_GIT_COMMIT_SHA || 'dev',
@@ -160,19 +175,24 @@ app.get('/health', async (req: Request, res: Response) => {
     };
 
     if (isDeep && hasValidToken && dbStatus.status === 'error' && cacheInfo.state !== 'ok') {
-      return res.status(503).json(payload);
+      res.status(503).json(payload);
+      return;
     }
 
-    return res.status(200).json(payload);
-  } catch (err: any) {
-    return res.status(500).json({ status: 'error', error: err.message });
+    res.status(200).json(payload);
+    return;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ status: 'error', error: message });
+    return;
   }
 });
 
 // GET /v1/jobs - Paginated jobs query
 app.get('/v1/jobs', async (req: Request, res: Response) => {
   try {
-    const canonKey = canonicalJobsKey(req.query as any);
+    const rawQuery = req.query as Record<string, unknown>;
+    const canonKey = canonicalJobsKey(rawQuery);
     const cacheable = isCacheableView(canonKey);
     const page = Math.max(1, Math.min(5000, parseInt(String(req.query.page || '1'), 10) || 1));
 
@@ -185,25 +205,30 @@ app.get('/v1/jobs', async (req: Request, res: Response) => {
       if (filterPart) viewName = filterPart;
     }
 
-    const result = await readThroughService.serveView(
+    const queryParams = parseJobQueryParams(rawQuery);
+    const result = await readThroughService.serveView<JobsResponseDTO>(
       canonKey,
       cacheable,
       res,
-      () => queryJobs(prisma, req.query as any),
+      () => queryJobs(prisma, queryParams),
       { viewName, page }
     );
     res.json(result);
-  } catch (err: any) {
-    if (err.status === 503) {
+    return;
+  } catch (err: unknown) {
+    if (isHttpError(err) && err.status === 503) {
       res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
-      return res.status(503).json({
+      const errorPayload: ErrorResponseDTO = {
         error: err.message,
         code: err.code || 'UPSTREAM_UNAVAILABLE',
         retryAfterSeconds: err.retryAfterSeconds || 5,
-      });
+      };
+      res.status(503).json(errorPayload);
+      return;
     }
     console.error('Error fetching jobs:', err);
     res.status(500).json({ error: 'Failed to fetch jobs' });
+    return;
   }
 });
 
@@ -212,52 +237,62 @@ app.get('/v1/jobs/:id', async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     if (!isValidId(id)) {
-      return res.status(404).json({ error: 'Job not found' });
+      res.status(404).json({ error: 'Job not found' });
+      return;
     }
-    const job = await readThroughService.serveDetail(
+    const job = await readThroughService.serveDetail<JobDetailDTO>(
       id,
       res,
       () => queryJobDetail(prisma, id)
     );
     if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+      res.status(404).json({ error: 'Job not found' });
+      return;
     }
     res.json(job);
-  } catch (err: any) {
-    if (err.status === 503) {
+    return;
+  } catch (err: unknown) {
+    if (isHttpError(err) && err.status === 503) {
       res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
-      return res.status(503).json({
+      const errorPayload: ErrorResponseDTO = {
         error: err.message,
         code: err.code || 'UPSTREAM_UNAVAILABLE',
         retryAfterSeconds: err.retryAfterSeconds || 5,
-      });
+      };
+      res.status(503).json(errorPayload);
+      return;
     }
     console.error('Error fetching job detail:', err);
     res.status(500).json({ error: 'Failed to fetch job detail' });
+    return;
   }
 });
 
 // GET /v1/facets - Aggregate filter facets
 app.get('/v1/facets', async (_req: Request, res: Response) => {
   try {
-    const facets = await readThroughService.serveView(
+    const facets = await readThroughService.serveView<FacetsResponseDTO>(
       'facets',
       true,
       res,
       () => computeFacets(prisma)
     );
     res.json(facets);
-  } catch (err: any) {
-    if (err.status === 503) {
+    return;
+  } catch (err: unknown) {
+    if (isHttpError(err) && err.status === 503) {
       res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
-      return res.status(503).json({
+      const errorPayload: ErrorResponseDTO = {
         error: err.message,
         code: err.code || 'UPSTREAM_UNAVAILABLE',
         retryAfterSeconds: err.retryAfterSeconds || 5,
-      });
+      };
+      res.status(503).json(errorPayload);
+      return;
     }
     console.error('Error fetching facets:', err);
     res.status(500).json({ error: 'Failed to fetch facets' });
+    return;
   }
 });
 
@@ -270,36 +305,41 @@ app.get('/v1/companies', async (req: Request, res: Response) => {
     const isCacheable = !hasSearch && pageSize === 30;
     const canonKey = `companies?page=${page}`;
 
-    const companies = await readThroughService.serveView(
+    const queryParams = parseCompanyQueryParams(req.query as Record<string, unknown>);
+    const companies = await readThroughService.serveView<CompaniesResponseDTO>(
       canonKey,
       isCacheable,
       res,
-      () => queryCompanies(prisma, req.query as any),
+      () => queryCompanies(prisma, queryParams),
       { page }
     );
     res.json(companies);
-  } catch (err: any) {
-    if (err.status === 503) {
+    return;
+  } catch (err: unknown) {
+    if (isHttpError(err) && err.status === 503) {
       res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
-      return res.status(503).json({
+      const errorPayload: ErrorResponseDTO = {
         error: err.message,
         code: err.code || 'UPSTREAM_UNAVAILABLE',
         retryAfterSeconds: err.retryAfterSeconds || 5,
-      });
+      };
+      res.status(503).json(errorPayload);
+      return;
     }
     console.error('Error fetching companies:', err);
     res.status(500).json({ error: 'Failed to fetch companies' });
+    return;
   }
 });
 
 // GET /v1/meta - Overall metadata
 app.get('/v1/meta', async (_req: Request, res: Response) => {
   try {
-    const meta = await readThroughService.serveView(
+    const meta = await readThroughService.serveView<MetaResponseDTO>(
       'meta',
       true,
       res,
-      async () => {
+      async (): Promise<MetaResponseDTO> => {
         const [activeJobs, hiringCompanies, facets] = await Promise.all([
           prisma.job.count({ where: { active: true, isListed: true } }),
           prisma.company.count({ where: { status: 'ACTIVE', jobs: { some: { active: true, isListed: true } } } }),
@@ -315,17 +355,21 @@ app.get('/v1/meta', async (_req: Request, res: Response) => {
       }
     );
     res.json(meta);
-  } catch (err: any) {
-    if (err.status === 503) {
+    return;
+  } catch (err: unknown) {
+    if (isHttpError(err) && err.status === 503) {
       res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
-      return res.status(503).json({
+      const errorPayload: ErrorResponseDTO = {
         error: err.message,
         code: err.code || 'UPSTREAM_UNAVAILABLE',
         retryAfterSeconds: err.retryAfterSeconds || 5,
-      });
+      };
+      res.status(503).json(errorPayload);
+      return;
     }
     console.error('Error fetching meta:', err);
     res.status(500).json({ error: 'Failed to fetch meta' });
+    return;
   }
 });
 

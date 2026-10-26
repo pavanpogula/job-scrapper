@@ -91,7 +91,7 @@
     <header class="header">
         <h1><span class="material-icons-round">folder_special</span> Job Scraper Project Explorer</h1>
         <p>Click any file to see details and functions</p>
-        <div class="generated">Auto-generated on 2026-10-25</div>
+        <div class="generated">Auto-generated on 2026-10-26</div>
     </header>
     <div class="main">
         <aside class="sidebar">
@@ -241,6 +241,12 @@
                     <div class="tree-item file" onclick="showFile('src_api_Server_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Server.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_api_types_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>types.ts</span>
                         
                     </div>
                 </li></ul>
@@ -542,6 +548,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_ApiServer_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ApiServer.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ApiTypes_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ApiTypes.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1234,7 +1246,7 @@
       },
       {
         "label": "Functions",
-        "value": "3"
+        "value": "5"
       }
     ],
     "functions": [
@@ -1247,8 +1259,57 @@
         "desc": "Releases an active slot and dequeues the next waiting task."
       },
       {
+        "name": "run()",
+        "desc": "Executes an async task within the concurrency limit."
+      },
+      {
         "name": "getStatus()",
         "desc": "Returns current active and queue status."
+      },
+      {
+        "name": "singleFlight()",
+        "desc": "Single-flight helper ensuring only one in-flight DB query per cache key"
+      }
+    ]
+  },
+  "src_api_types_ts": {
+    "name": "types.ts",
+    "path": "src/api/types.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Single source of truth for public HTTP API response contracts, request query parameters, and error types",
+    "tags": [
+      "API",
+      "DTO",
+      "Contract",
+      "Types"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "isHttpError()",
+        "desc": "Type guard to identify HttpError objects with numeric status codes"
+      },
+      {
+        "name": "extractQueryString()",
+        "desc": "Extracts a single string from a query parameter value"
+      },
+      {
+        "name": "parseJobQueryParams()",
+        "desc": "Parses and sanitizes raw Express req.query parameters for /v1/jobs"
+      },
+      {
+        "name": "parseCompanyQueryParams()",
+        "desc": "Parses raw Express req.query parameters for /v1/companies"
       }
     ]
   },
@@ -1778,13 +1839,17 @@
       },
       {
         "label": "Functions",
-        "value": "1"
+        "value": "2"
       }
     ],
     "functions": [
       {
         "name": "createLimiter()",
         "desc": "Creates an adaptive concurrency limiter for controlled parallel execution with dynamic throttling on 429/403"
+      },
+      {
+        "name": "chunk()",
+        "desc": "Splits an array into chunks of specified size"
       }
     ]
   },
@@ -2517,6 +2582,31 @@
       "Contract",
       "Snapshots",
       "Supertest"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ApiTypes_test_ts": {
+    "name": "ApiTypes.test.ts",
+    "path": "tests/unit/ApiTypes.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates public DTO types, type-level Equal<> assertions, query return signatures, and runtime error guards",
+    "tags": [
+      "API",
+      "Types",
+      "DTO",
+      "Contracts",
+      "Tests"
     ],
     "info": [
       {
