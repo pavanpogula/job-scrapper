@@ -47,6 +47,8 @@ erDiagram
         String workplaceType "nullable ('Remote', 'OnSite', 'Hybrid')"
         String employmentType "nullable ('FullTime', 'Contract', etc.)"
         DateTime publishedAt "nullable (indexed)"
+        DateTime lastUpdatedAt "nullable (freshness timestamp)"
+        String lastUpdatedSource "nullable ('ashby', 'detected', 'published', 'firstSeen')"
         Boolean isListed "default true"
         String country "nullable (indexed)"
         String region "nullable"
@@ -117,6 +119,8 @@ Empty names (`""`) are not stored → `departmentId`/`locationId = null`.
 | `workplaceType` | `String?` | `'Remote'`, `'OnSite'`, `'Hybrid'` (from Ashby `workplaceType`) |
 | `employmentType` | `String?` | `'FullTime'`, `'Contract'`, `'PartTime'`, `'Intern'`, `'Temporary'` |
 | `publishedAt` | `DateTime?` | when the job was published (99.94% coverage; indexed) |
+| `lastUpdatedAt` | `DateTime?` | resolved freshness timestamp (monotonic; from Ashby update, content-hash change detection, or published date) |
+| `lastUpdatedSource` | `String?` | provenance of `lastUpdatedAt`: `'ashby'`, `'detected'`, `'published'`, or `'firstSeen'` |
 | `isListed` | `Boolean` | `@default(true)` — `false` means reachable only by direct link |
 | `country` | `String?` | ISO-3166-1 alpha-2 2-letter uppercase code normalized from `job.address.postalAddress.addressCountry` via `toIsoCountry()` (indexed; `null` if unresolvable) |
 | `region` | `String?` | State/region code from `addressRegion` |

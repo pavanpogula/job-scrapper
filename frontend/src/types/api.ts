@@ -6,6 +6,7 @@
 export type WorkplaceType = 'Remote' | 'OnSite' | 'Hybrid';
 export type EmploymentType = 'FullTime' | 'PartTime' | 'Contract' | 'Intern' | 'Temporary';
 export type SalaryInterval = '1 YEAR' | '1 HOUR' | '1 MONTH' | '1 WEEK' | '1 DAY';
+export type LastUpdatedSource = 'ashby' | 'detected' | 'published' | 'firstSeen';
 
 export interface PostalAddress {
   addressCountry?: string;
@@ -55,6 +56,8 @@ export interface JobListItem {
   workplaceType?: WorkplaceType | null;
   employmentType?: EmploymentType | null;
   publishedAt?: string | null;
+  lastUpdatedAt?: string | null;
+  lastUpdatedSource?: LastUpdatedSource | null;
   salaryMin?: number | null;
   salaryMax?: number | null;
   salaryCurrency?: string | null;

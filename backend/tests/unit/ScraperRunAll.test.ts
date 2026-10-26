@@ -544,4 +544,142 @@ describe('AshbyScraper runAll() Harness (P1-T03)', () => {
         expect(recordScrapeFinished).toHaveBeenCalledTimes(1);
         expect(report2.cache?.status).toBe('skipped_flag');
     });
+
+    test('lastUpdatedAt resolution rules during scrape runs', async () => {
+        const scraper = new AshbyScraper();
+        const testCompany = 'freshness-corp';
+        statefulPrisma._data.companies.set(testCompany, { slug: testCompany, status: 'ACTIVE' });
+
+        // 1. New job with publishedAt -> gets 'published'
+        const pubDateStr = '2026-10-20T10:00:00.000Z';
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: testCompany,
+            jobs: [
+                {
+                    id: 'fresh-job-1',
+                    title: 'Software Engineer',
+                    department: 'Engineering',
+                    location: 'Remote',
+                    employmentType: 'FullTime',
+                    applyUrl: 'https://jobs.ashbyhq.com/freshness-corp/fresh-job-1',
+                    isRemote: true,
+                    publishedAt: pubDateStr
+                }
+            ],
+            source: 'rest',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        await scraper.runAll({ slugs: [testCompany], concurrency: 1, saveTelemetry: false, skipPublish: true });
+        const jobAfterCreate = statefulPrisma._data.jobs.get('fresh-job-1');
+        expect(jobAfterCreate).toBeDefined();
+        expect(jobAfterCreate.lastUpdatedSource).toBe('published');
+        expect(jobAfterCreate.lastUpdatedAt).toEqual(new Date(pubDateStr));
+
+        // 2. Changed hash -> gets 'detected'
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: testCompany,
+            jobs: [
+                {
+                    id: 'fresh-job-1',
+                    title: 'Staff Software Engineer', // title changed -> hash changes
+                    department: 'Engineering',
+                    location: 'Remote',
+                    employmentType: 'FullTime',
+                    applyUrl: 'https://jobs.ashbyhq.com/freshness-corp/fresh-job-1',
+                    isRemote: true,
+                    publishedAt: pubDateStr
+                }
+            ],
+            source: 'rest',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        await scraper.runAll({ slugs: [testCompany], concurrency: 1, saveTelemetry: false, skipPublish: true });
+        const jobAfterUpdate = statefulPrisma._data.jobs.get('fresh-job-1');
+        expect(jobAfterUpdate.lastUpdatedSource).toBe('detected');
+        expect(jobAfterUpdate.lastUpdatedAt.getTime()).toBeGreaterThanOrEqual(new Date(pubDateStr).getTime());
+        const detectedTime = jobAfterUpdate.lastUpdatedAt;
+
+        // 3. Unchanged hash -> lastUpdatedAt does not change
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: testCompany,
+            jobs: [
+                {
+                    id: 'fresh-job-1',
+                    title: 'Staff Software Engineer', // unchanged
+                    department: 'Engineering',
+                    location: 'Remote',
+                    employmentType: 'FullTime',
+                    applyUrl: 'https://jobs.ashbyhq.com/freshness-corp/fresh-job-1',
+                    isRemote: true,
+                    publishedAt: pubDateStr
+                }
+            ],
+            source: 'rest',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        await scraper.runAll({ slugs: [testCompany], concurrency: 1, saveTelemetry: false, skipPublish: true });
+        const jobAfterUnchanged = statefulPrisma._data.jobs.get('fresh-job-1');
+        expect(jobAfterUnchanged.lastUpdatedAt).toEqual(detectedTime);
+        expect(jobAfterUnchanged.lastUpdatedSource).toBe('detected');
+
+        // 4. GraphQL raw-touch -> lastUpdatedAt does not change
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: testCompany,
+            jobs: [
+                {
+                    id: 'fresh-job-1',
+                    title: 'Staff Software Engineer',
+                    department: 'Engineering',
+                    location: 'Remote',
+                    employmentType: 'FullTime',
+                    applyUrl: 'https://jobs.ashbyhq.com/freshness-corp/fresh-job-1',
+                    isRemote: true
+                }
+            ],
+            source: 'graphql',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        await scraper.runAll({ slugs: [testCompany], concurrency: 1, saveTelemetry: false, skipPublish: true });
+        const jobAfterRawTouch = statefulPrisma._data.jobs.get('fresh-job-1');
+        expect(jobAfterRawTouch.lastUpdatedAt).toEqual(detectedTime);
+
+        // 5. GraphQL-only new row (no publishedAt) -> gets 'firstSeen'
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: testCompany,
+            jobs: [
+                {
+                    id: 'fresh-job-graphql-only',
+                    title: 'Lead Architect',
+                    department: 'Architecture',
+                    location: 'Remote',
+                    employmentType: 'FullTime',
+                    applyUrl: 'https://jobs.ashbyhq.com/freshness-corp/fresh-job-graphql-only',
+                    isRemote: true,
+                    publishedAt: null
+                }
+            ],
+            source: 'graphql',
+            rateLimited: false,
+            notFound: false,
+            validationIssues: []
+        });
+
+        await scraper.runAll({ slugs: [testCompany], concurrency: 1, saveTelemetry: false, skipPublish: true });
+        const jobGraphQLOnly = statefulPrisma._data.jobs.get('fresh-job-graphql-only');
+        expect(jobGraphQLOnly).toBeDefined();
+        expect(jobGraphQLOnly.lastUpdatedSource).toBe('firstSeen');
+        expect(jobGraphQLOnly.lastUpdatedAt).toBeInstanceOf(Date);
+    });
 });

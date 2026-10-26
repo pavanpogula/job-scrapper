@@ -51,7 +51,20 @@ All page routes are asynchronously chunked using `React.lazy` and wrapped in `<S
 
 ---
 
-## 5. Configuration & Environment Variables
+## 5. Job Freshness Display & Formatting
+
+- **Helper:** `src/lib/formatJobFreshness.ts` computes relative freshness labels, tooltips, and semantic `<time dateTime={...}>` timestamps based on `lastUpdatedAt`, `lastUpdatedSource`, and `publishedAt`.
+- **Card Badges (BrowsePage):**
+  - Displays `"Updated <relative>"` for detected changes (`'detected'`) and Ashby update timestamps (`'ashby'`), with tooltip `"Posted <date>"` when `publishedAt` differs.
+  - Displays `"Posted <relative>"` for `'published'` or legacy rows.
+  - Displays `"First seen <relative>"` for `'firstSeen'`.
+  - Relative thresholds: `<1m` -> `"just now"`, `<60m` -> `"<m>m ago"`, `<24h` -> `"<h>h ago"`, `<30d` -> `"<d>d ago"`, `>=30d` -> short date (e.g. `"Mar 4, 2026"`).
+- **Detail View (JobDetailPage):**
+  - Displays `"Posted <date> · Updated <date>"` when both publication and update dates exist and differ.
+
+---
+
+## 6. Configuration & Environment Variables
 
 | Variable | Default (Dev) | Production (Vercel) | Description |
 |---|---|---|---|

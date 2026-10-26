@@ -60,7 +60,7 @@ sequenceDiagram
   Co->>W: fork + shard (round-robin)
   loop each company (isolated try/catch)
     W->>A: GET posting-api (retry/backoff) → GraphQL fallback on 404/403/400
-    W->>PG: createMany new / upsert changed+inactive / deactivate missing (contentHash compare, no Redis)
+    W->>PG: createMany new / upsert changed+inactive with resolveLastUpdated / deactivate missing (contentHash compare, no Redis)
     W->>PG: update Company counters (consecutiveNotFound/Failures, lastSuccessAt)
   end
   W-->>Co: IPC report (counters, events)

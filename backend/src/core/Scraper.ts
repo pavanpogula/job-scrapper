@@ -20,6 +20,7 @@ import {
 import { toIsoCountry } from '../lib/Country';
 import { ErrorTracker, ErrorReportDocument } from '../lib/ErrorTracker';
 import { publishCacheGeneration, recordScrapeFinished } from '../cache/Publisher';
+import { resolveLastUpdated, PrevJobState } from './ResolveLastUpdated';
 
 const prisma = new PrismaClient();
 
@@ -139,6 +140,7 @@ interface ProcessedJob {
     workplaceType: string | null;
     employmentType: string | null;
     publishedAt: Date | null;
+    updatedAt?: Date | null;
     isListed: boolean;
     country: string | null;
     region: string | null;
@@ -315,58 +317,67 @@ export class AshbyScraper {
     private async batchUpsertJobs(processedJobs: ProcessedJob[], tracker?: ErrorTracker) {
         if (processedJobs.length === 0) return;
 
-        const buildUpsertArgs = (job: ProcessedJob) => ({
-            where: { ashbyId: job.ashbyId },
-            create: {
-                ashbyId: job.ashbyId,
-                title: job.title,
-                companySlug: job.companySlug,
-                departmentId: job.departmentId ?? null,
-                locationId: job.locationId ?? null,
-                applyUrl: job.applyUrl,
-                salaryMin: job.salaryMin ?? null,
-                salaryMax: job.salaryMax ?? null,
-                salaryCurrency: job.salaryCurrency ?? null,
-                salaryInterval: job.salaryInterval ?? null,
-                isRemote: job.isRemote,
-                workplaceType: job.workplaceType ?? null,
-                employmentType: job.employmentType ?? null,
-                publishedAt: job.publishedAt ?? null,
-                isListed: job.isListed,
-                country: job.country ?? null,
-                region: job.region ?? null,
-                city: job.city ?? null,
-                postalAddress: job.postalAddress ?? Prisma.DbNull,
-                metadata: job.metadata,
-                contentHash: job.contentHash,
-                lastSeenAt: new Date(),
-                active: true
-            },
-            update: {
-                title: job.title,
-                departmentId: job.departmentId ?? null,
-                locationId: job.locationId ?? null,
-                applyUrl: job.applyUrl,
-                salaryMin: job.salaryMin ?? null,
-                salaryMax: job.salaryMax ?? null,
-                salaryCurrency: job.salaryCurrency ?? null,
-                salaryInterval: job.salaryInterval ?? null,
-                isRemote: job.isRemote,
-                workplaceType: job.workplaceType ?? null,
-                employmentType: job.employmentType ?? null,
-                publishedAt: job.publishedAt ?? null,
-                isListed: job.isListed,
-                country: job.country ?? null,
-                region: job.region ?? null,
-                city: job.city ?? null,
-                postalAddress: job.postalAddress ?? Prisma.DbNull,
-                metadata: job.metadata,
-                contentHash: job.contentHash,
-                lastSeenAt: new Date(),
-                updatedAt: new Date(),
-                active: true
-            }
-        });
+        const buildUpsertArgs = (job: ProcessedJob, prev?: PrevJobState | null) => {
+            const now = new Date();
+            const createResolved = resolveLastUpdated(null, job, now);
+            const updateResolved = resolveLastUpdated(prev, job, now);
+            return {
+                where: { ashbyId: job.ashbyId },
+                create: {
+                    ashbyId: job.ashbyId,
+                    title: job.title,
+                    companySlug: job.companySlug,
+                    departmentId: job.departmentId ?? null,
+                    locationId: job.locationId ?? null,
+                    applyUrl: job.applyUrl,
+                    salaryMin: job.salaryMin ?? null,
+                    salaryMax: job.salaryMax ?? null,
+                    salaryCurrency: job.salaryCurrency ?? null,
+                    salaryInterval: job.salaryInterval ?? null,
+                    isRemote: job.isRemote,
+                    workplaceType: job.workplaceType ?? null,
+                    employmentType: job.employmentType ?? null,
+                    publishedAt: job.publishedAt ?? null,
+                    isListed: job.isListed,
+                    country: job.country ?? null,
+                    region: job.region ?? null,
+                    city: job.city ?? null,
+                    postalAddress: job.postalAddress ?? Prisma.DbNull,
+                    metadata: job.metadata,
+                    contentHash: job.contentHash,
+                    lastSeenAt: now,
+                    lastUpdatedAt: createResolved.lastUpdatedAt,
+                    lastUpdatedSource: createResolved.lastUpdatedSource,
+                    active: true
+                },
+                update: {
+                    title: job.title,
+                    departmentId: job.departmentId ?? null,
+                    locationId: job.locationId ?? null,
+                    applyUrl: job.applyUrl,
+                    salaryMin: job.salaryMin ?? null,
+                    salaryMax: job.salaryMax ?? null,
+                    salaryCurrency: job.salaryCurrency ?? null,
+                    salaryInterval: job.salaryInterval ?? null,
+                    isRemote: job.isRemote,
+                    workplaceType: job.workplaceType ?? null,
+                    employmentType: job.employmentType ?? null,
+                    publishedAt: job.publishedAt ?? null,
+                    isListed: job.isListed,
+                    country: job.country ?? null,
+                    region: job.region ?? null,
+                    city: job.city ?? null,
+                    postalAddress: job.postalAddress ?? Prisma.DbNull,
+                    metadata: job.metadata,
+                    contentHash: job.contentHash,
+                    lastSeenAt: now,
+                    updatedAt: now,
+                    lastUpdatedAt: updateResolved.lastUpdatedAt,
+                    lastUpdatedSource: updateResolved.lastUpdatedSource,
+                    active: true
+                }
+            };
+        };
 
         // Process in batches
         for (let i = 0; i < processedJobs.length; i += BATCH_SIZE) {
@@ -379,9 +390,9 @@ export class AshbyScraper {
 
                 if (typeof findManyFn === 'function' && typeof createManyFn === 'function') {
                     // Fast bulk path: 1 SELECT + 1 INSERT (createMany) for new jobs, only upserting changed existing jobs
-                    const existingRows: { ashbyId: string; contentHash: string; active: boolean; metadata?: any }[] = await findManyFn({
+                    const existingRows: { ashbyId: string; contentHash: string; active: boolean; lastUpdatedAt: Date | null; lastUpdatedSource: string | null; metadata?: any }[] = await findManyFn({
                         where: { ashbyId: { in: batch.map(j => j.ashbyId) } },
-                        select: { ashbyId: true, contentHash: true, active: true, metadata: true }
+                        select: { ashbyId: true, contentHash: true, active: true, lastUpdatedAt: true, lastUpdatedSource: true, metadata: true }
                     });
                     const existingMap = new Map(existingRows.map(r => [r.ashbyId, r]));
 
@@ -410,57 +421,64 @@ export class AshbyScraper {
                     if (toCreate.length > 0) {
                         const now = new Date();
                         await createManyFn({
-                            data: toCreate.map(job => ({
-                                ashbyId: job.ashbyId,
-                                title: job.title,
-                                companySlug: job.companySlug,
-                                departmentId: job.departmentId ?? null,
-                                locationId: job.locationId ?? null,
-                                applyUrl: job.applyUrl,
-                                salaryMin: job.salaryMin ?? null,
-                                salaryMax: job.salaryMax ?? null,
-                                salaryCurrency: job.salaryCurrency ?? null,
-                                salaryInterval: job.salaryInterval ?? null,
-                                isRemote: job.isRemote,
-                                workplaceType: job.workplaceType ?? null,
-                                employmentType: job.employmentType ?? null,
-                                publishedAt: job.publishedAt ?? null,
-                                isListed: job.isListed,
-                                country: job.country ?? null,
-                                region: job.region ?? null,
-                                city: job.city ?? null,
-                                postalAddress: job.postalAddress ?? Prisma.DbNull,
-                                metadata: job.metadata,
-                                contentHash: job.contentHash,
-                                lastSeenAt: now,
-                                active: true
-                            })),
+                            data: toCreate.map(job => {
+                                const resolved = resolveLastUpdated(null, job, now);
+                                return {
+                                    ashbyId: job.ashbyId,
+                                    title: job.title,
+                                    companySlug: job.companySlug,
+                                    departmentId: job.departmentId ?? null,
+                                    locationId: job.locationId ?? null,
+                                    applyUrl: job.applyUrl,
+                                    salaryMin: job.salaryMin ?? null,
+                                    salaryMax: job.salaryMax ?? null,
+                                    salaryCurrency: job.salaryCurrency ?? null,
+                                    salaryInterval: job.salaryInterval ?? null,
+                                    isRemote: job.isRemote,
+                                    workplaceType: job.workplaceType ?? null,
+                                    employmentType: job.employmentType ?? null,
+                                    publishedAt: job.publishedAt ?? null,
+                                    isListed: job.isListed,
+                                    country: job.country ?? null,
+                                    region: job.region ?? null,
+                                    city: job.city ?? null,
+                                    postalAddress: job.postalAddress ?? Prisma.DbNull,
+                                    metadata: job.metadata,
+                                    contentHash: job.contentHash,
+                                    lastSeenAt: now,
+                                    lastUpdatedAt: resolved.lastUpdatedAt,
+                                    lastUpdatedSource: resolved.lastUpdatedSource,
+                                    active: true
+                                };
+                            }),
                             skipDuplicates: true
                         });
                     }
 
                     if (toUpdate.length > 0) {
                         await prisma.$transaction(
-                            toUpdate.map(job => prisma.job.upsert(buildUpsertArgs(job)))
+                            toUpdate.map(job => prisma.job.upsert(buildUpsertArgs(job, existingMap.get(job.ashbyId))))
                         );
                     }
                 } else {
                     // Standard transaction upsert path
                     const toRawTouch: string[] = [];
-                    const toUpsert: ProcessedJob[] = [];
+                    const toUpsert: { job: ProcessedJob; existing?: PrevJobState | null }[] = [];
 
                     for (const job of batch) {
-                        if (job.source === 'graphql') {
-                            const findUniqueFn = (prisma.job as any)?.findUnique;
-                            if (typeof findUniqueFn === 'function') {
-                                const existing = await findUniqueFn({ where: { ashbyId: job.ashbyId } });
-                                if (existing && existing.metadata?._source === 'rest') {
-                                    toRawTouch.push(job.ashbyId);
-                                    continue;
-                                }
-                            }
+                        const findUniqueFn = (prisma.job as any)?.findUnique;
+                        let existing: (PrevJobState & { metadata?: { _source?: string } | null }) | null = null;
+                        if (typeof findUniqueFn === 'function') {
+                            existing = await findUniqueFn({
+                                where: { ashbyId: job.ashbyId },
+                                select: { ashbyId: true, contentHash: true, active: true, lastUpdatedAt: true, lastUpdatedSource: true, metadata: true }
+                            });
                         }
-                        toUpsert.push(job);
+                        if (job.source === 'graphql' && existing && existing.metadata?._source === 'rest') {
+                            toRawTouch.push(job.ashbyId);
+                            continue;
+                        }
+                        toUpsert.push({ job, existing });
                     }
 
                     if (toRawTouch.length > 0 && typeof prisma.$executeRaw === 'function') {
@@ -470,7 +488,7 @@ export class AshbyScraper {
 
                     if (toUpsert.length > 0) {
                         await prisma.$transaction(
-                            toUpsert.map(job => prisma.job.upsert(buildUpsertArgs(job)))
+                            toUpsert.map(({ job, existing }) => prisma.job.upsert(buildUpsertArgs(job, existing)))
                         );
                     }
                 }
@@ -481,21 +499,23 @@ export class AshbyScraper {
                 succeededJobs = [];
                 for (const job of batch) {
                     try {
-                        if (job.source === 'graphql') {
-                            const findUniqueFn = (prisma.job as any)?.findUnique;
-                            if (typeof findUniqueFn === 'function') {
-                                const existing = await findUniqueFn({ where: { ashbyId: job.ashbyId } });
-                                if (existing && existing.metadata?._source === 'rest') {
-                                    const now = new Date();
-                                    if (typeof prisma.$executeRaw === 'function') {
-                                        await prisma.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ${job.ashbyId}`.catch(() => {});
-                                    }
-                                    succeededJobs.push(job);
-                                    continue;
-                                }
-                            }
+                        const findUniqueFn = (prisma.job as any)?.findUnique;
+                        let existing: (PrevJobState & { metadata?: { _source?: string } | null }) | null = null;
+                        if (typeof findUniqueFn === 'function') {
+                            existing = await findUniqueFn({
+                                where: { ashbyId: job.ashbyId },
+                                select: { ashbyId: true, contentHash: true, active: true, lastUpdatedAt: true, lastUpdatedSource: true, metadata: true }
+                            });
                         }
-                        await prisma.job.upsert(buildUpsertArgs(job));
+                        if (job.source === 'graphql' && existing && existing.metadata?._source === 'rest') {
+                            const now = new Date();
+                            if (typeof prisma.$executeRaw === 'function') {
+                                await prisma.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ${job.ashbyId}`.catch(() => {});
+                            }
+                            succeededJobs.push(job);
+                            continue;
+                        }
+                        await prisma.job.upsert(buildUpsertArgs(job, existing));
                         succeededJobs.push(job);
                     } catch (jobErr: any) {
                         if (tracker) {
@@ -547,6 +567,8 @@ export class AshbyScraper {
             const postal = job.address?.postalAddress;
             const parsedPublishedAt = job.publishedAt ? new Date(job.publishedAt) : null;
             const validPublishedAt = parsedPublishedAt && !isNaN(parsedPublishedAt.getTime()) ? parsedPublishedAt : null;
+            const parsedUpdatedAt = job.updatedAt ? new Date(job.updatedAt) : null;
+            const validUpdatedAt = parsedUpdatedAt && !isNaN(parsedUpdatedAt.getTime()) ? parsedUpdatedAt : null;
             const cleanCountry = toIsoCountry(postal?.addressCountry);
             const cleanRegion = postal?.addressRegion ? sanitizeText(postal.addressRegion) : null;
             const cleanCity = postal?.addressLocality ? sanitizeText(postal.addressLocality) : null;
@@ -592,6 +614,7 @@ export class AshbyScraper {
                 workplaceType: job.workplaceType ?? null,
                 employmentType: job.employmentType ?? null,
                 publishedAt: validPublishedAt,
+                updatedAt: validUpdatedAt,
                 isListed: job.isListed !== false,
                 country: cleanCountry,
                 region: postal?.addressRegion ? sanitizeText(postal.addressRegion) : null,

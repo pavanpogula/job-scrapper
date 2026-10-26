@@ -38,6 +38,10 @@ export interface JobListItemDTO {
   employmentType: string | null;
   /** Publication timestamp in ISO-8601 UTC format, or null */
   publishedAt: string | null;
+  /** Last updated timestamp in ISO-8601 UTC format, or null */
+  lastUpdatedAt: string | null;
+  /** Provenance of the last updated timestamp: 'ashby' | 'detected' | 'published' | 'firstSeen', or null */
+  lastUpdatedSource: 'ashby' | 'detected' | 'published' | 'firstSeen' | null;
   /** Minimum annual or interval salary figure in major units (e.g. 100000 for USD), or null */
   salaryMin: number | null;
   /** Maximum annual or interval salary figure in major units, or null */
@@ -106,6 +110,10 @@ export interface JobDetailDTO {
   employmentType: string | null;
   /** Publication timestamp in ISO-8601 UTC format, or null */
   publishedAt: string | null;
+  /** Last updated timestamp in ISO-8601 UTC format, or null */
+  lastUpdatedAt: string | null;
+  /** Provenance of the last updated timestamp: 'ashby' | 'detected' | 'published' | 'firstSeen', or null */
+  lastUpdatedSource: 'ashby' | 'detected' | 'published' | 'firstSeen' | null;
   /** Minimum salary figure in major units, or null */
   salaryMin: number | null;
   /** Maximum salary figure in major units, or null */

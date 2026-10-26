@@ -35,6 +35,8 @@ export const LIST_SELECT = {
   workplaceType: true,
   employmentType: true,
   publishedAt: true,
+  lastUpdatedAt: true,
+  lastUpdatedSource: true,
   applyUrl: true,
   country: true,
   region: true,
@@ -78,6 +80,8 @@ export const DETAIL_SELECT = {
   workplaceType: true,
   employmentType: true,
   publishedAt: true,
+  lastUpdatedAt: true,
+  lastUpdatedSource: true,
   applyUrl: true,
   country: true,
   region: true,
@@ -142,6 +146,10 @@ export function toJobListItem(job: JobWithListRelations): JobListItemDTO {
     workplaceType: job.workplaceType ?? null,
     employmentType: job.employmentType ?? null,
     publishedAt: job.publishedAt ? (job.publishedAt instanceof Date ? job.publishedAt.toISOString() : String(job.publishedAt)) : null,
+    lastUpdatedAt: job.lastUpdatedAt
+      ? (job.lastUpdatedAt instanceof Date ? job.lastUpdatedAt.toISOString() : String(job.lastUpdatedAt))
+      : (job.publishedAt ? (job.publishedAt instanceof Date ? job.publishedAt.toISOString() : String(job.publishedAt)) : null),
+    lastUpdatedSource: (job.lastUpdatedSource as JobListItemDTO['lastUpdatedSource']) ?? (job.publishedAt ? 'published' : null),
     salaryMin: job.salaryMin ?? null,
     salaryMax: job.salaryMax ?? null,
     salaryCurrency: job.salaryCurrency ?? null,
@@ -152,6 +160,11 @@ export function toJobListItem(job: JobWithListRelations): JobListItemDTO {
     updatedAt: job.updatedAt ? (job.updatedAt instanceof Date ? job.updatedAt.toISOString() : String(job.updatedAt)) : null,
   };
 }
+
+/**
+ * @summary Alias for toJobListItem matching card view terminology
+ */
+export const toJobCard = toJobListItem;
 
 /**
  * @summary Maps a database job row to the public API detail contract
@@ -204,6 +217,10 @@ export function toJobDetail(job: JobWithDetailRelations): JobDetailDTO {
     workplaceType: job.workplaceType ?? null,
     employmentType: job.employmentType ?? null,
     publishedAt: job.publishedAt ? (job.publishedAt instanceof Date ? job.publishedAt.toISOString() : String(job.publishedAt)) : null,
+    lastUpdatedAt: job.lastUpdatedAt
+      ? (job.lastUpdatedAt instanceof Date ? job.lastUpdatedAt.toISOString() : String(job.lastUpdatedAt))
+      : (job.publishedAt ? (job.publishedAt instanceof Date ? job.publishedAt.toISOString() : String(job.publishedAt)) : null),
+    lastUpdatedSource: (job.lastUpdatedSource as JobListItemDTO['lastUpdatedSource']) ?? (job.publishedAt ? 'published' : null),
     salaryMin: job.salaryMin ?? null,
     salaryMax: job.salaryMax ?? null,
     salaryCurrency: job.salaryCurrency ?? null,

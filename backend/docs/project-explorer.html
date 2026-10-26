@@ -295,6 +295,12 @@
                         <span class="tree-badge">⭐ Core</span>
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('src_core_ResolveLastUpdated_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ResolveLastUpdated.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_core_Scraper_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Scraper.ts</span>
@@ -683,6 +689,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_LastUpdated_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>LastUpdated.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_PathResolution_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>PathResolution.test.ts</span>
@@ -889,7 +901,7 @@
       },
       {
         "name": "Job",
-        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• lastSeenAt: DateTime\\n• createdAt: DateTime\\n• updatedAt: DateTime"
+        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• lastSeenAt: DateTime\\n• lastUpdatedAt: DateTime\\n• lastUpdatedSource: String\\n• createdAt: DateTime\\n• updatedAt: DateTime"
       }
     ]
   },
@@ -1460,6 +1472,39 @@
       {
         "name": "runClusterScrape()",
         "desc": "Entry point for multi-process scraping across OS worker processes with signal forwarding and fault tolerance"
+      }
+    ]
+  },
+  "src_core_ResolveLastUpdated_ts": {
+    "name": "ResolveLastUpdated.ts",
+    "path": "src/core/ResolveLastUpdated.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Determines lastUpdatedAt timestamp and lastUpdatedSource according to scrape change detection rules",
+    "tags": [
+      "Scraper",
+      "Timestamp",
+      "Freshness",
+      "LastUpdated"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "2"
+      }
+    ],
+    "functions": [
+      {
+        "name": "parseValidDate()",
+        "desc": "Safely parses any date representation, returning null for invalid or unparseable values."
+      },
+      {
+        "name": "resolveLastUpdated()",
+        "desc": "Resolves the lastUpdatedAt timestamp and provenance source for a job posting."
       }
     ]
   },
@@ -3117,6 +3162,30 @@
       "Fixtures",
       "Telemetry",
       "Reports"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_LastUpdated_test_ts": {
+    "name": "LastUpdated.test.ts",
+    "path": "tests/unit/LastUpdated.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates resolveLastUpdated rules: new jobs, hash changes, reactivation, raw touch, invalid dates, and monotonicity",
+    "tags": [
+      "Unit Test",
+      "Freshness",
+      "LastUpdated",
+      "Scraper"
     ],
     "info": [
       {

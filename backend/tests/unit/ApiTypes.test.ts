@@ -58,10 +58,14 @@ type _TestJobTitle = Expect<Equal<JobListItemDTO['title'], string>>;
 type _TestJobIsRemote = Expect<Equal<JobListItemDTO['isRemote'], boolean>>;
 type _TestJobSalaryMin = Expect<Equal<JobListItemDTO['salaryMin'], number | null>>;
 type _TestJobPublishedAt = Expect<Equal<JobListItemDTO['publishedAt'], string | null>>;
+type _TestJobLastUpdatedAt = Expect<Equal<JobListItemDTO['lastUpdatedAt'], string | null>>;
+type _TestJobLastUpdatedSource = Expect<Equal<JobListItemDTO['lastUpdatedSource'], 'ashby' | 'detected' | 'published' | 'firstSeen' | null>>;
 
 // 4. JobDetailDTO fields
 type _TestDetailSecondaryLocs = Expect<Equal<JobDetailDTO['secondaryLocations'], string[]>>;
 type _TestDetailCompany = Expect<Equal<JobDetailDTO['company'], CompanyDetailDTO | null>>;
+type _TestDetailLastUpdatedAt = Expect<Equal<JobDetailDTO['lastUpdatedAt'], string | null>>;
+type _TestDetailLastUpdatedSource = Expect<Equal<JobDetailDTO['lastUpdatedSource'], 'ashby' | 'detected' | 'published' | 'firstSeen' | null>>;
 
 // 5. Facet types
 type _TestFacetsCountries = Expect<Equal<FacetsResponseDTO['countries'], FacetCountDTO[]>>;
