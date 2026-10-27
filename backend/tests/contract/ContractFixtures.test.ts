@@ -130,9 +130,11 @@ describe('ContractFixtures API Integration Suite (P8a)', () => {
     readThroughService.setRedisClient(null);
 
     statefulPrisma = createStatefulPrisma({
+      // Mirror what Postgres returns: logoUrl is always present (string or null) and _count matches the seeded jobs
+      // (3 acme-corp, 2 beta-inc), so the companies fixture has the same keys and counts as the live API.
       companies: [
-        { id: 'comp-acme', slug: 'acme-corp', name: 'Acme Corp', status: 'ACTIVE' },
-        { id: 'comp-beta', slug: 'beta-inc', name: 'Beta Inc', status: 'ACTIVE' },
+        { id: 'comp-acme', slug: 'acme-corp', name: 'Acme Corp', logoUrl: 'https://example.com/acme-logo.png', status: 'ACTIVE', _count: { jobs: 3 } },
+        { id: 'comp-beta', slug: 'beta-inc', name: 'Beta Inc', logoUrl: null, status: 'ACTIVE', _count: { jobs: 2 } },
       ],
       departments: [
         { id: 'dept-eng', name: 'Engineering' },

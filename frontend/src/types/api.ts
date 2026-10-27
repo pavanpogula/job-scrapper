@@ -11,8 +11,8 @@ export type LastUpdatedSource = 'ashby' | 'detected' | 'published' | 'firstSeen'
 export interface CompanySummary {
   slug: string;
   name: string | null;
-  logoUrl?: string | null;
-  jobCount?: number;
+  logoUrl: string | null;
+  jobCount: number;
 }
 
 export interface CompanyDetail {

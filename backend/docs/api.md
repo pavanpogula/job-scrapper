@@ -278,7 +278,7 @@ npm --prefix backend test -- backend/tests/unit/Hardening.test.ts
 npm --prefix backend test -- backend/tests/unit/ReadThrough.test.ts
 
 # API contract fixture and cache HIT == MISS parity tests
-npm --prefix backend test -- backend/tests/contract/ContractFixtures.test.ts
+npm --prefix backend test -- tests/contract/ContractFixtures.test.ts
 ```
 
 ### Contract Fixtures & Parity Testing

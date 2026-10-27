@@ -200,14 +200,18 @@ describe('P8a: Frontend API Contract Parity & Fixture Validation', () => {
     it('validates jobs.default.json matches exact response and item shape', () => {
       expect(Object.keys(jobsDefault).sort()).toEqual([...JOBS_RESPONSE_KEYS].sort());
       expect(jobsDefault.data.length).toBeGreaterThan(0);
-      expect(Object.keys(jobsDefault.data[0]).sort()).toEqual([...JOB_LIST_ITEM_KEYS].sort());
+      for (const job of jobsDefault.data) {
+        expect(Object.keys(job).sort()).toEqual([...JOB_LIST_ITEM_KEYS].sort());
+      }
       expect(Object.keys(jobsDefault.meta).sort()).toEqual([...PAGINATION_META_KEYS].sort());
     });
 
     it('validates jobs.filtered.json matches exact response and item shape', () => {
       expect(Object.keys(jobsFiltered).sort()).toEqual([...JOBS_RESPONSE_KEYS].sort());
       expect(jobsFiltered.data.length).toBeGreaterThan(0);
-      expect(Object.keys(jobsFiltered.data[0]).sort()).toEqual([...JOB_LIST_ITEM_KEYS].sort());
+      for (const job of jobsFiltered.data) {
+        expect(Object.keys(job).sort()).toEqual([...JOB_LIST_ITEM_KEYS].sort());
+      }
       expect(Object.keys(jobsFiltered.meta).sort()).toEqual([...PAGINATION_META_KEYS].sort());
     });
 
@@ -252,12 +256,10 @@ describe('P8a: Frontend API Contract Parity & Fixture Validation', () => {
     it('validates companies.default.json matches exact CompaniesResponse shape', () => {
       expect(Object.keys(companiesDefault).sort()).toEqual([...COMPANIES_RESPONSE_KEYS].sort());
       expect(companiesDefault.data.length).toBeGreaterThan(0);
-      const firstCompanyKeys = Object.keys(companiesDefault.data[0]);
-      for (const key of firstCompanyKeys) {
-        expect(COMPANY_SUMMARY_KEYS).toContain(key as (keyof CompanySummary));
+      // Exact key set for every company: a field the API stops sending (or the UI type drops) must fail here
+      for (const company of companiesDefault.data) {
+        expect(Object.keys(company).sort()).toEqual([...COMPANY_SUMMARY_KEYS].sort());
       }
-      expect(firstCompanyKeys).toContain('slug');
-      expect(firstCompanyKeys).toContain('name');
     });
   });
 

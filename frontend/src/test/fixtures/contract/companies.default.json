@@ -3,12 +3,14 @@
     {
       "slug": "acme-corp",
       "name": "Acme Corp",
-      "jobCount": 0
+      "logoUrl": "https://example.com/acme-logo.png",
+      "jobCount": 3
     },
     {
       "slug": "beta-inc",
       "name": "Beta Inc",
-      "jobCount": 0
+      "logoUrl": null,
+      "jobCount": 2
     }
   ],
   "total": 2,
