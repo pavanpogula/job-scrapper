@@ -29,6 +29,7 @@ Every ADR follows the template defined in [ADR-0000-template.md](./ADR-0000-temp
 | [ADR-0016](./ADR-0016-manual-vercel-deploys.md) | Manual Vercel deploys from a GitHub Actions workflow | Accepted | 2026-10-26 | ADR-0014, P3a |
 | [ADR-0017](./ADR-0017-agent-branch-pushes.md) | Agents publish task branches through a guarded push script | Accepted | 2026-10-26 | ADR-0006, ADR-0016 |
 | [ADR-0018](./ADR-0018-job-last-updated-detection.md) | Job last-updated time is detected by content-hash change | Accepted | 2026-10-26 | BF-011, ADR-0004 |
+| [ADR-0019](./ADR-0019-company-profile-and-filters.md) | Company profile endpoint and company / posted-within job filters | Accepted | 2026-10-27 | ADR-0018, BF-020, BF-021, BF-022 |
 
 ---
 

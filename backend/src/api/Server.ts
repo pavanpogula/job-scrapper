@@ -12,6 +12,8 @@ import {
   queryJobDetail,
   computeFacets,
   queryCompanies,
+  queryCompanyProfile,
+  SLUG_REGEX,
 } from './db/queries';
 import { readThroughService } from './cache/ReadThrough';
 import { canonicalJobsKey, isCacheableView } from '../lib/cache/keys';
@@ -27,6 +29,7 @@ import type {
   JobDetailDTO,
   FacetsResponseDTO,
   CompaniesResponseDTO,
+  CompanyProfileDTO,
   MetaResponseDTO,
   HealthResponseDTO,
   ErrorResponseDTO,
@@ -301,11 +304,13 @@ app.get('/v1/companies', async (req: Request, res: Response) => {
   try {
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query.pageSize || '30'), 10) || 30));
-    const hasSearch = Boolean(req.query.search);
-    const isCacheable = !hasSearch && pageSize === 30;
-    const canonKey = `companies?page=${page}`;
-
     const queryParams = parseCompanyQueryParams(req.query as Record<string, unknown>);
+    const hasSearch = Boolean(req.query.search);
+    const byJobs = queryParams.sort === 'jobs';
+    // Pre-rendered pages are A-Z only; "most hiring" gets its own key and is never served from the generation
+    const isCacheable = !hasSearch && pageSize === 30 && !byJobs;
+    const canonKey = byJobs ? `companies?page=${page}&sort=jobs` : `companies?page=${page}`;
+
     const companies = await readThroughService.serveView<CompaniesResponseDTO>(
       canonKey,
       isCacheable,
@@ -328,6 +333,43 @@ app.get('/v1/companies', async (req: Request, res: Response) => {
     }
     console.error('Error fetching companies:', err);
     res.status(500).json({ error: 'Failed to fetch companies' });
+    return;
+  }
+});
+
+// GET /v1/companies/:slug - Single company profile with facets
+app.get('/v1/companies/:slug', async (req: Request, res: Response) => {
+  try {
+    const slug = String(req.params.slug || '').trim().toLowerCase();
+    if (!SLUG_REGEX.test(slug)) {
+      res.status(404).json({ error: 'Company not found' });
+      return;
+    }
+    const profile = await readThroughService.serveView<CompanyProfileDTO | null>(
+      `company_profile:${slug}`,
+      false,
+      res,
+      () => queryCompanyProfile(prisma, slug)
+    );
+    if (!profile) {
+      res.status(404).json({ error: 'Company not found' });
+      return;
+    }
+    res.json(profile);
+    return;
+  } catch (err: unknown) {
+    if (isHttpError(err) && err.status === 503) {
+      res.setHeader('Retry-After', String(err.retryAfterSeconds || 5));
+      const errorPayload: ErrorResponseDTO = {
+        error: err.message,
+        code: err.code || 'UPSTREAM_UNAVAILABLE',
+        retryAfterSeconds: err.retryAfterSeconds || 5,
+      };
+      res.status(503).json(errorPayload);
+      return;
+    }
+    console.error('Error fetching company profile:', err);
+    res.status(500).json({ error: 'Failed to fetch company profile' });
     return;
   }
 });
@@ -371,6 +413,11 @@ app.get('/v1/meta', async (_req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch meta' });
     return;
   }
+});
+
+// O14: Unknown /v1/* endpoints return JSON 404
+app.use('/v1', (_req: Request, res: Response) => {
+  res.status(404).json({ error: 'Not found' });
 });
 
 // Start server

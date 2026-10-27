@@ -18,7 +18,7 @@
 | **O2** | Live fixer test after P3 (~$5 API spend) | **default** (skip live fixer test; rely on deterministic gate) |
 | **O3** | `toJobDetail` createdAt/updatedAt | **default** (remove `createdAt/updatedAt` from UI JobDetail type) |
 | **O4** | Backend filters `company/department/location/city` + `sortBy=title` | **default** (remove unsupported filters / `sortBy=title` from UI) |
-| **O5** | Companies `totalPages` 0 vs `max(1)` | **default** (`totalPages = max(1)` on both endpoints, as a BF) |
+| **O5** | Companies `totalPages` 0 vs `max(1)` | **default** (`totalPages = max(1)` on both endpoints, BF-021 done in feat/company-pages-api) |
 | **O6** | `/v1/meta` DB-path `lastScrapeAt` | **default** (fix `/v1/meta` `lastScrapeAt` on DB path, as a BF) |
 | **O7** | Playwright config & tests | **default** (add Playwright config + one smoke e2e) |
 | **O8** | Versioning without root `package.json` | **default** (single repo version in CHANGELOG + tag; app `package.json` versions kept equal; `release` skill updated) |
@@ -27,7 +27,7 @@
 | **O11** | Stop-the-line toggles manager | **default** (owner flips `SCRAPE_ENABLED` / `FIXER_ENABLED` / `DISCOVERY_ENABLED` repo Variables) |
 | **O12** | Codex integration style | **default** (Codex = nested `AGENTS.md` + skills only; recorded in ADR-0013) |
 | **O13** | Fixer package.json edit permission | **default** (fixer may NOT edit any `package.json`) |
-| **O14** | Unknown `/v1/*` routes response | **default** (unknown `/v1/*` routes return JSON 404, as a BF) |
+| **O14** | Unknown `/v1/*` routes response | **default** (unknown `/v1/*` routes return JSON 404, BF-022 done in feat/company-pages-api) |
 
 ### Local-Machine Checklist
 - [ ] P2: Remove untracked `job-scrapper-ui/` leftovers (`node_modules/`, `dist/`).
@@ -248,11 +248,11 @@
 > - PR #16 (`e17b9cf`): Agent branch publishing script (`scripts/agents/push-branch.sh`, ADR-0017).
 > - PR #18 (`a66bab7`): Job last updated timestamp feature across scraper, database, API, and UI (ADR-0018).
 
-### [ ] P8a — Contract fixtures + frontend alignment
+### [x] P8a — Contract fixtures + frontend alignment (merged)
 - **Branch:** `plan/mono-p8a-contract-parity`
-- **PR:** `pending`
+- **PR:** #21
 - **Merge method:** `squash`
-- **Commit SHAs:** `pending`
+- **Commit SHAs:** merged into main
 - **Owner decisions used:** O3, O4
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 60 repo-level tests).
@@ -272,7 +272,7 @@
 - **PR:** `pending`
 - **Merge method:** `squash`
 - **Commit SHAs:** `pending`
-- **Owner decisions used:** O5, O6, O14
+- **Owner decisions used:** O6 (O5 and O14 completed in feat/company-pages-api, ADR-0019)
 - **Verification evidence:** `pending`
 - **Owner actions:** Deploy backend -> dispatch `scrape-daily publish_only=true` -> smoke test
 - **Rollback command:** Instant Rollback backend -> revert PR -> dispatch `publish_only`

@@ -14,6 +14,10 @@ import facetsDefault from './fixtures/contract/facets.default.json';
 import companiesDefault from './fixtures/contract/companies.default.json';
 import metaDefault from './fixtures/contract/meta.default.json';
 import error404 from './fixtures/contract/error.404.json';
+import companyProfileFound from './fixtures/contract/company-profile.found.json';
+import companyProfileNotFound from './fixtures/contract/company-profile.not-found.json';
+import jobsCompany from './fixtures/contract/jobs.company.json';
+import companiesSortedByJobs from './fixtures/contract/companies.sorted-by-jobs.json';
 
 import type {
   JobsResponse,
@@ -23,6 +27,7 @@ import type {
   CompaniesResponse,
   CompanySummary,
   CompanyDetail,
+  CompanyProfile,
   PaginationMeta,
   ApiMeta,
 } from '../types/api';
@@ -35,9 +40,13 @@ interface ErrorResponse {
 jobsDefault satisfies JobsResponse;
 jobsFiltered satisfies JobsResponse;
 jobsEmpty satisfies JobsResponse;
+jobsCompany satisfies JobsResponse;
 jobDetailFound satisfies JobDetail;
 facetsDefault satisfies FacetsData;
 companiesDefault satisfies CompaniesResponse;
+companiesSortedByJobs satisfies CompaniesResponse;
+companyProfileFound satisfies CompanyProfile;
+companyProfileNotFound satisfies ErrorResponse;
 metaDefault satisfies ApiMeta;
 error404 satisfies ErrorResponse;
 jobDetailNotFound satisfies ErrorResponse;
@@ -166,6 +175,21 @@ const COMPANY_DETAIL_KEYS = [
 type _AssertCompanyDetailKeys = Equal<typeof COMPANY_DETAIL_KEYS[number], keyof CompanyDetail>;
 const _checkCompanyDetailKeys: _AssertCompanyDetailKeys = true;
 
+const COMPANY_PROFILE_KEYS = [
+  'slug',
+  'name',
+  'logoUrl',
+  'jobCount',
+  'withSalary',
+  'latestPublishedAt',
+  'workplaceTypes',
+  'employmentTypes',
+  'departments',
+  'locations',
+] as const satisfies readonly (keyof CompanyProfile)[];
+type _AssertCompanyProfileKeys = Equal<typeof COMPANY_PROFILE_KEYS[number], keyof CompanyProfile>;
+const _checkCompanyProfileKeys: _AssertCompanyProfileKeys = true;
+
 const API_META_KEYS = [
   'activeJobs',
   'hiringCompanies',
@@ -192,6 +216,7 @@ describe('P8a: Frontend API Contract Parity & Fixture Validation', () => {
     expect(_checkCompaniesResponseKeys).toBe(true);
     expect(_checkCompanySummaryKeys).toBe(true);
     expect(_checkCompanyDetailKeys).toBe(true);
+    expect(_checkCompanyProfileKeys).toBe(true);
     expect(_checkApiMetaKeys).toBe(true);
     expect(_checkErrorResponseKeys).toBe(true);
   });
@@ -220,6 +245,16 @@ describe('P8a: Frontend API Contract Parity & Fixture Validation', () => {
       expect(jobsEmpty.data).toEqual([]);
       expect(Object.keys(jobsEmpty.meta).sort()).toEqual([...PAGINATION_META_KEYS].sort());
       expect(jobsEmpty.meta.total).toBe(0);
+    });
+
+    it('validates jobs.company.json matches exact response and item shape', () => {
+      expect(Object.keys(jobsCompany).sort()).toEqual([...JOBS_RESPONSE_KEYS].sort());
+      expect(jobsCompany.data.length).toBeGreaterThan(0);
+      for (const job of jobsCompany.data) {
+        expect(Object.keys(job).sort()).toEqual([...JOB_LIST_ITEM_KEYS].sort());
+        expect(job.companySlug).toBe('acme-corp');
+      }
+      expect(Object.keys(jobsCompany.meta).sort()).toEqual([...PAGINATION_META_KEYS].sort());
     });
   });
 
@@ -260,6 +295,31 @@ describe('P8a: Frontend API Contract Parity & Fixture Validation', () => {
       for (const company of companiesDefault.data) {
         expect(Object.keys(company).sort()).toEqual([...COMPANY_SUMMARY_KEYS].sort());
       }
+    });
+
+    it('validates companies.sorted-by-jobs.json matches exact CompaniesResponse shape', () => {
+      expect(Object.keys(companiesSortedByJobs).sort()).toEqual([...COMPANIES_RESPONSE_KEYS].sort());
+      expect(companiesSortedByJobs.data.length).toBeGreaterThan(0);
+      for (const company of companiesSortedByJobs.data) {
+        expect(Object.keys(company).sort()).toEqual([...COMPANY_SUMMARY_KEYS].sort());
+      }
+    });
+  });
+
+  describe('GET /v1/companies/:slug fixtures', () => {
+    it('validates company-profile.found.json matches exact CompanyProfile shape', () => {
+      expect(Object.keys(companyProfileFound).sort()).toEqual([...COMPANY_PROFILE_KEYS].sort());
+      expect(companyProfileFound.slug).toBe('acme-corp');
+      expect(typeof companyProfileFound.jobCount).toBe('number');
+      expect(Array.isArray(companyProfileFound.workplaceTypes)).toBe(true);
+      expect(Array.isArray(companyProfileFound.employmentTypes)).toBe(true);
+      expect(Array.isArray(companyProfileFound.departments)).toBe(true);
+      expect(Array.isArray(companyProfileFound.locations)).toBe(true);
+    });
+
+    it('validates company-profile.not-found.json matches error shape', () => {
+      expect(Object.keys(companyProfileNotFound).sort()).toEqual([...ERROR_RESPONSE_KEYS].sort());
+      expect(companyProfileNotFound.error).toBe('Company not found');
     });
   });
 

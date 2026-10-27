@@ -356,7 +356,7 @@ export async function publishCacheGeneration(
             total: totalCompanies,
             page: p,
             pageSize: 30,
-            totalPages: Math.ceil(totalCompanies / 30),
+            totalPages: companyTotalPages,
           })
         ),
         { level: 6 }

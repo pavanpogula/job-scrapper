@@ -20,6 +20,8 @@ export interface SeedJob extends ReferenceJob {
   salaryMin: number | null;
   salaryMax: number | null;
   publishedAt: Date | null;
+  lastUpdatedAt: Date | null;
+  lastUpdatedSource: string | null;
 }
 
 export const SEED_COMPANIES: SeedCompany[] = [
@@ -108,6 +110,13 @@ export function buildSeedJobs(): SeedJob[] {
   return SPECS.map(([title, companySlug, departmentName, locationName], i) => {
     const workplaceType = WORKPLACES[i % WORKPLACES.length] ?? 'OnSite';
     const hasSalary = i % 3 !== 0;
+    const hoursAgo = [12, 72, 360, 1080][i % 4];
+    const relTime = new Date(Date.now() - hoursAgo * 3600 * 1000);
+    const hasLastUpdate = i % 2 === 0;
+    const lastUpdatedAt = hasLastUpdate ? relTime : null;
+    const publishedAt = hasLastUpdate ? new Date(relTime.getTime() - 24 * 3600 * 1000) : (i % 5 === 4 ? null : relTime);
+    const lastUpdatedSource = lastUpdatedAt ? (i % 4 === 0 ? 'content_diff' : 'published') : (publishedAt ? 'published' : null);
+
     return {
       id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`,
       title,
@@ -123,8 +132,9 @@ export function buildSeedJobs(): SeedJob[] {
       isRemote: workplaceType === 'Remote',
       salaryMin: hasSalary ? 50_000 + (i % 7) * 25_000 : null,
       salaryMax: hasSalary ? 80_000 + (i % 7) * 25_000 : null,
-      // Several rows share a timestamp and some have none, to exercise the sort tie-breakers.
-      publishedAt: i % 5 === 4 ? null : new Date(BASE_TIME + (i % 6) * DAY_MS),
+      publishedAt,
+      lastUpdatedAt,
+      lastUpdatedSource,
     };
   });
 }

@@ -6,8 +6,9 @@
 
 import request from 'supertest';
 import app from '../../src/api/Server';
+import { readThroughService } from '../../src/api/cache/ReadThrough';
 import { buildSearchWhere } from '../../src/lib/search';
-import { mockJob, mockCompany, mockDepartment } from '../../__mocks__/@prisma/client';
+import { mockJob, mockCompany, mockDepartment, mockLocation } from '../../__mocks__/@prisma/client';
 import sampleJob from '../fixtures/api/sample-job.json';
 import sampleCompany from '../fixtures/api/sample-company.json';
 
@@ -236,6 +237,88 @@ describe('API Server Contract & Snapshot Tests', () => {
       );
     });
 
+    it('filters jobs by company slug', async () => {
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      await request(app)
+        .get('/v1/jobs?company=acme-corp')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            companySlug: 'acme-corp',
+          }),
+        })
+      );
+    });
+
+    it('combines company filter with search (BF-020)', async () => {
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      await request(app)
+        .get('/v1/jobs?company=acme-corp&search=software')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            companySlug: 'acme-corp',
+            AND: expect.any(Array),
+          }),
+        })
+      );
+    });
+
+    it('filters jobs by postedWithin window (1d, 7d, 30d)', async () => {
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      await request(app)
+        .get('/v1/jobs?postedWithin=7d')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  expect.objectContaining({ lastUpdatedAt: expect.any(Object) }),
+                  expect.objectContaining({ AND: expect.any(Array) }),
+                ]),
+              }),
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('ignores unknown postedWithin values', async () => {
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      await request(app)
+        .get('/v1/jobs?postedWithin=invalid_window')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  expect.objectContaining({ lastUpdatedAt: expect.any(Object) }),
+                ]),
+              }),
+            ]),
+          }),
+        })
+      );
+    });
+
     it('returns valid meta pagination when results are empty', async () => {
       mockJob.findMany.mockResolvedValueOnce([]);
       mockJob.count.mockResolvedValueOnce(0);
@@ -391,7 +474,44 @@ describe('API Server Contract & Snapshot Tests', () => {
       );
     });
 
-    it('returns 200 with empty list when no companies match', async () => {
+    it('sorts companies by OPEN job count when sort=jobs (ordering proven in tests/integration/Companies.test.ts)', async () => {
+      mockCompany.findMany.mockResolvedValueOnce([
+        { slug: 'old-co', name: 'Old Co', logoUrl: null },
+        { slug: 'hiring-co', name: 'Hiring Co', logoUrl: null },
+      ]);
+      mockJob.groupBy.mockResolvedValueOnce([
+        { companySlug: 'old-co', _count: { _all: 1 } },
+        { companySlug: 'hiring-co', _count: { _all: 5 } },
+      ]);
+
+      const res = await request(app)
+        .get('/v1/companies?sort=jobs')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.map((c: { slug: string; jobCount: number }) => [c.slug, c.jobCount])).toEqual([
+        ['hiring-co', 5],
+        ['old-co', 1],
+      ]);
+      expect(mockJob.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({ by: ['companySlug'], where: { active: true, isListed: true } })
+      );
+    });
+
+    it('never serves sort=jobs from the A-Z cache key or the pre-rendered generation', async () => {
+      const spy = jest.spyOn(readThroughService, 'serveView');
+      mockCompany.findMany.mockResolvedValueOnce([]);
+      mockJob.groupBy.mockResolvedValueOnce([]);
+
+      await request(app)
+        .get('/v1/companies?sort=jobs&page=2')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(spy).toHaveBeenCalledWith('companies?page=2&sort=jobs', false, expect.anything(), expect.any(Function), expect.anything());
+      spy.mockRestore();
+    });
+
+    it('returns 200 with totalPages=1 when no companies match (O5)', async () => {
       mockCompany.findMany.mockResolvedValueOnce([]);
       mockCompany.count.mockResolvedValueOnce(0);
 
@@ -402,7 +522,81 @@ describe('API Server Contract & Snapshot Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual([]);
       expect(res.body.total).toBe(0);
-      expect(res.body.totalPages).toBe(0);
+      expect(res.body.totalPages).toBe(1);
+    });
+  });
+
+  describe('GET /v1/companies/:slug', () => {
+    it('returns 200 with full company profile when found', async () => {
+      mockCompany.findFirst.mockResolvedValueOnce({
+        slug: 'acme-corp',
+        name: 'Acme Corp',
+        logoUrl: 'https://example.com/logo.png',
+        status: 'ACTIVE',
+      });
+      mockJob.count
+        .mockResolvedValueOnce(5) // jobCount
+        .mockResolvedValueOnce(3); // withSalary
+      mockJob.findFirst.mockResolvedValueOnce({
+        publishedAt: new Date('2026-03-01T10:00:00.000Z'),
+      });
+      mockJob.groupBy
+        .mockResolvedValueOnce([{ workplaceType: 'Remote', _count: { _all: 3 } }]) // workplaceTypes
+        .mockResolvedValueOnce([{ employmentType: 'FullTime', _count: { _all: 5 } }]) // employmentTypes
+        .mockResolvedValueOnce([{ departmentId: 'dept-eng', _count: { _all: 4 } }]) // departments by open jobs
+        .mockResolvedValueOnce([{ locationId: 'loc-sf', _count: { _all: 3 } }]); // locations by open jobs
+      mockDepartment.findMany.mockResolvedValueOnce([{ id: 'dept-eng', name: 'Engineering' }]);
+      mockLocation.findMany.mockResolvedValueOnce([{ id: 'loc-sf', name: 'San Francisco' }]);
+
+      const res = await request(app)
+        .get('/v1/companies/acme-corp')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        slug: 'acme-corp',
+        name: 'Acme Corp',
+        logoUrl: 'https://example.com/logo.png',
+        jobCount: 5,
+        withSalary: 3,
+        latestPublishedAt: '2026-03-01T10:00:00.000Z',
+        workplaceTypes: [{ value: 'Remote', count: 3 }],
+        employmentTypes: [{ value: 'FullTime', count: 5 }],
+        departments: [{ value: 'Engineering', count: 4 }],
+        locations: [{ value: 'San Francisco', count: 3 }],
+      });
+    });
+
+    it('returns 404 when company does not exist in database', async () => {
+      mockCompany.findFirst.mockResolvedValueOnce(null);
+
+      const res = await request(app)
+        .get('/v1/companies/unknown-corp')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Company not found' });
+    });
+
+    it('returns 404 when company is NOT_FOUND status in database', async () => {
+      mockCompany.findFirst.mockResolvedValueOnce(null); // findFirst filters by status: 'ACTIVE'
+
+      const res = await request(app)
+        .get('/v1/companies/inactive-corp')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Company not found' });
+    });
+
+    it('returns 404 immediately for invalid slug without querying database', async () => {
+      const res = await request(app)
+        .get('/v1/companies/INVALID_SLUG!')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Company not found' });
+      expect(mockCompany.findFirst).not.toHaveBeenCalled();
     });
   });
 
@@ -449,6 +643,15 @@ describe('API Server Contract & Snapshot Tests', () => {
 
       expect(res.status).toBe(500);
       expect(res.body).toEqual({ error: 'Failed to fetch jobs' });
+    });
+
+    it('returns 404 JSON for unknown /v1/* route (O14)', async () => {
+      const res = await request(app)
+        .get('/v1/nope')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Not found' });
     });
   });
 

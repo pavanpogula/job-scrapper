@@ -171,6 +171,32 @@ export interface CompaniesResponseDTO {
 }
 
 /**
+ * Detailed company profile with facet breakdowns (/v1/companies/:slug)
+ */
+export interface CompanyProfileDTO {
+  /** Unique company slug identifier */
+  slug: string;
+  /** Company display name, or null */
+  name: string | null;
+  /** Company logo URL, or null */
+  logoUrl: string | null;
+  /** Total count of active, listed jobs open at this company */
+  jobCount: number;
+  /** Number of active, listed jobs at this company that include salary data */
+  withSalary: number;
+  /** Publication timestamp of the most recent active job in ISO-8601 UTC format, or null */
+  latestPublishedAt: string | null;
+  /** Distribution of active jobs by workplace classification */
+  workplaceTypes: FacetCountDTO[];
+  /** Distribution of active jobs by employment type */
+  employmentTypes: FacetCountDTO[];
+  /** Top 10 departments by active job count */
+  departments: FacetCountDTO[];
+  /** Top 10 locations by active job count */
+  locations: FacetCountDTO[];
+}
+
+/**
  * Pagination metadata envelope for list endpoints
  */
 export interface PaginationMetaDTO {
@@ -322,6 +348,8 @@ export interface JobQueryParams {
   sortOrder?: 'asc' | 'desc';
   page?: string | number;
   pageSize?: string | number;
+  company?: string;
+  postedWithin?: '1d' | '7d' | '30d' | string;
 }
 
 /**
@@ -331,6 +359,7 @@ export interface CompanyQueryParams {
   search?: string;
   page?: string | number;
   pageSize?: string | number;
+  sort?: 'jobs' | 'name' | string;
 }
 
 /**
@@ -404,6 +433,17 @@ export function parseJobQueryParams(query: Record<string, unknown>): JobQueryPar
   const pageSize = extractQueryString(query.pageSize);
   if (pageSize !== undefined) params.pageSize = pageSize;
 
+  const company = extractQueryString(query.company);
+  if (company !== undefined) params.company = company;
+
+  const postedWithin = extractQueryString(query.postedWithin);
+  if (postedWithin !== undefined) {
+    const pw = postedWithin.trim().toLowerCase();
+    if (pw === '1d' || pw === '7d' || pw === '30d') {
+      params.postedWithin = pw as '1d' | '7d' | '30d';
+    }
+  }
+
   return params;
 }
 
@@ -420,6 +460,9 @@ export function parseCompanyQueryParams(query: Record<string, unknown>): Company
 
   const pageSize = extractQueryString(query.pageSize);
   if (pageSize !== undefined) params.pageSize = pageSize;
+
+  const sort = extractQueryString(query.sort);
+  if (sort === 'jobs' || sort === 'name') params.sort = sort;
 
   return params;
 }

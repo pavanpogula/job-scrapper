@@ -1,0 +1,36 @@
+{
+  "slug": "acme-corp",
+  "name": "Acme Corp",
+  "logoUrl": "https://example.com/acme-logo.png",
+  "jobCount": 3,
+  "withSalary": 3,
+  "latestPublishedAt": "2026-02-15T10:05:00.000Z",
+  "workplaceTypes": [
+    {
+      "value": "Remote",
+      "count": 3
+    }
+  ],
+  "employmentTypes": [
+    {
+      "value": "FullTime",
+      "count": 3
+    }
+  ],
+  "departments": [
+    {
+      "value": "Engineering",
+      "count": 3
+    }
+  ],
+  "locations": [
+    {
+      "value": "San Francisco",
+      "count": 2
+    },
+    {
+      "value": "New York",
+      "count": 1
+    }
+  ]
+}

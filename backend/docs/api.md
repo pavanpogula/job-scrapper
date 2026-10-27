@@ -17,12 +17,14 @@ Returns a paginated list of active and listed jobs matching filter criteria. Inc
   - `page` (number, default: 1): Page number (1-based, max: 5000).
   - `pageSize` (number, default: 25): Results per page (1..100).
   - `search` (string, optional): All-words search (BF-020). The text is split into lowercase words (max 8, edge punctuation removed; `c++`, `c#`, `node.js`, `r&d` kept). A job matches when **every** word starts a word in its title, company name, department or location, in any order (`senior engineer` finds "Staff Senior Software Engineer"; `sf` finds "Remote - SF" but not "Transfer"). `%` and `_` match literally. Searches are never served from the pre-rendered cache.
+  - `company` (string, optional): Exact company slug filter (case-insensitive, trimmed). Combines with search (BF-020) and other filters. Bypasses pre-rendered cache (`isCacheableView: false`).
+  - `postedWithin` (string, optional): One of `1d`, `7d`, `30d`. Filters jobs where `COALESCE(lastUpdatedAt, publishedAt) >= now - window` (ADR-0018 / ADR-0019). Unknown values are ignored. Bypasses pre-rendered cache.
   - `workplaceType` (string, optional): One of `Remote`, `Hybrid`, `OnSite`.
   - `employmentType` (string, optional): e.g. `FullTime`, `PartTime`, `Contract`.
   - `country` (string, optional): ISO-3166-1 alpha-2 code (e.g. `US`, `GB`).
   - `salaryMin` (number, optional): Minimum required salary threshold.
   - `salaryInterval` (string, optional): Ignored unless `salaryMin` is present; e.g. `1 YEAR`, `1 MONTH`.
-  - `sortBy` (string, default: `publishedAt`): Sort field (`publishedAt`, `title`, `company`).
+  - `sortBy` (string, default: `publishedAt`): Sort field (`publishedAt`, `salary`, `company`).
   - `sortOrder` (string, default: `desc`): `asc` or `desc`.
 
 - **Response:**
@@ -87,7 +89,9 @@ Paginated directory of active hiring companies.
   - `page` (number, default: 1)
   - `pageSize` (number, default: 20)
   - `search` (string, optional)
+  - `sort` (string, optional, default: `name`): `'jobs'` (most **open** jobs first — active and listed only, closed jobs never count — then name, then slug; served from the database, never from the pre-rendered A–Z pages, under its own cache key) or `'name'` (alphabetical by name, then slug).
 - **Response:**
+  `totalPages` is guaranteed to be at least 1 even when the company collection is empty (Owner decision O5 / BF-021).
   ```json
   {
     "data": [
@@ -104,6 +108,40 @@ Paginated directory of active hiring companies.
     "totalPages": 75
   }
   ```
+
+### `GET /v1/companies/:slug`
+Retrieves detailed profile information for an active company including job counts, salary availability, latest job publication timestamp, and top 10 departments and locations (ADR-0019). Served as an uncacheable DB view with identical CDN cache headers to `/v1/companies`.
+
+- **Parameters:**
+  - `slug` (string, path): Slug matching `/^[a-z0-9-]{1,100}$/`.
+- **Response (200):**
+  ```json
+  {
+    "slug": "acme-corp",
+    "name": "Acme Corp",
+    "logoUrl": "https://...",
+    "jobCount": 42,
+    "withSalary": 25,
+    "latestPublishedAt": "2026-10-25T14:30:00.000Z",
+    "workplaceTypes": [
+      { "value": "Remote", "count": 25 },
+      { "value": "Hybrid", "count": 17 }
+    ],
+    "employmentTypes": [
+      { "value": "FullTime", "count": 42 }
+    ],
+    "departments": [
+      { "value": "Engineering", "count": 30 },
+      { "value": "Product", "count": 12 }
+    ],
+    "locations": [
+      { "value": "San Francisco, CA", "count": 20 },
+      { "value": "New York, NY", "count": 10 }
+    ]
+  }
+  ```
+- **Response (404):**
+  `{ "error": "Company not found" }` (returned for non-existent companies, companies not in `ACTIVE` status, or invalid slug format).
 
 ### `GET /v1/meta`
 Telemetry metadata on job corpus and scrape generation.
@@ -152,6 +190,9 @@ Shallow health check endpoint (v2 schema) that performs 0 database and 0 Redis o
     }
   }
   ```
+
+### Unknown Route Handling (O14 / BF-022)
+Any unrecognized route under `/v1/*` returns HTTP 404 with standard JSON envelope `{ "error": "Not found" }` and `Cache-Control: no-store`.
 
 ---
 

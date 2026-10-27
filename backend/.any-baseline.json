@@ -16,7 +16,7 @@
   "src/utils/EnrichCompanies.ts": 1,
   "tests/e2e/DiscoveryPipeline.test.ts": 5,
   "tests/helpers/fakeRedis.ts": 19,
-  "tests/helpers/prismaFactory.ts": 50,
+  "tests/helpers/prismaFactory.ts": 47,
   "tests/unit/ApiGolden.test.ts": 2,
   "tests/unit/ApiServer.test.ts": 1,
   "tests/unit/AshbyClient.test.ts": 4,

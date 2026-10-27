@@ -131,9 +131,24 @@ export interface JobsResponse {
   meta: PaginationMeta;
 }
 
+export interface CompanyProfile {
+  slug: string;
+  name: string | null;
+  logoUrl: string | null;
+  jobCount: number;
+  withSalary: number;
+  latestPublishedAt: string | null;
+  workplaceTypes: FacetCount[];
+  employmentTypes: FacetCount[];
+  departments: FacetCount[];
+  locations: FacetCount[];
+}
+
 export interface JobsQueryParams {
   search?: string;
   country?: string;
+  company?: string;
+  postedWithin?: '1d' | '7d' | '30d';
   workplaceType?: WorkplaceType | '';
   employmentType?: EmploymentType | '';
   isRemote?: boolean;
@@ -144,4 +159,11 @@ export interface JobsQueryParams {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;
+}
+
+export interface CompanyQueryParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  sort?: 'jobs' | 'name';
 }
