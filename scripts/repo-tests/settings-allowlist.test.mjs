@@ -22,6 +22,7 @@ const DANGEROUS = [
   'scrape:parallel',
   'scrape:csv',
   'seed',
+  'seed:greenhouse',
   'discover',
   'enrich:companies',
   'cache:publish',

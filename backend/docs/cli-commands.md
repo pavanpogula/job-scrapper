@@ -10,6 +10,7 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | Command | Entry file | Needs DB | Needs Redis | Network | Writes | Exit code on failure |
 |---|---|:-:|:-:|---|---|---|
 | `npm run seed [-- --all]` | `src/utils/Seed.ts` | ✅ | — | — | `Company` rows | 0 (`.catch(console.error)`) |
+| `npm run seed:greenhouse [-- token1,token2]` | `src/utils/SeedGreenhouse.ts` | ✅ | — | Greenhouse Board API | `Company` rows (`gh--<token>`, `source=GREENHOUSE`) | 1 |
 | `npm run discover [-- --common-crawl] [-- --enrich]` | `src/discovery/CdxWorker.ts` | ✅ | — | Wayback CDX (+ CommonCrawl, + Ashby HTML) | `Company` rows (`name`/`logoUrl` with `--enrich`) | 1 |
 | `npm run process:cdx -- <file.json>` | `src/utils/ProcessCdxData.ts` | — | — | — | `./extracted-slugs.json` (CWD) | non-zero only on thrown read/parse error |
 | `npm run scrape [-- --sources=s1,s2] [-- --slugs=a,b]` | `src/core/Scraper.ts` | ✅ | optional | Ashby REST (+ GraphQL fallback) | `Job`, `Department`, `Location`, `Company.status`, Redis `job:*:hash`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 1 |
@@ -50,6 +51,12 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
 - Output: `📊 Found N existing companies in DB.`, `📝 Found M NEW companies to insert.`, `✅ Seed complete.` — or
   `✅ No new companies to add.`
 - Prereq: `DATABASE_URL`, tables created (`npx prisma db push`).
+
+### `npm run seed:greenhouse [-- discord,figma,gitlab,airbnb,stripe]` — `src/utils/SeedGreenhouse.ts`
+- Positional or `--tokens=` argument: comma-separated list of Greenhouse board tokens. Defaults to `CURATED_GREENHOUSE_BOARDS` in `src/config/GreenhouseBoards.ts` (`discord`, `figma`, `gitlab`, `airbnb`, `stripe`).
+- Validates each token against `GET https://boards-api.greenhouse.io/v1/boards/{token}` via `GreenhouseClient.fetchCompanyMetadata(token)`.
+- When `status === 'ok'`, upserts `Company { slug: 'gh--' + token, source: 'GREENHOUSE', atsToken: token, name, status: 'ACTIVE' }` by `source_atsToken`. Skips `not_found` or `error` boards.
+- Not run in CI; for local throwaway DB testing before G6 production enablement.
 
 ### `npm run discover [-- --common-crawl] [-- --enrich]` — `src/discovery/CdxWorker.ts`
 - See [02 → Workflow A1](./architecture-and-workflows.md#workflow-a1).

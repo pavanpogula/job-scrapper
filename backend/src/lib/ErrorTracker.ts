@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import { ValidationIssue } from './Sanitizer';
+import { AtsSource } from './ats/source';
 
 export type ErrorCategory =
     | 'api_error'
@@ -31,6 +32,7 @@ export interface RecordedErrorEvent {
     id?: string;
     timestamp: string;
     category: ErrorCategory;
+    source?: AtsSource;
     subkind?: string;
     companySlug: string;
     jobId?: string;
@@ -40,6 +42,14 @@ export interface RecordedErrorEvent {
     httpStatus?: number;
     attempts?: number;
     samplePayload?: Record<string, any>;
+}
+
+export interface SourceTelemetrySummary {
+    companiesAttempted: number;
+    companiesWithJobs: number;
+    jobsCollected: number;
+    notFound: number;
+    apiErrors: number;
 }
 
 export interface RunMetadata {
@@ -83,6 +93,7 @@ export interface RunTelemetrySummary {
     dbErrors: number;
     dbActiveJobsBefore?: number;
     dbActiveJobsAfter?: number;
+    bySource?: Partial<Record<AtsSource, SourceTelemetrySummary>>;
 }
 
 export interface CategoryTelemetry {
@@ -192,6 +203,7 @@ export class ErrorTracker {
     public outcome: 'success' | 'partial' | 'failed' = 'success';
     public exitCode = 0;
     public workersList: ErrorReportDocument['workers'] = [];
+    public bySource: Partial<Record<AtsSource, SourceTelemetrySummary>> = {};
 
     /**
      * @summary Initializes a new ErrorTracker instance for a scrape run
@@ -206,11 +218,63 @@ export class ErrorTracker {
     }
 
     /**
+     * @summary Returns or initializes per-source telemetry summary counters
+     */
+    public ensureSourceStats(source: AtsSource): SourceTelemetrySummary {
+        let stats = this.bySource[source];
+        if (!stats) {
+            stats = {
+                companiesAttempted: 0,
+                companiesWithJobs: 0,
+                jobsCollected: 0,
+                notFound: 0,
+                apiErrors: 0
+            };
+            this.bySource[source] = stats;
+        }
+        return stats;
+    }
+
+    /**
+     * @summary Increments companiesAttempted for a given ATS source
+     */
+    public recordSourceAttempt(source: AtsSource): void {
+        this.ensureSourceStats(source).companiesAttempted++;
+    }
+
+    /**
+     * @summary Increments companiesWithJobs and jobsCollected for a given ATS source when jobs > 0
+     */
+    public recordSourceJobs(source: AtsSource, jobCount: number): void {
+        const stats = this.ensureSourceStats(source);
+        if (jobCount > 0) {
+            stats.companiesWithJobs++;
+            stats.jobsCollected += jobCount;
+        }
+    }
+
+    /**
+     * @summary Increments notFound counter for a given ATS source
+     */
+    public recordSourceNotFound(source: AtsSource): void {
+        this.ensureSourceStats(source).notFound++;
+    }
+
+    /**
      * @summary Records a structured event with category-capped storage and exact metric tracking
      * @param event The error event to record
      */
     public recordEvent(event: Omit<RecordedErrorEvent, 'timestamp'>): void {
         const cat = event.category;
+
+        if (event.source) {
+            const stats = this.ensureSourceStats(event.source);
+            if (cat === 'api_error') {
+                stats.apiErrors++;
+            } else if (cat === 'not_found') {
+                stats.notFound++;
+            }
+        }
 
         // Exact counter tracking
         const currCount = (this.categoryCounts.get(cat) ?? 0) + 1;
@@ -248,8 +312,9 @@ export class ErrorTracker {
     /**
      * @summary Records validation and sanitization issues returned by Sanitizer, splitting into filtered and sanitized
      * @param issues Validation issues list
+     * @param source Optional ATS source identifier
      */
-    public recordValidationIssues(issues: ValidationIssue[]): void {
+    public recordValidationIssues(issues: ValidationIssue[], source?: AtsSource): void {
         for (const issue of issues) {
             if (issue.action === 'filtered') {
                 if (issue.jobId) this.filteredJobIds.add(issue.jobId);
@@ -257,6 +322,7 @@ export class ErrorTracker {
 
                 this.recordEvent({
                     category: 'validation_filtered',
+                    ...(source ? { source } : {}),
                     subkind: issue.field || 'unknown',
                     companySlug: issue.companySlug,
                     jobId: issue.jobId,
@@ -270,6 +336,7 @@ export class ErrorTracker {
 
                 this.recordEvent({
                     category: 'validation_sanitized',
+                    ...(source ? { source } : {}),
                     subkind: issue.field || 'unknown',
                     companySlug: issue.companySlug,
                     jobId: issue.jobId,
@@ -360,7 +427,8 @@ export class ErrorTracker {
                 jobsDeactivated: this.jobsDeactivated,
                 dbErrors: this.dbErrors,
                 dbActiveJobsBefore: this.dbActiveJobsBefore,
-                dbActiveJobsAfter: this.dbActiveJobsAfter
+                dbActiveJobsAfter: this.dbActiveJobsAfter,
+                ...(Object.keys(this.bySource).length > 0 ? { bySource: this.bySource } : {})
             },
             workers: (this.workersList && this.workersList.length > 0) ? this.workersList : undefined,
             categories,
@@ -508,6 +576,29 @@ export class ErrorTracker {
             summary.jobsReactivated = (summary.jobsReactivated || 0) + (r.summary.jobsReactivated || 0);
             summary.jobsDeactivated = (summary.jobsDeactivated || 0) + (r.summary.jobsDeactivated || 0);
             summary.dbErrors += r.summary.dbErrors || 0;
+
+            if (r.summary.bySource) {
+                summary.bySource = summary.bySource || {};
+                for (const [src, srcStats] of Object.entries(r.summary.bySource)) {
+                    if (!srcStats) continue;
+                    const atsSrc = src as AtsSource;
+                    if (!summary.bySource[atsSrc]) {
+                        summary.bySource[atsSrc] = {
+                            companiesAttempted: 0,
+                            companiesWithJobs: 0,
+                            jobsCollected: 0,
+                            notFound: 0,
+                            apiErrors: 0
+                        };
+                    }
+                    const dest = summary.bySource[atsSrc]!;
+                    dest.companiesAttempted += srcStats.companiesAttempted || 0;
+                    dest.companiesWithJobs += srcStats.companiesWithJobs || 0;
+                    dest.jobsCollected += srcStats.jobsCollected || 0;
+                    dest.notFound += srcStats.notFound || 0;
+                    dest.apiErrors += srcStats.apiErrors || 0;
+                }
+            }
 
             if (r.categories) {
                 for (const [cat, data] of Object.entries(r.categories)) {

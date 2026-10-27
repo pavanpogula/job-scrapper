@@ -38,6 +38,7 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 | BF-015 | `8895d95` | Posting API failure classification, 429 rate limit scoping, and Retry-After header honoring (SCR-11/12) | ✅ (`tests/unit/AshbyClient.test.ts`, `ScraperRunAll.test.ts`) |
 | BF-016 | `38f4f01` | GraphQL source preservation against REST overwrite and empty board deactivation deferral (SCR-16/17) | ✅ (`tests/unit/ScraperRunAll.test.ts`) |
 | BF-017 | HEAD | Cache publishing orchestration, worker failure isolation, and exit code contract (CACHE-04, GAP-OPS-06) | ✅ (`tests/unit/ClusterScraper.test.ts`, `ScraperRunAll.test.ts`) |
+| BF-023 | HEAD | Greenhouse board fetch & normalization, `greenhouse:<id>` deactivation safety, `_normVersion` freshness rule, and source-aware telemetry (ADR-0021) | ✅ (`GreenhouseClient.test.ts`, `GreenhouseCoexistence.test.ts`, `LastUpdated.test.ts`, `ErrorTrackerV2.test.ts`, `ReportClassifier.test.ts`) |
 
 ### BF-001: Posting API 404/403 for boards that are live in the browser
 - **Symptom:** Companies return `404`/`403` from `api.ashbyhq.com/posting-api/job-board/<slug>` but show live jobs at `jobs.ashbyhq.com/<slug>`.
@@ -240,6 +241,17 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Implemented in:** `backend/src/api/Server.ts`.
 - **Regression Invariant:** Any request to an unknown `/v1/*` route returns status 404 with JSON `{ "error": "Not found" }` and `Cache-Control: no-store`.
 - **Guarding tests:** `backend/tests/unit/ApiServer.test.ts` (`returns JSON 404 for unknown /v1 routes`).
+
+### BF-023: Greenhouse board fetch & normalization (ADR-0021)
+- **Symptom:** Greenhouse Job Board API differs structurally from Ashby: 404 body messages differ across endpoints (`/jobs` returns `"Job not found"` vs `/v1/boards/{t}` returning `"Job board not found"`), `content` is HTML-entity-escaped once, `pay_input_ranges` reports compensation in integer cents with `"Hourly"` only in the range title/blurb, `internal_job_id` repeats across distinct job posts, raw numeric `id`s would mass-deactivate `greenhouse:<id>` rows if passed directly to `deactivateStaleJobs`, and future normalizer changes would mark every Greenhouse job as freshly `'detected'` without a normalization version guard.
+- **Root cause & fix:**
+  1. Implemented `GreenhouseClient` (`backend/src/lib/ats/GreenhouseClient.ts`) and shared retry helper `backend/src/lib/ats/http.ts`. 404/`notFound` is decided strictly by HTTP status 404 (never by body text); only HTTP 429 sets `rateLimited: true` with `Retry-After` capped at 10 s.
+  2. Implemented pure `normalizeGreenhouseJob(raw, ref)` mapping `externalId = String(id)`, `legacyKey = "greenhouse:" + id`, single-pass HTML entity unescaping (`decodeHtmlEntities` in `Sanitizer.ts`) before HTML/plain sanitization, cents÷100 salary extraction with hourly title/blurb detection, multi-location splitting, right-to-left office location parsing, `sourceUpdatedAt: null`, and `raw` (`Job.metadata`) carrying `descriptionHtml`, `descriptionPlain`, `jobUrl`, `team: null`, `secondaryLocations`, `_source: 'rest'`, `_ats: 'greenhouse'`, `_normVersion: 1`, `updated_at`, `departments`, `offices`, `metadata` (dropping escaped `content`). Never dedupes on `internal_job_id`.
+  3. Extended `resolveLastUpdated` (`backend/src/core/ResolveLastUpdated.ts`) with the `_normVersion` rule: when `contentHash` changes and `prev.metadata._normVersion !== next.metadata._normVersion`, keep stored `lastUpdatedAt` and `lastUpdatedSource`.
+  4. Extended `ErrorTracker` with optional `source` on events and `summary.bySource` (merged across workers), and made `ReportClassifier` source-aware (`BF-023` for Greenhouse instead of Ashby's `BF-001`) while keeping Ashby message strings byte-identical.
+- **Implemented in:** `backend/src/lib/ats/GreenhouseClient.ts`, `backend/src/lib/ats/http.ts`, `backend/src/lib/Sanitizer.ts`, `backend/src/core/ResolveLastUpdated.ts`, `backend/src/core/Scraper.ts`, `backend/src/lib/ErrorTracker.ts`, `backend/src/lib/ReportClassifier.ts`, `backend/src/utils/SeedGreenhouse.ts`.
+- **Regression Invariant:** Greenhouse 404 is detected by HTTP status only; `content` is HTML-unescaped once and dropped from `raw`; `raw` includes `descriptionHtml`/`descriptionPlain`/`jobUrl`/`team`/`secondaryLocations`/`_normVersion`; `activeIds` passed to `deactivateStaleJobs` are `greenhouse:<id>` `legacyKey` values; scraping one source never touches or deactivates another source's jobs; `_normVersion` changes preserve `lastUpdatedAt`/`lastUpdatedSource`; Ashby telemetry strings remain byte-identical.
+- **Guarding tests:** `backend/tests/unit/GreenhouseClient.test.ts`, `backend/tests/integration/GreenhouseCoexistence.test.ts`, `backend/tests/unit/LastUpdated.test.ts`, `backend/tests/unit/ErrorTrackerV2.test.ts`, `backend/tests/unit/ReportClassifier.test.ts`.
 
 ---
 

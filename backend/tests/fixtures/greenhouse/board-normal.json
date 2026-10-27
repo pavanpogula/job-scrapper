@@ -1,0 +1,127 @@
+{
+  "jobs": [
+    {
+      "id": 8806482002,
+      "internal_job_id": 6210001002,
+      "title": "Commercial Policy Lead",
+      "updated_at": "2026-10-20T20:27:20-04:00",
+      "first_published": "2026-09-15T12:52:11-04:00",
+      "requisition_id": "R-1001",
+      "location": {
+        "name": "San Francisco Bay Area"
+      },
+      "absolute_url": "https://job-boards.greenhouse.io/discord/jobs/8806482002",
+      "company_name": "Discord",
+      "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;Discord has a highly engaged community &amp;amp; millions of daily active users (&#39;gamers&#39; &amp;amp; builders).&lt;/p&gt;&lt;/div&gt;&lt;p&gt;Join our Policy team to lead commercial policy initiatives.&lt;/p&gt;",
+      "departments": [
+        {
+          "id": 4054683002,
+          "name": "Policy",
+          "child_ids": [],
+          "parent_id": 4094263002
+        }
+      ],
+      "offices": [
+        {
+          "id": 4082816002,
+          "name": "Remote (US)",
+          "location": null,
+          "child_ids": [],
+          "parent_id": null
+        }
+      ],
+      "metadata": [
+        {
+          "id": 4105571002,
+          "name": "Featured on Website",
+          "value": [],
+          "value_type": "multi_select"
+        }
+      ],
+      "pay_input_ranges": [
+        {
+          "min_cents": 19200000,
+          "max_cents": 21600000,
+          "currency_type": "USD",
+          "title": "Base Salary",
+          "blurb": "<p><em>The base salary range for this full-time position is listed below.</em></p>"
+        }
+      ]
+    },
+    {
+      "id": 8840756002,
+      "internal_job_id": 6210001002,
+      "title": "Data Scientist - Client Platform",
+      "updated_at": "2026-10-20T20:14:41-04:00",
+      "first_published": "2026-09-24T17:26:49-04:00",
+      "requisition_id": "R-1002",
+      "location": {
+        "name": "San Francisco, CA"
+      },
+      "absolute_url": "https://discord.com/jobs/8840756002?gh_jid=8840756002",
+      "company_name": "Discord",
+      "content": "&lt;p&gt;We are looking for a Data Scientist &#8211; Client Platform.&lt;/p&gt;&lt;script&gt;alert(1)&lt;/script&gt;",
+      "departments": [
+        {
+          "id": 4022531002,
+          "name": "Data Science & Engineering",
+          "child_ids": [],
+          "parent_id": 4094266002
+        }
+      ],
+      "offices": [
+        {
+          "id": 4000383002,
+          "name": "San Francisco, CA",
+          "location": "San Francisco, California, United States",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ],
+      "metadata": [],
+      "pay_input_ranges": [
+        {
+          "min_cents": 16000000,
+          "max_cents": 20000000,
+          "currency_type": "USD",
+          "title": "Base Salary",
+          "blurb": ""
+        }
+      ]
+    },
+    {
+      "id": 8722538002,
+      "internal_job_id": 6210002002,
+      "title": "Software Engineering Intern - Core Infrastructure",
+      "updated_at": "2026-10-21T14:41:29-04:00",
+      "first_published": "2026-08-20T13:43:23-04:00",
+      "requisition_id": "R-1003",
+      "location": {
+        "name": "Remote - United States"
+      },
+      "absolute_url": "https://job-boards.greenhouse.io/discord/jobs/8722538002",
+      "company_name": "Discord",
+      "content": "&lt;p&gt;Summer internship working on distributed systems.&lt;/p&gt;",
+      "departments": [
+        {
+          "id": 4107920002,
+          "name": "Engineering",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ],
+      "offices": [],
+      "metadata": [
+        {
+          "id": 4105579999,
+          "name": "Workplace Type",
+          "value": "Remote",
+          "value_type": "single_select"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "total": 3
+  }
+}

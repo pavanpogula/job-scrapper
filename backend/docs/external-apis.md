@@ -10,6 +10,8 @@
 | 2 | Ashby Posting API | `GET https://api.ashbyhq.com/posting-api/job-board/{slug}` | none | `src/lib/AshbyClient.ts` (`ScraperCSV.ts`) |
 | 2b | Ashby Hosted GraphQL API (Fallback) | `POST https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams` | none | `src/lib/AshbyClient.ts` `fetchFromAshbyGraphQL()` (fallback on 404/403/400) |
 | 2c | Ashby Hosted Board page | `GET https://jobs.ashbyhq.com/{slug}` (HTML) | none | `src/lib/AshbyClient.ts` `fetchOrganizationMetadata()` (`npm run discover -- --enrich`) |
+| 2d | Greenhouse Job Board API (Jobs) | `GET https://boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true&pay_transparency=true` | none | `src/lib/ats/GreenhouseClient.ts` `fetchBoard()` (`Scraper.ts`, `ClusterScraper.ts`) |
+| 2e | Greenhouse Job Board API (Board Info) | `GET https://boards-api.greenhouse.io/v1/boards/{token}` | none | `src/lib/ats/GreenhouseClient.ts` `fetchCompanyMetadata()` (`SeedGreenhouse.ts`, `EnrichCompanies.ts`) |
 | 3 | Wayback CDX | `GET http://web.archive.org/cdx/search/cdx` | none | `src/discovery/CdxWorker.ts` (+ manual download for `process:cdx`) |
 | 3b | CommonCrawl Index | `GET https://index.commoncrawl.org/CC-MAIN-2024-51-index` | none | `src/discovery/CdxWorker.ts` `fetchCommonCrawlUrls()` (`npm run discover -- --common-crawl`) |
 | 4 | Google Drive v3 | `files.create` (multipart upload), `files.list` | Service-account JWT | `src/lib/GoogleDriveOAuth.ts` |
@@ -139,6 +141,36 @@ GraphQL-sourced jobs therefore have **no `publishedAt`** (empty CSV `Published D
 `timeout: 10000`). Extracts `window.__appData = {...};` with a regex, `JSON.parse`s it, and returns
 `{ name: organization.name, logoUrl: organization.theme.logoWordmarkImageUrl || organization.theme.logoSquareImageUrl }`,
 or `null` on any failure. Used only by `enrichCompanyMetadata()` in `src/discovery/CdxWorker.ts`.
+
+---
+
+## 2d–2e. Greenhouse Public Job Board API (`src/lib/ats/GreenhouseClient.ts`)
+
+**Endpoints (verified live on 2026-10-26/27 across airbnb, stripe, discord, figma, gitlab):**
+- **Jobs:** `GET https://boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true&pay_transparency=true`
+  - One call per board returns every published job, no auth, no pagination.
+  - Unknown board → `404 {"status":404,"error":"Job not found"}`.
+- **Board Info:** `GET https://boards-api.greenhouse.io/v1/boards/{token}`
+  - Returns `{"name":"Discord","content":"..."}` (no logo URL in v1).
+  - Unknown board → `404 {"status":404,"error":"Job board not found"}`.
+  - **Important (BF-023):** Because the 404 body text differs between `/jobs` (`"Job not found"`) and `/v1/boards/{t}` (`"Job board not found"`), `notFound` is decided strictly by **HTTP status 404**, never by message text.
+
+**Client & WAF Behaviour:**
+- Sends `BROWSER_HEADERS` plus `Accept-Encoding: gzip` (stripe: 5.5 MB raw → 1.9 MB gzip), `timeout: 15000` ms.
+- Shares retry/backoff logic with Ashby via `src/lib/ats/http.ts` (`isRetryableError`, `parseRetryAfterSeconds` capped at 10 s, `computeRetryDelayMs`, `classifyFetchFailure`).
+- Only HTTP `429` sets `rateLimited: true` (BF-015/BF-023).
+- `200` with `jobs: []` returns an empty board with `fetchMode: 'primary'` (existing empty-board deferral in `Scraper.ts` applies).
+- Tokens are case-insensitive (lower-cased on lookup). EU boards (`job-boards.eu.greenhouse.io/{t}`) are served by the same `boards-api.greenhouse.io` API host; their `absolute_url` preserves the EU host, which `canonicalUrls` prefers when it is a `*.greenhouse.io` host. `boards.greenhouse.io/*` 301-redirects to `job-boards.greenhouse.io/*`.
+
+**Job Fields & Normalization (`normalizeGreenhouseJob`):**
+- `id` (numeric, globally unique across boards) → `externalId: String(id)`, `legacyKey: "greenhouse:" + id` (stored in `Job.ashbyId`).
+- `internal_job_id` repeats across distinct job posts — **never** dedupe on `internal_job_id`.
+- `title`, `company_name`, `updated_at` (stored in `raw` metadata only; `sourceUpdatedAt` is `null` in v1 per ADR-0021 so internal edits do not trigger false freshness updates), `first_published` (converted to ISO UTC `publishedAt`).
+- `location.name`: free text (`"Remote - USA"`, `"A • B"`, `"A; B"`, `"N/A"`). Primary `location` is the first segment split on `•`, `;`, or ` or ` (`"N/A"` → `""`); remaining segments go to `secondaryLocations`.
+- `offices[]`: first non-null `offices[].location` is parsed from the right (`last = country` via `toIsoCountry`, `first = city`, `middle = region` when 3 parts) to populate `postal`.
+- `content`: **HTML-entity-escaped** (`&lt;`, `&gt;`, `&quot;`, `&amp;`, `&#39;`, numeric entities) — unescaped **exactly once** via single-pass `decodeHtmlEntities` before `sanitizeJobDescriptionHtml` and `sanitizeJobDescriptionPlain`. The raw escaped `content` is dropped from `raw` metadata so descriptions are never stored twice.
+- `pay_input_ranges[]` (returned only when `pay_transparency=true`): integer **cents** (`min_cents` / `max_cents` ÷ 100), `currency_type`, and interval `'1 HOUR'` when `title` (or fallback `blurb`) matches `/\bhourly\b|per hour/i`, else `'1 YEAR'`.
+- `raw` (`Job.metadata`) carries `descriptionHtml`, `descriptionPlain`, `jobUrl`, `team: null`, `secondaryLocations`, `_source: 'rest'`, `_ats: 'greenhouse'`, `_normVersion: 1`, `updated_at`, `departments`, `offices`, and `metadata`.
 
 ---
 

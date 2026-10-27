@@ -41,13 +41,43 @@ const HTML_ENTITIES: Record<string, string> = {
 };
 
 /**
- * @summary Decodes common HTML entities in single-line text fields (title, location, department)
+ * @summary Decodes HTML named and numeric (decimal/hex) entities in a single pass (unescapes once)
  */
 export function decodeHtmlEntities(input: string): string {
-    return input.replace(/&(amp|lt|gt|quot|#39|#x27|apos|nbsp);/gi, match => {
-        const lower = match.toLowerCase();
-        return HTML_ENTITIES[lower] ?? match;
-    });
+    return input.replace(
+        /&(?:(amp|lt|gt|quot|#39|#x27|apos|nbsp)|#(\d+)|#x([0-9a-f]+));/gi,
+        (match, named?: string, dec?: string, hex?: string) => {
+            if (named) {
+                const lower = `&${named.toLowerCase()};`;
+                return HTML_ENTITIES[lower] ?? match;
+            }
+            if (dec) {
+                const code = parseInt(dec, 10);
+                if (
+                    !Number.isNaN(code) &&
+                    code > 0 &&
+                    code <= 0x10ffff &&
+                    (code < 0xd800 || code > 0xdfff)
+                ) {
+                    return String.fromCodePoint(code);
+                }
+                return match;
+            }
+            if (hex) {
+                const code = parseInt(hex, 16);
+                if (
+                    !Number.isNaN(code) &&
+                    code > 0 &&
+                    code <= 0x10ffff &&
+                    (code < 0xd800 || code > 0xdfff)
+                ) {
+                    return String.fromCodePoint(code);
+                }
+                return match;
+            }
+            return match;
+        }
+    );
 }
 
 /**

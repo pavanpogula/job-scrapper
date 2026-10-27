@@ -190,11 +190,15 @@ sequenceDiagram
 ```
 
 **Important behaviours**
-- **ATS Adapter Boundary (ADR-0021):** ATS ingestion is abstracted behind `AtsClient` (`src/lib/ats/AtsClient.ts`).
-  `AshbyAtsClient` implements the interface wrapping `fetchAshbyBoardWithFallback()` and the pure normalizer `normalizeAshbyJob()`.
+- **ATS Adapter Boundary (ADR-0021, BF-023):** ATS ingestion is abstracted behind `AtsClient` (`src/lib/ats/AtsClient.ts`).
+  `AshbyAtsClient` wraps `fetchAshbyBoardWithFallback()` and `normalizeAshbyJob()`; `GreenhouseClient` (`src/lib/ats/GreenhouseClient.ts`)
+  implements Greenhouse Job Board API fetching and `normalizeGreenhouseJob()` (registered in the default client registry, disabled by default until `--sources` includes `greenhouse`).
+  Both clients share retry/backoff and failure classification via `src/lib/ats/http.ts`.
   Scraper core maintains isolated `AdaptiveLimiter` instances per ATS source so 429 throttling on one ATS does not affect another,
   dispatches by company `source`, filters DB queries by enabled sources, and keys all job deactivation, empty-board checks,
-  and DB lookups by `NormalizedJob.legacyKey` (`ashbyId`).
+  and DB lookups by `NormalizedJob.legacyKey` (`ashbyId`, e.g. `greenhouse:<id>` for Greenhouse).
+  `resolveLastUpdated` includes the `_normVersion` rule so bumping `metadata._normVersion` in a normalizer updates stored rows without marking every job's `lastUpdatedAt` as newly `'detected'`.
+  `ErrorTracker` records optional `source` on events and `summary.bySource[source]` counters (merged across workers by `mergeReports`), while keeping Ashby telemetry message strings byte-identical.
 - **Concurrency:** `CONCURRENCY_LIMIT = 15` (`src/core/Scraper.ts`), overridable via `runAll({ concurrency })`. Uses the
   adaptive `createLimiter()` (`src/lib/Concurrency.ts`): `onRateLimit()` halves concurrency (floor `minConcurrency = 2`)
   and pauses dispatch for `defaultCooldownMs = 2000`; `onSuccess()` adds +1 after `recoveryThreshold = 25` consecutive

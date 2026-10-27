@@ -294,4 +294,44 @@ describe('ReportClassifier Unit Tests (P1-T10 / LOOP-05)', () => {
         const res = classifyReport(report, { outputDir: tmpDir });
         expect(res.issues.length).toBeLessThanOrEqual(3);
     });
+
+    test('source-aware BF mapping: Greenhouse api_error maps to BF-023 (not BF-001) while Ashby maps to BF-001', () => {
+        const ghReport = createBaseReport();
+        for (let i = 1; i <= 6; i++) {
+            ghReport.events.push({
+                id: `ev-gh-${i}`,
+                timestamp: new Date().toISOString(),
+                category: 'api_error',
+                source: 'greenhouse',
+                companySlug: `gh--co-${i}`,
+                message: 'Greenhouse Board API failed (http/503/3) after 3 attempts',
+                actionTaken: 'retry_exhausted'
+            });
+        }
+        const ghRes = classifyReport(ghReport, { outputDir: tmpDir });
+        expect(ghRes.actionable).toBe(true);
+        expect(ghRes.issues[0].relatedBF).toEqual(['BF-023']);
+        expect(ghRes.issues[0].relatedBF).not.toContain('BF-001');
+
+        const ashbyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'classifier-ashby-'));
+        try {
+            const ashbyReport = createBaseReport();
+            for (let i = 1; i <= 6; i++) {
+                ashbyReport.events.push({
+                    id: `ev-ashby-${i}`,
+                    timestamp: new Date().toISOString(),
+                    category: 'api_error',
+                    source: 'ashby',
+                    companySlug: `ashby-co-${i}`,
+                    message: 'Posting API failed (http/503/3) after 3 attempts',
+                    actionTaken: 'retry_exhausted'
+                });
+            }
+            const ashbyRes = classifyReport(ashbyReport, { outputDir: ashbyDir });
+            expect(ashbyRes.actionable).toBe(true);
+            expect(ashbyRes.issues[0].relatedBF).toEqual(['BF-001']);
+        } finally {
+            fs.rmSync(ashbyDir, { recursive: true, force: true });
+        }
+    });
 });

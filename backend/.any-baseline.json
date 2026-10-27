@@ -7,7 +7,7 @@
   "src/database/DbInspect.ts": 3,
   "src/database/DbMenu.ts": 2,
   "src/database/NormalizeCountries.ts": 2,
-  "src/lib/AshbyClient.ts": 5,
+  "src/lib/AshbyClient.ts": 1,
   "src/lib/ErrorTracker.ts": 6,
   "src/lib/GoogleDriveOAuth.ts": 4,
   "src/lib/GoogleDriveUserOAuth.ts": 5,
