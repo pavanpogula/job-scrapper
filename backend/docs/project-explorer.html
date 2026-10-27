@@ -436,6 +436,12 @@
                         <span>Sanitizer.ts</span>
                         
                     </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_search_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>search.ts</span>
+                        
+                    </div>
                 </li></ul>
                 </li><li class="">
                     <div class="tree-item folder" onclick="toggleFolder(this)">
@@ -548,6 +554,31 @@
                     <div class="tree-item file" onclick="showFile('tests_helpers_prismaFactory_ts')">
                         <span class="material-icons-round">description</span>
                         <span>prismaFactory.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>integration</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_Search_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>Search.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_searchReference_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>searchReference.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_searchSeed_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>searchSeed.ts</span>
                         
                     </div>
                 </li></ul>
@@ -765,6 +796,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_ScraperRunAll_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ScraperRunAll.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_SearchTokenize_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>SearchTokenize.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -2301,6 +2338,52 @@
       }
     ]
   },
+  "src_lib_search_ts": {
+    "name": "search.ts",
+    "path": "src/lib/search.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Turns user search text into tokens and a Prisma filter: every token must start a word in the title, company, department or location (BF-020)",
+    "tags": [
+      "Search",
+      "Prisma",
+      "API",
+      "Jobs",
+      "BF-020"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "5"
+      }
+    ],
+    "functions": [
+      {
+        "name": "tokenizeSearch()",
+        "desc": "Splits search text into lowercase, de-duplicated tokens with edge punctuation removed"
+      },
+      {
+        "name": "canonicalSearch()",
+        "desc": "Canonical form of a search for cache keys: tokens sorted and space-joined, or '' when there are none"
+      },
+      {
+        "name": "escapeLike()",
+        "desc": "Escapes LIKE wildcards so `%`, `_` and `\\` in user input match literally"
+      },
+      {
+        "name": "wordStartConditions()",
+        "desc": "String-filter conditions that are true when the token starts a word in a text column"
+      },
+      {
+        "name": "buildSearchWhere()",
+        "desc": "Builds the Prisma filter for a search: AND over tokens, each token OR'd across the four searchable fields"
+      }
+    ]
+  },
   "src_utils_EnrichCompanies_ts": {
     "name": "EnrichCompanies.ts",
     "path": "src/utils/EnrichCompanies.ts",
@@ -2635,6 +2718,111 @@
       }
     ],
     "functions": []
+  },
+  "tests_integration_Search_test_ts": {
+    "name": "Search.test.ts",
+    "path": "tests/integration/Search.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Proves /v1/jobs search returns exactly the right jobs, combines with filters, and pages without loss (BF-020)",
+    "tags": [
+      "tests",
+      "integration",
+      "search",
+      "postgres",
+      "pagination",
+      "BF-020"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "assertLocalDatabase()",
+        "desc": "Refuses anything but a local database so these destructive tests can never touch production"
+      },
+      {
+        "name": "searchIds()",
+        "desc": "Every id the API returns for a query, at pageSize 100 (the seed has fewer rows than that)."
+      },
+      {
+        "name": "walk()",
+        "desc": "Walks every page and returns ids in page order, checking the page metadata on the way."
+      }
+    ]
+  },
+  "tests_integration_searchReference_ts": {
+    "name": "searchReference.ts",
+    "path": "tests/integration/searchReference.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Independent plain-TypeScript statement of the BF-020 search rule, used to decide which seeded jobs must match",
+    "tags": [
+      "tests",
+      "search",
+      "oracle",
+      "BF-020"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "referenceTokens()",
+        "desc": "Splits user text into search tokens per the BF-020 rule"
+      },
+      {
+        "name": "startsAWord()",
+        "desc": "True when the token begins a word somewhere in the field (case-insensitive, literal characters)"
+      },
+      {
+        "name": "referenceSearch()",
+        "desc": "Ids of visible jobs matching the search text; every token must start a word in some searchable field"
+      }
+    ]
+  },
+  "tests_integration_searchSeed_ts": {
+    "name": "searchSeed.ts",
+    "path": "tests/integration/searchSeed.ts",
+    "icon": "🌱",
+    "iconClass": "green",
+    "summary": "Hand-written companies, departments, locations and ~50 jobs covering the BF-020 search edge cases",
+    "tags": [
+      "tests",
+      "search",
+      "seed",
+      "BF-020"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "buildSeedJobs()",
+        "desc": "Builds the deterministic job rows; ids are stable UUIDs so failures name the same rows every run"
+      }
+    ]
   },
   "tests_unit_ApiGolden_test_ts": {
     "name": "ApiGolden.test.ts",
@@ -3479,6 +3667,30 @@
       "Batch",
       "Deactivation",
       "createMany"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_SearchTokenize_test_ts": {
+    "name": "SearchTokenize.test.ts",
+    "path": "tests/unit/SearchTokenize.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Guards BF-020 tokenizing, cache-key canonicalisation, LIKE escaping and the shape of the search filter",
+    "tags": [
+      "tests",
+      "search",
+      "tokenizer",
+      "BF-020"
     ],
     "info": [
       {

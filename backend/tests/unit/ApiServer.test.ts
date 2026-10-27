@@ -6,6 +6,7 @@
 
 import request from 'supertest';
 import app from '../../src/api/Server';
+import { buildSearchWhere } from '../../src/lib/search';
 import { mockJob, mockCompany, mockDepartment } from '../../__mocks__/@prisma/client';
 import sampleJob from '../fixtures/api/sample-job.json';
 import sampleCompany from '../fixtures/api/sample-company.json';
@@ -88,25 +89,19 @@ describe('API Server Contract & Snapshot Tests', () => {
       expect(res.body).toMatchSnapshot();
     });
 
-    it('applies search filter across title, department, location, company', async () => {
+    it('applies the BF-020 all-words search filter (matching itself is proven in tests/integration/Search.test.ts)', async () => {
       mockJob.findMany.mockResolvedValueOnce([]);
       mockJob.count.mockResolvedValueOnce(0);
 
       const res = await request(app)
-        .get('/v1/jobs?search=engineer')
+        .get('/v1/jobs?search=Senior%20Engineer')
         .set('X-Forwarded-For', getNextIp());
 
       expect(res.status).toBe(200);
       expect(mockJob.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            AND: expect.arrayContaining([
-              expect.objectContaining({
-                OR: expect.arrayContaining([
-                  { title: { contains: 'engineer', mode: 'insensitive' } },
-                ]),
-              }),
-            ]),
+            AND: expect.arrayContaining([buildSearchWhere(['senior', 'engineer'])]),
           }),
         })
       );

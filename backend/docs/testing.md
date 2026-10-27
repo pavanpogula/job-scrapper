@@ -19,7 +19,18 @@ All backend test commands are executed from the repository root with `npm --pref
 | Watch mode | `npm --prefix backend test -- --watch` |
 | Typecheck tests | `npm --prefix backend run typecheck:test` |
 | Lint backend code | `npm --prefix backend run lint` |
+| Search integration tests (real PostgreSQL) | `TEST_DATABASE_URL=postgresql://test:test@localhost:5432/search_test npm --prefix backend run test:integration` |
 | Update contract fixtures | `npm --prefix backend run contract:fixtures` |
+
+### 1.1 Real-database integration tests (`tests/integration/`)
+
+The Prisma mock cannot evaluate text filters, so search correctness (BF-020) is proven against a real PostgreSQL:
+
+- `npm test` skips `tests/integration/` (see `jest.config.js`); `npm run test:integration` runs it with `jest.integration.config.js`, which uses the real Prisma client.
+- The suite needs `TEST_DATABASE_URL` and **refuses any host other than `localhost`/`127.0.0.1`**. It runs `prisma db push` and wipes the job tables in that database, so never point it at a shared database. Without the variable the suite is skipped with a warning.
+- CI (`backend-ci.yml`) starts a `postgres:17.5` service container and always runs the suite.
+- Locally, start a throwaway database first, for example `docker run --rm -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=search_test -p 5432:5432 postgres:17.5`.
+- `tests/integration/searchReference.ts` is an independent statement of the search rule (it must not import `src/lib/search.ts`); `searchSeed.ts` holds the hand-written edge-case jobs.
 
 ---
 

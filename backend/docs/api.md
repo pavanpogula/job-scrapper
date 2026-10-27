@@ -16,7 +16,7 @@ Returns a paginated list of active and listed jobs matching filter criteria. Inc
 - **Parameters:**
   - `page` (number, default: 1): Page number (1-based, max: 5000).
   - `pageSize` (number, default: 25): Results per page (1..100).
-  - `search` (string, optional): Substring search over `title`, `department`, `location`, `companyName`.
+  - `search` (string, optional): All-words search (BF-020). The text is split into lowercase words (max 8, edge punctuation removed; `c++`, `c#`, `node.js`, `r&d` kept). A job matches when **every** word starts a word in its title, company name, department or location, in any order (`senior engineer` finds "Staff Senior Software Engineer"; `sf` finds "Remote - SF" but not "Transfer"). `%` and `_` match literally. Searches are never served from the pre-rendered cache.
   - `workplaceType` (string, optional): One of `Remote`, `Hybrid`, `OnSite`.
   - `employmentType` (string, optional): e.g. `FullTime`, `PartTime`, `Contract`.
   - `country` (string, optional): ISO-3166-1 alpha-2 code (e.g. `US`, `GB`).

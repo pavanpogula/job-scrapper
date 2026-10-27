@@ -4,6 +4,7 @@
   "description": "Batch TypeScript CLI scraper for Ashby ATS feeding Neon PostgreSQL & Upstash Redis, Express REST API on Vercel.",
   "scripts": {
     "test": "jest",
+    "test:integration": "jest -c jest.integration.config.js --runInBand",
     "contract:fixtures": "UPDATE_CONTRACT_FIXTURES=1 jest tests/contract/ContractFixtures.test.ts",
     "seed": "npx ts-node src/utils/Seed.ts",
     "discover": "npx ts-node src/discovery/CdxWorker.ts",

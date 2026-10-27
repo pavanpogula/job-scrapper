@@ -12,6 +12,7 @@ import {
   toJobDetail,
   isValidId,
 } from '../contract';
+import { buildSearchWhere, tokenizeSearch } from '../../lib/search';
 import type {
   JobQueryParams,
   CompanyQueryParams,
@@ -40,18 +41,10 @@ export async function queryJobs(
   };
   const andConditions: Prisma.JobWhereInput[] = [];
 
-  if (params.search && typeof params.search === 'string') {
-    const s = params.search.trim().slice(0, 100);
-    if (s.length > 0) {
-      andConditions.push({
-        OR: [
-          { title: { contains: s, mode: 'insensitive' } },
-          { company: { name: { contains: s, mode: 'insensitive' } } },
-          { department: { name: { contains: s, mode: 'insensitive' } } },
-          { location: { name: { contains: s, mode: 'insensitive' } } },
-        ],
-      });
-    }
+  // BF-020: every word must start a word in the title, company, department or location
+  const searchWhere = buildSearchWhere(tokenizeSearch(params.search));
+  if (searchWhere) {
+    andConditions.push(searchWhere);
   }
 
   if (params.workplaceType) {

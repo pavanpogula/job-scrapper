@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **fix(search)**: job search matches all words, in any order, at word starts (BF-020).
+  - Root cause: `/v1/jobs` treated the whole search text as one substring, so `senior engineer` returned 106 jobs instead of including the 678 "Senior Software Engineer" jobs, `software engineer senior` returned 0, and `SF` matched inside words such as "Transfer".
+  - Fix: new `backend/src/lib/search.ts` (`tokenizeSearch`, `buildSearchWhere`, `canonicalSearch`, `escapeLike`) used by `queryJobs`; every word must start a word in title, company, department or location; LIKE wildcards escaped; cache keys canonicalise equivalent searches. `/v1/companies` search unchanged.
+  - Tests: new real-PostgreSQL tier `backend/tests/integration/Search.test.ts` (`npm run test:integration`, `jest.integration.config.js`, localhost-only guard) comparing 50+ queries against an independent reference matcher, filter intersections, and full pagination walks; `backend-ci.yml` runs it against a `postgres:17.5` service container. Plus `SearchTokenize.test.ts` and frontend `searchBox.test.tsx`. 91 of the 171 integration tests fail on the old code.
+  - UI: search placeholder now says "Search by job title, company or location (all words must match)".
+  - Docs: BF-020 in `docs/bug-fix-log.md` and `docs/agents/context.md`, `docs/testing.md`, `backend/docs/testing.md`, `backend/docs/api.md`, `frontend/docs/frontend-ui.md`, `frontend/docs/testing.md`.
+
 - **test(contract)**: Phase P8a API contract fixtures and frontend alignment.
   - Golden contract fixtures: added `backend/tests/contract/ContractFixtures.test.ts` running supertest against Express with deterministic fake timers (`2026-03-01T12:00:00.000Z`) and seeded mocks, asserting response shapes and cache HIT == MISS parity (BF-019). Generates 9 fixtures into `backend/tests/fixtures/contract/` via `UPDATE_CONTRACT_FIXTURES=1`.
   - Added npm script `"contract:fixtures"` in `backend/package.json` (excluded from Claude auto-approve allow-list).

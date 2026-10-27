@@ -36,6 +36,7 @@ All frontend test commands are executed from the repository root with `npm --pre
 - `src/test/defaultQuery.test.ts`: Verifies search parameter serialization and default query states.
 - `src/test/countryFacets.test.tsx`: Integration test with MSW asserting country display names and filter dispatch.
 - `src/test/sortParams.test.ts`: URL `sort`/`order` parsing; unsupported values such as old `?sort=title` bookmarks (removed in P8a/O4) fall back to `publishedAt`/`desc`.
+- `src/test/searchBox.test.tsx`: Search box round trip with MSW: Enter sends the trimmed text and resets to page 1, `c++`/`c#`/`r&d`/`100%`/`node.js` survive URL encoding, clear removes `q`, and Back restores the previous search (BF-020).
 - `src/test/formatJobFreshness.test.ts`: Unit tests for the job freshness label helper (Updated / Posted / First seen, relative and absolute dates, clock skew, invalid input; ADR-0018).
 - `src/test/jobFreshness.test.tsx`: Integration test with MSW asserting job cards render the freshness label as `<time>` elements, including the `publishedAt` fallback for cache bodies without the new fields.
 
