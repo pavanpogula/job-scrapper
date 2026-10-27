@@ -51,13 +51,15 @@ The matrix below documents where every secret is configured and consumed:
 - **Triggers:** Cron schedule `17 6 * * *` (06:17 UTC daily) and manual `workflow_dispatch`.
 - **Inputs:** `workers` (default 4), `skip_publish`, `publish_only`, `recheck_not_found`, `skip_fixer`, `fixture_report`.
 - **Steps:**
-  1. Restores historical scrape run cache (`output/run-history.json`).
-  2. Runs `npm run enrich:companies` to update display names and logos.
-  3. Executes `npm run scrape:parallel -- --workers=4` with automatic cache publishing.
-  4. Classifies error telemetry via `npm run report:classify`.
-  5. Uploads `scrape-report-<runId>` artifact (30-day retention).
-  6. On failure (`exitCode = 1` or infra alert), runs `scripts/ci/alert-issue.sh` to create or update a `scrape-alert` issue.
-  7. Chains to the automated Claude fixer job when actionable issues are detected.
+  1. Syncs database schema (`npx prisma db push --skip-generate`).
+  2. Backfills multi-source columns and validates uniqueness (`npm run db:backfill-source`, `continue-on-error: true`).
+  3. Restores historical scrape run cache (`output/run-history.json`).
+  4. Runs `npm run enrich:companies` to update display names and logos.
+  5. Executes `npm run scrape:parallel -- --workers=4` with automatic cache publishing.
+  6. Classifies error telemetry via `npm run report:classify`.
+  7. Uploads `scrape-report-<runId>` artifact (30-day retention).
+  8. On failure (`exitCode = 1` or infra alert), runs `scripts/ci/alert-issue.sh` to create or update a `scrape-alert` issue.
+  9. Chains to the automated Claude fixer job when actionable issues are detected.
 
 ---
 

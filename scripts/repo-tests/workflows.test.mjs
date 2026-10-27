@@ -50,6 +50,23 @@ test('workflows structure, paths, and fixer constraints adhere to invariants', (
     }
   }
 
+  // Multi-source step ordering invariant: db push -> backfill -> enrich/scrape
+  const scrapeSteps = scrapeJob.steps || [];
+  const dbPushIndex = scrapeSteps.findIndex((s) => String(s.run).includes('prisma db push'));
+  assert.ok(dbPushIndex !== -1, 'scrape-daily must have a prisma db push step');
+
+  const backfillStep = scrapeSteps.find((s) => String(s.run).includes('npm run db:backfill-source'));
+  assert.ok(backfillStep, 'scrape-daily must have a backfill step running npm run db:backfill-source');
+  assert.equal(backfillStep['continue-on-error'], true, 'backfill step must have continue-on-error: true');
+
+  const backfillIndex = scrapeSteps.indexOf(backfillStep);
+  assert.ok(backfillIndex > dbPushIndex, 'backfill must run after prisma db push');
+
+  const enrichOrScrapeIndex = scrapeSteps.findIndex(
+    (s) => String(s.run).includes('enrich:companies') || String(s.name).toLowerCase().includes('run scrape')
+  );
+  assert.ok(backfillIndex < enrichOrScrapeIndex, 'backfill must run before enrichment/scrape');
+
   // 2. discover-weekly.yml
   const discoverPath = path.join(workflowsDir, 'discover-weekly.yml');
   assert.ok(fs.existsSync(discoverPath), 'discover-weekly.yml must exist');
@@ -57,6 +74,13 @@ test('workflows structure, paths, and fixer constraints adhere to invariants', (
   const discoverJob = discoverYaml.jobs?.discover;
   assert.ok(discoverJob, 'discover job must exist');
   assert.ok(String(discoverJob.if).includes('DISCOVERY_ENABLED'), 'discover job must check DISCOVERY_ENABLED');
+
+  // discover-weekly must sync schema before discovery
+  const discoverSteps = discoverJob.steps || [];
+  const discoverDbPushIndex = discoverSteps.findIndex((s) => String(s.run).includes('prisma db push'));
+  assert.ok(discoverDbPushIndex !== -1, 'discover-weekly must have a prisma db push step');
+  const runDiscoveryIndex = discoverSteps.findIndex((s) => String(s.run).includes('npm run discover'));
+  assert.ok(discoverDbPushIndex < runDiscoveryIndex, 'discover-weekly db push must run before discovery pipeline');
 
   // 3. Legacy ci.yml must be deleted
   const ciPath = path.join(workflowsDir, 'ci.yml');

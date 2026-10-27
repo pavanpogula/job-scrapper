@@ -18,6 +18,7 @@ export async function cleanDatabase() {
 
     try {
         const allCompanies = await prisma.company.findMany({
+            where: { source: 'ASHBY' },
             select: { id: true, slug: true, name: true }
         });
 

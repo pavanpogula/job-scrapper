@@ -15,6 +15,11 @@ if [[ ! -t 0 ]]; then
   INPUT=$(cat || true)
 fi
 
+# Hooks always send a JSON payload; no payload means there is no tool command to check
+if [[ -z "$INPUT" ]]; then
+  exit 0
+fi
+
 # If stdin was provided, extract the command and verify it's a git commit
 if [[ -n "$INPUT" ]]; then
   CMD=$(node -e '

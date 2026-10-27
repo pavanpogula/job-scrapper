@@ -11,6 +11,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Ats {
+  ASHBY
+  GREENHOUSE
+}
+
 enum CompanyStatus {
   ACTIVE
   NOT_FOUND
@@ -22,6 +27,8 @@ model Company {
   slug                String        @unique // e.g. "deel"
   name                String?
   logoUrl             String?
+  source              Ats           @default(ASHBY)
+  atsToken            String?       // native board token (lowercase)
   status              CompanyStatus @default(ACTIVE)
   consecutiveNotFound Int           @default(0)
   consecutiveFailures Int           @default(0)
@@ -30,6 +37,8 @@ model Company {
   pendingEmptySince   DateTime?
   jobs                Job[]
   createdAt           DateTime      @default(now())
+
+  @@index([source, status])
 }
 
 model Department {
@@ -45,10 +54,12 @@ model Location {
 }
 
 model Job {
-  id       String @id @default(uuid())
-  ashbyId  String @unique // External ID from Ashby
-  title    String
-  applyUrl String
+  id         String  @id @default(uuid())
+  ashbyId    String  @unique // legacy global key: Ashby UUID, or `greenhouse:<id>` for Greenhouse
+  source     Ats     @default(ASHBY)
+  externalId String? // native ATS id
+  title      String
+  applyUrl   String
 
   // Relations
   companySlug String
@@ -91,6 +102,7 @@ model Job {
   updatedAt  DateTime  @updatedAt
 
   // Index for efficient filtering
+  @@index([source, active, isListed, publishedAt(sort: Desc)])
   @@index([active, isListed, publishedAt(sort: Desc), createdAt(sort: Desc), id])
   @@index([active, isListed, workplaceType, publishedAt(sort: Desc)])
   @@index([active, isListed, employmentType, publishedAt(sort: Desc)])

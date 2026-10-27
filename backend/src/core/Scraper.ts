@@ -325,6 +325,8 @@ export class AshbyScraper {
                 where: { ashbyId: job.ashbyId },
                 create: {
                     ashbyId: job.ashbyId,
+                    source: 'ASHBY' as const,
+                    externalId: job.ashbyId,
                     title: job.title,
                     companySlug: job.companySlug,
                     departmentId: job.departmentId ?? null,
@@ -351,6 +353,8 @@ export class AshbyScraper {
                     active: true
                 },
                 update: {
+                    source: 'ASHBY' as const,
+                    externalId: job.ashbyId,
                     title: job.title,
                     departmentId: job.departmentId ?? null,
                     locationId: job.locationId ?? null,
@@ -425,6 +429,8 @@ export class AshbyScraper {
                                 const resolved = resolveLastUpdated(null, job, now);
                                 return {
                                     ashbyId: job.ashbyId,
+                                    source: 'ASHBY' as const,
+                                    externalId: job.ashbyId,
                                     title: job.title,
                                     companySlug: job.companySlug,
                                     departmentId: job.departmentId ?? null,
