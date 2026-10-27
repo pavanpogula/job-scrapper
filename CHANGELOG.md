@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixer Safety: Temporarily removed `backend/prisma/schema.prisma` from fixer allowed scope in `check-fixer-scope.sh` for the duration of the multi-source migration.
   - Tests: Added `backend/tests/integration/MultiSourceSchema.test.ts` (isolated real Postgres schema) and unit tests for dual-write payloads, slug validation, and DbClean ATS filtering.
   - Docs: Authored `docs/decisions/ADR-0021-multi-source-ats.md`, updated `docs/agents/context.md`, `backend/docs/database-and-cache.md`, `backend/docs/cli-commands.md`, `docs/deployment-and-operations.md`.
+  - Review follow-up: `MultiSourceSchema.test.ts` Step 1 seeded the pre-G1 schema through the generated (G1) client, which always sends `source`, so the suite failed ("column `source` does not exist"); it now seeds with raw SQL. Backfill index checks are scoped to `current_schema()`.
+
+- **fix(hooks)**: `post-commit-reminder.sh` exits silently on empty stdin. Every hook caller sends a JSON payload; with none, the hook used to inspect HEAD, so `hooks.test.mjs` "empty stdin" failed whenever the latest commit did not touch CHANGELOG.md (flaky main CI run #40).
 
 - **feat(ui)**: "Founded by Pavan Reddy Pogula" credit with a LinkedIn link.
   - Footer (every page): one quiet line "Founded by <name>" with a small LinkedIn icon; About page: new "4. Founder" section with a compact LinkedIn preview card (profile photo avatar, name, "Founder · B.O.O.L.E.A.N", profile URL, "View on LinkedIn" button).
