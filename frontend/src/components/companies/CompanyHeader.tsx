@@ -17,6 +17,7 @@ import {
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { CompanyProfile } from '../../types/api';
 import { CompanyAvatar } from '../common/CompanyAvatar';
+import { SourceBadge } from '../common/SourceBadge';
 import { formatLocationCount } from '../../lib/labels';
 
 export interface CompanyHeaderProps {
@@ -32,6 +33,11 @@ export const CompanyHeader: React.FC<CompanyHeaderProps> = ({ profile }) => {
 
   const jobsLabel = profile.jobCount === 1 ? '1 open job' : `${profile.jobCount} open jobs`;
   const locationsLabel = formatLocationCount(profile.locations?.length ?? 0);
+  const careersUrl =
+    profile.boardUrl ||
+    (profile.source === 'greenhouse'
+      ? `https://job-boards.greenhouse.io/${profile.slug.startsWith('gh--') ? profile.slug.slice(4) : profile.slug}`
+      : `https://jobs.ashbyhq.com/${profile.slug}`);
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -70,18 +76,21 @@ export const CompanyHeader: React.FC<CompanyHeaderProps> = ({ profile }) => {
             />
 
             <Box sx={{ pb: 0.5 }}>
-              <Typography
-                variant="h4"
-                component="h1"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: { xs: '1.5rem', sm: '2rem' },
-                  letterSpacing: '-0.02em',
-                  color: 'text.primary',
-                }}
-              >
-                {companyName}
-              </Typography>
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                <Typography
+                  variant="h4"
+                  component="h1"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: { xs: '1.5rem', sm: '2rem' },
+                    letterSpacing: '-0.02em',
+                    color: 'text.primary',
+                  }}
+                >
+                  {companyName}
+                </Typography>
+                <SourceBadge source={profile.source} />
+              </Stack>
 
               <Typography
                 variant="body2"
@@ -97,13 +106,13 @@ export const CompanyHeader: React.FC<CompanyHeaderProps> = ({ profile }) => {
             variant="outlined"
             size="small"
             color="secondary"
-            href={`https://jobs.ashbyhq.com/${profile.slug}`}
+            href={careersUrl}
             target="_blank"
             rel="noopener noreferrer"
             endIcon={<OpenInNewIcon fontSize="small" />}
             sx={{ fontWeight: 600, mb: { xs: 0, sm: 0.5 } }}
           >
-            View on Ashby
+            View careers board ↗
           </Button>
         </Stack>
       </Box>

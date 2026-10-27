@@ -4,6 +4,8 @@ export const MOCK_JOBS: JobListItem[] = [
   {
     id: 'job-1',
     ashbyId: '7fe8abc1-deel-sr-fe',
+    source: 'ashby',
+    externalId: '7fe8abc1-deel-sr-fe',
     title: 'Senior Frontend Engineer, Design Systems',
     applyUrl: 'https://jobs.ashbyhq.com/deel/7fe8abc1/application',
     companySlug: 'deel',
@@ -31,6 +33,8 @@ export const MOCK_JOBS: JobListItem[] = [
   {
     id: 'job-2',
     ashbyId: '992b1a8-1pwd-staff-sec',
+    source: 'ashby',
+    externalId: '992b1a8-1pwd-staff-sec',
     title: 'Staff Security Engineer, Application Security',
     applyUrl: 'https://jobs.ashbyhq.com/1password/992b1a8/application',
     companySlug: '1password',
@@ -58,6 +62,8 @@ export const MOCK_JOBS: JobListItem[] = [
   {
     id: 'job-3',
     ashbyId: 'c1209e4-ramp-prod-eng',
+    source: 'ashby',
+    externalId: 'c1209e4-ramp-prod-eng',
     title: 'Product Engineer, Core Payments',
     applyUrl: 'https://jobs.ashbyhq.com/ramp/c1209e4/application',
     companySlug: 'ramp',
@@ -85,6 +91,8 @@ export const MOCK_JOBS: JobListItem[] = [
   {
     id: 'job-4',
     ashbyId: 'd48291a-notion-infra',
+    source: 'ashby',
+    externalId: 'd48291a-notion-infra',
     title: 'Site Reliability & Infrastructure Architect',
     applyUrl: 'https://jobs.ashbyhq.com/notion/d48291a/application',
     companySlug: 'notion',
@@ -112,6 +120,8 @@ export const MOCK_JOBS: JobListItem[] = [
   {
     id: 'job-5',
     ashbyId: 'e81039f-linear-prod-des',
+    source: 'ashby',
+    externalId: 'e81039f-linear-prod-des',
     title: 'Senior Product Designer',
     applyUrl: 'https://jobs.ashbyhq.com/linear/e81039f/application',
     companySlug: 'linear',
@@ -135,7 +145,36 @@ export const MOCK_JOBS: JobListItem[] = [
     isListed: true,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-  }
+  },
+  {
+    id: 'job-gh-1',
+    ashbyId: 'greenhouse:4892104',
+    source: 'greenhouse',
+    externalId: '4892104',
+    title: 'Staff Platform Engineer, Developer Experience',
+    applyUrl: 'https://job-boards.greenhouse.io/figma/jobs/4892104',
+    companySlug: 'gh--figma',
+    companyName: 'Figma',
+    companyLogoUrl: null,
+    department: 'Infrastructure',
+    location: 'San Francisco, CA',
+    country: 'US',
+    region: 'CA',
+    city: 'San Francisco',
+    isRemote: true,
+    workplaceType: 'Remote',
+    employmentType: 'FullTime',
+    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+    lastUpdatedSource: 'published',
+    salaryMin: 195000,
+    salaryMax: 260000,
+    salaryCurrency: 'USD',
+    salaryInterval: '1 YEAR',
+    isListed: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+  },
 ];
 
 export const MOCK_JOB_DETAIL: JobDetail = {
@@ -182,10 +221,41 @@ Requirements:
     slug: 'deel',
     name: 'Deel',
     logoUrl: 'https://cdn.ashbyhq.com/org/deel/logo.png',
+    source: 'ashby',
+    boardUrl: 'https://jobs.ashbyhq.com/deel',
   }
 };
 
+export const MOCK_GREENHOUSE_JOB_DETAIL: JobDetail = {
+  ...MOCK_JOBS[5],
+  active: true,
+  jobUrl: 'https://job-boards.greenhouse.io/figma/jobs/4892104',
+  team: 'Core Platform & DX',
+  descriptionPlain: `About Figma:
+Figma is the leading collaborative design platform.
+
+About the Role:
+We are looking for a Staff Platform Engineer to lead developer velocity and platform engineering.`,
+  descriptionHtml: `<h3>About Figma</h3>
+<p>Figma is the leading collaborative design platform.</p>
+<h3>About the Role</h3>
+<p>We are looking for a <strong>Staff Platform Engineer</strong> to lead developer velocity and platform engineering.</p>`,
+  secondaryLocations: ['New York, NY'],
+  companyJobCount: 18,
+  company: {
+    slug: 'gh--figma',
+    name: 'Figma',
+    logoUrl: null,
+    source: 'greenhouse',
+    boardUrl: 'https://job-boards.greenhouse.io/figma',
+  },
+};
+
 export const MOCK_FACETS: FacetsData = {
+  sources: [
+    { value: 'ashby', count: 5 },
+    { value: 'greenhouse', count: 1 },
+  ],
   workplaceTypes: [
     { value: 'Remote', count: 10633 },
     { value: 'OnSite', count: 9917 },

@@ -40,7 +40,7 @@ export const Header: React.FC = () => {
 
   const statsLabel = meta
     ? `${meta.activeJobs.toLocaleString()} live jobs · ${meta.hiringCompanies.toLocaleString()} companies`
-    : 'Live verified jobs · Ashby ATS';
+    : 'Live verified jobs · Company career boards';
 
   const isActive = (path: string) => {
     if (path === '/' && location.pathname === '/') return true;

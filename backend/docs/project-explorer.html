@@ -662,6 +662,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_MixedSources_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>MixedSources.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_integration_MultiSourceSchema_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>MultiSourceSchema.test.ts</span>
@@ -3137,13 +3143,17 @@
       },
       {
         "label": "Functions",
-        "value": "2"
+        "value": "3"
       }
     ],
     "functions": [
       {
         "name": "createSampleJob()",
         "desc": "Creates a deterministic sample job object for database seeding"
+      },
+      {
+        "name": "createGreenhouseJob()",
+        "desc": "Creates a deterministic sample Greenhouse job for contract fixture testing"
       },
       {
         "name": "assertOrUpdateFixture()",
@@ -3313,6 +3323,33 @@
       "Ashby",
       "Coexistence",
       "BF-023",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_integration_MixedSources_test_ts": {
+    "name": "MixedSources.test.ts",
+    "path": "tests/integration/MixedSources.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Proves source filter, source/externalId fields, facets, board links and underscore slugs with Ashby and Greenhouse rows side by side (ADR-0021)",
+    "tags": [
+      "tests",
+      "integration",
+      "multi-source",
+      "greenhouse",
+      "ashby",
+      "postgres",
       "ADR-0021"
     ],
     "info": [

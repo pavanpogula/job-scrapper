@@ -26,6 +26,8 @@ function createSampleJob(n: number) {
   return {
     id: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
     ashbyId: `ashby-job-${n}`,
+    externalId: `ashby-job-${n}`,
+    source: 'ASHBY',
     title: n % 2 === 1 ? `Senior Software Engineer ${n}` : `Product Manager ${n}`,
     companySlug: n % 2 === 1 ? 'acme-corp' : 'beta-inc',
     departmentId: n % 2 === 1 ? 'dept-eng' : 'dept-prod',
@@ -66,7 +68,66 @@ function createSampleJob(n: number) {
       slug: n % 2 === 1 ? 'acme-corp' : 'beta-inc',
       name: n % 2 === 1 ? 'Acme Corp' : 'Beta Inc',
       logoUrl: null,
+      source: 'ASHBY',
+      atsToken: n % 2 === 1 ? 'acme-corp' : 'beta-inc',
       _count: { jobs: 3 },
+    },
+  };
+}
+
+/**
+ * @summary Creates a deterministic sample Greenhouse job for contract fixture testing
+ */
+function createGreenhouseJob() {
+  const published = new Date(Date.UTC(2026, 1, 15, 11, 0));
+  return {
+    id: '00000000-0000-4000-8000-000000000042',
+    ashbyId: 'greenhouse:5678901',
+    externalId: '5678901',
+    source: 'GREENHOUSE',
+    title: 'Staff Infrastructure Engineer',
+    companySlug: 'gh--stripe',
+    departmentId: 'dept-eng',
+    locationId: 'loc-sf',
+    employmentType: 'FullTime',
+    workplaceType: 'Remote',
+    isRemote: true,
+    country: 'US',
+    region: 'CA',
+    city: 'San Francisco',
+    postalAddress: null,
+    salaryMin: 180000,
+    salaryMax: 240000,
+    salaryCurrency: 'USD',
+    salaryInterval: '1 YEAR',
+    compensationTierSummary: '$180k - $240k',
+    descriptionHtml: '<p>Job description for Staff Infrastructure Engineer at Stripe</p>',
+    applyUrl: 'https://job-boards.greenhouse.io/stripe/jobs/5678901',
+    contentHash: 'hash-gh-42',
+    active: true,
+    isListed: true,
+    publishedAt: published,
+    lastUpdatedAt: published,
+    lastUpdatedSource: 'published',
+    createdAt: published,
+    updatedAt: published,
+    metadata: {
+      _source: 'greenhouse',
+      descriptionHtml: '<p>Job description for Staff Infrastructure Engineer at Stripe</p>',
+      descriptionPlain: 'Job description for Staff Infrastructure Engineer at Stripe',
+      team: 'Infrastructure',
+      secondaryLocations: [{ location: 'Seattle, US' }],
+    },
+    department: { id: 'dept-eng', name: 'Engineering' },
+    location: { id: 'loc-sf', name: 'San Francisco' },
+    company: {
+      id: 'comp-stripe',
+      slug: 'gh--stripe',
+      name: 'Stripe',
+      logoUrl: null,
+      source: 'GREENHOUSE',
+      atsToken: 'stripe',
+      _count: { jobs: 1 },
     },
   };
 }
@@ -133,8 +194,9 @@ describe('ContractFixtures API Integration Suite (P8a)', () => {
       // Mirror what Postgres returns: logoUrl is always present (string or null) and _count matches the seeded jobs
       // (3 acme-corp, 2 beta-inc), so the companies fixture has the same keys and counts as the live API.
       companies: [
-        { id: 'comp-acme', slug: 'acme-corp', name: 'Acme Corp', logoUrl: 'https://example.com/acme-logo.png', status: 'ACTIVE', _count: { jobs: 3 } },
-        { id: 'comp-beta', slug: 'beta-inc', name: 'Beta Inc', logoUrl: null, status: 'ACTIVE', _count: { jobs: 2 } },
+        { id: 'comp-acme', slug: 'acme-corp', name: 'Acme Corp', logoUrl: 'https://example.com/acme-logo.png', status: 'ACTIVE', source: 'ASHBY', atsToken: 'acme-corp', _count: { jobs: 3 } },
+        { id: 'comp-beta', slug: 'beta-inc', name: 'Beta Inc', logoUrl: null, status: 'ACTIVE', source: 'ASHBY', atsToken: 'beta-inc', _count: { jobs: 2 } },
+        { id: 'comp-stripe', slug: 'gh--stripe', name: 'Stripe', logoUrl: null, status: 'ACTIVE', source: 'GREENHOUSE', atsToken: 'stripe', _count: { jobs: 1 } },
       ],
       departments: [
         { id: 'dept-eng', name: 'Engineering' },
@@ -149,6 +211,7 @@ describe('ContractFixtures API Integration Suite (P8a)', () => {
     for (let i = 1; i <= 5; i++) {
       statefulPrisma.seed('job', createSampleJob(i));
     }
+    statefulPrisma.seed('job', createGreenhouseJob());
 
     Object.assign(mockCompany, statefulPrisma.company);
     Object.assign(mockJob, statefulPrisma.job);
@@ -166,7 +229,7 @@ describe('ContractFixtures API Integration Suite (P8a)', () => {
     });
 
     it('verifies GET /v1/jobs (filtered: workplaceType=Remote&country=US)', async () => {
-      const allJobs = [1, 2, 3, 4, 5].map(createSampleJob);
+      const allJobs = [...[1, 2, 3, 4, 5].map(createSampleJob), createGreenhouseJob()];
       const filtered = allJobs.filter((j) => j.workplaceType === 'Remote' && j.country === 'US');
       mockJob.findMany.mockResolvedValueOnce(filtered);
       mockJob.count.mockResolvedValueOnce(filtered.length);
@@ -176,6 +239,15 @@ describe('ContractFixtures API Integration Suite (P8a)', () => {
         .set('X-Forwarded-For', '10.0.0.2');
       expect(res.status).toBe(200);
       assertOrUpdateFixture('jobs.filtered', res.body);
+    });
+
+    it('verifies GET /v1/jobs?source=greenhouse', async () => {
+      const res = await request(app).get('/v1/jobs?source=greenhouse').set('X-Forwarded-For', '10.0.0.15');
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(1);
+      expect(res.body.data[0].source).toBe('greenhouse');
+      expect(res.body.data[0].externalId).toBe('5678901');
+      assertOrUpdateFixture('jobs.source-greenhouse', res.body);
     });
 
     it('verifies GET /v1/jobs (empty page)', async () => {

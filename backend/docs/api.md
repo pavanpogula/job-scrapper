@@ -16,6 +16,7 @@ Returns a paginated list of active and listed jobs matching filter criteria. Inc
 - **Parameters:**
   - `page` (number, default: 1): Page number (1-based, max: 5000).
   - `pageSize` (number, default: 25): Results per page (1..100).
+  - `source` (string, optional): ATS source filter (`ashby` or `greenhouse`). Unknown values are ignored. Bypasses pre-rendered cache (`isCacheableView: false`).
   - `search` (string, optional): All-words search (BF-020). The text is split into lowercase words (max 8, edge punctuation removed; `c++`, `c#`, `node.js`, `r&d` kept). A job matches when **every** word starts a word in its title, company name, department or location, in any order (`senior engineer` finds "Staff Senior Software Engineer"; `sf` finds "Remote - SF" but not "Transfer"). `%` and `_` match literally. Searches are never served from the pre-rendered cache.
   - `company` (string, optional): Exact company slug filter (case-insensitive, trimmed). Combines with search (BF-020) and other filters. Bypasses pre-rendered cache (`isCacheableView: false`).
   - `postedWithin` (string, optional): One of `1d`, `7d`, `30d`. Filters jobs where `COALESCE(lastUpdatedAt, publishedAt) >= now - window` (ADR-0018 / ADR-0019). Unknown values are ignored. Bypasses pre-rendered cache.
@@ -33,6 +34,9 @@ Returns a paginated list of active and listed jobs matching filter criteria. Inc
     "data": [
       {
         "id": "e4b52cb5-3d8a-4d2a-89a1-cb9cf540192a",
+        "ashbyId": "c7a1e2f3-4b5c-6d7e-8f9a-0b1c2d3e4f5a",
+        "source": "ashby",
+        "externalId": "c7a1e2f3-4b5c-6d7e-8f9a-0b1c2d3e4f5a",
         "title": "Senior Infrastructure Engineer",
         "department": "Platform Engineering",
         "location": "San Francisco, CA",
@@ -63,9 +67,9 @@ Returns a paginated list of active and listed jobs matching filter criteria. Inc
 Retrieves detailed information for a single job posting by UUID or fallback `ashbyId`.
 
 - **Parameters:**
-  - `id` (string, path): UUID or Ashby alphanumeric ID. Non-UUID strings that cannot match format return 404 immediately with 0 I/O.
+  - `id` (string, path): UUID or Ashby alphanumeric ID (also accepts `greenhouse:<id>` fallback). Non-UUID strings that cannot match format return 404 immediately with 0 I/O.
 - **Response (200):**
-  Full job object including `descriptionHtml`, `compensation`, and `metadata`.
+  Full job object including `source` (`'ashby'` | `'greenhouse'`), `externalId`, `jobUrl`, `descriptionHtml`, `compensation`, and `company` with `source` and `boardUrl`. `ashbyId` is deprecated; clients should use `source` + `externalId`.
 - **Response (404):**
   `{ "error": "Job not found" }` (cached in-process for 10 minutes).
 
@@ -75,6 +79,10 @@ Retrieves aggregated facet counts for filter controls across active jobs.
 - **Response:**
   ```json
   {
+    "sources": [
+      { "value": "ashby", "count": 28400 },
+      { "value": "greenhouse", "count": 5623 }
+    ],
     "departments": [{ "value": "Engineering", "count": 1420 }],
     "workplaceTypes": [{ "value": "Remote", "count": 2840 }],
     "employmentTypes": [{ "value": "FullTime", "count": 4900 }],
@@ -98,6 +106,8 @@ Paginated directory of active hiring companies.
       {
         "name": "Acme Corp",
         "slug": "acme-corp",
+        "source": "ashby",
+        "boardUrl": "https://jobs.ashbyhq.com/acme-corp",
         "logoUrl": "https://...",
         "jobCount": 42
       }
@@ -113,12 +123,14 @@ Paginated directory of active hiring companies.
 Retrieves detailed profile information for an active company including job counts, salary availability, latest job publication timestamp, and top 10 departments and locations (ADR-0019). Served as an uncacheable DB view with identical CDN cache headers to `/v1/companies`.
 
 - **Parameters:**
-  - `slug` (string, path): Slug matching `/^[a-z0-9-]{1,100}$/`.
+  - `slug` (string, path): Slug matching `/^[a-z0-9_-]{1,100}$/`.
 - **Response (200):**
   ```json
   {
     "slug": "acme-corp",
     "name": "Acme Corp",
+    "source": "ashby",
+    "boardUrl": "https://jobs.ashbyhq.com/acme-corp",
     "logoUrl": "https://...",
     "jobCount": 42,
     "withSalary": 25,

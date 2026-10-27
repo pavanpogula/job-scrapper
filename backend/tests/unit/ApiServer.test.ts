@@ -319,6 +319,49 @@ describe('API Server Contract & Snapshot Tests', () => {
       );
     });
 
+    it('filters jobs by source=ashby and source=greenhouse', async () => {
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      await request(app)
+        .get('/v1/jobs?source=ashby')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ source: 'ASHBY' }),
+        })
+      );
+
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      await request(app)
+        .get('/v1/jobs?source=greenhouse')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ source: 'GREENHOUSE' }),
+        })
+      );
+    });
+
+    it('ignores unknown source values', async () => {
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      await request(app)
+        .get('/v1/jobs?source=invalid_ats')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({ source: expect.anything() }),
+        })
+      );
+    });
+
     it('returns valid meta pagination when results are empty', async () => {
       mockJob.findMany.mockResolvedValueOnce([]);
       mockJob.count.mockResolvedValueOnce(0);
@@ -401,6 +444,7 @@ describe('API Server Contract & Snapshot Tests', () => {
   describe('GET /v1/facets', () => {
     it('returns 200 with facet groups and matches snapshot', async () => {
       mockJob.groupBy
+        .mockResolvedValueOnce([{ source: 'ASHBY', _count: { _all: 20 } }])
         .mockResolvedValueOnce([{ workplaceType: 'Remote', _count: { _all: 10 } }])
         .mockResolvedValueOnce([{ employmentType: 'FullTime', _count: { _all: 8 } }])
         .mockResolvedValueOnce([{ country: 'US', _count: { _all: 15 } }]);
@@ -419,6 +463,7 @@ describe('API Server Contract & Snapshot Tests', () => {
         .set('X-Forwarded-For', getNextIp());
 
       expect(res.status).toBe(200);
+      expect(res.body.sources).toEqual([{ value: 'ashby', count: 20 }]);
       expect(res.body.workplaceTypes).toEqual([{ value: 'Remote', count: 10 }]);
       expect(res.body.employmentTypes).toEqual([{ value: 'FullTime', count: 8 }]);
       expect(res.body.countries).toEqual([{ value: 'US', count: 15 }]);
@@ -447,6 +492,8 @@ describe('API Server Contract & Snapshot Tests', () => {
         name: 'Acme Corp',
         logoUrl: 'https://logo.com/acme.png',
         jobCount: 42,
+        source: 'ashby',
+        boardUrl: 'https://jobs.ashbyhq.com/acme-corp',
       });
       expect(res.body.total).toBe(1);
       expect(res.body.totalPages).toBe(1);
@@ -557,6 +604,8 @@ describe('API Server Contract & Snapshot Tests', () => {
         slug: 'acme-corp',
         name: 'Acme Corp',
         logoUrl: 'https://example.com/logo.png',
+        source: 'ashby',
+        boardUrl: 'https://jobs.ashbyhq.com/acme-corp',
         jobCount: 5,
         withSalary: 3,
         latestPublishedAt: '2026-03-01T10:00:00.000Z',
@@ -565,6 +614,90 @@ describe('API Server Contract & Snapshot Tests', () => {
         departments: [{ value: 'Engineering', count: 4 }],
         locations: [{ value: 'San Francisco', count: 3 }],
       });
+    });
+
+    it('returns Greenhouse company profile with greenhouse boardUrl and source', async () => {
+      mockCompany.findFirst.mockResolvedValueOnce({
+        slug: 'gh--figma',
+        name: 'Figma',
+        logoUrl: null,
+        status: 'ACTIVE',
+        source: 'GREENHOUSE',
+        atsToken: 'figma',
+      });
+      mockJob.count
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(8);
+      mockJob.findFirst.mockResolvedValueOnce(null);
+      mockJob.groupBy
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const res = await request(app)
+        .get('/v1/companies/gh--figma')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(200);
+      expect(res.body.source).toBe('greenhouse');
+      expect(res.body.boardUrl).toBe('https://job-boards.greenhouse.io/figma');
+    });
+
+    it('falls back to stripping gh-- prefix for greenhouse boardUrl when atsToken is null', async () => {
+      mockCompany.findFirst.mockResolvedValueOnce({
+        slug: 'gh--discord',
+        name: 'Discord',
+        logoUrl: null,
+        status: 'ACTIVE',
+        source: 'GREENHOUSE',
+        atsToken: null,
+      });
+      mockJob.count
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(2);
+      mockJob.findFirst.mockResolvedValueOnce(null);
+      mockJob.groupBy
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const res = await request(app)
+        .get('/v1/companies/gh--discord')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(200);
+      expect(res.body.source).toBe('greenhouse');
+      expect(res.body.boardUrl).toBe('https://job-boards.greenhouse.io/discord');
+    });
+
+    it('allows underscores in company slug for greenhouse companies with underscores', async () => {
+      mockCompany.findFirst.mockResolvedValueOnce({
+        slug: 'gh--foo_bar',
+        name: 'Foo Bar',
+        logoUrl: null,
+        status: 'ACTIVE',
+        source: 'GREENHOUSE',
+        atsToken: 'foo_bar',
+      });
+      mockJob.count
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(0);
+      mockJob.findFirst.mockResolvedValueOnce(null);
+      mockJob.groupBy
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const res = await request(app)
+        .get('/v1/companies/gh--foo_bar')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(200);
+      expect(res.body.source).toBe('greenhouse');
+      expect(res.body.boardUrl).toBe('https://job-boards.greenhouse.io/foo_bar');
     });
 
     it('returns 404 when company does not exist in database', async () => {

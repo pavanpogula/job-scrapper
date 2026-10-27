@@ -35,6 +35,8 @@ export function useJobFilters() {
 
   // Sync from URL params into Redux store on mount or URL change
   useEffect(() => {
+    const rawSource = searchParams.get('source') || '';
+    const source = rawSource === 'ashby' || rawSource === 'greenhouse' ? rawSource : '';
     const q = searchParams.get('q') || '';
     const workplace = (searchParams.get('workplace') || '') as WorkplaceType | '';
     const employment = (searchParams.get('employment') || '') as EmploymentType | '';
@@ -50,6 +52,7 @@ export function useJobFilters() {
 
     dispatch(
       syncFromUrl({
+        source,
         search: q,
         workplaceType: workplace,
         employmentType: employment,
@@ -91,6 +94,7 @@ export function useJobFilters() {
       const merged = { ...filters, ...newFilters };
       const params = new URLSearchParams();
 
+      if (merged.source) params.set('source', merged.source);
       if (merged.search && merged.search.trim()) params.set('q', merged.search.trim());
       if (merged.workplaceType) params.set('workplace', merged.workplaceType);
       if (merged.employmentType) params.set('employment', merged.employmentType);

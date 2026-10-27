@@ -63,6 +63,9 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
                 if (w.companySlug !== undefined) {
                     result = result.filter(j => j.companySlug === w.companySlug);
                 }
+                if (w.source !== undefined) {
+                    result = result.filter(j => (j.source || 'ASHBY') === w.source);
+                }
                 if (w.publishedAt?.not === null) {
                     result = result.filter(j => j.publishedAt !== null && j.publishedAt !== undefined);
                 }
@@ -212,8 +215,9 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
                 if (args.where?.active !== undefined && j.active !== args.where.active) continue;
                 if (args.where?.isListed !== undefined && j.isListed !== args.where.isListed) continue;
                 if (args.where?.companySlug !== undefined && j.companySlug !== args.where.companySlug) continue;
+                if (args.where?.source !== undefined && (j.source || 'ASHBY') !== args.where.source) continue;
                 if (args.where?.[field]?.not === null && (j[field] === null || j[field] === undefined)) continue;
-                const val = j[field];
+                const val = field === 'source' ? (j.source || 'ASHBY') : j[field];
                 if (val !== null && val !== undefined) {
                     counts.set(val, (counts.get(val) || 0) + 1);
                 }

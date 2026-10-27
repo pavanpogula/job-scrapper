@@ -1,7 +1,7 @@
 {
-  "activeJobs": 5,
-  "hiringCompanies": 2,
-  "withSalary": 5,
+  "activeJobs": 6,
+  "hiringCompanies": 3,
+  "withSalary": 6,
   "lastScrapeAt": "2026-03-01T12:00:00.000Z",
   "generation": "live_db"
 }

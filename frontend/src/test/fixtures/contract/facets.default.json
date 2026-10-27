@@ -1,8 +1,18 @@
 {
+  "sources": [
+    {
+      "value": "ashby",
+      "count": 5
+    },
+    {
+      "value": "greenhouse",
+      "count": 1
+    }
+  ],
   "workplaceTypes": [
     {
       "value": "Remote",
-      "count": 3
+      "count": 4
     },
     {
       "value": "OnSite",
@@ -12,13 +22,13 @@
   "employmentTypes": [
     {
       "value": "FullTime",
-      "count": 5
+      "count": 6
     }
   ],
   "countries": [
     {
       "value": "US",
-      "count": 3
+      "count": 4
     },
     {
       "value": "CA",
@@ -36,7 +46,7 @@
     }
   ],
   "hasSalary": {
-    "yes": 5,
+    "yes": 6,
     "no": 0
   }
 }

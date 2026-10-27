@@ -1,0 +1,41 @@
+{
+  "data": [
+    {
+      "id": "00000000-0000-4000-8000-000000000042",
+      "ashbyId": "greenhouse:5678901",
+      "source": "greenhouse",
+      "externalId": "5678901",
+      "title": "Staff Infrastructure Engineer",
+      "companySlug": "gh--stripe",
+      "companyName": "Stripe",
+      "companyLogoUrl": null,
+      "department": "Engineering",
+      "location": "San Francisco",
+      "country": "US",
+      "region": "CA",
+      "city": "San Francisco",
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "employmentType": "FullTime",
+      "publishedAt": "2026-02-15T11:00:00.000Z",
+      "lastUpdatedAt": "2026-02-15T11:00:00.000Z",
+      "lastUpdatedSource": "published",
+      "salaryMin": 180000,
+      "salaryMax": 240000,
+      "salaryCurrency": "USD",
+      "salaryInterval": "1 YEAR",
+      "applyUrl": "https://job-boards.greenhouse.io/stripe/jobs/5678901",
+      "isListed": true,
+      "createdAt": "2026-02-15T11:00:00.000Z",
+      "updatedAt": "2026-02-15T11:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "pageSize": 25,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}

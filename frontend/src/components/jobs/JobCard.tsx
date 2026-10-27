@@ -8,6 +8,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { Box, Typography, Stack, Link } from '@mui/material';
 import { JobListItem } from '../../types/api';
 import { CompanyAvatar } from '../common/CompanyAvatar';
+import { SourceBadge } from '../common/SourceBadge';
 import { formatWorkplace, formatSalary } from '../../lib/labels';
 import { formatJobFreshness } from '../../lib/formatJobFreshness';
 import { usePrefetch } from '../../store/api/jobsApi';
@@ -199,6 +200,8 @@ export const JobCard: React.FC<JobCardProps> = ({
                 {freshness.label}
               </Typography>
             )}
+
+            <SourceBadge source={job.source} size="small" />
           </Stack>
         </Box>
       </Stack>

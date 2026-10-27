@@ -68,7 +68,7 @@ export const AboutPage: React.FC = () => {
                 </Typography>
               </Stack>
               <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.6, display: 'block' }}>
-                Every click opens the employer's genuine application form on Ashby in a fresh tab.
+                Every click opens the employer's genuine application form on their official careers board in a fresh tab.
               </Typography>
             </Paper>
 
@@ -103,7 +103,7 @@ export const AboutPage: React.FC = () => {
             3. Data Sources & Integrity
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-            Listings are collected via Ashby's Public Job Posting API with automatic hosted GraphQL fallback. Closed positions are detected through change detection hashes and deactivated automatically.
+            Listings are collected via company career board APIs (Ashby & Greenhouse). Closed positions are detected through change detection hashes and deactivated automatically.
           </Typography>
         </Box>
 

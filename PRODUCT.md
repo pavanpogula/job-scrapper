@@ -8,11 +8,11 @@ web
 
 ## Users
 
-Primary users are job seekers, software engineers, product managers, and knowledge workers looking for direct, verified job postings directly on company career boards (Ashby ATS) without intermediate recruiter spam, stale postings, or mandatory logins.
+Primary users are job seekers, software engineers, product managers, and knowledge workers looking for direct, verified job postings directly on company career boards (Ashby & Greenhouse ATS) without intermediate recruiter spam, stale postings, or mandatory logins.
 
 ## Product Purpose
 
-B.O.O.L.E.A.N is a clean, ultra-responsive job browsing web application and company career directory. It enables job seekers to quickly search, filter, and review verified company postings with full salary transparency and freshness tracking, and apply directly at the employer's official Ashby board.
+B.O.O.L.E.A.N is a clean, ultra-responsive job browsing web application and company career directory. It enables job seekers to quickly search, filter, and review verified company postings with full salary transparency and freshness tracking, and apply directly at the employer's official ATS board.
 
 ## Positioning
 
@@ -48,7 +48,7 @@ Direct career-board postings index with verified freshness and direct apply link
 
 ## Product Principles
 
-1. **Direct to Source:** Every posting links directly to the employer's official Ashby ATS application. Zero middleman friction.
+1. **Direct to Source:** Every posting links directly to the employer's official ATS application (Ashby or Greenhouse). Zero middleman friction.
 2. **Density and Precision (Operate Mode):** High information density without visual clutter. Clean metadata lines, humanized labels, clear salary ranges, and relative freshness badges.
 3. **Frictionless Navigation:** Fast search, instant filter pill toggles, and two-pane master-detail desktop workflow with URL state persistence.
 4. **Transparent Facts:** Always display verified salary ranges when available and accurate freshness timestamps based on content diffs and publication dates.

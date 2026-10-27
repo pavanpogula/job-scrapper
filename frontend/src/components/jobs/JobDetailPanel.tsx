@@ -26,6 +26,7 @@ import { sanitizeHtml } from '../../lib/sanitize';
 import { formatDetailFreshness } from '../../lib/formatJobFreshness';
 import { formatWorkplace, formatEmployment, formatSalary } from '../../lib/labels';
 import { CompanyAvatar } from '../common/CompanyAvatar';
+import { SourceBadge } from '../common/SourceBadge';
 
 export interface JobDetailPanelProps {
   jobId?: string | null;
@@ -172,6 +173,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
             </Typography>
           )}
         </Box>
+        <SourceBadge source={job.source} />
       </Stack>
 
       {/* Job Title */}

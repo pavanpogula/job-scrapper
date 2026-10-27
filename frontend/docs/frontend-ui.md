@@ -8,7 +8,9 @@ The **B.O.O.L.E.A.N** web frontend (`frontend/`) is a high-density, performant j
 
 - **Brand Identity:** User-facing product name is **B.O.O.L.E.A.N** (never expanding the acronym) with a prominent "B" mark and monospace wordmark.
 - **No Authentication / Zero Friction:** Users browse, filter, search, and click "Apply Direct". There are no logins, candidate tracking, resume uploading, or intermediate applications.
-- **Direct Employer ATS Links:** Every outbound application button navigates straight to the company's verified ATS job board (`https://jobs.ashbyhq.com/<companySlug>/<ashbyId>`) with `rel="noopener noreferrer"`.
+- **Direct Employer ATS Links:** Every outbound application button navigates straight to the company's verified ATS job board (`applyUrl` / `boardUrl` for Ashby or Greenhouse) with `rel="noopener noreferrer"`. URLs are never hardcoded or constructed in client code.
+- **Source Badge (`SourceBadge.tsx`):** A small, quiet indicator ("via Ashby" / "via Greenhouse") rendered on `JobCard`, `JobDetailPanel` header, and `CompanyHeader` (ADR-0021).
+- **Source Filtering:** `JobFiltersBar` includes a "Source" filter pill (All / Ashby / Greenhouse) synchronized with `?source=` in URL params.
 - **Desktop Two-Pane Ergonomics:** On desktop viewports (>= md), `/` renders a two-pane layout: a scrollable list (`JobList`) on the left and a sticky full-detail panel (`JobDetailPanel`) on the right. First job is auto-selected; URL syncs via `?jobId=`.
 - **Mobile Responsive Ergonomics:** On mobile viewports (< md), list cards navigate directly to `/jobs/:id`, and filters collapse into an accessible bottom-sheet drawer.
 - **Search box:** placeholder "Search by job title, company or location (all words must match)". Pressing Enter sets `q` and resets to page 1; matching rules are in `backend/docs/api.md` (BF-020).

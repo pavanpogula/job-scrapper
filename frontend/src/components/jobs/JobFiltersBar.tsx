@@ -60,6 +60,7 @@ export const JobFiltersBar: React.FC<JobFiltersBarProps> = ({
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Menu anchor states for desktop filter pills
+  const [sourceAnchor, setSourceAnchor] = useState<null | HTMLElement>(null);
   const [dateAnchor, setDateAnchor] = useState<null | HTMLElement>(null);
   const [workplaceAnchor, setWorkplaceAnchor] = useState<null | HTMLElement>(null);
   const [employmentAnchor, setEmploymentAnchor] = useState<null | HTMLElement>(null);
@@ -77,6 +78,7 @@ export const JobFiltersBar: React.FC<JobFiltersBarProps> = ({
 
   // Active filter count (excluding default page/pageSize/publishedAt desc sort)
   const activeFilterCount = [
+    Boolean(filters.source),
     Boolean(filters.country),
     Boolean(filters.workplaceType),
     Boolean(filters.employmentType),
@@ -374,6 +376,57 @@ export const JobFiltersBar: React.FC<JobFiltersBarProps> = ({
             </MenuItem>
           </Menu>
 
+          {/* Source Pill */}
+          <Chip
+            label={
+              filters.source === 'greenhouse'
+                ? 'Source: Greenhouse'
+                : filters.source === 'ashby'
+                ? 'Source: Ashby'
+                : 'Source'
+            }
+            onClick={(e) => setSourceAnchor(e.currentTarget)}
+            onDelete={filters.source ? () => onUpdateFilters({ source: '', page: 1 }) : undefined}
+            deleteIcon={<ClearIcon fontSize="small" />}
+            color={filters.source ? 'primary' : 'default'}
+            variant={filters.source ? 'filled' : 'outlined'}
+            icon={<ArrowDropDownIcon />}
+            sx={{ fontWeight: 600, fontSize: '0.8rem' }}
+          />
+          <Menu
+            anchorEl={sourceAnchor}
+            open={Boolean(sourceAnchor)}
+            onClose={() => setSourceAnchor(null)}
+          >
+            <MenuItem
+              selected={!filters.source}
+              onClick={() => {
+                onUpdateFilters({ source: '', page: 1 });
+                setSourceAnchor(null);
+              }}
+            >
+              All Sources
+            </MenuItem>
+            <MenuItem
+              selected={filters.source === 'ashby'}
+              onClick={() => {
+                onUpdateFilters({ source: 'ashby', page: 1 });
+                setSourceAnchor(null);
+              }}
+            >
+              Ashby
+            </MenuItem>
+            <MenuItem
+              selected={filters.source === 'greenhouse'}
+              onClick={() => {
+                onUpdateFilters({ source: 'greenhouse', page: 1 });
+                setSourceAnchor(null);
+              }}
+            >
+              Greenhouse
+            </MenuItem>
+          </Menu>
+
           {/* Salary Pill */}
           <Chip
             label="Has salary"
@@ -509,6 +562,25 @@ export const JobFiltersBar: React.FC<JobFiltersBarProps> = ({
                   {formatCountryOption(c.value)}
                 </MenuItem>
               ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" fullWidth>
+            <InputLabel id="mobile-source-label">Source</InputLabel>
+            <Select
+              labelId="mobile-source-label"
+              value={filters.source || ''}
+              label="Source"
+              onChange={(e) =>
+                onUpdateFilters({
+                  source: (e.target.value as 'ashby' | 'greenhouse' | '') || '',
+                  page: 1,
+                })
+              }
+            >
+              <MenuItem value="">All Sources</MenuItem>
+              <MenuItem value="ashby">Ashby</MenuItem>
+              <MenuItem value="greenhouse">Greenhouse</MenuItem>
             </Select>
           </FormControl>
 

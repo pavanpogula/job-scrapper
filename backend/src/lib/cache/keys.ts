@@ -65,6 +65,7 @@ export function detailsShard(id: string): number {
 
 export const KNOWN_PARAMS = new Set([
   'search',
+  'source',
   'workplaceType',
   'employmentType',
   'country',
@@ -180,6 +181,14 @@ export function parseJobsQuery(query: Record<string, any>) {
     const pw = query.postedWithin.trim().toLowerCase();
     if (['1d', '7d', '30d'].includes(pw)) {
       normalized.postedWithin = pw;
+    }
+  }
+
+  // 13. source (only ashby, greenhouse supported; others dropped)
+  if (query.source && typeof query.source === 'string') {
+    const src = query.source.trim().toLowerCase();
+    if (src === 'ashby' || src === 'greenhouse') {
+      normalized.source = src;
     }
   }
 
