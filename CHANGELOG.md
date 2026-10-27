@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+  - Review follow-up: added `backend/tests/integration/MixedSources.test.ts` (real Postgres; the plan required it and the PR had none): `source=` returns exactly that source and combines with search/company, facets count per source, board links are built from `atsToken`, Ashby `stripe` and Greenhouse `gh--stripe` stay separate, `gh--foo_bar` (underscore) profile works, and the Greenhouse detail URL has no `gh--`. The footer's single "Ashby & Greenhouse public job APIs" link pointed only at Ashby docs; it is now two links, one per API. Also checked live in Chrome (1440 px and 390 px, light and dark) against a local database with real Ashby and Greenhouse jobs: no console errors, Source pill/drawer filter, Back button, unknown `?source=` ignored.
 
 - **feat(api,ui)**: Job source in API and UI, source filter, source-neutral copy (ADR-0021, contract).
   - API Contract & DTOs (`backend/src/api/types.ts`, `backend/src/api/contract.ts`, `backend/src/api/db/queries.ts`, `backend/src/lib/cache/keys.ts`): Additive extension adding `source: 'ashby' | 'greenhouse'` and `externalId: string` to `JobListItemDTO` and `JobDetailDTO`; deprecated `ashbyId` in favour of `source` + `externalId`; added `source` and `boardUrl: string` to `CompanySummaryDTO`, `CompanyDetailDTO`, and `CompanyProfileDTO` (using server-side canonical builders in `backend/src/lib/ats/urls.ts`); added `sources: FacetCountDTO[]` to `FacetsResponseDTO`.

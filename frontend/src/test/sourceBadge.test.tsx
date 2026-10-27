@@ -199,6 +199,9 @@ describe('Neutralized Copy Assertions', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Ashby & Greenhouse public job APIs/i)).toBeInTheDocument();
+    const ashbyLink = screen.getByRole('link', { name: /Ashby public job API/i });
+    const greenhouseLink = screen.getByRole('link', { name: /Greenhouse job board API/i });
+    expect(ashbyLink).toHaveAttribute('href', expect.stringContaining('ashbyhq.com'));
+    expect(greenhouseLink).toHaveAttribute('href', expect.stringContaining('greenhouse.io'));
   });
 });

@@ -50,7 +50,18 @@ export const Footer: React.FC = () => {
               underline="hover"
               sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
             >
-              Ashby & Greenhouse public job APIs <OpenInNewIcon sx={{ fontSize: 12 }} />
+              Ashby public job API <OpenInNewIcon sx={{ fontSize: 12 }} />
+            </Link>
+            <Typography variant="caption" color="text.secondary">·</Typography>
+            <Link
+              href="https://developers.greenhouse.io/job-board.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              color="text.secondary"
+              underline="hover"
+              sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+            >
+              Greenhouse job board API <OpenInNewIcon sx={{ fontSize: 12 }} />
             </Link>
             <Typography variant="caption" color="text.secondary">·</Typography>
             <Typography variant="caption" color="text.secondary">
