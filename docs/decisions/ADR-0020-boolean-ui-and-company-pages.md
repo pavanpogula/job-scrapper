@@ -33,7 +33,7 @@ Adopt Option 3:
    - Supports `?company=<slug>` deep-linking from company pages.
 4. **Company Profile & Directory Pages (`CompanyPage.tsx`, `CompaniesPage.tsx`)**:
    - `CompaniesPage`: Grid of `CompanyCard`s with uncropped logo tiles, search, and a "Most hiring / A–Z" sort toggle (`sort=jobs|name`).
-   - `CompanyPage`: Dynamic hero banner with 80px avatar, metadata, external Ashby board link, sticky tab navigation, `Overview` tab (hiring metrics, top departments, workplace mix, location breakdown), and `Jobs` tab (recent 10 carousel, department accordions, in-company search, two-pane selection, and "See all in search" link).
+   - `CompanyPage`: Dynamic hero banner with 80px avatar, metadata, external Ashby board link, sticky tab navigation, `Overview` tab (hiring metrics, top departments, workplace mix, location breakdown), and `Jobs` tab (recent 10 carousel, department accordions over API-paged results — 50 per page so every job is reachable — in-company search sent to the API with `company`, two-pane selection, and "See all in search" link). Location counts read "10+" when the top-10 list is full. `PRODUCT.md` and `DESIGN.md` live at the repo root because the impeccable skill reads them there; `layout.test.mjs` allow-lists both.
    - Unknown company slugs render a friendly 404 state.
 5. **Labels & Presentation (`lib/labels.ts`)**:
    - Maps raw ATS enums to human-readable strings (`Full-time`, `Part-time`, `On-site`, `Hybrid`, `Remote`, `Internship`, `Temporary`) and formatted salary ranges (`$140k – $180k/yr`).

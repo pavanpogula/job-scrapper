@@ -53,6 +53,9 @@ test('layout: root contains only allow-listed tracked entries', () => {
     'AGENTS.md',
     'CHANGELOG.md',
     'CLAUDE.md',
+    // Design context the impeccable skill reads from the project root (ADR-0020)
+    'DESIGN.md',
+    'PRODUCT.md',
     'README.md',
     'backend',
     'docs',

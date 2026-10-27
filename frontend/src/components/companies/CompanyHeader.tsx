@@ -17,6 +17,7 @@ import {
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { CompanyProfile } from '../../types/api';
 import { CompanyAvatar } from '../common/CompanyAvatar';
+import { formatLocationCount } from '../../lib/labels';
 
 export interface CompanyHeaderProps {
   profile: CompanyProfile;
@@ -29,9 +30,8 @@ export const CompanyHeader: React.FC<CompanyHeaderProps> = ({ profile }) => {
   const isJobsTab = location.pathname.endsWith('/jobs');
   const activeTab = isJobsTab ? 'jobs' : 'overview';
 
-  const locationsCount = profile.locations?.length ?? 0;
   const jobsLabel = profile.jobCount === 1 ? '1 open job' : `${profile.jobCount} open jobs`;
-  const locationsLabel = locationsCount === 1 ? '1 location' : `${locationsCount} locations`;
+  const locationsLabel = formatLocationCount(profile.locations?.length ?? 0);
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -50,8 +50,8 @@ export const CompanyHeader: React.FC<CompanyHeaderProps> = ({ profile }) => {
         }}
       />
 
-      {/* Hero Content Overlapping Banner */}
-      <Box sx={{ px: { xs: 2, sm: 3 }, mt: { xs: -5, sm: -6 }, mb: 2 }}>
+      {/* Hero Content Overlapping Banner — positioned above the (relative) banner so its tint never covers the name */}
+      <Box sx={{ position: 'relative', zIndex: 1, px: { xs: 2, sm: 3 }, mt: { xs: -5, sm: -6 }, mb: 2 }}>
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           spacing={2.5}

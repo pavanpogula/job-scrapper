@@ -27,7 +27,7 @@ All page routes are asynchronously chunked using `React.lazy` and wrapped in `<S
 | `/jobs/:id` | `JobDetailPage` | `GET /v1/jobs/:id`, `GET /v1/jobs?company=:slug` | Full role description, compensation breakdown, verified employer details, closed-job status banner, and "More jobs at <company>" section. |
 | `/companies` | `CompaniesPage` | `GET /v1/companies` | Directory of verified hiring companies with uncropped logo tiles, search filter, active job counts, and "Most hiring / A–Z" sort toggle. |
 | `/companies/:slug` | `CompanyPage` (Overview tab) | `GET /v1/companies/:slug` | Company profile with hiring metrics, top departments, top locations, workplace mix, and salary transparency. |
-| `/companies/:slug/jobs` | `CompanyPage` (Jobs tab) | `GET /v1/companies/:slug`, `GET /v1/jobs?company=:slug` | Company job openings with newest 10 carousel, department-grouped accordions, search, and two-pane master/detail. |
+| `/companies/:slug/jobs` | `CompanyPage` (Jobs tab) | `GET /v1/companies/:slug`, `GET /v1/jobs?company=:slug` | Company job openings with newest 10 carousel, then **every** job via API paging (50 per page, "Showing x–y of N") grouped by department per page; in-company search goes to the API (`company` + `search`, BF-020 rules), never a client-side filter of loaded rows; two-pane master/detail. Location counts show "10+" because the profile lists at most 10. |
 | `/about` | `AboutPage` | — | Architectural principles, data integrity explanation, and project information. |
 | `*` | `NotFoundPage` | — | Fallback 404 error page with action button returning to the job index. |
 

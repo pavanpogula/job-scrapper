@@ -72,7 +72,7 @@ describe('JobCard component', () => {
     expect(screen.getByText(/San Francisco · On-site/i)).toBeInTheDocument();
 
     // Formatted salary range
-    expect(screen.getByText('$140k – $180k/yr')).toBeInTheDocument();
+    expect(screen.getByText('$140K–$180K/yr')).toBeInTheDocument();
 
     // Freshness tag
     const timeEl = screen.getByText('Posted 2d ago');

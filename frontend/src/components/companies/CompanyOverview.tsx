@@ -20,7 +20,7 @@ import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { CompanyProfile } from '../../types/api';
-import { formatWorkplace } from '../../lib/labels';
+import { formatWorkplace, formatLocationCount } from '../../lib/labels';
 
 export interface CompanyOverviewProps {
   profile: CompanyProfile;
@@ -72,7 +72,7 @@ export const CompanyOverview: React.FC<CompanyOverviewProps> = ({ profile }) => 
             </Typography>
           </Stack>
           <Typography variant="h5" sx={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-            {profile.locations?.length ?? 0}
+            {formatLocationCount(profile.locations?.length ?? 0, { bare: true })}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             cities & offices
