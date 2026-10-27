@@ -20,9 +20,13 @@ import type {
   JobDetailDTO,
   FacetsResponseDTO,
   CompaniesResponseDTO,
+  CompanyProfileDTO,
+  FacetCountDTO,
 } from '../types';
 
-export type { JobQueryParams, CompanyQueryParams };
+export const SLUG_REGEX = /^[a-z0-9-]{1,100}$/;
+
+export type { JobQueryParams, CompanyQueryParams, CompanyProfileDTO };
 
 /**
  * @summary Queries paginated jobs matching filters with deterministic sort tie-breakers
@@ -83,6 +87,26 @@ export async function queryJobs(
   // GAP-API-01 / 04 §4.1: Ignore salaryInterval unless salaryMin is a valid number
   if (validSalaryMin !== null && params.salaryInterval) {
     andConditions.push({ salaryInterval: params.salaryInterval });
+  }
+
+  if (params.company && typeof params.company === 'string' && params.company.trim()) {
+    where.companySlug = params.company.trim();
+  }
+
+  if (params.postedWithin && (params.postedWithin === '1d' || params.postedWithin === '7d' || params.postedWithin === '30d')) {
+    const windowDays = params.postedWithin === '1d' ? 1 : params.postedWithin === '7d' ? 7 : 30;
+    const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+    andConditions.push({
+      OR: [
+        { lastUpdatedAt: { gte: cutoff } },
+        {
+          AND: [
+            { lastUpdatedAt: null },
+            { publishedAt: { gte: cutoff } },
+          ],
+        },
+      ],
+    });
   }
 
   if (andConditions.length > 0) {
@@ -240,12 +264,17 @@ export async function queryCompanies(
     }
   }
 
+  const orderBy: Prisma.CompanyOrderByWithRelationInput[] =
+    params.sort === 'jobs'
+      ? [{ jobs: { _count: 'desc' } }, { name: 'asc' }, { slug: 'asc' }]
+      : [{ name: 'asc' }, { slug: 'asc' }];
+
   const [companies, total] = await Promise.all([
     prisma.company.findMany({
       where,
       take: limit,
       skip,
-      orderBy: { name: 'asc' },
+      orderBy,
       include: {
         _count: {
           select: { jobs: { where: { active: true, isListed: true } } },
@@ -265,6 +294,117 @@ export async function queryCompanies(
     total,
     page: pageNum,
     pageSize: limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  };
+}
+
+/**
+ * @summary Queries full company profile with job breakdowns and facets by slug
+ */
+export async function queryCompanyProfile(
+  prisma: PrismaClient,
+  slug: string
+): Promise<CompanyProfileDTO | null> {
+  if (!slug || typeof slug !== 'string' || !SLUG_REGEX.test(slug.trim())) {
+    return null;
+  }
+  const normalizedSlug = slug.trim().toLowerCase();
+
+  const company = await prisma.company.findFirst({
+    where: { slug: normalizedSlug, status: 'ACTIVE' },
+    select: { slug: true, name: true, logoUrl: true },
+  });
+  if (!company) {
+    return null;
+  }
+
+  const jobWhere: Prisma.JobWhereInput = {
+    companySlug: normalizedSlug,
+    active: true,
+    isListed: true,
+  };
+
+  const [
+    jobCount,
+    withSalary,
+    latestJob,
+    workplaceGroups,
+    employmentGroups,
+    deptRows,
+    locRows,
+  ] = await Promise.all([
+    prisma.job.count({ where: jobWhere }),
+    prisma.job.count({
+      where: {
+        ...jobWhere,
+        OR: [{ salaryMin: { not: null } }, { salaryMax: { not: null } }],
+      },
+    }),
+    prisma.job.findFirst({
+      where: { ...jobWhere, publishedAt: { not: null } },
+      orderBy: { publishedAt: 'desc' },
+      select: { publishedAt: true },
+    }),
+    prisma.job.groupBy({
+      by: ['workplaceType'],
+      where: { ...jobWhere, workplaceType: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.job.groupBy({
+      by: ['employmentType'],
+      where: { ...jobWhere, employmentType: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.department.findMany({
+      where: { jobs: { some: jobWhere } },
+      select: {
+        name: true,
+        _count: {
+          select: { jobs: { where: jobWhere } },
+        },
+      },
+      take: 50,
+    }).catch((): { name: string; _count: { jobs: number } }[] => []),
+    prisma.location.findMany({
+      where: { jobs: { some: jobWhere } },
+      select: {
+        name: true,
+        _count: {
+          select: { jobs: { where: jobWhere } },
+        },
+      },
+      take: 50,
+    }).catch((): { name: string; _count: { jobs: number } }[] => []),
+  ]);
+
+  const workplaceTypes: FacetCountDTO[] = workplaceGroups
+    .map((g) => ({ value: g.workplaceType!, count: g._count._all }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+
+  const employmentTypes: FacetCountDTO[] = employmentGroups
+    .map((g) => ({ value: g.employmentType!, count: g._count._all }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+
+  const departments: FacetCountDTO[] = (deptRows || [])
+    .map((d) => ({ value: d.name, count: d._count?.jobs ?? 0 }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
+    .slice(0, 10);
+
+  const locations: FacetCountDTO[] = (locRows || [])
+    .map((l) => ({ value: l.name, count: l._count?.jobs ?? 0 }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
+    .slice(0, 10);
+
+  return {
+    slug: company.slug,
+    name: company.name,
+    logoUrl: company.logoUrl,
+    jobCount,
+    withSalary,
+    latestPublishedAt: latestJob?.publishedAt ? latestJob.publishedAt.toISOString() : null,
+    workplaceTypes,
+    employmentTypes,
+    departments,
+    locations,
   };
 }

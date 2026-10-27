@@ -36,7 +36,7 @@ job-scrapper/
 │   ├── README.md             # Frontend setup and local developer guide
 │   └── docs/                 # Frontend-specific UI and component guides
 ├── docs/                     # Central repository documentation
-│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0018)
+│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0019)
 │   ├── agents/               # Canonical agent context, roster, and role definitions
 │   ├── archive/              # Preserved historical planning documentation
 │   ├── monorepo-migration/   # Monorepo migration plan, progress, and backlog
@@ -147,6 +147,8 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
 - [ADR-0015: Synchronized API Contract Fixtures](./decisions/ADR-0015-type-contract-and-fixtures.md)
 - [ADR-0016: Manual Vercel Deploys](./decisions/ADR-0016-manual-vercel-deploys.md)
 - [ADR-0017: Agents Publish Task Branches via a Guarded Push Script](./decisions/ADR-0017-agent-branch-pushes.md)
+- [ADR-0018: Job Last-Updated Time Detected by Content-Hash Change](./decisions/ADR-0018-job-last-updated-detection.md)
+- [ADR-0019: Company Profile Endpoint and Company / Posted-Within Job Filters](./decisions/ADR-0019-company-profile-and-filters.md)
 
 ---
 
@@ -157,6 +159,10 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
   - Plan: [`docs/monorepo-migration/PLAN.md`](./monorepo-migration/PLAN.md)
   - Progress: [`docs/monorepo-migration/PROGRESS.md`](./monorepo-migration/PROGRESS.md)
   - Backlog: [`docs/monorepo-migration/BACKLOG.md`](./monorepo-migration/BACKLOG.md)
+- **Active UI Implementation Plans (`docs/plans/`):**
+  - Plan: [`docs/plans/boolean-ui/00-PLAN.md`](./plans/boolean-ui/00-PLAN.md)
+  - PR A: [`docs/plans/boolean-ui/PR-A-company-api.md`](./plans/boolean-ui/PR-A-company-api.md)
+  - PR B: [`docs/plans/boolean-ui/PR-B-boolean-ui.md`](./plans/boolean-ui/PR-B-boolean-ui.md)
 
 ---
 

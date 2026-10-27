@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "slug": "acme-corp",
+      "name": "Acme Corp",
+      "logoUrl": "https://example.com/acme-logo.png",
+      "jobCount": 3
+    },
+    {
+      "slug": "beta-inc",
+      "name": "Beta Inc",
+      "logoUrl": null,
+      "jobCount": 2
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "pageSize": 30,
+  "totalPages": 1
+}

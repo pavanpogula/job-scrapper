@@ -46,6 +46,7 @@ export function cacheControlMiddleware(req: Request, res: Response, next: NextFu
       path === '/v1/jobs' ||
       path === '/v1/facets' ||
       path === '/v1/companies' ||
+      path.startsWith('/v1/companies/') ||
       path === '/v1/meta';
 
     if (isListOrMeta && status === 200) {

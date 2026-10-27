@@ -197,6 +197,27 @@ describe('canonicalJobsKey and isCacheableView (20-case test table)', () => {
       expectedKey: 'jobs?country=CA&page=4',
       isCacheable: true,
     },
+    // 21. Company filter normalization (never cacheable in pre-rendered cache)
+    {
+      name: 'Company filter is normalized and not cacheable',
+      query: { company: '  acme-corp  ', page: 1 },
+      expectedKey: 'jobs?company=acme-corp&page=1',
+      isCacheable: false,
+    },
+    // 22. postedWithin=1d/7d/30d filter normalization (never cacheable)
+    {
+      name: 'postedWithin=7d is normalized and not cacheable',
+      query: { postedWithin: '  7D  ', page: 1 },
+      expectedKey: 'jobs?page=1&postedWithin=7d',
+      isCacheable: false,
+    },
+    // 23. Unknown postedWithin values are ignored/dropped
+    {
+      name: 'Unknown postedWithin value is ignored',
+      query: { postedWithin: '2w', page: 1 },
+      expectedKey: 'jobs?page=1',
+      isCacheable: true,
+    },
   ];
 
   cases.forEach(({ name, query, expectedKey, isCacheable }, idx) => {

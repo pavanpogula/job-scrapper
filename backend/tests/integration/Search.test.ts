@@ -85,6 +85,8 @@ describeIfDb('BF-020: job search against real PostgreSQL', () => {
         salaryCurrency: j.salaryMin === null ? null : 'USD',
         salaryInterval: j.salaryMin === null ? null : '1 YEAR',
         publishedAt: j.publishedAt,
+        lastUpdatedAt: j.lastUpdatedAt,
+        lastUpdatedSource: j.lastUpdatedSource,
         active: j.active,
         isListed: j.isListed,
         metadata: {},
@@ -185,6 +187,9 @@ describeIfDb('BF-020: job search against real PostgreSQL', () => {
       { hasSalary: 'true' },
       { salaryMin: '100000' },
       { country: 'US', hasSalary: 'true' },
+      { company: 'acme' },
+      { company: 'globex' },
+      { postedWithin: '30d' },
     ];
     const SEARCHES = ['senior engineer', 'engineer', 'sf', 'london'];
 
@@ -197,6 +202,51 @@ describeIfDb('BF-020: job search against real PostgreSQL', () => {
         expect(both.ids).toEqual(intersection);
       });
     }
+  });
+
+  describe('company= filter', () => {
+    it('returns only jobs belonging to the exact company slug', async () => {
+      const { ids, total } = await searchIds({ company: 'acme' });
+      const expected = jobs.filter((j) => j.companySlug === 'acme' && j.active && j.isListed).map((j) => j.id).sort();
+      expect(ids).toEqual(expected);
+      expect(total).toBe(expected.length);
+      expect(total).toBeGreaterThan(0);
+    });
+
+    it('returns empty list for non-existent company slug', async () => {
+      const { ids, total } = await searchIds({ company: 'does-not-exist' });
+      expect(ids).toEqual([]);
+      expect(total).toBe(0);
+    });
+
+    it('combines company filter with search', async () => {
+      const { ids, total } = await searchIds({ company: 'acme', search: 'engineer' });
+      const searchOnly = referenceSearch(jobs, 'engineer');
+      const expected = jobs
+        .filter((j) => j.companySlug === 'acme' && j.active && j.isListed && searchOnly.includes(j.id))
+        .map((j) => j.id)
+        .sort();
+      expect(ids).toEqual(expected);
+      expect(total).toBe(expected.length);
+    });
+  });
+
+  describe('postedWithin filter', () => {
+    it.each(['1d', '7d', '30d'] as const)('postedWithin=%s filters correctly by COALESCE(lastUpdatedAt, publishedAt)', async (window) => {
+      const windowMs = window === '1d' ? 24 * 3600 * 1000 : window === '7d' ? 7 * 24 * 3600 * 1000 : 30 * 24 * 3600 * 1000;
+      const cutoff = Date.now() - windowMs;
+      const { ids, total } = await searchIds({ postedWithin: window });
+      const expected = jobs
+        .filter((j) => {
+          if (!j.active || !j.isListed) return false;
+          const effectiveTime = j.lastUpdatedAt ? j.lastUpdatedAt.getTime() : (j.publishedAt ? j.publishedAt.getTime() : null);
+          return effectiveTime !== null && effectiveTime >= cutoff;
+        })
+        .map((j) => j.id)
+        .sort();
+      expect(ids).toEqual(expected);
+      expect(total).toBe(expected.length);
+    });
   });
 
   describe('pagination never loses or repeats jobs', () => {
@@ -236,6 +286,17 @@ describeIfDb('BF-020: job search against real PostgreSQL', () => {
           expect(first.total).toBe(expected.length);
           const second = await walk(params, pageSize);
           expect(second.order).toEqual(first.order);
+        });
+      }
+    }
+    for (const company of ['acme', 'globex']) {
+      for (const pageSize of [1, 2, 5]) {
+        it(`pages cleanly with company="${company}", pageSize=${pageSize}`, async () => {
+          const result = await walk({ company }, pageSize);
+          const expected = jobs.filter((j) => j.companySlug === company && j.active && j.isListed).map((j) => j.id);
+          expect(new Set(result.order).size).toBe(result.order.length);
+          expect([...result.order].sort()).toEqual(expected.sort());
+          expect(result.total).toBe(expected.length);
         });
       }
     }

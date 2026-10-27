@@ -223,6 +223,30 @@ describe('ContractFixtures API Integration Suite (P8a)', () => {
       assertOrUpdateFixture('meta.default', res.body);
     });
 
+    it('verifies GET /v1/companies/:slug (found)', async () => {
+      const res = await request(app).get('/v1/companies/acme-corp').set('X-Forwarded-For', '10.0.0.11');
+      expect(res.status).toBe(200);
+      assertOrUpdateFixture('company-profile.found', res.body);
+    });
+
+    it('verifies GET /v1/companies/:slug (not found)', async () => {
+      const res = await request(app).get('/v1/companies/unknown-company').set('X-Forwarded-For', '10.0.0.12');
+      expect(res.status).toBe(404);
+      assertOrUpdateFixture('company-profile.not-found', res.body);
+    });
+
+    it('verifies GET /v1/jobs?company=acme-corp', async () => {
+      const res = await request(app).get('/v1/jobs?company=acme-corp').set('X-Forwarded-For', '10.0.0.13');
+      expect(res.status).toBe(200);
+      assertOrUpdateFixture('jobs.company', res.body);
+    });
+
+    it('verifies GET /v1/companies?sort=jobs', async () => {
+      const res = await request(app).get('/v1/companies?sort=jobs').set('X-Forwarded-For', '10.0.0.14');
+      expect(res.status).toBe(200);
+      assertOrUpdateFixture('companies.sorted-by-jobs', res.body);
+    });
+
     it('verifies error body shape (404 invalid UUID)', async () => {
       const res = await request(app).get('/v1/jobs/not-a-uuid').set('X-Forwarded-For', '10.0.0.9');
       expect(res.status).toBe(404);

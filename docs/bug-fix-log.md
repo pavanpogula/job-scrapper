@@ -227,6 +227,20 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Regression Invariant:** For any search, `/v1/jobs` returns exactly the visible jobs in which every token starts a word in title, company, department or location; filters only narrow the result; walking every page returns each match exactly once with `meta.total` equal to the match count, in a stable order.
 - **Guarding tests:** `tests/integration/Search.test.ts` (real PostgreSQL, independent reference matcher), `tests/unit/SearchTokenize.test.ts`, `tests/unit/ApiServer.test.ts`, `frontend/src/test/searchBox.test.tsx`.
 
+### BF-021: Companies totalPages floor 1 across DB and Redis Publisher (O5)
+- **Symptom:** When no companies matched or the company list was empty, `queryCompanies` returned `totalPages: 0` while cached/publisher paths produced `totalPages: 1`, breaking cache parity.
+- **Root cause & fix:** Aligned `queryCompanies` in `src/api/db/queries.ts` and `publishCacheGeneration` in `src/cache/Publisher.ts` to compute `totalPages: Math.max(1, Math.ceil(total / limit))`.
+- **Implemented in:** `backend/src/api/db/queries.ts`, `backend/src/cache/Publisher.ts`.
+- **Regression Invariant:** For `/v1/companies`, `totalPages` is always >= 1 regardless of whether the result set is empty or whether served from database or cache.
+- **Guarding tests:** `backend/tests/unit/ApiServer.test.ts` (`returns 200 with empty list when no companies match`), `backend/tests/contract/ContractFixtures.test.ts`.
+
+### BF-022: Unrecognized /v1/* routes return JSON 404 envelope (O14)
+- **Symptom:** Requesting unknown routes under `/v1/*` produced Express default HTML 404 pages instead of structured JSON error envelopes expected by API clients.
+- **Root cause & fix:** Added a terminal catch-all router middleware on `/v1` returning `{ "error": "Not found" }` with HTTP 404 status.
+- **Implemented in:** `backend/src/api/Server.ts`.
+- **Regression Invariant:** Any request to an unknown `/v1/*` route returns status 404 with JSON `{ "error": "Not found" }` and `Cache-Control: no-store`.
+- **Guarding tests:** `backend/tests/unit/ApiServer.test.ts` (`returns JSON 404 for unknown /v1 routes`).
+
 ---
 
 ## 📈 Improvement Log & Future Packaging Roadmap

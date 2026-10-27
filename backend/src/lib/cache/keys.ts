@@ -76,6 +76,8 @@ export const KNOWN_PARAMS = new Set([
   'pageSize',
   'sortBy',
   'sortOrder',
+  'company',
+  'postedWithin',
 ]);
 
 const ALLOWED_WORKPLACE_TYPES = new Set(['Remote', 'Hybrid', 'OnSite']);
@@ -166,6 +168,19 @@ export function parseJobsQuery(query: Record<string, any>) {
 
   if (validSalaryMin !== null && query.salaryInterval && typeof query.salaryInterval === 'string' && query.salaryInterval.trim()) {
     normalized.salaryInterval = query.salaryInterval.trim();
+  }
+
+  // 11. company
+  if (query.company && typeof query.company === 'string' && query.company.trim()) {
+    normalized.company = query.company.trim();
+  }
+
+  // 12. postedWithin (only 1d, 7d, 30d supported; others dropped)
+  if (query.postedWithin && typeof query.postedWithin === 'string') {
+    const pw = query.postedWithin.trim().toLowerCase();
+    if (['1d', '7d', '30d'].includes(pw)) {
+      normalized.postedWithin = pw;
+    }
   }
 
   return normalized;

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(api)**: company profile endpoint and company / posted-within job filters (ADR-0019).
+  - Company profile endpoint: added `GET /v1/companies/:slug` returning `CompanyProfileDTO` (`slug`, `name`, `logoUrl`, `jobCount`, `withSalary`, `latestPublishedAt`, `workplaceTypes`, `employmentTypes`, `departments` [top 10], `locations` [top 10]) over active & listed jobs. Validates slug format `/^[a-z0-9-]{1,100}$/` and requires company `status === 'ACTIVE'`; returns 404 `{ "error": "Company not found" }` otherwise. Served through `ReadThroughService.serveView` as an uncacheable DB view with CDN edge caching matching `/v1/companies`.
+  - Job filters: added `company=<slug>` filter (case-insensitive, trimmed) and `postedWithin=1d|7d|30d` filter (`COALESCE(lastUpdatedAt, publishedAt) >= now - window`) to `GET /v1/jobs`. Both combine cleanly with search (BF-020) and existing filters, and bypass pre-rendered cache (`isCacheableView: false`).
+  - Company directory sorting: added `sort=jobs|name` to `GET /v1/companies` (default `name`). Sorting by `jobs` orders by active job count descending, then name, then slug.
+  - Owner decisions O5 & O14: ensured `totalPages = Math.max(1, Math.ceil(total / limit))` across DB queries and cache publisher (BF-021), and added terminal catch-all router returning standard JSON 404 `{ "error": "Not found" }` for unknown `/v1/*` routes (BF-022).
+  - Contract fixtures & frontend alignment: added test cases `company-profile.found`, `company-profile.not-found`, `jobs.company`, and `companies.sorted-by-jobs` to `backend/tests/contract/ContractFixtures.test.ts`. Synced fixtures to frontend; added `CompanyProfile`, `company?`, and `postedWithin?` to `frontend/src/types/api.ts`; added compile-time `satisfies` and runtime key-set assertions to `frontend/src/test/contract.test.ts`.
+  - Architecture & docs: authored `docs/decisions/ADR-0019-company-profile-and-filters.md`, updated ADR indices in `docs/decisions/README.md` and `docs/README.md`, recorded BF-021 and BF-022 in `docs/bug-fix-log.md`, added testing invariant rows in `docs/testing.md`, updated `backend/docs/api.md`, updated `docs/monorepo-migration/PROGRESS.md`, updated `docs/agents/context.md` within 6,144 byte budget, ran `sync-shells.mjs`, and committed `docs/plans/boolean-ui/` as-is.
+  - Any-ratchet: zero new `any`; lowered backend baseline count by 3 (from 257 to 254).
+
 - **fix(search)**: job search matches all words, in any order, at word starts (BF-020).
   - Root cause: `/v1/jobs` treated the whole search text as one substring, so `senior engineer` returned 106 jobs instead of including the 678 "Senior Software Engineer" jobs, `software engineer senior` returned 0, and `SF` matched inside words such as "Transfer".
   - Fix: new `backend/src/lib/search.ts` (`tokenizeSearch`, `buildSearchWhere`, `canonicalSearch`, `escapeLike`) used by `queryJobs`; every word must start a word in title, company, department or location; LIKE wildcards escaped; cache keys canonicalise equivalent searches. `/v1/companies` search unchanged.

@@ -1,6 +1,6 @@
 # Agent Context
 
-Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (BF-019 cache parity fix).
+Authoritative quick context for AI coding agents. Last updated: 2026-10-27 (ADR-0019).
 
 ## Components & Entry Points
 - **Scraper:** `backend/src/core/Scraper.ts` (single process / IPC worker), `backend/src/core/ClusterScraper.ts` (parallel OS worker coordinator), `backend/src/core/ScraperCSV.ts` (streaming CSV exporter).
@@ -22,9 +22,9 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (BF-0
 
 ## Data & Cache Facts
 - **Change Detection:** PostgreSQL `contentHash` comparison over 17 explicit fields in `batchUpsertJobs` (Redis change detection removed in P1-T04 per D-06).
-- **Freshness Detection:** `lastUpdatedAt` and `lastUpdatedSource` (`'ashby'`, `'detected'`, `'published'`, `'firstSeen'`) tracked on `Job`; content-hash modifications trigger `'detected'` at scrape time without altering `computeJobContentHash` (ADR-0018).
+- **Freshness Detection:** `lastUpdatedAt` and `lastUpdatedSource` (`'ashby'|'detected'|'published'|'firstSeen'`) on `Job`; content-hash changes trigger `'detected'` without altering `computeJobContentHash` (ADR-0018).
 - **Cache Generations:** Upstash Redis `jc:v1:*` keys. Double-buffered atomic generation swap via MULTI/EXEC. Detail rows sharded across 8 hashes (`CRC32(id) % 8`).
-- **REST Endpoints:** `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/facets`, `/v1/meta`, `/health` (v2 shallow inspection; 0 DB/Redis calls when warm).
+- **REST Endpoints:** `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/companies/:slug`, `/v1/facets`, `/v1/meta`, `/health` (shallow, 0 DB/Redis warm). Unknown `/v1/*` returns JSON 404 (O14).
 - **Backpressure & Concurrency:** `DbGuard` limits active database queries to 3 with queue size 10 (returns 503 + Retry-After on backpressure). Coalesces concurrent identical DB queries via `singleFlight`.
 - **Telemetry:** Each run writes `output/reports/<YYYY-MM>/<runId>.json` (ErrorTracker v2) and `output/latest-<mode>.json`.
 
