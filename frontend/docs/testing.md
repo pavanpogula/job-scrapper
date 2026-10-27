@@ -39,6 +39,11 @@ All frontend test commands are executed from the repository root with `npm --pre
 - `src/test/searchBox.test.tsx`: Search box round trip with MSW: Enter sends the trimmed text and resets to page 1, `c++`/`c#`/`r&d`/`100%`/`node.js` survive URL encoding, clear removes `q`, and Back restores the previous search (BF-020).
 - `src/test/formatJobFreshness.test.ts`: Unit tests for the job freshness label helper (Updated / Posted / First seen, relative and absolute dates, clock skew, invalid input; ADR-0018).
 - `src/test/jobFreshness.test.tsx`: Integration test with MSW asserting job cards render the freshness label as `<time>` elements, including the `publishedAt` fallback for cache bodies without the new fields.
+- `src/test/jobCard.test.tsx`: Component tests for `JobCard` verifying human labels, uncropped logo / fallback initial, formatted salary, freshness `<time>` tags, company links, and omission of inline apply buttons (ADR-0020).
+- `src/test/twoPaneAndFilters.test.tsx`: Integration tests for desktop two-pane layout, filter pills (`postedWithin`, `isRemote`, `hasSalary`), and `?company=` deep linking (ADR-0020).
+- `src/test/companyJobsTab.test.tsx`: Company Jobs tab reaches every job: real total and "Showing x–y of N", API paging to the last page, in-company search sent to the API (`company` + `search`, page reset), and "10+ locations" for a capped list (ADR-0020).
+- `src/test/companyPage.test.tsx`: Integration tests for `CompanyPage` Overview and Jobs tabs, department grouping, and 404 state (ADR-0020).
+- `src/test/companiesDirectory.test.tsx`: Integration tests for `CompaniesPage` directory, uncropped logos, "Most hiring / A–Z" sort toggle, and `B.O.O.L.E.A.N` header brand mark (ADR-0020).
 
 ### Contract Fixture Parity
 Frontend contract fixtures in `src/test/fixtures/contract/` are mirrored byte-for-byte from backend contract fixtures:

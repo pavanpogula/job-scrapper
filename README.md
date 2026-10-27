@@ -1,6 +1,6 @@
-# Ashby Job Scraper
+# B.O.O.L.E.A.N · Ashby Job Scraper
 
-A TypeScript monorepo providing a high-performance batch scraper feeding Neon PostgreSQL and Upstash Redis (`jc:v1:*` cache-first architecture), a serverless Express REST API deployed on Vercel, and a modern React 19 web application for browsing and filtering public Ashby job postings.
+A TypeScript monorepo providing a high-performance batch scraper feeding Neon PostgreSQL and Upstash Redis (`jc:v1:*` cache-first architecture), a serverless Express REST API deployed on Vercel, and a modern React 19 web application (B.O.O.L.E.A.N) for browsing and filtering direct company job postings.
 
 - **Live UI:** [https://job-scrapper-ui.vercel.app](https://job-scrapper-ui.vercel.app)
 - **Live API:** [https://job-scrapper-api-eight.vercel.app](https://job-scrapper-api-eight.vercel.app)

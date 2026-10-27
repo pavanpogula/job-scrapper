@@ -28,6 +28,7 @@ import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import { useAppDispatch } from '../store';
 import { toggleTheme } from '../store/slices/themeSlice';
 import { useGetMetaQuery } from '../store/api/jobsApi';
+import { BrandMark } from './brand/BrandMark';
 
 export const Header: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -65,37 +66,12 @@ export const Header: React.FC = () => {
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 1.25,
                 textDecoration: 'none',
                 color: 'inherit',
               }}
+              aria-label="B.O.O.L.E.A.N home"
             >
-              <Box
-                sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '6px',
-                  bgcolor: 'text.primary',
-                  color: 'background.default',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                }}
-              >
-                A
-              </Box>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                Ashby Index
-              </Typography>
+              <BrandMark size="medium" />
             </Box>
 
             {/* Desktop Stats Pill */}

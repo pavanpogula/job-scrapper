@@ -1,3 +1,8 @@
+/**
+ * @file CompaniesPage.tsx
+ * @summary Directory of hiring companies with uncropped logo tiles, instant search, and "Most hiring / A–Z" sort toggle
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   Container,
@@ -5,24 +10,25 @@ import {
   Typography,
   TextField,
   InputAdornment,
-  Paper,
-  Stack,
-  Avatar,
-  Link,
   IconButton,
   Pagination,
+  ToggleButtonGroup,
+  ToggleButton,
+  Stack,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import BusinessIcon from '@mui/icons-material/Business';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import { useGetCompaniesQuery } from '../store/api/jobsApi';
+import { CompanyCard } from '../components/companies/CompanyCard';
 import { QueryState } from '../components/QueryState';
 
 export const CompaniesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<'jobs' | 'name'>('jobs');
 
   // Debounce search input by 300ms
   useEffect(() => {
@@ -37,17 +43,28 @@ export const CompaniesPage: React.FC = () => {
     search: debouncedSearch,
     page,
     pageSize: 30,
+    sort,
   });
 
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
+  const handleSortChange = (
+    _: React.MouseEvent<HTMLElement>,
+    nextSort: 'jobs' | 'name' | null
+  ) => {
+    if (nextSort !== null) {
+      setSort(nextSort);
+      setPage(1);
+    }
+  };
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <title>Companies | Ashby Job Directory</title>
+      <title>Companies | B.O.O.L.E.A.N</title>
       <meta
         name="description"
-        content="Browse all hiring companies hosting active job postings on Ashby ATS."
+        content="Browse all hiring companies hosting active job postings on official applicant tracking systems."
       />
 
       <Box sx={{ mb: 4 }}>
@@ -55,15 +72,22 @@ export const CompaniesPage: React.FC = () => {
           Hiring Companies Directory
         </Typography>
         <Typography variant="body2" color="text.secondary" role="status">
-          {data ? `${total.toLocaleString()} active companies hosting open jobs on Ashby ATS.` : 'Loading active companies...'}
+          {data ? `${total.toLocaleString()} active companies hosting open jobs.` : 'Loading active companies...'}
         </Typography>
       </Box>
 
-      {/* Filter Input */}
-      <Box sx={{ mb: 4 }}>
+      {/* Filter and Sort Toolbar */}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        sx={{
+          mb: 4,
+          alignItems: { xs: 'stretch', sm: 'center' },
+          justifyContent: 'space-between',
+        }}
+      >
         <TextField
-          fullWidth
-          size="medium"
+          size="small"
           placeholder="Filter companies by name or slug..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -74,7 +98,7 @@ export const CompaniesPage: React.FC = () => {
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ color: 'text.secondary' }} />
+                  <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                 </InputAdornment>
               ),
               endAdornment: searchTerm ? (
@@ -94,8 +118,27 @@ export const CompaniesPage: React.FC = () => {
               ) : null,
             },
           }}
+          sx={{ maxWidth: { xs: '100%', sm: 400 }, flex: 1 }}
         />
-      </Box>
+
+        {/* Sort Toggle: Most hiring / A–Z */}
+        <ToggleButtonGroup
+          value={sort}
+          exclusive
+          onChange={handleSortChange}
+          size="small"
+          aria-label="Sort companies by"
+        >
+          <ToggleButton value="jobs" aria-label="Most hiring">
+            <TrendingUpIcon fontSize="small" sx={{ mr: 0.75 }} />
+            Most hiring
+          </ToggleButton>
+          <ToggleButton value="name" aria-label="A to Z">
+            <SortByAlphaIcon fontSize="small" sx={{ mr: 0.75 }} />
+            A–Z
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
 
       <QueryState
         isLoading={isLoading}
@@ -115,87 +158,7 @@ export const CompaniesPage: React.FC = () => {
               }}
             >
               {data.data.map((company) => (
-                <Paper
-                  key={company.slug}
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 2,
-                    transition: 'border-color 0.15s ease',
-                    '&:hover': {
-                      borderColor: 'text.secondary',
-                    },
-                  }}
-                >
-                  <Stack direction="row" spacing={2} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
-                    <Avatar
-                      src={company.logoUrl || undefined}
-                      alt={`${company.name || company.slug} logo`}
-                      variant="rounded"
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        bgcolor: 'background.default',
-                        color: 'text.primary',
-                        fontSize: '1rem',
-                        fontWeight: 700,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                      }}
-                    >
-                      {!company.logoUrl && ((company.name ? company.name.charAt(0) : company.slug.charAt(0)) || <BusinessIcon />)}
-                    </Avatar>
-
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{
-                          fontWeight: 700,
-                          color: 'text.primary',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {company.name || company.slug}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontFamily: "'Geist Mono', monospace",
-                          color: 'text.secondary',
-                          fontSize: '0.72rem',
-                          display: 'block',
-                        }}
-                      >
-                        {company.slug}
-                      </Typography>
-                    </Box>
-                  </Stack>
-
-                  <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{ fontWeight: 700, color: 'secondary.main', fontVariantNumeric: 'tabular-nums' }}
-                    >
-                      {company.jobCount ? `${company.jobCount} roles` : 'Openings'}
-                    </Typography>
-                    <Link
-                      href={`https://jobs.ashbyhq.com/${company.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      underline="hover"
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}
-                    >
-                      Board <OpenInNewIcon sx={{ fontSize: 10 }} />
-                    </Link>
-                  </Box>
-                </Paper>
+                <CompanyCard key={company.slug} company={company} />
               ))}
             </Box>
 

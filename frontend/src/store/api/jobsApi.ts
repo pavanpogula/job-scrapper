@@ -13,6 +13,8 @@ import {
   JobDetail, 
   FacetsData, 
   CompaniesResponse,
+  CompanyProfile,
+  CompanyQueryParams,
   ApiMeta
 } from '../../types/api';
 
@@ -70,16 +72,23 @@ export const jobsApi = createApi({
       providesTags: ['Facets'],
     }),
 
-    getCompanies: builder.query<CompaniesResponse, { search?: string; page?: number; pageSize?: number }>({
+    getCompanies: builder.query<CompaniesResponse, CompanyQueryParams>({
       keepUnusedDataFor: 600,
       query: (params) => {
         const queryParams = new URLSearchParams();
         if (params.search && params.search.trim()) queryParams.append('search', params.search.trim());
         if (params.page) queryParams.append('page', String(params.page));
         if (params.pageSize) queryParams.append('pageSize', String(params.pageSize));
+        if (params.sort) queryParams.append('sort', params.sort);
         return `companies?${queryParams.toString()}`;
       },
       providesTags: ['Companies'],
+    }),
+
+    getCompanyProfile: builder.query<CompanyProfile, string>({
+      keepUnusedDataFor: 600,
+      query: (slug) => `companies/${encodeURIComponent(slug)}`,
+      providesTags: (_result, _error, slug) => [{ type: 'Companies', id: slug }],
     }),
 
     getMeta: builder.query<ApiMeta, void>({
@@ -95,5 +104,7 @@ export const {
   useGetJobByIdQuery,
   useGetFacetsQuery,
   useGetCompaniesQuery,
+  useGetCompanyProfileQuery,
   useGetMetaQuery,
+  usePrefetch,
 } = jobsApi;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Container, Box, Typography, Link, Stack } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { BrandMark } from './brand/BrandMark';
 
 export const Footer: React.FC = () => {
   return (
@@ -24,11 +25,9 @@ export const Footer: React.FC = () => {
           }}
         >
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              Ashby Public ATS Index
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
-              Direct listings collected straight from verified Ashby career boards. No accounts, no candidate data retention, no middlemen.
+            <BrandMark size="small" />
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+              Direct listings collected straight from verified company career boards. No accounts, no candidate data retention, no middlemen.
             </Typography>
           </Box>
 

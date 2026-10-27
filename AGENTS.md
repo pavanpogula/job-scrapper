@@ -1,6 +1,6 @@
 # AGENTS.md
 
-The **Ashby Job Scraper** is a batch TypeScript CLI scraper feeding Neon PostgreSQL and Upstash Redis (`jc:v1:*` cache-first architecture), an Express REST API deployed on Vercel (`backend/api/index.ts` invoking `backend/src/api/Server.ts`), and a React 19 web application in `frontend/` for browsing public Ashby job postings. Users only browse and click Apply (no logins).
+The **Ashby Job Scraper** (product name: **B.O.O.L.E.A.N**) is a batch TypeScript CLI scraper feeding Neon PostgreSQL and Upstash Redis (`jc:v1:*` cache-first architecture), an Express REST API deployed on Vercel (`backend/api/index.ts` invoking `backend/src/api/Server.ts`), and a React 19 web application in `frontend/` for browsing direct company job postings. Users only browse and click Apply (no logins).
 
 ## Flow
 1. **Discover & Seed:** `npm run discover` / `npm run seed [-- --all]` populates `Company` rows from Ashby ATS slugs.

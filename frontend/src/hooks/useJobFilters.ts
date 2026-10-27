@@ -39,6 +39,10 @@ export function useJobFilters() {
     const workplace = (searchParams.get('workplace') || '') as WorkplaceType | '';
     const employment = (searchParams.get('employment') || '') as EmploymentType | '';
     const country = searchParams.get('country') || '';
+    const company = searchParams.get('company') || '';
+    const rawPosted = searchParams.get('postedWithin');
+    const postedWithin = rawPosted === '1d' || rawPosted === '7d' || rawPosted === '30d' ? rawPosted : undefined;
+    const remote = searchParams.get('remote') === '1' || searchParams.get('remote') === 'true' || searchParams.get('isRemote') === 'true';
     const salary = searchParams.get('salary') === '1' || searchParams.get('salary') === 'true';
     const sort = parseSortParam(searchParams.get('sort'));
     const order = parseOrderParam(searchParams.get('order'));
@@ -50,6 +54,9 @@ export function useJobFilters() {
         workplaceType: workplace,
         employmentType: employment,
         country,
+        company,
+        postedWithin,
+        isRemote: remote,
         hasSalary: salary,
         sortBy: sort,
         sortOrder: order,
@@ -58,9 +65,29 @@ export function useJobFilters() {
     );
   }, [searchParams, dispatch]);
 
+  const selectedJobId = searchParams.get('jobId') || null;
+
+  const selectJob = useCallback(
+    (jobId: string | null, replace = false) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (jobId) {
+            next.set('jobId', jobId);
+          } else {
+            next.delete('jobId');
+          }
+          return next;
+        },
+        { replace }
+      );
+    },
+    [setSearchParams]
+  );
+
   // Update URL search parameters when filters change
   const updateUrl = useCallback(
-    (newFilters: Partial<JobsQueryParams>) => {
+    (newFilters: Partial<JobsQueryParams>, options?: { preserveJobId?: boolean; replace?: boolean }) => {
       const merged = { ...filters, ...newFilters };
       const params = new URLSearchParams();
 
@@ -68,14 +95,21 @@ export function useJobFilters() {
       if (merged.workplaceType) params.set('workplace', merged.workplaceType);
       if (merged.employmentType) params.set('employment', merged.employmentType);
       if (merged.country) params.set('country', merged.country);
+      if (merged.company && merged.company.trim()) params.set('company', merged.company.trim());
+      if (merged.postedWithin) params.set('postedWithin', merged.postedWithin);
+      if (merged.isRemote) params.set('remote', '1');
       if (merged.hasSalary) params.set('salary', '1');
       if (merged.sortBy && merged.sortBy !== 'publishedAt') params.set('sort', merged.sortBy);
       if (merged.sortOrder && merged.sortOrder !== 'desc') params.set('order', merged.sortOrder);
       if (merged.page && merged.page > 1) params.set('page', String(merged.page));
 
-      setSearchParams(params, { replace: false });
+      if (options?.preserveJobId && searchParams.get('jobId')) {
+        params.set('jobId', searchParams.get('jobId')!);
+      }
+
+      setSearchParams(params, { replace: options?.replace ?? false });
     },
-    [filters, setSearchParams]
+    [filters, searchParams, setSearchParams]
   );
 
   const clearAllFilters = useCallback(() => {
@@ -85,6 +119,8 @@ export function useJobFilters() {
 
   return {
     filters,
+    selectedJobId,
+    selectJob,
     updateUrl,
     clearAllFilters,
   };

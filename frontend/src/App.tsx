@@ -10,6 +10,7 @@ import { Footer } from './components/Footer';
 const BrowsePage = lazy(() => import('./pages/BrowsePage'));
 const JobDetailPage = lazy(() => import('./pages/JobDetailPage'));
 const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
+const CompanyPage = lazy(() => import('./pages/CompanyPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -42,6 +43,8 @@ export const App: React.FC = () => {
               <Route path="/" element={<BrowsePage />} />
               <Route path="/jobs/:id" element={<JobDetailPage />} />
               <Route path="/companies" element={<CompaniesPage />} />
+              <Route path="/companies/:slug" element={<CompanyPage />} />
+              <Route path="/companies/:slug/jobs" element={<CompanyPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
