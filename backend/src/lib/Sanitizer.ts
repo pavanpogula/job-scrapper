@@ -104,6 +104,12 @@ export function sanitizeJobDescriptionPlain(plain: unknown, fallbackHtml?: unkno
         .trim();
 }
 
+export interface CanonicalUrlOptions {
+    fallbackUrl?: (token: string, jobId: string, isApplyUrl: boolean) => string;
+    baseUrl?: string;
+    sourceName?: string;
+}
+
 /**
  * @summary Validates and normalizes Ashby job/apply URLs, falling back to canonical Ashby URL if malformed or missing
  */
@@ -112,14 +118,18 @@ export function sanitizeJobUrl(
     companySlug: string,
     jobId: string,
     isApplyUrl = false,
-    onIssue?: (reason: string) => void
+    onIssue?: (reason: string) => void,
+    urlOptions?: CanonicalUrlOptions
 ): string {
     const cleanSlug = encodeURIComponent(companySlug.trim());
     const cleanJobId = encodeURIComponent(jobId.trim());
-    const canonicalFallback = `https://jobs.ashbyhq.com/${cleanSlug}/${cleanJobId}${isApplyUrl ? '/application' : ''}`;
+    const sourceName = urlOptions?.sourceName ?? 'Ashby';
+    const canonicalFallback = urlOptions?.fallbackUrl
+        ? urlOptions.fallbackUrl(cleanSlug, cleanJobId, isApplyUrl)
+        : `https://jobs.ashbyhq.com/${cleanSlug}/${cleanJobId}${isApplyUrl ? '/application' : ''}`;
 
     if (typeof rawUrl !== 'string' || !rawUrl.trim()) {
-        onIssue?.('Missing URL; replaced with canonical Ashby URL');
+        onIssue?.(`Missing URL; replaced with canonical ${sourceName} URL`);
         return canonicalFallback;
     }
 
@@ -128,24 +138,25 @@ export function sanitizeJobUrl(
         INVALID_ID_VALUES.has(trimmed.toLowerCase()) ||
         /^(javascript|data|vbscript|file|mailto):/i.test(trimmed)
     ) {
-        onIssue?.(`Unsafe or placeholder URL "${trimmed.slice(0, 40)}"; replaced with canonical Ashby URL`);
+        onIssue?.(`Unsafe or placeholder URL "${trimmed.slice(0, 40)}"; replaced with canonical ${sourceName} URL`);
         return canonicalFallback;
     }
 
     try {
+        const baseOrigin = urlOptions?.baseUrl ?? 'https://jobs.ashbyhq.com';
         // Support relative paths returned by custom boards
         const parsed = trimmed.startsWith('/')
-            ? new URL(trimmed, 'https://jobs.ashbyhq.com')
+            ? new URL(trimmed, baseOrigin)
             : new URL(trimmed);
 
         if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-            onIssue?.(`Invalid URL protocol "${parsed.protocol}"; replaced with canonical Ashby URL`);
+            onIssue?.(`Invalid URL protocol "${parsed.protocol}"; replaced with canonical ${sourceName} URL`);
             return canonicalFallback;
         }
 
         return parsed.toString();
     } catch {
-        onIssue?.(`Malformed URL "${trimmed.slice(0, 60)}"; replaced with canonical Ashby URL`);
+        onIssue?.(`Malformed URL "${trimmed.slice(0, 60)}"; replaced with canonical ${sourceName} URL`);
         return canonicalFallback;
     }
 }
@@ -212,7 +223,8 @@ export function sanitizeJsonMetadata(value: any): any {
 export function validateAndSanitizeJob(
     rawJob: any,
     companySlug: string,
-    issues: ValidationIssue[] = []
+    issues: ValidationIssue[] = [],
+    urlOptions?: CanonicalUrlOptions
 ): AshbyJob | null {
     if (!rawJob || typeof rawJob !== 'object') {
         issues.push({
@@ -270,7 +282,7 @@ export function validateAndSanitizeJob(
             reason,
             action: 'sanitized'
         });
-    });
+    }, urlOptions);
 
     const cleanApplyUrl = sanitizeJobUrl(rawJob.applyUrl, companySlug, rawId, true, reason => {
         issues.push({
@@ -280,7 +292,7 @@ export function validateAndSanitizeJob(
             reason,
             action: 'sanitized'
         });
-    });
+    }, urlOptions);
 
     // 5. Sanitize descriptions if present on rawJob
     const sanitizedMetadata = sanitizeJsonMetadata({
@@ -313,7 +325,11 @@ export function validateAndSanitizeJob(
 /**
  * @summary Validates and sanitizes an array of raw Ashby jobs, filtering out corrupt objects and collecting validation issues
  */
-export function sanitizeJobBatch(rawJobs: any[], companySlug: string): SanitizeBatchResult {
+export function sanitizeJobBatch(
+    rawJobs: any[],
+    companySlug: string,
+    urlOptions?: CanonicalUrlOptions
+): SanitizeBatchResult {
     const validJobs: AshbyJob[] = [];
     const issues: ValidationIssue[] = [];
 
@@ -343,7 +359,7 @@ export function sanitizeJobBatch(rawJobs: any[], companySlug: string): SanitizeB
             continue;
         }
 
-        const sanitized = validateAndSanitizeJob(rawJob, companySlug, issues);
+        const sanitized = validateAndSanitizeJob(rawJob, companySlug, issues, urlOptions);
         if (!sanitized) continue;
 
         seenIds.add(sanitized.id);

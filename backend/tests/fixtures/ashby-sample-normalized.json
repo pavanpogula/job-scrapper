@@ -1,0 +1,106 @@
+[
+  {
+    "externalId": "7fe8abc1-1234-4567-89ab-cdef01234567",
+    "legacyKey": "7fe8abc1-1234-4567-89ab-cdef01234567",
+    "title": "Senior Staff Backend Engineer",
+    "department": "Engineering",
+    "location": "San Francisco, CA",
+    "employmentType": "FullTime",
+    "applyUrl": "https://jobs.ashbyhq.com/1password/7fe8abc1-1234-4567-89ab-cdef01234567/application",
+    "jobUrl": "https://jobs.ashbyhq.com/1password/7fe8abc1-1234-4567-89ab-cdef01234567",
+    "isRemote": false,
+    "workplaceType": "Hybrid",
+    "isListed": true,
+    "publishedAt": "2026-03-15T12:00:00.000Z",
+    "sourceUpdatedAt": null,
+    "postal": null,
+    "salary": {
+      "min": 180000,
+      "max": 240000,
+      "currency": "USD",
+      "interval": "1 YEAR"
+    },
+    "descriptionHtml": "",
+    "descriptionPlain": "",
+    "team": "Platform",
+    "secondaryLocations": [],
+    "country": null,
+    "region": null,
+    "city": null,
+    "raw": {
+      "id": "7fe8abc1-1234-4567-89ab-cdef01234567",
+      "title": "Senior Staff Backend Engineer",
+      "department": "Engineering",
+      "team": "Platform",
+      "employmentType": "FullTime",
+      "location": "San Francisco, CA",
+      "secondaryLocations": [],
+      "publishedAt": "2026-03-15T12:00:00.000Z",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "Hybrid",
+      "applyUrl": "https://jobs.ashbyhq.com/1password/7fe8abc1-1234-4567-89ab-cdef01234567/application",
+      "jobUrl": "https://jobs.ashbyhq.com/1password/7fe8abc1-1234-4567-89ab-cdef01234567",
+      "compensation": {
+        "scrapeableCompensationSalarySummary": "$180,000 - $240,000",
+        "summaryComponents": [
+          {
+            "compensationType": "Salary",
+            "interval": "1 YEAR",
+            "currencyCode": "USD",
+            "minValue": 180000,
+            "maxValue": 240000
+          }
+        ]
+      },
+      "_source": "rest"
+    },
+    "contentHash": "1e70b374376a040a5617a4f5efbb1fff"
+  },
+  {
+    "externalId": "8901cdef-5678-90ab-cdef-1234567890ab",
+    "legacyKey": "8901cdef-5678-90ab-cdef-1234567890ab",
+    "title": "Lead Product Designer",
+    "department": "Design",
+    "location": "Remote - US",
+    "employmentType": "FullTime",
+    "applyUrl": "https://jobs.ashbyhq.com/1password/8901cdef-5678-90ab-cdef-1234567890ab/application",
+    "jobUrl": "https://jobs.ashbyhq.com/1password/8901cdef-5678-90ab-cdef-1234567890ab",
+    "isRemote": true,
+    "workplaceType": "Remote",
+    "isListed": true,
+    "publishedAt": "2026-03-16T14:30:00.000Z",
+    "sourceUpdatedAt": null,
+    "postal": null,
+    "salary": {
+      "min": null,
+      "max": null,
+      "currency": null,
+      "interval": null
+    },
+    "descriptionHtml": "",
+    "descriptionPlain": "",
+    "team": "Core UX",
+    "secondaryLocations": [],
+    "country": null,
+    "region": null,
+    "city": null,
+    "raw": {
+      "id": "8901cdef-5678-90ab-cdef-1234567890ab",
+      "title": "Lead Product Designer",
+      "department": "Design",
+      "team": "Core UX",
+      "employmentType": "FullTime",
+      "location": "Remote - US",
+      "secondaryLocations": [],
+      "publishedAt": "2026-03-16T14:30:00.000Z",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "applyUrl": "https://jobs.ashbyhq.com/1password/8901cdef-5678-90ab-cdef-1234567890ab/application",
+      "jobUrl": "https://jobs.ashbyhq.com/1password/8901cdef-5678-90ab-cdef-1234567890ab",
+      "_source": "rest"
+    },
+    "contentHash": "7775e9b8bc5536c1cddae6369605e9d9"
+  }
+]

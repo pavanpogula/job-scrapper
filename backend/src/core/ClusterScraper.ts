@@ -10,6 +10,7 @@ import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
 import { ErrorReportDocument, ErrorTracker } from '../lib/ErrorTracker';
 import { publishCacheGeneration, recordScrapeFinished } from '../cache/Publisher';
+import { AtsSource, parseAtsSources, toDbAts } from '../lib/ats/source';
 
 const prisma = new PrismaClient();
 
@@ -24,6 +25,8 @@ export interface WorkerResult {
 }
 
 export interface ClusterScrapeOptions {
+    sources?: AtsSource[];
+    slugs?: string[];
     workerTimeoutMs?: number;
     killGracePeriodMs?: number;
     saveTelemetry?: boolean;
@@ -54,19 +57,47 @@ export function resolveWorkerCount(argv: string[], totalItems: number, cpuCount:
     return Math.max(1, Math.min(requested, Math.max(1, totalItems)));
 }
 
+export type PartitionItem = string | { slug: string; source?: string };
+
 /**
- * @summary Distributes company slugs evenly across N worker shards using round-robin partitioning
- * @param slugs Array of company slugs
+ * @summary Distributes company slugs evenly across N worker shards using round-robin partitioning with source interleaving
+ * @param items Array of company slugs or objects with slug and source
  * @param workerCount Number of worker shards
  * @returns 2D array of company slugs partitioned by shard
  */
-export function partitionSlugs(slugs: string[], workerCount: number): string[][] {
-    const count = Math.max(1, Math.min(workerCount, Math.max(1, slugs.length)));
+export function partitionSlugs(items: PartitionItem[], workerCount: number): string[][] {
+    if (items.length === 0) return [];
+    const count = Math.max(1, Math.min(workerCount, items.length));
     const shards: string[][] = Array.from({ length: count }, () => []);
 
-    slugs.forEach((slug, idx) => {
-        shards[idx % count].push(slug);
-    });
+    const hasObjectWithSource = items.some(
+        item => typeof item === 'object' && item !== null && item.source
+    );
+
+    if (hasObjectWithSource) {
+        // Group by source
+        const bySource = new Map<string, string[]>();
+        for (const item of items) {
+            const slug = typeof item === 'string' ? item : item.slug;
+            const source = (typeof item === 'object' && item !== null && item.source) ? item.source : 'unknown';
+            if (!bySource.has(source)) {
+                bySource.set(source, []);
+            }
+            bySource.get(source)!.push(slug);
+        }
+
+        // Distribute each source evenly across shards
+        for (const [, sourceSlugs] of bySource) {
+            sourceSlugs.forEach((slug, idx) => {
+                shards[idx % count].push(slug);
+            });
+        }
+    } else {
+        items.forEach((item, idx) => {
+            const slug = typeof item === 'string' ? item : item.slug;
+            shards[idx % count].push(slug);
+        });
+    }
 
     return shards.filter(s => s.length > 0);
 }
@@ -86,6 +117,7 @@ export function runWorkerShard(
     options: {
         workerTimeoutMs?: number;
         killGracePeriodMs?: number;
+        sources?: AtsSource[];
         onSpawn?: (child: ChildProcess) => void;
     } = {}
 ): Promise<WorkerResult> {
@@ -211,7 +243,8 @@ export function runWorkerShard(
             child.send({
                 workerId,
                 slugs,
-                concurrency: perWorkerConcurrency
+                concurrency: perWorkerConcurrency,
+                sources: options.sources
             });
         } catch (err: any) {
             cleanupAndResolve({
@@ -238,13 +271,42 @@ export async function runClusterScrape(
 ): Promise<ErrorReportDocument | null> {
     const startedAtMs = Date.now();
 
+    const sourcesFlag = argv.find(arg => arg.startsWith('--sources='));
+    const slugsFlag = argv.find(arg => arg.startsWith('--slugs='));
+
+    let enabledSources: AtsSource[];
+    if (options.sources && options.sources.length > 0) {
+        enabledSources = options.sources;
+    } else if (sourcesFlag) {
+        const raw = sourcesFlag.split('=')[1];
+        try {
+            enabledSources = parseAtsSources(raw);
+        } catch (err: unknown) {
+            console.error(`❌ ${(err as Error).message}`);
+            process.exit(1);
+        }
+    } else {
+        enabledSources = ['ashby'];
+    }
+
+    let explicitSlugs = options.slugs;
+    if (!explicitSlugs && slugsFlag) {
+        explicitSlugs = slugsFlag.split('=')[1].split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    const enabledDbSources = enabledSources.map(toDbAts);
+
     const isSundayUtc = new Date().getUTCDay() === 0;
     const recheckNotFound = argv.includes('--recheck-not-found') || isSundayUtc;
     const statusFilter = recheckNotFound ? { in: ['ACTIVE', 'NOT_FOUND'] as any } : 'ACTIVE';
 
     const companies = await prisma.company.findMany({
-        where: { status: statusFilter },
-        select: { slug: true }
+        where: {
+            status: statusFilter,
+            source: { in: enabledDbSources },
+            ...(explicitSlugs ? { slug: { in: explicitSlugs } } : {})
+        },
+        select: { slug: true, source: true }
     });
     await prisma.$disconnect();
 
@@ -254,9 +316,9 @@ export async function runClusterScrape(
     }
 
     const slugs = companies.map(c => c.slug);
-    const workerCount = resolveWorkerCount(argv, slugs.length);
-    const shards = partitionSlugs(slugs, workerCount);
-    const perWorkerConcurrency = slugs.length > 100 ? 12 : Math.max(5, Math.ceil(20 / shards.length));
+    const workerCount = resolveWorkerCount(argv, companies.length);
+    const shards = partitionSlugs(companies, workerCount);
+    const perWorkerConcurrency = companies.length > 100 ? 12 : Math.max(5, Math.ceil(20 / shards.length));
 
     console.log(`⚡ MULTI-PROCESS CLUSTER SCRAPER`);
     console.log(`   Active Companies : ${slugs.length}`);
@@ -287,6 +349,7 @@ export async function runClusterScrape(
         runWorkerShard(idx + 1, shardSlugs, perWorkerConcurrency, {
             workerTimeoutMs: options.workerTimeoutMs,
             killGracePeriodMs: options.killGracePeriodMs,
+            sources: enabledSources,
             onSpawn: child => activeChildren.add(child)
         })
     );

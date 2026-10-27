@@ -1,9 +1,12 @@
 # ADR-0021: Multi-Source ATS Architecture (Greenhouse Onboarding)
 
-- Status: Accepted
+- Status: Accepted (Phase G1 & G2 Implemented)
 - Date: 2026-10-27
 - Deciders: owner, scraper-architect
 - Related: ADR-0001, ADR-0004, ADR-0009, ADR-0010, ADR-0018, ADR-0019, ADR-0020
+
+> **Implementation Note (Phase G2 - 2026-10-27)**:
+> Phase G2 implemented: `AtsClient` interface and `AshbyAtsClient` adapter put in place, scraper core, cluster coordinator, and enrichment made source-agnostic with per-source adaptive limiters and `--sources`/`--slugs` flags, and Prisma schema updated with `@@unique([source, externalId])` on `Job` and `@@unique([source, atsToken])` on `Company`.
 
 ## Context
 The Ashby Job Scraper (B.O.O.L.E.A.N) was originally designed around Ashby as its single Applicant Tracking System (ATS) source. Public job boards hosted on Greenhouse (`https://job-boards.greenhouse.io/{token}`) provide an unauthenticated, unpaginated REST API returning active job postings. Expanding the platform to ingest Greenhouse job postings alongside Ashby boards requires supporting multiple ATS providers without disrupting existing database queries, API contracts, cache generation publishing, or frontend components.

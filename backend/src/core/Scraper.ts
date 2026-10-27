@@ -6,14 +6,12 @@
 
 import { PrismaClient, Prisma } from '@prisma/client';
 import crypto from 'crypto';
-import { createLimiter } from '../lib/Concurrency';
+import { createLimiter, AdaptiveLimiter } from '../lib/Concurrency';
 import {
     AshbyJob,
-    extractSalary,
-    fetchAshbyBoardWithFallback
+    extractSalary
 } from '../lib/AshbyClient';
 import {
-    sanitizeJobUrl,
     sanitizeJsonMetadata,
     sanitizeText
 } from '../lib/Sanitizer';
@@ -21,6 +19,9 @@ import { toIsoCountry } from '../lib/Country';
 import { ErrorTracker, ErrorReportDocument } from '../lib/ErrorTracker';
 import { publishCacheGeneration, recordScrapeFinished } from '../cache/Publisher';
 import { resolveLastUpdated, PrevJobState } from './ResolveLastUpdated';
+import { AtsClient, BoardRef, NormalizedJob } from '../lib/ats/AtsClient';
+import { AshbyAtsClient } from '../lib/ats/AshbyAtsClient';
+import { AtsSource, DbAts, parseAtsSources, toDbAts, toAtsSource } from '../lib/ats/source';
 
 const prisma = new PrismaClient();
 
@@ -50,7 +51,7 @@ export interface ContentHashFields {
     descriptionHtml?: string | null;
     descriptionPlain?: string | null;
     team?: string | null;
-    secondaryLocations?: Array<{ location: string } | string> | null;
+    secondaryLocations?: Array<{ location?: string } | string> | null;
 }
 
 /**
@@ -125,8 +126,10 @@ export function computeJobContentHash(fields: ContentHashFields): string {
     return crypto.createHash('md5').update(stableStringify(canonical)).digest('hex');
 }
 
-interface ProcessedJob {
+export interface ProcessedJob {
     ashbyId: string;
+    externalId: string;
+    source: DbAts;
     title: string;
     companySlug: string;
     departmentId: string | null;
@@ -145,22 +148,49 @@ interface ProcessedJob {
     country: string | null;
     region: string | null;
     city: string | null;
-    postalAddress: any;
-    metadata: any;
+    postalAddress: Prisma.InputJsonValue;
+    metadata: Prisma.InputJsonValue;
     contentHash: string;
-    source?: 'rest' | 'graphql';
+    fetchMode?: 'primary' | 'fallback' | 'none';
+}
+
+export interface AshbyScraperOptions {
+    clients?: Map<AtsSource, AtsClient>;
 }
 
 /**
  * @summary High-performance scraper class with adaptive concurrency, 3-strike quarantine, stale job deactivation, and streaming batch DB writes
  */
 export class AshbyScraper {
+    private clients: Map<AtsSource, AtsClient>;
+    private limiters = new Map<AtsSource, AdaptiveLimiter>();
     private departmentCache = new Map<string, string>();
     private departmentInFlight = new Map<string, Promise<string>>();
     private locationCache = new Map<string, string>();
     private locationInFlight = new Map<string, Promise<string>>();
     private companiesWithExistingJobs = new Set<string>();
     private hasLoadedExistingJobSlugs = false;
+
+    constructor(options: AshbyScraperOptions = {}) {
+        if (options.clients) {
+            this.clients = new Map(options.clients);
+        } else {
+            this.clients = new Map();
+            this.clients.set('ashby', new AshbyAtsClient());
+        }
+    }
+
+    /**
+     * @summary Gets or creates an adaptive concurrency limiter for a specific ATS source
+     */
+    public getLimiter(source: AtsSource, concurrency: number): AdaptiveLimiter {
+        let limiter = this.limiters.get(source);
+        if (!limiter) {
+            limiter = createLimiter(concurrency);
+            this.limiters.set(source, limiter);
+        }
+        return limiter;
+    }
 
     /**
      * @summary Deactivates jobs in the database that are no longer listed on the company's live Ashby board
@@ -325,8 +355,8 @@ export class AshbyScraper {
                 where: { ashbyId: job.ashbyId },
                 create: {
                     ashbyId: job.ashbyId,
-                    source: 'ASHBY' as const,
-                    externalId: job.ashbyId,
+                    source: job.source ?? 'ASHBY',
+                    externalId: job.externalId ?? job.ashbyId,
                     title: job.title,
                     companySlug: job.companySlug,
                     departmentId: job.departmentId ?? null,
@@ -353,8 +383,8 @@ export class AshbyScraper {
                     active: true
                 },
                 update: {
-                    source: 'ASHBY' as const,
-                    externalId: job.ashbyId,
+                    source: job.source ?? 'ASHBY',
+                    externalId: job.externalId ?? job.ashbyId,
                     title: job.title,
                     departmentId: job.departmentId ?? null,
                     locationId: job.locationId ?? null,
@@ -409,7 +439,7 @@ export class AshbyScraper {
                         if (!prev) continue;
 
                         const prevIsRest = prev.metadata?._source === 'rest';
-                        if (j.source === 'graphql' && prevIsRest) {
+                        if (j.fetchMode === 'fallback' && prevIsRest) {
                             // A GraphQL result arriving over a REST row updates only active and lastSeenAt via raw SQL (updatedAt untouched)
                             toRawTouch.push(j.ashbyId);
                         } else if (prev.contentHash !== j.contentHash || !prev.active) {
@@ -429,8 +459,8 @@ export class AshbyScraper {
                                 const resolved = resolveLastUpdated(null, job, now);
                                 return {
                                     ashbyId: job.ashbyId,
-                                    source: 'ASHBY' as const,
-                                    externalId: job.ashbyId,
+                                    source: job.source ?? 'ASHBY',
+                                    externalId: job.externalId ?? job.ashbyId,
                                     title: job.title,
                                     companySlug: job.companySlug,
                                     departmentId: job.departmentId ?? null,
@@ -480,7 +510,7 @@ export class AshbyScraper {
                                 select: { ashbyId: true, contentHash: true, active: true, lastUpdatedAt: true, lastUpdatedSource: true, metadata: true }
                             });
                         }
-                        if (job.source === 'graphql' && existing && existing.metadata?._source === 'rest') {
+                        if (job.fetchMode === 'fallback' && existing && existing.metadata?._source === 'rest') {
                             toRawTouch.push(job.ashbyId);
                             continue;
                         }
@@ -513,7 +543,7 @@ export class AshbyScraper {
                                 select: { ashbyId: true, contentHash: true, active: true, lastUpdatedAt: true, lastUpdatedSource: true, metadata: true }
                             });
                         }
-                        if (job.source === 'graphql' && existing && existing.metadata?._source === 'rest') {
+                        if (job.fetchMode === 'fallback' && existing && existing.metadata?._source === 'rest') {
                             const now = new Date();
                             if (typeof prisma.$executeRaw === 'function') {
                                 await prisma.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ${job.ashbyId}`.catch(() => {});
@@ -544,40 +574,31 @@ export class AshbyScraper {
     }
 
     /**
-     * @summary Processes a single company's jobs, sanitizing fields and metadata before returning prepared job records
+     * @summary Processes normalized jobs, resolving department and location and computing contentHash
      */
     private async processCompanyJobs(
         companySlug: string,
-        jobs: AshbyJob[],
-        source: 'rest' | 'graphql' = 'rest'
+        jobs: NormalizedJob[],
+        source: DbAts,
+        fetchMode: 'primary' | 'fallback' | 'none'
     ): Promise<ProcessedJob[]> {
         if (jobs.length === 0) return [];
 
         const processedJobs: ProcessedJob[] = [];
 
         for (const job of jobs) {
-            const cleanTitle = sanitizeText(job.title);
-            if (!cleanTitle || !job.id) {
-                console.warn(`  ⚠️ [ValidationFilter] Skipping malformed job in ${companySlug} (id=${job.id})`);
+            const cleanTitle = job.title;
+            if (!cleanTitle || !job.externalId) {
+                console.warn(`  ⚠️ [ValidationFilter] Skipping malformed job in ${companySlug} (id=${job.externalId})`);
                 continue;
             }
 
-            const cleanDept = sanitizeText(job.department);
-            const cleanLoc = sanitizeText(job.location);
-            const departmentId = await this.getOrCreateDepartment(cleanDept);
-            const locationId = await this.getOrCreateLocation(cleanLoc);
-            const salary = extractSalary(job);
-            const cleanApplyUrl = sanitizeJobUrl(job.applyUrl, companySlug, job.id, true);
-            const cleanMetadata = sanitizeJsonMetadata(job) || {};
-            cleanMetadata._source = source;
-            const postal = job.address?.postalAddress;
-            const parsedPublishedAt = job.publishedAt ? new Date(job.publishedAt) : null;
-            const validPublishedAt = parsedPublishedAt && !isNaN(parsedPublishedAt.getTime()) ? parsedPublishedAt : null;
-            const parsedUpdatedAt = job.updatedAt ? new Date(job.updatedAt) : null;
-            const validUpdatedAt = parsedUpdatedAt && !isNaN(parsedUpdatedAt.getTime()) ? parsedUpdatedAt : null;
-            const cleanCountry = toIsoCountry(postal?.addressCountry);
-            const cleanRegion = postal?.addressRegion ? sanitizeText(postal.addressRegion) : null;
-            const cleanCity = postal?.addressLocality ? sanitizeText(postal.addressLocality) : null;
+            const cleanDept = job.department ? sanitizeText(job.department) : null;
+            const cleanLoc = job.location ? sanitizeText(job.location) : null;
+            const departmentId = cleanDept ? await this.getOrCreateDepartment(cleanDept) : null;
+            const locationId = cleanLoc ? await this.getOrCreateLocation(cleanLoc) : null;
+
+            const publishedAtStr = job.publishedAt ? job.publishedAt.toISOString() : null;
 
             // Generate contentHash AFTER sanitization over explicit field list
             const hash = computeJobContentHash({
@@ -585,50 +606,52 @@ export class AshbyScraper {
                 location: cleanLoc || null,
                 department: cleanDept || null,
                 salary: {
-                    min: salary.min ?? null,
-                    max: salary.max ?? null,
-                    currency: salary.currency ?? null,
-                    interval: salary.interval ?? null
+                    min: job.salary?.min ?? null,
+                    max: job.salary?.max ?? null,
+                    currency: job.salary?.currency ?? null,
+                    interval: job.salary?.interval ?? null
                 },
                 isRemote: Boolean(job.isRemote),
                 workplaceType: job.workplaceType ?? null,
                 employmentType: job.employmentType ?? null,
-                publishedAt: validPublishedAt ? validPublishedAt.toISOString() : null,
-                applyUrl: cleanApplyUrl,
+                publishedAt: publishedAtStr,
+                applyUrl: job.applyUrl,
                 isListed: job.isListed !== false,
-                country: cleanCountry,
-                region: cleanRegion,
-                city: cleanCity,
-                descriptionHtml: cleanMetadata?.descriptionHtml || job.descriptionHtml || '',
-                descriptionPlain: cleanMetadata?.descriptionPlain || job.descriptionPlain || '',
-                team: cleanMetadata?.team || job.team || null,
-                secondaryLocations: job.secondaryLocations || cleanMetadata?.secondaryLocations || []
+                country: job.country ?? null,
+                region: job.region ?? null,
+                city: job.city ?? null,
+                descriptionHtml: job.descriptionHtml || '',
+                descriptionPlain: job.descriptionPlain || '',
+                team: job.team ?? null,
+                secondaryLocations: job.secondaryLocations || []
             });
 
             processedJobs.push({
-                ashbyId: job.id,
+                ashbyId: job.legacyKey,
+                externalId: job.externalId,
+                source,
                 title: cleanTitle,
                 companySlug,
                 departmentId,
                 locationId,
-                applyUrl: cleanApplyUrl,
-                salaryMin: salary.min ?? null,
-                salaryMax: salary.max ?? null,
-                salaryCurrency: salary.currency ?? null,
-                salaryInterval: salary.interval ?? null,
+                applyUrl: job.applyUrl,
+                salaryMin: job.salary?.min ?? null,
+                salaryMax: job.salary?.max ?? null,
+                salaryCurrency: job.salary?.currency ?? null,
+                salaryInterval: job.salary?.interval ?? null,
                 isRemote: job.isRemote,
                 workplaceType: job.workplaceType ?? null,
                 employmentType: job.employmentType ?? null,
-                publishedAt: validPublishedAt,
-                updatedAt: validUpdatedAt,
+                publishedAt: job.publishedAt ?? null,
+                updatedAt: job.sourceUpdatedAt ?? null,
                 isListed: job.isListed !== false,
-                country: cleanCountry,
-                region: postal?.addressRegion ? sanitizeText(postal.addressRegion) : null,
-                city: postal?.addressLocality ? sanitizeText(postal.addressLocality) : null,
-                postalAddress: postal ? (sanitizeJsonMetadata(postal) ?? Prisma.DbNull) : Prisma.DbNull,
-                metadata: cleanMetadata,
+                country: job.country ?? null,
+                region: job.region ?? null,
+                city: job.city ?? null,
+                postalAddress: job.postal ? (sanitizeJsonMetadata(job.postal) ?? Prisma.DbNull) : Prisma.DbNull,
+                metadata: (job.raw || {}) as Prisma.InputJsonValue,
                 contentHash: hash,
-                source
+                fetchMode
             });
         }
 
@@ -640,6 +663,7 @@ export class AshbyScraper {
      */
     public async runAll(options: {
         slugs?: string[];
+        sources?: AtsSource[];
         workerId?: number;
         concurrency?: number;
         saveTelemetry?: boolean;
@@ -653,6 +677,31 @@ export class AshbyScraper {
         const workerPrefix = options.workerId !== undefined ? `[Worker #${options.workerId} | PID ${process.pid}] ` : '';
         const concurrencyLimit = options.concurrency ?? CONCURRENCY_LIMIT;
         const shouldSaveTelemetry = options.saveTelemetry ?? (options.workerId === undefined);
+
+        const sourcesFlag = process.argv.find(arg => arg.startsWith('--sources='));
+        const slugsFlag = process.argv.find(arg => arg.startsWith('--slugs='));
+
+        let enabledSources: AtsSource[];
+        if (options.sources && options.sources.length > 0) {
+            enabledSources = options.sources;
+        } else if (sourcesFlag) {
+            const raw = sourcesFlag.split('=')[1];
+            try {
+                enabledSources = parseAtsSources(raw);
+            } catch (err: unknown) {
+                console.error(`❌ ${(err as Error).message}`);
+                process.exit(1);
+            }
+        } else {
+            enabledSources = ['ashby'];
+        }
+
+        let explicitSlugs = options.slugs;
+        if (!explicitSlugs && slugsFlag) {
+            explicitSlugs = slugsFlag.split('=')[1].split(',').map(s => s.trim()).filter(Boolean);
+        }
+
+        const enabledDbSources = enabledSources.map(toDbAts);
 
         // Pre-warm department and location caches in 2 queries to avoid per-company round trips
         if (typeof (prisma.department as any)?.findMany === 'function') {
@@ -679,25 +728,97 @@ export class AshbyScraper {
         const recheckNotFound = options.recheckNotFound ?? (process.argv.includes('--recheck-not-found') || isSundayUtc);
         const statusFilter = recheckNotFound ? { in: ['ACTIVE', 'NOT_FOUND'] as any } : 'ACTIVE';
 
-        const companies: Array<{ slug: string; consecutiveNotFound?: number; consecutiveFailures?: number; pendingEmptySince?: Date | null }> = options.slugs
-            ? await prisma.company.findMany({
-                where: { slug: { in: options.slugs } },
-                select: { slug: true, consecutiveNotFound: true, consecutiveFailures: true, pendingEmptySince: true }
-            }).then(rows => {
-                const rowMap = new Map(rows.map(r => [r.slug, r]));
-                return options.slugs!.map(s => rowMap.get(s) ?? { slug: s, consecutiveNotFound: 0, consecutiveFailures: 0, pendingEmptySince: null });
-            }).catch(() => options.slugs!.map(slug => ({ slug, consecutiveNotFound: 0, consecutiveFailures: 0, pendingEmptySince: null })))
-            : await prisma.company.findMany({
-                where: { status: statusFilter },
-                select: { slug: true, consecutiveNotFound: true, consecutiveFailures: true, pendingEmptySince: true }
+        const tracker = new ErrorTracker('db_scrape');
+
+        let companies: Array<{
+            slug: string;
+            source: DbAts;
+            atsToken: string | null;
+            consecutiveNotFound?: number;
+            consecutiveFailures?: number;
+            pendingEmptySince?: Date | null;
+        }> = [];
+
+        if (explicitSlugs) {
+            const rows = await prisma.company.findMany({
+                where: { slug: { in: explicitSlugs } },
+                select: {
+                    slug: true,
+                    source: true,
+                    atsToken: true,
+                    consecutiveNotFound: true,
+                    consecutiveFailures: true,
+                    pendingEmptySince: true
+                }
+            }).catch(() => [] as any[]);
+
+            const rowMap = new Map(rows.map(r => [r.slug, r]));
+            for (const slug of explicitSlugs) {
+                const row = rowMap.get(slug);
+                if (!row) {
+                    tracker.recordEvent({
+                        category: 'company_error',
+                        companySlug: slug,
+                        message: `Slug '${slug}' not found in database; skipping`,
+                        actionTaken: 'skipped_unknown_slug'
+                    });
+                    continue;
+                }
+                const atsSource = toAtsSource(row.source);
+                if (!enabledSources.includes(atsSource)) {
+                    tracker.recordEvent({
+                        category: 'company_error',
+                        companySlug: slug,
+                        message: `Source '${row.source}' is not enabled for slug '${slug}'; skipping`,
+                        actionTaken: 'skipped_disabled_source'
+                    });
+                    continue;
+                }
+                if (!this.clients.has(atsSource)) {
+                    tracker.recordEvent({
+                        category: 'company_error',
+                        companySlug: slug,
+                        message: `No AtsClient registered for source '${atsSource}' for slug '${slug}'; skipping`,
+                        actionTaken: 'skipped_unregistered_client'
+                    });
+                    continue;
+                }
+                companies.push(row);
+            }
+        } else {
+            const rows = await prisma.company.findMany({
+                where: {
+                    status: statusFilter,
+                    source: { in: enabledDbSources }
+                },
+                select: {
+                    slug: true,
+                    source: true,
+                    atsToken: true,
+                    consecutiveNotFound: true,
+                    consecutiveFailures: true,
+                    pendingEmptySince: true
+                }
+            }).catch(() => [] as any[]);
+
+            companies = rows.filter(row => {
+                const atsSource = toAtsSource(row.source);
+                if (!this.clients.has(atsSource)) {
+                    tracker.recordEvent({
+                        category: 'company_error',
+                        companySlug: row.slug,
+                        message: `No AtsClient registered for source '${atsSource}'; skipping`,
+                        actionTaken: 'skipped_unregistered_client'
+                    });
+                    return false;
+                }
+                return true;
             });
+        }
 
         console.log(`🚀 ${workerPrefix}Starting HIGH-PERFORMANCE scrape for ${companies.length} companies`);
         console.log(`   ${workerPrefix}Concurrency: ${concurrencyLimit} | Batch Size: ${BATCH_SIZE}\n`);
 
-        // Create adaptive concurrency limiter and telemetry tracker
-        const limit = createLimiter(concurrencyLimit);
-        const tracker = new ErrorTracker('db_scrape');
         tracker.companiesAttempted = companies.length;
 
         let completed = 0;
@@ -725,10 +846,19 @@ export class AshbyScraper {
             }
         };
 
-        const fetchPromises = companies.map(company =>
-            limit(async () => {
+        const fetchPromises = companies.map(company => {
+            const atsSource = toAtsSource(company.source);
+            const client = this.clients.get(atsSource)!;
+            const limit = this.getLimiter(atsSource, concurrencyLimit);
+            const boardRef: BoardRef = {
+                slug: company.slug,
+                source: atsSource,
+                atsToken: company.atsToken || company.slug
+            };
+
+            return limit(async () => {
                 try {
-                    const boardResult = await fetchAshbyBoardWithFallback(company.slug, {
+                    const boardResult = await client.fetchBoard(boardRef, {
                         includeCompensation: true
                     });
                     completed++;
@@ -739,19 +869,19 @@ export class AshbyScraper {
                         tracker.recordEvent({
                             category: 'rate_limited',
                             companySlug: company.slug,
-                            message: 'HTTP 429 Too Many Requests received from Posting API',
+                            message: `HTTP 429 Too Many Requests received from ${atsSource} API`,
                             actionTaken: 'throttled_concurrency'
                         });
                     } else {
                         limit.onSuccess();
                     }
 
-                    if (boardResult.source === 'graphql') {
+                    if (boardResult.fetchMode === 'fallback') {
                         tracker.graphqlFallbacksUsed++;
                         tracker.recordEvent({
                             category: 'graphql_fallback',
                             companySlug: company.slug,
-                            message: 'Posting API returned 404/403; recovered board via Ashby hosted GraphQL API',
+                            message: 'Posting API returned 404/403; recovered board via fallback API',
                             actionTaken: `recovered_${boardResult.jobs.length}_jobs`
                         });
                     }
@@ -788,8 +918,8 @@ export class AshbyScraper {
                                 ...(isQuarantined ? { status: 'NOT_FOUND' } : {})
                             }
                         }).catch(() => {});
-                    } else if (boardResult.source === 'rest' || boardResult.source === 'graphql') {
-                        const activeIds = boardResult.jobs.map(j => j.id);
+                    } else if (boardResult.fetchMode === 'primary' || boardResult.fetchMode === 'fallback') {
+                        const activeIds = boardResult.jobs.map(j => j.legacyKey);
 
                         if (activeIds.length === 0) {
                             let activeJobCount = 0;
@@ -861,7 +991,7 @@ export class AshbyScraper {
                             }
                         }
                     } else {
-                        // source === 'none' with notFound === false (fetch error, network, timeout, 5xx)
+                        // fetchMode === 'none' with notFound === false (fetch error, network, timeout, 5xx)
                         const consecutiveFailures = (company.consecutiveFailures ?? 0) + 1;
 
                         if (boardResult.failure) {
@@ -914,7 +1044,8 @@ export class AshbyScraper {
                         const processed = await this.processCompanyJobs(
                             boardResult.slug,
                             boardResult.jobs,
-                            boardResult.source === 'graphql' ? 'graphql' : 'rest'
+                            company.source,
+                            boardResult.fetchMode
                         );
                         totalProcessed += processed.length;
                         pendingJobs.push(...processed);
@@ -941,8 +1072,8 @@ export class AshbyScraper {
                     });
                     console.error(`  ❌ ${workerPrefix}[CompanyError] Failed processing ${company.slug}: ${err.message || String(err)}`);
                 }
-            })
-        );
+            });
+        });
 
         await Promise.all(fetchPromises);
 
@@ -1021,11 +1152,12 @@ export class AshbyScraper {
 
 if (require.main === module) {
     if (process.argv.includes('--ipc-worker')) {
-        process.once('message', async (msg: { workerId: number; slugs: string[]; concurrency?: number }) => {
+        process.once('message', async (msg: { workerId: number; slugs: string[]; concurrency?: number; sources?: AtsSource[] }) => {
             const scraper = new AshbyScraper();
             try {
                 const report = await scraper.runAll({
                     slugs: msg.slugs,
+                    sources: msg.sources,
                     workerId: msg.workerId,
                     concurrency: msg.concurrency,
                     saveTelemetry: false,

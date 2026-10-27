@@ -9,7 +9,11 @@ import { FakeRedis } from '../helpers/fakeRedis';
 import { Prisma } from '@prisma/client';
 
 const statefulPrisma = createStatefulPrisma({
-    companies: [{ slug: 'acme-corp', status: 'ACTIVE' }],
+    companies: [
+        { slug: 'acme-corp', status: 'ACTIVE' },
+        { slug: 'failing-corp', status: 'ACTIVE' },
+        { slug: 'healthy-corp', status: 'ACTIVE' }
+    ],
     jobs: [
         {
             ashbyId: 'old-stale-job',

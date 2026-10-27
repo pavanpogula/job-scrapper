@@ -13,5 +13,5 @@ When modifying scraper core or library components:
 2. Invariants BF-001 through BF-018+ must be preserved.
 3. Test-driven development is required: author a failing test in `backend/tests/unit/` before applying any fix.
 4. Only HTTP 429 triggers `sawRateLimit`; Retry-After header must be honored (capped at 10s).
-5. GraphQL fallback rows must never overwrite rich REST fields.
+5. Fallback rows must never overwrite primary rows (BF-016: fallback over primary guard; Ashby-only).
 6. Preserve existing docstrings, interfaces, and error telemetry handling.

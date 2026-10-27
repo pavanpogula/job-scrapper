@@ -6,7 +6,9 @@
 
 import { PrismaClient } from '@prisma/client';
 import { createLimiter } from '../lib/Concurrency';
-import { fetchOrganizationMetadata } from '../lib/AshbyClient';
+import { AtsClient, BoardRef } from '../lib/ats/AtsClient';
+import { AshbyAtsClient } from '../lib/ats/AshbyAtsClient';
+import { AtsSource, parseAtsSources, toAtsSource, toDbAts } from '../lib/ats/source';
 
 const prisma = new PrismaClient();
 
@@ -14,6 +16,7 @@ export interface EnrichmentResult {
     totalTargeted: number;
     enrichedCount: number;
     failedCount: number;
+    skippedCount: number;
     durationSeconds: number;
 }
 
@@ -24,15 +27,40 @@ export async function enrichActiveCompanies(options: {
     concurrency?: number;
     limit?: number;
     forceAll?: boolean;
+    sources?: AtsSource[];
+    clients?: Map<AtsSource, AtsClient>;
 } = {}): Promise<EnrichmentResult> {
     const startTime = Date.now();
     const concurrency = options.concurrency ?? 15;
+
+    const sourcesFlag = process.argv.find(a => a.startsWith('--sources='));
+    let enabledSources: AtsSource[];
+    if (options.sources && options.sources.length > 0) {
+        enabledSources = options.sources;
+    } else if (sourcesFlag) {
+        const raw = sourcesFlag.split('=')[1];
+        try {
+            enabledSources = parseAtsSources(raw);
+        } catch (err: unknown) {
+            console.error(`❌ ${(err as Error).message}`);
+            process.exit(1);
+        }
+    } else {
+        enabledSources = ['ashby'];
+    }
+
+    const clients = options.clients
+        ? new Map(options.clients)
+        : new Map<AtsSource, AtsClient>([['ashby', new AshbyAtsClient()]]);
+
+    const enabledDbSources = enabledSources.map(toDbAts);
 
     console.log('🔍 Identifying active hiring companies needing enrichment...');
 
     // Find companies with active jobs
     const activeCompanies = await prisma.company.findMany({
         where: {
+            source: { in: enabledDbSources },
             jobs: {
                 some: { active: true }
             },
@@ -47,6 +75,8 @@ export async function enrichActiveCompanies(options: {
         },
         select: {
             slug: true,
+            source: true,
+            atsToken: true,
             name: true,
             logoUrl: true
         },
@@ -65,6 +95,7 @@ export async function enrichActiveCompanies(options: {
             totalTargeted: 0,
             enrichedCount: 0,
             failedCount: 0,
+            skippedCount: 0,
             durationSeconds: 0
         };
     }
@@ -72,12 +103,28 @@ export async function enrichActiveCompanies(options: {
     const limiter = createLimiter(concurrency);
     let enrichedCount = 0;
     let failedCount = 0;
+    let skippedCount = 0;
     let processed = 0;
 
     const tasks = candidates.map(company =>
         limiter(async () => {
+            const atsSource = toAtsSource(company.source);
+            const client = clients.get(atsSource);
+
+            if (!client) {
+                processed++;
+                skippedCount++;
+                console.warn(`  ⚠️ [Enrich] Skipping ${company.slug}: no AtsClient registered for source ${atsSource}`);
+                return;
+            }
+
             try {
-                const meta = await fetchOrganizationMetadata(company.slug);
+                const ref: BoardRef = {
+                    slug: company.slug,
+                    source: atsSource,
+                    atsToken: company.atsToken || company.slug
+                };
+                const meta = await client.fetchCompanyMetadata(ref);
                 processed++;
 
                 if (meta.status === 'rate_limited') {
@@ -98,7 +145,7 @@ export async function enrichActiveCompanies(options: {
                 }
 
                 if (processed % 100 === 0 || processed === candidates.length) {
-                    console.log(`  📊 [${processed}/${candidates.length}] Enriched: ${enrichedCount} | No meta: ${failedCount}`);
+                    console.log(`  📊 [${processed}/${candidates.length}] Enriched: ${enrichedCount} | No meta: ${failedCount} | Skipped: ${skippedCount}`);
                 }
             } catch (err: any) {
                 processed++;
@@ -117,11 +164,13 @@ export async function enrichActiveCompanies(options: {
     console.log(`   Total targeted: ${candidates.length}`);
     console.log(`   Successfully enriched: ${enrichedCount}`);
     console.log(`   No metadata / un-enriched: ${failedCount}`);
+    console.log(`   Skipped (unregistered): ${skippedCount}`);
 
     return {
         totalTargeted: candidates.length,
         enrichedCount,
         failedCount,
+        skippedCount,
         durationSeconds
     };
 }

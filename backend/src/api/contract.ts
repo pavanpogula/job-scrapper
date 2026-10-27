@@ -6,6 +6,7 @@
 
 import type { Prisma } from '@prisma/client';
 import type { JobListItemDTO, JobDetailDTO } from './types';
+import { jobUrl as buildJobUrl } from '../lib/ats/urls';
 
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -193,7 +194,7 @@ export function toJobDetail(job: JobWithDetailRelations): JobDetailDTO {
   const jobUrl =
     typeof meta.jobUrl === 'string' && meta.jobUrl.length > 0
       ? meta.jobUrl
-      : `https://jobs.ashbyhq.com/${job.companySlug}/${job.ashbyId}`;
+      : buildJobUrl('ashby', job.companySlug, job.ashbyId);
 
   const descriptionHtml = typeof meta.descriptionHtml === 'string' ? meta.descriptionHtml : '';
   const descriptionPlain = typeof meta.descriptionPlain === 'string' ? meta.descriptionPlain : '';

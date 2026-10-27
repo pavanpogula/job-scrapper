@@ -38,6 +38,7 @@ model Company {
   jobs                Job[]
   createdAt           DateTime      @default(now())
 
+  @@unique([source, atsToken])
   @@index([source, status])
 }
 
@@ -102,6 +103,7 @@ model Job {
   updatedAt  DateTime  @updatedAt
 
   // Index for efficient filtering
+  @@unique([source, externalId])
   @@index([source, active, isListed, publishedAt(sort: Desc)])
   @@index([active, isListed, publishedAt(sort: Desc), createdAt(sort: Desc), id])
   @@index([active, isListed, workplaceType, publishedAt(sort: Desc)])

@@ -149,6 +149,13 @@ describeIfDb('ADR-0021: Multi-source schema expansion, dual-write backfill, and 
     expect(uniquesPush.stdout.toLowerCase()).toContain('already in sync');
   });
 
+  it('Step 4b: pushes live schema.prisma reporting already in sync (G2 live schema confirmation)', async () => {
+    const liveSchemaPath = path.resolve(__dirname, '../../prisma/schema.prisma');
+    const livePush = pushSchema(liveSchemaPath);
+    expect(livePush.status).toBe(0);
+    expect(livePush.stdout.toLowerCase()).toContain('already in sync');
+  });
+
   it('Step 5: backfill refuses and exits 1 without creating indexes when an ASHBY company has slug with --', async () => {
     // Drop existing indexes to verify failure prevents creation
     await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS "Company_source_atsToken_key"`);
