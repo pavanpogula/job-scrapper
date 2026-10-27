@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **chore(agents)**: removed the unused third-party skills `design-taste-frontend` and `emil-design-eng` from `.agents/skills/` (and their `.claude/skills/` symlinks and `skills-lock.json` entries). No agent, rule or doc referenced them; the frontend keeps `impeccable` and `frontend-design`. Deletions recorded in `scripts/migration/move-map.json`.
+
 - **fix(search)**: job search matches all words, in any order, at word starts (BF-020).
   - Root cause: `/v1/jobs` treated the whole search text as one substring, so `senior engineer` returned 106 jobs instead of including the 678 "Senior Software Engineer" jobs, `software engineer senior` returned 0, and `SF` matched inside words such as "Transfer".
   - Fix: new `backend/src/lib/search.ts` (`tokenizeSearch`, `buildSearchWhere`, `canonicalSearch`, `escapeLike`) used by `queryJobs`; every word must start a word in title, company, department or location; LIKE wildcards escaped; cache keys canonicalise equivalent searches. `/v1/companies` search unchanged.

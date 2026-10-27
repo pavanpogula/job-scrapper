@@ -209,6 +209,22 @@
     {
       "path": "job-scrapper-ui/src/test/fixtures/sample-company.json",
       "reason": "Replaced by synced API contract fixtures in P8a"
+    },
+    {
+      "path": ".agents/skills/design-taste-frontend/",
+      "reason": "Unused third-party design skill removed (not referenced by any agent, rule or doc)"
+    },
+    {
+      "path": ".agents/skills/emil-design-eng/",
+      "reason": "Unused third-party design skill removed (not referenced by any agent, rule or doc)"
+    },
+    {
+      "path": ".claude/skills/design-taste-frontend",
+      "reason": "Unused third-party design skill removed (not referenced by any agent, rule or doc)"
+    },
+    {
+      "path": ".claude/skills/emil-design-eng",
+      "reason": "Unused third-party design skill removed (not referenced by any agent, rule or doc)"
     }
   ]
 }
