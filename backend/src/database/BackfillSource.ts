@@ -118,7 +118,7 @@ export async function backfillSource(client?: PrismaClient): Promise<BackfillRes
     const remainingNullCompanies = nullCompanyRows[0]?.count ?? 0;
 
     const indexes = await prisma.$queryRawUnsafe<IndexResult[]>(
-      `SELECT indexname FROM pg_indexes WHERE tablename IN ('Job', 'Company') AND indexname IN ('Job_source_externalId_key', 'Company_source_atsToken_key') ORDER BY indexname`
+      `SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND tablename IN ('Job', 'Company') AND indexname IN ('Job_source_externalId_key', 'Company_source_atsToken_key') ORDER BY indexname`
     );
     const indexNames = indexes.map((i) => i.indexname);
 

@@ -83,38 +83,21 @@ describeIfDb('ADR-0021: Multi-source schema expansion, dual-write backfill, and 
   });
 
   it('Step 1: seeds initial data under pre-G1 schema', async () => {
-    await prisma.company.createMany({
-      data: [
-        { slug: 'acme-corp', name: 'Acme Corp' },
-        { slug: 'beta-corp', name: 'Beta Corp' }
-      ]
-    });
+    // Raw SQL: the generated client matches the live schema and always sends `source`,
+    // which does not exist yet under the pre-G1 schema.
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Company" (id, slug, name) VALUES ('c-acme', 'acme-corp', 'Acme Corp'), ('c-beta', 'beta-corp', 'Beta Corp')`
+    );
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Job" (id, "ashbyId", title, "applyUrl", "companySlug", metadata, "contentHash", "updatedAt") VALUES
+        ('j-1', 'ashby-job-1', 'Software Engineer', 'https://jobs.ashbyhq.com/acme-corp/ashby-job-1', 'acme-corp', '{}', 'hash-1', NOW()),
+        ('j-2', 'ashby-job-2', 'Product Manager', 'https://jobs.ashbyhq.com/beta-corp/ashby-job-2', 'beta-corp', '{}', 'hash-2', NOW())`
+    );
 
-    await prisma.job.createMany({
-      data: [
-        {
-          ashbyId: 'ashby-job-1',
-          title: 'Software Engineer',
-          applyUrl: 'https://jobs.ashbyhq.com/acme-corp/ashby-job-1',
-          companySlug: 'acme-corp',
-          metadata: {},
-          contentHash: 'hash-1'
-        },
-        {
-          ashbyId: 'ashby-job-2',
-          title: 'Product Manager',
-          applyUrl: 'https://jobs.ashbyhq.com/beta-corp/ashby-job-2',
-          companySlug: 'beta-corp',
-          metadata: {},
-          contentHash: 'hash-2'
-        }
-      ]
-    });
-
-    const companyCount = await prisma.company.count();
-    const jobCount = await prisma.job.count();
-    expect(companyCount).toBe(2);
-    expect(jobCount).toBe(2);
+    const counts = await prisma.$queryRawUnsafe<{ companies: number; jobs: number }[]>(
+      `SELECT (SELECT count(*)::int FROM "Company") AS companies, (SELECT count(*)::int FROM "Job") AS jobs`
+    );
+    expect(counts[0]).toEqual({ companies: 2, jobs: 2 });
   });
 
   it('Step 2: pushes schema.g1.prisma without data loss flags; rows default to source=ASHBY and NULL externalId/atsToken', async () => {
@@ -197,7 +180,7 @@ describeIfDb('ADR-0021: Multi-source schema expansion, dual-write backfill, and 
 
     // Verify indexes were NOT created
     const indexes = await prisma.$queryRawUnsafe<IndexRow[]>(
-      `SELECT indexname FROM pg_indexes WHERE tablename IN ('Job', 'Company') AND indexname IN ('Job_source_externalId_key', 'Company_source_atsToken_key')`
+      `SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND tablename IN ('Job', 'Company') AND indexname IN ('Job_source_externalId_key', 'Company_source_atsToken_key')`
     );
     expect(indexes).toHaveLength(0);
 
