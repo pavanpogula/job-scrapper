@@ -11,6 +11,7 @@ import {
   GreenhouseClient,
   GreenhouseRawJob,
   normalizeGreenhouseJob,
+  parseGreenhousePlace,
 } from '../../src/lib/ats/GreenhouseClient';
 import { BoardRef } from '../../src/lib/ats/AtsClient';
 import { AshbyScraper, computeJobContentHash } from '../../src/core/Scraper';
@@ -224,8 +225,9 @@ describe('GreenhouseClient & normalizeGreenhouseJob (BF-023)', () => {
       const j3 = normalizeGreenhouseJob(fixture.jobs[2], stripeRef)!;
       expect(j3.location).toBe('Chicago, IL');
       expect(j3.secondaryLocations).toEqual(['New York, NY']);
-      expect(j3.postal).toBeNull();
-      expect(j3.country).toBeNull();
+      // No office: the job location "Chicago, IL" is the fallback (IL is Illinois, never Israel)
+      expect(j3.postal).toEqual({ addressCountry: 'US', addressRegion: 'IL', addressLocality: 'Chicago' });
+      expect(j3.country).toBe('US');
       expect(j3.department).toBe('');
 
       // 4. "N/A" location -> ''
@@ -483,5 +485,30 @@ describe('GreenhouseClient & normalizeGreenhouseJob (BF-023)', () => {
         },
       });
     });
+  });
+});
+
+describe('parseGreenhousePlace (real Greenhouse office formats)', () => {
+  it.each([
+    ['San Francisco, California, United States', 'US', 'California', 'San Francisco'],
+    ['Lisbon, Portugal', 'PT', null, 'Lisbon'],
+    ['Dublin, Dublin, Ireland', 'IE', 'Dublin', 'Dublin'],
+    ['Atlanta, Georgia', 'US', 'Georgia', 'Atlanta'],
+    ['Tbilisi, Tbilisi, Georgia', 'GE', 'Tbilisi', 'Tbilisi'],
+    ['Austin, Texas', 'US', 'Texas', 'Austin'],
+    ['Alabama', 'US', 'Alabama', null],
+    ['Chicago, IL', 'US', 'IL', 'Chicago'],
+    ['San Francisco, CA', 'US', 'CA', 'San Francisco'],
+    ['US, Remote Zone 1', 'US', null, null],
+    ['Canada, Remote', 'CA', null, null],
+    ['Remote - California', 'US', 'California', null],
+    ['Remote (U.S.)', 'US', null, null],
+    ['APAC', null, null, null],
+    ['N/A', null, null, null],
+  ])('%s -> %s', (text, country, region, city) => {
+    const parsed = parseGreenhousePlace(text);
+    expect(parsed.country).toBe(country);
+    expect(parsed.region).toBe(region);
+    expect(parsed.city).toBe(city);
   });
 });

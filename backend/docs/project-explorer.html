@@ -2578,7 +2578,7 @@
       },
       {
         "label": "Functions",
-        "value": "10"
+        "value": "12"
       }
     ],
     "functions": [
@@ -2591,8 +2591,16 @@
         "desc": "Splits a Greenhouse location.name string into primary location and deduplicated secondary locations"
       },
       {
+        "name": "isUsState()",
+        "desc": "True when a place part is a US state: an upper-case 2-letter code (\"CA\", \"IL\") or a full state name"
+      },
+      {
+        "name": "parseGreenhousePlace()",
+        "desc": "Parses a \"City, Region, Country\" style place string from the right into country, region and city."
+      },
+      {
         "name": "parseGreenhouseOfficePostal()",
-        "desc": "Parses the first non-null offices[].location from the right into country, region, city, and postal object"
+        "desc": "Parses the first offices[].location that yields a country; falls back to the job location text"
       },
       {
         "name": "extractMetadataWorkplaceType()",

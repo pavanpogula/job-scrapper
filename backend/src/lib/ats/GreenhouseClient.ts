@@ -164,55 +164,117 @@ function parseGreenhouseLocations(rawLocationName: unknown): {
   return { location: primary, secondaryLocations: secondary };
 }
 
+const US_STATE_NAMES = [
+  'alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware',
+  'district of columbia', 'florida', 'georgia', 'hawaii', 'idaho', 'illinois', 'indiana', 'iowa', 'kansas',
+  'kentucky', 'louisiana', 'maine', 'maryland', 'massachusetts', 'michigan', 'minnesota', 'mississippi',
+  'missouri', 'montana', 'nebraska', 'nevada', 'new hampshire', 'new jersey', 'new mexico', 'new york',
+  'north carolina', 'north dakota', 'ohio', 'oklahoma', 'oregon', 'pennsylvania', 'rhode island',
+  'south carolina', 'south dakota', 'tennessee', 'texas', 'utah', 'vermont', 'virginia', 'washington',
+  'west virginia', 'wisconsin', 'wyoming',
+];
+const US_STATE_NAME_SET = new Set(US_STATE_NAMES);
+const US_STATE_CODE_SET = new Set([
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY',
+  'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH',
+  'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+]);
+// Case-sensitive codes so the English word "us" never matches
+const US_TEXT_REGEX = /\b(?:[Uu]nited [Ss]tates|USA|US)\b|\bU\.S\./;
+
 /**
- * @summary Parses the first non-null offices[].location from the right into country, region, city, and postal object
+ * @summary True when a place part is a US state: an upper-case 2-letter code ("CA", "IL") or a full state name
  */
-function parseGreenhouseOfficePostal(offices: GreenhouseOffice[] | null | undefined): {
+function isUsState(part: string, allowName: boolean): boolean {
+  if (US_STATE_CODE_SET.has(part)) return true;
+  return allowName && US_STATE_NAME_SET.has(part.toLowerCase());
+}
+
+/**
+ * @summary Parses a "City, Region, Country" style place string from the right into country, region and city.
+ * A trailing US state ("Chicago, IL", "Atlanta, Georgia", "Alabama") maps to US — never to Canada, Israel or
+ * the country Georgia — and "Remote …" parts are skipped so "US, Remote Zone 1" still resolves to US.
+ */
+export function parseGreenhousePlace(text: string | null | undefined): {
   postal: NormalizedPostal | null;
   country: string | null;
   region: string | null;
   city: string | null;
 } {
-  if (!Array.isArray(offices)) {
-    return { postal: null, country: null, region: null, city: null };
-  }
+  const empty = { postal: null, country: null, region: null, city: null };
+  if (typeof text !== 'string') return empty;
 
-  const firstWithLoc = offices.find(
-    (o) =>
-      o &&
-      typeof o.location === 'string' &&
-      o.location.trim().length > 0 &&
-      o.location.trim().toLowerCase() !== 'n/a'
-  );
-
-  if (!firstWithLoc || typeof firstWithLoc.location !== 'string') {
-    return { postal: null, country: null, region: null, city: null };
-  }
-
-  const parts = firstWithLoc.location
+  const parts = text
     .split(',')
-    .map((p) => sanitizeText(p))
-    .filter((p) => p.length > 0);
+    // "Remote - California" / "Remote (U.S.)" -> "California" / "U.S."
+    .map((p) => sanitizeText(p).replace(/^remote\s*[-–:(]\s*/i, '').replace(/\)$/, '').trim())
+    .filter((p) => p.length > 0 && p.toLowerCase() !== 'n/a');
+  if (parts.length === 0) return empty;
 
-  if (parts.length === 0) {
-    return { postal: null, country: null, region: null, city: null };
+  let country: string | null = null;
+  let region: string | null = null;
+  let countryIdx = -1;
+
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const part = parts[i];
+    if (/\bremote\b/i.test(part) && i > 0) continue;
+    // Full state names only count at the end of a short string ("Atlanta, Georgia"), so
+    // "Tbilisi, Tbilisi, Georgia" style three-part strings keep their country.
+    if (isUsState(part, parts.length <= 2 || i < parts.length - 1)) {
+      country = 'US';
+      region = part;
+      countryIdx = i;
+      break;
+    }
+    const iso = toIsoCountry(part);
+    if (iso) {
+      country = iso;
+      countryIdx = i;
+      break;
+    }
+    if (/\bremote\b/i.test(part)) continue;
+    break;
   }
 
-  const lastPart = parts[parts.length - 1];
-  const country = toIsoCountry(lastPart);
-  const city = parts.length >= 2 ? parts[0] : null;
-  const region = parts.length >= 3 ? parts.slice(1, parts.length - 1).join(', ') : null;
+  if (countryIdx === -1) return empty;
 
-  if (!country && !region && !city) {
-    return { postal: null, country: null, region: null, city: null };
+  const before = parts.slice(0, countryIdx);
+  if (!region && before.length >= 2) {
+    region = before.slice(1).join(', ');
   }
+  const city = before.length >= 1 ? before[0] : null;
 
   const postal: NormalizedPostal = {};
   if (country) postal.addressCountry = country;
   if (region) postal.addressRegion = region;
   if (city) postal.addressLocality = city;
-
   return { postal, country, region, city };
+}
+
+/**
+ * @summary Parses the first offices[].location that yields a country; falls back to the job location text
+ */
+function parseGreenhouseOfficePostal(
+  offices: GreenhouseOffice[] | null | undefined,
+  locationText?: string | null
+): {
+  postal: NormalizedPostal | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+} {
+  if (Array.isArray(offices)) {
+    for (const office of offices) {
+      const parsed = parseGreenhousePlace(office?.location);
+      if (parsed.country) return parsed;
+    }
+  }
+  const fromLocation = parseGreenhousePlace(locationText);
+  if (fromLocation.country) return fromLocation;
+  if (typeof locationText === 'string' && US_TEXT_REGEX.test(locationText)) {
+    return { postal: { addressCountry: 'US' }, country: 'US', region: null, city: null };
+  }
+  return { postal: null, country: null, region: null, city: null };
 }
 
 /**
@@ -352,7 +414,7 @@ export function normalizeGreenhouseJob(
   const legacyKey = `greenhouse:${externalId}`;
   const department = sanitizeText(raw.departments?.[0]?.name ?? '');
   const { location, secondaryLocations } = parseGreenhouseLocations(raw.location?.name);
-  const { postal, country, region, city } = parseGreenhouseOfficePostal(raw.offices);
+  const { postal, country, region, city } = parseGreenhouseOfficePostal(raw.offices, location);
 
   const metaWorkplace = extractMetadataWorkplaceType(raw.metadata);
   const rawLocationString = typeof raw.location?.name === 'string' ? raw.location.name : '';
