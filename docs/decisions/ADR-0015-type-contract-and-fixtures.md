@@ -1,6 +1,6 @@
 # ADR-0015: Synchronized API contract fixtures and type parity between backend and frontend
 
-- Status: Accepted (Planned for Phase P8a)
+- Status: Implemented (Phase P8a)
 - Date: 2026-10-25
 - Deciders: owner, scraper-architect agent
 - Related: O3, O4, O5, O6, O14, P8a
@@ -25,3 +25,9 @@ Adopt Option 2: Synchronized contract fixtures and automated parity testing (to 
 - Guarantees 100% runtime contract safety across the backend/frontend boundary.
 - Zero extra build tooling or package publishing overhead.
 - Frontend and backend retain independent TypeScript build configurations.
+
+## Implementation Notes (P8a)
+- Generated 9 golden contract fixtures in `backend/tests/fixtures/contract/` via supertest integration suite (`backend/tests/contract/ContractFixtures.test.ts`).
+- Added fixture sync script `scripts/contract/sync-fixtures.mjs` and repo test `scripts/repo-tests/contract-sync.test.mjs` guaranteeing byte-for-byte fixture parity.
+- Implemented O3 (removed `createdAt`/`updatedAt` from frontend `JobDetail`), O4 (removed unsupported filters and `sortBy=title` from UI), and aligned `frontend/src/types/api.ts`.
+- Replaced legacy DB-row sample fixtures with contract fixtures in `frontend/src/test/contract.test.ts`, asserting compile-time `satisfies` and exhaustive runtime key-set checks with zero type assertions.

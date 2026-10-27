@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "slug": "acme-corp",
+      "name": "Acme Corp",
+      "jobCount": 0
+    },
+    {
+      "slug": "beta-inc",
+      "name": "Beta Inc",
+      "jobCount": 0
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "pageSize": 30,
+  "totalPages": 1
+}

@@ -200,7 +200,6 @@ export const BrowsePage: React.FC = () => {
           >
             <MenuItem value="publishedAt-desc">Most Recent</MenuItem>
             <MenuItem value="salary-desc">Highest Salary</MenuItem>
-            <MenuItem value="title-asc">Job Title (A-Z)</MenuItem>
             <MenuItem value="company-asc">Company (A-Z)</MenuItem>
           </Select>
         </FormControl>
@@ -431,7 +430,7 @@ export const BrowsePage: React.FC = () => {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                       <Stack direction="row" spacing={1} sx={{ mb: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
                         <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                          {job.companyName}
+                          {job.companyName || job.companySlug}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">·</Typography>
                         <Typography

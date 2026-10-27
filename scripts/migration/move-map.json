@@ -193,6 +193,22 @@
     {
       "path": ".github/workflows/ci.yml",
       "reason": "Legacy monolithic CI deleted in P4b; split into backend-ci.yml, frontend-ci.yml, and repo-ci.yml in P4a"
+    },
+    {
+      "path": "frontend/src/test/fixtures/sample-job.json",
+      "reason": "Replaced by synced API contract fixtures in P8a"
+    },
+    {
+      "path": "frontend/src/test/fixtures/sample-company.json",
+      "reason": "Replaced by synced API contract fixtures in P8a"
+    },
+    {
+      "path": "job-scrapper-ui/src/test/fixtures/sample-job.json",
+      "reason": "Replaced by synced API contract fixtures in P8a"
+    },
+    {
+      "path": "job-scrapper-ui/src/test/fixtures/sample-company.json",
+      "reason": "Replaced by synced API contract fixtures in P8a"
     }
   ]
 }
