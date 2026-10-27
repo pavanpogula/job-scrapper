@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(db)**: Multi-source schema expand, dual-write and backfill (ADR-0021).
+  - Schema: Added `enum Ats { ASHBY GREENHOUSE }`, `Company.source` (`@default(ASHBY)`), `Company.atsToken`, `Job.source` (`@default(ASHBY)`), and `Job.externalId` with plain filtering indexes. Preserved `Job.ashbyId` as the legacy unique global key.
+  - Dual-Write: Scraper create/update/createMany paths in `Scraper.ts` write `source: 'ASHBY'` and `externalId: job.ashbyId`. Seed and CdxWorker write `source: 'ASHBY'` and `atsToken: slug`.
+  - Double-Hyphen Guard: Guarded slug insertion in `Seed.ts` and `CdxWorker.ts` against `--` patterns. Restricted `DbClean.ts` to `source='ASHBY'` to prevent inadvertent deletion of future `gh--` Greenhouse companies.
+  - Backfill & Uniques: Authored idempotent batched backfill `BackfillSource.ts` (`npm run db:backfill-source`) updating legacy rows, validating invariant constraints, and creating unique indexes `"Job_source_externalId_key"` and `"Company_source_atsToken_key"` via SQL. Added `db:backfill-source` step to `scrape-daily.yml` with warning on failure, and schema push step to `discover-weekly.yml`.
+  - Fixer Safety: Temporarily removed `backend/prisma/schema.prisma` from fixer allowed scope in `check-fixer-scope.sh` for the duration of the multi-source migration.
+  - Tests: Added `backend/tests/integration/MultiSourceSchema.test.ts` (isolated real Postgres schema) and unit tests for dual-write payloads, slug validation, and DbClean ATS filtering.
+  - Docs: Authored `docs/decisions/ADR-0021-multi-source-ats.md`, updated `docs/agents/context.md`, `backend/docs/database-and-cache.md`, `backend/docs/cli-commands.md`, `docs/deployment-and-operations.md`.
+
 - **feat(ui)**: "Founded by Pavan Reddy Pogula" credit with a LinkedIn link.
   - Footer (every page): one quiet line "Founded by <name>" with a small LinkedIn icon; About page: new "4. Founder" section with a compact LinkedIn preview card (profile photo avatar, name, "Founder · B.O.O.L.E.A.N", profile URL, "View on LinkedIn" button).
   - Single source of truth `frontend/src/lib/site.ts` (`FOUNDER`); component `frontend/src/components/brand/FounderCredit.tsx`. New-tab links use `noopener noreferrer` and accessible names; the avatar is `frontend/public/founder.jpg`, a self-hosted 320×320 (28 KB) crop of the founder's LinkedIn photo — never hotlinked, because LinkedIn image links expire — with initials as the fallback.

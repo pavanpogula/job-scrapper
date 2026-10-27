@@ -69,8 +69,8 @@ describe('E2E: Discovery to Seeding & Clean Pipeline', () => {
 
     expect(mockCreateMany).toHaveBeenCalledWith({
       data: [
-        { slug: '1password', name: '1password', status: 'ACTIVE' },
-        { slug: 'multiverse', name: 'multiverse', status: 'ACTIVE' }
+        { slug: '1password', name: '1password', source: 'ASHBY', atsToken: '1password', status: 'ACTIVE' },
+        { slug: 'multiverse', name: 'multiverse', source: 'ASHBY', atsToken: 'multiverse', status: 'ACTIVE' }
       ],
       skipDuplicates: true
     });

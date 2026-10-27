@@ -46,6 +46,7 @@ describe('CdxWorker', () => {
       expect(isValidSlug('-leading-dash')).toBe(false);
       expect(isValidSlug('trailing-dash-')).toBe(false);
       expect(isValidSlug('double--dash')).toBe(false);
+      expect(isValidSlug('a--b')).toBe(false);
       expect(isValidSlug('under_score')).toBe(false);
       expect(isValidSlug('with.dot')).toBe(false);
       expect(isValidSlug('with spaces')).toBe(false);
@@ -119,12 +120,12 @@ describe('CdxWorker', () => {
       expect(mockUpsert).toHaveBeenCalledWith({
         where: { slug: '1password' },
         update: {},
-        create: { slug: '1password', name: '1password' }
+        create: { slug: '1password', name: '1password', source: 'ASHBY', atsToken: '1password' }
       });
       expect(mockUpsert).toHaveBeenCalledWith({
         where: { slug: 'abridge' },
         update: {},
-        create: { slug: 'abridge', name: 'abridge' }
+        create: { slug: 'abridge', name: 'abridge', source: 'ASHBY', atsToken: 'abridge' }
       });
     });
 

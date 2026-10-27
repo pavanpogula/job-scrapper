@@ -5,7 +5,7 @@ Provider: **PostgreSQL** (`url = env("DATABASE_URL")`) · Generator: `prisma-cli
 Sync method: `npx prisma db push` (no `prisma/migrations/` folder).
 
 Postgres object names are exactly the Prisma names (PascalCase, must be double-quoted in raw SQL): tables `"Company"`,
-`"Department"`, `"Location"`, `"Job"`; enum type `"CompanyStatus"`.
+`"Department"`, `"Location"`, `"Job"`; enum types `"CompanyStatus"`, `"Ats"`.
 
 ## 1. ER Diagram
 
@@ -64,6 +64,12 @@ erDiagram
 
 ## 2. Models (exact field list from `schema.prisma`)
 
+### `enum Ats`
+| Value | Set by | Meaning |
+|---|---|---|
+| `ASHBY` | `@default`, `Seed.ts`, `CdxWorker.ts` | Ashby ATS job board postings and company profiles |
+| `GREENHOUSE` | Future Greenhouse client / seed | Greenhouse ATS job board postings (`gh--` company slug prefix) |
+
 ### `enum CompanyStatus`
 | Value | Set by | Meaning |
 |---|---|---|
@@ -81,12 +87,16 @@ erDiagram
 | Field | Type | Attributes |
 |---|---|---|
 | `id` | `String` | `@id @default(uuid())` |
-| `slug` | `String` | `@unique` — natural key; FK target of `Job.companySlug`; Ashby path param |
+| `slug` | `String` | `@unique` — natural key; FK target of `Job.companySlug`; Ashby slug or `gh--<token>` for Greenhouse |
 | `name` | `String?` | `= slug` on seed / discover; real name via `npm run discover -- --enrich` |
 | `logoUrl` | `String?` | set only by `--enrich` (`theme.logoWordmarkImageUrl` → `theme.logoSquareImageUrl`) |
+| `source` | `Ats` | `@default(ASHBY)` — ATS provider provenance (`ASHBY` or `GREENHOUSE`) |
+| `atsToken` | `String?` | native board token (lowercase); unique with source |
 | `status` | `CompanyStatus` | `@default(ACTIVE)` |
 | `jobs` | `Job[]` | back-relation |
 | `createdAt` | `DateTime` | `@default(now())` |
+
+Indexed on `[source, status]`. Natural unique on `(source, atsToken)` created via SQL in G1 (`Company_source_atsToken_key`), declared in G2.
 
 No `updatedAt` on `Company`.
 
@@ -106,7 +116,9 @@ Empty names (`""`) are not stored → `departmentId`/`locationId = null`.
 | Field | Type | Attributes / notes |
 |---|---|---|
 | `id` | `String` | `@id @default(uuid())` |
-| `ashbyId` | `String` | `@unique` — upsert key |
+| `ashbyId` | `String` | `@unique` — legacy global unique key (Ashby UUID, or `greenhouse:<id>`) |
+| `source` | `Ats` | `@default(ASHBY)` — ATS provider provenance (`ASHBY` or `GREENHOUSE`) |
+| `externalId` | `String?` | native ATS job identifier (unique with source) |
 | `title` | `String` | `sanitizeText(job.title)`; jobs with empty title or id are skipped |
 | `applyUrl` | `String` | `sanitizeJobUrl(job.applyUrl, slug, id, true)` → fallback `https://jobs.ashbyhq.com/{slug}/{id}/application` |
 | `companySlug` | `String` | FK → `Company.slug` (relation `company`) |
@@ -198,6 +210,14 @@ The historical un-namespaced keys (`job:<ashbyId>:hash`) are purged using:
 ```bash
 npm run cache:purge-legacy
 ```
+
+## 5. Multi-Source ATS & Two-Step Uniques (ADR-0021)
+
+To support Greenhouse alongside Ashby without data loss aborts during `prisma db push`:
+- **Additive provenance columns:** `Job.source` (`ASHBY`|`GREENHOUSE`), `Job.externalId` (native ATS id), `Company.source`, and `Company.atsToken` (lowercased board token).
+- **Legacy global key:** `Job.ashbyId` remains the `@unique` key (`greenhouse:<id>` for Greenhouse rows).
+- **Company slug scheme:** Ashby keeps native slugs (e.g. `deel`), while Greenhouse uses permanent `gh--<token>` slugs (e.g. `gh--stripe`). Slugs with `--` are rejected by Ashby discovery and seed scripts.
+- **Two-step unique migration:** G1 creates unique indexes via raw SQL (`db:backfill-source` / `BackfillSource.ts`), ensuring `prisma db push` stays safe without `--accept-data-loss`. G2 declares `@@unique([source, externalId])` and `@@unique([source, atsToken])` in Prisma schema once rows and SQL indexes are already aligned.
 
 ## 5. Useful SQL (for `db:menu` option 7)
 

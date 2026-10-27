@@ -189,6 +189,9 @@ export async function runDiscovery(options: { includeCommonCrawl?: boolean; enri
 
     // Upsert into DB
     for (const slug of slugs) {
+        if (!isValidSlug(slug) || slug.includes('--')) {
+            continue;
+        }
         try {
             await prisma.company.upsert({
                 where: { slug: slug },
@@ -196,6 +199,8 @@ export async function runDiscovery(options: { includeCommonCrawl?: boolean; enri
                 create: {
                     slug: slug,
                     name: slug, // Placeholder, can be updated by scraper
+                    source: 'ASHBY' as const,
+                    atsToken: slug,
                 }
             });
             if (options.enrichMetadata) {

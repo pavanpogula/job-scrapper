@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
 import { TARGET_COMPANIES } from '../config/Companies';
+import { isValidSlug } from '../discovery/CdxWorker';
 
 const prisma = new PrismaClient();
 
@@ -43,8 +44,14 @@ export async function seed(options: { useExtractedSlugs?: boolean } = {}) {
     const existingSlugs = new Set(existingCompanies.map((c: { slug: string }) => c.slug));
     console.log(`📊 Found ${existingSlugs.size} existing companies in DB.`);
 
-    // 2. Memory Diff
-    const newCompanies = targetList.filter(slug => !existingSlugs.has(slug));
+    // 2. Memory Diff (excluding invalid or double-hyphen slugs)
+    const validTargetList = targetList.filter(slug => isValidSlug(slug) && !slug.includes('--'));
+    const invalidCount = targetList.length - validTargetList.length;
+    if (invalidCount > 0) {
+        console.warn(`⚠️ Filtered out ${invalidCount} invalid or double-hyphen slugs.`);
+    }
+
+    const newCompanies = validTargetList.filter(slug => !existingSlugs.has(slug));
 
     if (newCompanies.length === 0) {
         console.log('✅ No new companies to add.');
@@ -59,6 +66,8 @@ export async function seed(options: { useExtractedSlugs?: boolean } = {}) {
         data: newCompanies.map(slug => ({
             slug: slug,
             name: slug,
+            source: 'ASHBY' as const,
+            atsToken: slug,
             status: 'ACTIVE'
         })),
         skipDuplicates: true

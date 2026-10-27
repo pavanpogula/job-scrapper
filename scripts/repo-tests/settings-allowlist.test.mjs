@@ -16,6 +16,7 @@ const root = getRepoRoot();
 /** Scripts that read or write the production database or cache and must always prompt. */
 const DANGEROUS = [
   'db:clean',
+  'db:backfill-source',
   'db:normalize-countries',
   'scrape',
   'scrape:parallel',

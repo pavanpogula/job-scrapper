@@ -104,4 +104,17 @@ describe('DbClean Unit Tests', () => {
     expect(mockJobDeleteMany).not.toHaveBeenCalled();
     expect(mockCompanyDeleteMany).not.toHaveBeenCalled();
   });
+
+  it('should restrict company scan strictly to source=ASHBY to protect other ATS sources', async () => {
+    process.argv = ['node', 'DbClean.ts'];
+
+    mockFindMany.mockResolvedValueOnce([]);
+
+    await cleanDatabase();
+
+    expect(mockFindMany).toHaveBeenCalledWith({
+      where: { source: 'ASHBY' },
+      select: { id: true, slug: true, name: true }
+    });
+  });
 });

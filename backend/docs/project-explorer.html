@@ -320,6 +320,12 @@
                         <span>database</span>
                     </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_database_BackfillSource_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>BackfillSource.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_database_DbClean_ts')">
                         <span class="material-icons-round">description</span>
                         <span>DbClean.ts</span>
@@ -563,10 +569,41 @@
                         <span class="material-icons-round folder-icon">folder</span>
                         <span>integration</span>
                     </div>
+                    <ul><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
+                        <span>fixtures</span>
+                    </div>
                     <ul><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_fixtures_schema_g1-uniques_prisma')">
+                        <span class="material-icons-round">description</span>
+                        <span>schema.g1-uniques.prisma</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_fixtures_schema_g1_prisma')">
+                        <span class="material-icons-round">description</span>
+                        <span>schema.g1.prisma</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_fixtures_schema_pre-g1_prisma')">
+                        <span class="material-icons-round">description</span>
+                        <span>schema.pre-g1.prisma</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_integration_Companies_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Companies.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_MultiSourceSchema_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>MultiSourceSchema.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -945,7 +982,7 @@
     "functions": [
       {
         "name": "Company",
-        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• status: CompanyStatus\\n• consecutiveNotFound: Int\\n• consecutiveFailures: Int\\n• lastSuccessAt: DateTime\\n• lastCheckedAt: DateTime\\n• pendingEmptySince: DateTime\\n• jobs: Job[]\\n• createdAt: DateTime"
+        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• source: Ats\\n• atsToken: String\\n• status: CompanyStatus\\n• consecutiveNotFound: Int\\n• consecutiveFailures: Int\\n• lastSuccessAt: DateTime\\n• lastCheckedAt: DateTime\\n• pendingEmptySince: DateTime\\n• jobs: Job[]\\n• createdAt: DateTime"
       },
       {
         "name": "Department",
@@ -957,7 +994,7 @@
       },
       {
         "name": "Job",
-        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• lastSeenAt: DateTime\\n• lastUpdatedAt: DateTime\\n• lastUpdatedSource: String\\n• createdAt: DateTime\\n• updatedAt: DateTime"
+        "desc": "• id: String\\n• ashbyId: String\\n• source: Ats\\n• externalId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• lastSeenAt: DateTime\\n• lastUpdatedAt: DateTime\\n• lastUpdatedSource: String\\n• createdAt: DateTime\\n• updatedAt: DateTime"
       }
     ]
   },
@@ -1685,6 +1722,37 @@
       {
         "name": "scrapeToCSV()",
         "desc": "Main function - scrapes jobs concurrently and streams to CSV"
+      }
+    ]
+  },
+  "src_database_BackfillSource_ts": {
+    "name": "BackfillSource.ts",
+    "path": "src/database/BackfillSource.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Backfills externalId and atsToken for legacy ASHBY records, validates invariants, and creates unique indexes",
+    "tags": [
+      "Database",
+      "Backfill",
+      "Multi-source",
+      "ATS",
+      "Migration",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "backfillSource()",
+        "desc": "Idempotently backfills multi-source columns for Ashby rows, validates uniqueness, and creates unique indexes"
       }
     ]
   },
@@ -2766,6 +2834,33 @@
     ],
     "functions": []
   },
+  "tests_integration_MultiSourceSchema_test_ts": {
+    "name": "MultiSourceSchema.test.ts",
+    "path": "tests/integration/MultiSourceSchema.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Proves two-step unique index migration, additive schema push, idempotent backfill, and -- guard on real Postgres",
+    "tags": [
+      "Integration",
+      "Postgres",
+      "Schema",
+      "Multi-source",
+      "ATS",
+      "Migration",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_integration_Search_test_ts": {
     "name": "Search.test.ts",
     "path": "tests/integration/Search.test.ts",
@@ -2802,6 +2897,129 @@
       {
         "name": "walk()",
         "desc": "Walks every page and returns ids in page order, checking the page metadata on the way."
+      }
+    ]
+  },
+  "tests_integration_fixtures_schema_g1-uniques_prisma": {
+    "name": "schema.g1-uniques.prisma",
+    "path": "tests/integration/fixtures/schema.g1-uniques.prisma",
+    "icon": "🗄️",
+    "iconClass": "purple",
+    "summary": "Database schema with Prisma ORM models for Company, Job, Department, Location",
+    "tags": [
+      "Prisma",
+      "PostgreSQL",
+      "Schema",
+      "ORM"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "Schema"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "Company",
+        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• source: Ats\\n• atsToken: String\\n• status: CompanyStatus\\n• consecutiveNotFound: Int\\n• consecutiveFailures: Int\\n• lastSuccessAt: DateTime\\n• lastCheckedAt: DateTime\\n• pendingEmptySince: DateTime\\n• jobs: Job[]\\n• createdAt: DateTime"
+      },
+      {
+        "name": "Department",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
+      },
+      {
+        "name": "Location",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
+      },
+      {
+        "name": "Job",
+        "desc": "• id: String\\n• ashbyId: String\\n• source: Ats\\n• externalId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• lastSeenAt: DateTime\\n• lastUpdatedAt: DateTime\\n• lastUpdatedSource: String\\n• createdAt: DateTime\\n• updatedAt: DateTime"
+      }
+    ]
+  },
+  "tests_integration_fixtures_schema_g1_prisma": {
+    "name": "schema.g1.prisma",
+    "path": "tests/integration/fixtures/schema.g1.prisma",
+    "icon": "🗄️",
+    "iconClass": "purple",
+    "summary": "Database schema with Prisma ORM models for Company, Job, Department, Location",
+    "tags": [
+      "Prisma",
+      "PostgreSQL",
+      "Schema",
+      "ORM"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "Schema"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "Company",
+        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• source: Ats\\n• atsToken: String\\n• status: CompanyStatus\\n• consecutiveNotFound: Int\\n• consecutiveFailures: Int\\n• lastSuccessAt: DateTime\\n• lastCheckedAt: DateTime\\n• pendingEmptySince: DateTime\\n• jobs: Job[]\\n• createdAt: DateTime"
+      },
+      {
+        "name": "Department",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
+      },
+      {
+        "name": "Location",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
+      },
+      {
+        "name": "Job",
+        "desc": "• id: String\\n• ashbyId: String\\n• source: Ats\\n• externalId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• lastSeenAt: DateTime\\n• lastUpdatedAt: DateTime\\n• lastUpdatedSource: String\\n• createdAt: DateTime\\n• updatedAt: DateTime"
+      }
+    ]
+  },
+  "tests_integration_fixtures_schema_pre-g1_prisma": {
+    "name": "schema.pre-g1.prisma",
+    "path": "tests/integration/fixtures/schema.pre-g1.prisma",
+    "icon": "🗄️",
+    "iconClass": "purple",
+    "summary": "Database schema with Prisma ORM models for Company, Job, Department, Location",
+    "tags": [
+      "Prisma",
+      "PostgreSQL",
+      "Schema",
+      "ORM"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "Schema"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "Company",
+        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• status: CompanyStatus\\n• consecutiveNotFound: Int\\n• consecutiveFailures: Int\\n• lastSuccessAt: DateTime\\n• lastCheckedAt: DateTime\\n• pendingEmptySince: DateTime\\n• jobs: Job[]\\n• createdAt: DateTime"
+      },
+      {
+        "name": "Department",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
+      },
+      {
+        "name": "Location",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
+      },
+      {
+        "name": "Job",
+        "desc": "• id: String\\n• ashbyId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• lastSeenAt: DateTime\\n• lastUpdatedAt: DateTime\\n• lastUpdatedSource: String\\n• createdAt: DateTime\\n• updatedAt: DateTime"
       }
     ]
   },

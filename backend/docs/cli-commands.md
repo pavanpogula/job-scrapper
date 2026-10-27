@@ -20,6 +20,7 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run db:inspect` | `../src/database/DbInspect.ts` | ✅ | — | — | read-only | 0 (errors caught & logged) |
 | `npm run db:clean` | `../src/database/DbClean.ts` | ✅ | — | — | nothing (dry run) | 0 (errors caught & logged) |
 | `npm run db:clean -- --execute` | same | ✅ | — | — | **deletes** `Job` + `Company` rows with invalid slugs | 0 |
+| `npm run db:backfill-source` | `src/database/BackfillSource.ts` | ✅ | — | — | backfills `externalId` & `atsToken`, creates unique indexes | 1 |
 | `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force]` | `../src/utils/EnrichCompanies.ts` | ✅ | — | Ashby hosted boards | updates `Company.name` & `Company.logoUrl` | 1 |
 | `npm run verify` | `../src/utils/Verify.ts` | ✅ | — | — | read-only (console report) | 1 |
 | `npm run api:start` | `../src/api/Server.ts` | ✅ | — | — | HTTP server on port 3001 with rate limiting and static UI serving | 1 |

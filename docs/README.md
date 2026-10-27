@@ -36,7 +36,7 @@ job-scrapper/
 │   ├── README.md             # Frontend setup and local developer guide
 │   └── docs/                 # Frontend-specific UI and component guides
 ├── docs/                     # Central repository documentation
-│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0020)
+│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0021)
 │   ├── agents/               # Canonical agent context, roster, and role definitions
 │   ├── archive/              # Preserved historical planning documentation
 │   ├── monorepo-migration/   # Monorepo migration plan, progress, and backlog
@@ -149,6 +149,8 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
 - [ADR-0017: Agents Publish Task Branches via a Guarded Push Script](./decisions/ADR-0017-agent-branch-pushes.md)
 - [ADR-0018: Job Last-Updated Time Detected by Content-Hash Change](./decisions/ADR-0018-job-last-updated-detection.md)
 - [ADR-0019: Company Profile Endpoint and Company / Posted-Within Job Filters](./decisions/ADR-0019-company-profile-and-filters.md)
+- [ADR-0020: B.O.O.L.E.A.N Rebrand, LinkedIn-Style Job Browsing, and Company Directory Pages](./decisions/ADR-0020-boolean-ui-and-company-pages.md)
+- [ADR-0021: Multi-Source ATS Architecture (Greenhouse Onboarding)](./decisions/ADR-0021-multi-source-ats.md)
 
 ---
 
@@ -163,6 +165,14 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
   - Plan: [`docs/plans/boolean-ui/00-PLAN.md`](./plans/boolean-ui/00-PLAN.md)
   - PR A: [`docs/plans/boolean-ui/PR-A-company-api.md`](./plans/boolean-ui/PR-A-company-api.md)
   - PR B: [`docs/plans/boolean-ui/PR-B-boolean-ui.md`](./plans/boolean-ui/PR-B-boolean-ui.md)
+- **Greenhouse Multi-Source Implementation Plans (`docs/plans/greenhouse/`):**
+  - Overview Plan: [`docs/plans/greenhouse/00-PLAN.md`](./plans/greenhouse/00-PLAN.md)
+  - G1 Schema Expand & Backfill: [`docs/plans/greenhouse/G1-schema-expand-and-backfill.md`](./plans/greenhouse/G1-schema-expand-and-backfill.md)
+  - G2 ATS Adapter Refactor: [`docs/plans/greenhouse/G2-ats-adapter-refactor.md`](./plans/greenhouse/G2-ats-adapter-refactor.md)
+  - G3 Greenhouse Client: [`docs/plans/greenhouse/G3-greenhouse-client.md`](./plans/greenhouse/G3-greenhouse-client.md)
+  - G4 API & UI: [`docs/plans/greenhouse/G4-api-and-ui.md`](./plans/greenhouse/G4-api-and-ui.md)
+  - G5 Greenhouse Discovery: [`docs/plans/greenhouse/G5-greenhouse-discovery.md`](./plans/greenhouse/G5-greenhouse-discovery.md)
+  - G6 Enable Greenhouse: [`docs/plans/greenhouse/G6-enable-greenhouse.md`](./plans/greenhouse/G6-enable-greenhouse.md)
 
 ---
 

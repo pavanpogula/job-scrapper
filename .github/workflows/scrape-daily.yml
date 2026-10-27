@@ -87,6 +87,14 @@ jobs:
       - name: Sync database schema
         run: npx prisma db push --skip-generate
 
+      - name: Backfill multi-source columns
+        run: |
+          if ! npm run db:backfill-source; then
+            echo "⚠️ Backfill failed — G2 must not start; send this log to Claude" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+        continue-on-error: true
+
       - name: Restore run history cache
         uses: actions/cache/restore@v6
         with:

@@ -125,6 +125,32 @@ describe('AshbyScraper Unit Tests', () => {
       expect(mockTransaction).toHaveBeenCalledTimes(2);
     });
 
+    it('should include source=ASHBY and externalId in create and update payloads', async () => {
+      const mockJobs = [
+        {
+          ashbyId: 'test-job-dual-write',
+          title: 'Dual Write Job',
+          companySlug: '1password',
+          departmentId: 'd1',
+          locationId: 'l1',
+          applyUrl: 'https://jobs.ashbyhq.com/1password/test-job-dual-write/application',
+          metadata: {},
+          contentHash: 'hash-dual'
+        }
+      ];
+
+      mockTransaction.mockResolvedValue([]);
+
+      await (scraper as unknown as { batchUpsertJobs: (jobs: unknown[]) => Promise<unknown> }).batchUpsertJobs(mockJobs);
+
+      expect(mockJobUpsert).toHaveBeenCalled();
+      const upsertArg = mockJobUpsert.mock.calls[0][0];
+      expect(upsertArg.create.source).toBe('ASHBY');
+      expect(upsertArg.create.externalId).toBe('test-job-dual-write');
+      expect(upsertArg.update.source).toBe('ASHBY');
+      expect(upsertArg.update.externalId).toBe('test-job-dual-write');
+    });
+
     it('should fall back to per-job upserts and isolate failing job when a batch transaction throws', async () => {
       const mockJobs = [
         {

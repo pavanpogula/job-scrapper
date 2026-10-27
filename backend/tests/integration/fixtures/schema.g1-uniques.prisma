@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Ats {
+  ASHBY
+  GREENHOUSE
+}
+
+enum CompanyStatus {
+  ACTIVE
+  NOT_FOUND
+  REDIRECTED
+}
+
+model Company {
+  id                  String        @id @default(uuid())
+  slug                String        @unique // e.g. "deel"
+  name                String?
+  logoUrl             String?
+  source              Ats           @default(ASHBY)
+  atsToken            String?       // native board token (lowercase)
+  status              CompanyStatus @default(ACTIVE)
+  consecutiveNotFound Int           @default(0)
+  consecutiveFailures Int           @default(0)
+  lastSuccessAt       DateTime?
+  lastCheckedAt       DateTime?
+  pendingEmptySince   DateTime?
+  jobs                Job[]
+  createdAt           DateTime      @default(now())
+
+  @@unique([source, atsToken])
+  @@index([source, status])
+}
+
+model Department {
+  id   String @id @default(uuid())
+  name String @unique // "Engineering", "Sales"
+  jobs Job[]
+}
+
+model Location {
+  id   String @id @default(uuid())
+  name String @unique // "Remote", "London, UK"
+  jobs Job[]
+}
+
+model Job {
+  id         String  @id @default(uuid())
+  ashbyId    String  @unique // legacy global key: Ashby UUID, or `greenhouse:<id>` for Greenhouse
+  source     Ats     @default(ASHBY)
+  externalId String? // native ATS id
+  title      String
+  applyUrl   String
+
+  // Relations
+  companySlug String
+  company     Company @relation(fields: [companySlug], references: [slug])
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id])
+
+  // Compensation
+  salaryMin      Float?
+  salaryMax      Float?
+  salaryCurrency String?
+  salaryInterval String?
+
+  // Workplace & Employment
+  isRemote       Boolean   @default(false)
+  workplaceType  String? // "Remote", "Hybrid", "OnSite"
+  employmentType String? // "FullTime", "PartTime", "Contract", "Intern", "Temporary"
+  publishedAt    DateTime?
+  isListed       Boolean   @default(true)
+
+  // Structured Address
+  country       String?
+  region        String?
+  city          String?
+  postalAddress Json?
+
+  // Raw Data & Metadata
+  metadata    Json
+  contentHash String
+
+  active     Boolean   @default(true)
+  lastSeenAt DateTime?
+  lastUpdatedAt     DateTime?
+  lastUpdatedSource String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Index for efficient filtering
+  @@unique([source, externalId])
+  @@index([source, active, isListed, publishedAt(sort: Desc)])
+  @@index([active, isListed, publishedAt(sort: Desc), createdAt(sort: Desc), id])
+  @@index([active, isListed, workplaceType, publishedAt(sort: Desc)])
+  @@index([active, isListed, employmentType, publishedAt(sort: Desc)])
+  @@index([active, isListed, country, publishedAt(sort: Desc)])
+  @@index([companySlug, active])
+  @@index([departmentId])
+  @@index([locationId])
+  @@index([active, lastSeenAt])
+  @@index([isRemote])
+  @@index([city])
+}

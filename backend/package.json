@@ -12,6 +12,7 @@
     "scrape:parallel": "npx ts-node src/core/ClusterScraper.ts",
     "scrape:csv": "npx ts-node src/core/ScraperCSV.ts",
     "db:clean": "npx ts-node src/database/DbClean.ts",
+    "db:backfill-source": "npx ts-node src/database/BackfillSource.ts",
     "db:inspect": "npx ts-node src/database/DbInspect.ts",
     "db:menu": "npx ts-node src/database/DbMenu.ts",
     "enrich:companies": "npx ts-node src/utils/EnrichCompanies.ts",

@@ -38,7 +38,7 @@ skills:
 - `backend/src/discovery/**`
 - `backend/src/utils/**`
 - `backend/tests/**`
-- `backend/prisma/schema.prisma` (additive columns/indexes only; no destructive drops)
+- `backend/prisma/schema.prisma` (additive columns/indexes only; locked / excluded during multi-source ATS migration G1-G5)
 - `docs/**`
 - `CHANGELOG.md`
 - **Forbidden:** Never edits `.github/**`, `.claude/settings.json`, `.agents/hooks.json`, `vercel.json`, `frontend/**`, or dependency files.
