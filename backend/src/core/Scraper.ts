@@ -869,7 +869,10 @@ export class AshbyScraper {
                         tracker.recordEvent({
                             category: 'rate_limited',
                             companySlug: company.slug,
-                            message: `HTTP 429 Too Many Requests received from ${atsSource} API`,
+                            // Ashby text stays byte-identical: ReportClassifier fingerprints hash the message
+                            message: atsSource === 'ashby'
+                                ? 'HTTP 429 Too Many Requests received from Posting API'
+                                : `HTTP 429 Too Many Requests received from ${atsSource} API`,
                             actionTaken: 'throttled_concurrency'
                         });
                     } else {
@@ -881,7 +884,7 @@ export class AshbyScraper {
                         tracker.recordEvent({
                             category: 'graphql_fallback',
                             companySlug: company.slug,
-                            message: 'Posting API returned 404/403; recovered board via fallback API',
+                            message: 'Posting API returned 404/403; recovered board via Ashby hosted GraphQL API',
                             actionTaken: `recovered_${boardResult.jobs.length}_jobs`
                         });
                     }

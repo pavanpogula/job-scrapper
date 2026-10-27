@@ -391,6 +391,30 @@ describe('AshbyScraper runAll() Harness (P1-T03)', () => {
         expect(apiError?.attempts).toBe(3);
     });
 
+    test('Ashby rate-limit and GraphQL fallback messages stay byte-identical (issue fingerprints)', async () => {
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: [],
+            source: 'none',
+            rateLimited: true,
+            notFound: false
+        });
+        const rateReport = await new AshbyScraper().runAll({ slugs: ['acme-corp'], concurrency: 1, saveTelemetry: false });
+        expect(rateReport.events.find(e => e.category === 'rate_limited')?.message)
+            .toBe('HTTP 429 Too Many Requests received from Posting API');
+
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: [],
+            source: 'graphql',
+            rateLimited: false,
+            notFound: false
+        });
+        const fallbackReport = await new AshbyScraper().runAll({ slugs: ['acme-corp'], concurrency: 1, saveTelemetry: false });
+        expect(fallbackReport.events.find(e => e.category === 'graphql_fallback')?.message)
+            .toBe('Posting API returned 404/403; recovered board via Ashby hosted GraphQL API');
+    });
+
     test('graphql does not overwrite rest content', async () => {
         const oldDate = new Date('2026-01-01T00:00:00.000Z');
         statefulPrisma._data.jobs.set('job-rich', {
