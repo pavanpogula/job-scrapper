@@ -1,15 +1,18 @@
-# 13 · Frontend Web Application
+# 13 · Frontend Web Application (B.O.O.L.E.A.N)
 
-The **Ashby Job Scraper** web frontend (`frontend/`) is a high-density, performant, achromatic job browsing portal built with **React 19**, **TypeScript**, **Vite**, **Redux Toolkit (RTK Query)**, and **Material UI (MUI 6)**.
+The **B.O.O.L.E.A.N** web frontend (`frontend/`) is a high-density, performant job browsing portal built with **React 19**, **TypeScript**, **Vite**, **Redux Toolkit (RTK Query)**, and **Material UI (MUI 9)**.
 
 ---
 
 ## 1. Architectural Overview & Philosophy
 
+- **Brand Identity:** User-facing product name is **B.O.O.L.E.A.N** (never expanding the acronym) with a prominent "B" mark and monospace wordmark.
 - **No Authentication / Zero Friction:** Users browse, filter, search, and click "Apply Direct". There are no logins, candidate tracking, resume uploading, or intermediate applications.
-- **Direct Employer ATS Links:** Every outbound application button navigates straight to the company's verified Ashby ATS job board (`https://jobs.ashbyhq.com/<companySlug>/<ashbyId>`) with `rel="noopener noreferrer"`.
+- **Direct Employer ATS Links:** Every outbound application button navigates straight to the company's verified ATS job board (`https://jobs.ashbyhq.com/<companySlug>/<ashbyId>`) with `rel="noopener noreferrer"`.
+- **Desktop Two-Pane Ergonomics:** On desktop viewports (>= md), `/` renders a two-pane layout: a scrollable list (`JobList`) on the left and a sticky full-detail panel (`JobDetailPanel`) on the right. First job is auto-selected; URL syncs via `?jobId=`.
+- **Mobile Responsive Ergonomics:** On mobile viewports (< md), list cards navigate directly to `/jobs/:id`, and filters collapse into an accessible bottom-sheet drawer.
 - **Search box:** placeholder "Search by job title, company or location (all words must match)". Pressing Enter sets `q` and resets to page 1; matching rules are in `backend/docs/api.md` (BF-020).
-- **URL as Source of Truth:** Filter parameters (`q`, `workplace`, `employment`, `country`, `salary`, `sort`, `page`) are bidirectional: modifying UI controls updates browser URL search params, and direct links or browser back/forward buttons faithfully reconstruct the filter state.
+- **URL as Source of Truth:** Filter parameters (`q`, `workplace`, `employment`, `country`, `company`, `postedWithin`, `remote`, `salary`, `sort`, `order`, `page`, `jobId`) are bidirectional: modifying UI controls updates browser URL search params, and direct links or browser back/forward buttons faithfully reconstruct the filter state.
 - **Resilient Query State:** Uses `<QueryState>` wrapping network views to handle loading spinners, 404 not found states, 5xx retries, and automated 429 rate limit countdown auto-refetches based on `Retry-After` headers.
 
 ---
@@ -20,9 +23,11 @@ All page routes are asynchronously chunked using `React.lazy` and wrapped in `<S
 
 | Route Path | Component | Primary API Endpoints | Purpose |
 |---|---|---|---|
-| `/` | `BrowsePage` | `GET /v1/jobs`, `GET /v1/facets` | Search ledger, facet filtering, mobile drawer, sort controls, and pagination. |
-| `/jobs/:id` | `JobDetailPage` | `GET /v1/jobs/:id` | Full role description, compensation breakdown, verified employer details, closed-job status banner, and outbound apply actions. |
-| `/companies` | `CompaniesPage` | `GET /v1/companies` | Directory of verified hiring companies with search filter, active job counts, and direct links to employer Ashby portals. |
+| `/` | `BrowsePage` | `GET /v1/jobs`, `GET /v1/facets` | Search ledger, filter pills, desktop two-pane layout (`JobList` + `JobDetailPanel`), mobile drawer, and pagination. |
+| `/jobs/:id` | `JobDetailPage` | `GET /v1/jobs/:id`, `GET /v1/jobs?company=:slug` | Full role description, compensation breakdown, verified employer details, closed-job status banner, and "More jobs at <company>" section. |
+| `/companies` | `CompaniesPage` | `GET /v1/companies` | Directory of verified hiring companies with uncropped logo tiles, search filter, active job counts, and "Most hiring / A–Z" sort toggle. |
+| `/companies/:slug` | `CompanyPage` (Overview tab) | `GET /v1/companies/:slug` | Company profile with hiring metrics, top departments, top locations, workplace mix, and salary transparency. |
+| `/companies/:slug/jobs` | `CompanyPage` (Jobs tab) | `GET /v1/companies/:slug`, `GET /v1/jobs?company=:slug` | Company job openings with newest 10 carousel, department-grouped accordions, search, and two-pane master/detail. |
 | `/about` | `AboutPage` | — | Architectural principles, data integrity explanation, and project information. |
 | `*` | `NotFoundPage` | — | Fallback 404 error page with action button returning to the job index. |
 
@@ -34,13 +39,18 @@ All page routes are asynchronously chunked using `React.lazy` and wrapped in `<S
   - `getJobs(params)`
   - `getJobById(id)`
   - `getFacets()`
-  - `getCompanies({ search, page, pageSize })`
+  - `getCompanies({ search, page, pageSize, sort })`
+  - `getCompanyProfile(slug)`
   - `getMeta()`
 - **Filter Slice (`src/store/slices/filterSlice.ts`):** Stores normalized filter parameters in memory and synchronizes with URL parameters via `src/hooks/useJobFilters.ts`.
 - **Theme Slice (`src/store/slices/themeSlice.ts`):** Persists dark/light preference in `localStorage` and toggles `.dark` CSS class on `document.documentElement`.
-- **Supported Query Parameters & Sort Orders (O4 Alignment):**
-  - Search query (`search`), Workplace type (`workplaceType`), Employment type (`employmentType`), Country (`country`), Remote flag (`isRemote`), Compensation filters (`hasSalary`, `salaryMin`, `salaryInterval`).
-  - Sort keys: `publishedAt` (default), `salary`, `company`. Legacy `title` sort and unsupported query parameters (`company`, `department`, `location`, `city`) were removed to align strictly with backend API capabilities.
+- **Supported Query Parameters & Sort Orders:**
+  - Search query (`search`), Workplace type (`workplaceType`), Employment type (`employmentType`), Country (`country`), Company slug (`company`), Posted recency (`postedWithin`), Remote flag (`isRemote`), Compensation filters (`hasSalary`, `salaryMin`, `salaryInterval`).
+  - Sort keys: `publishedAt` (default), `salary`, `company`.
+- **Human-Readable Labels (`src/lib/labels.ts`):**
+  - Maps raw ATS enums (`FullTime`, `OnSite`, etc.) to human labels (`Full-time`, `On-site`, etc.) and formats salary intervals (`$140k – $180k/yr`).
+- **Uncropped Logos (`src/components/common/CompanyAvatar.tsx`):**
+  - Neutral tile with `object-fit: contain` and deterministic initial fallback, eliminating logo clipping.
 - **Client Rate Gate Removed (ADR-0011):** The legacy in-memory 10 req/min client-side gate was completely removed in favor of edge Vercel WAF rules and server-side `DbGuard` backpressure.
 
 ---

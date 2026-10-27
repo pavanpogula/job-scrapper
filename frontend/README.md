@@ -1,6 +1,6 @@
 # Frontend
 
-React 19 + TypeScript + Vite + Redux Toolkit + MUI web app for browsing Ashby job postings.
+React 19 + TypeScript + Vite + Redux Toolkit + MUI web app for B.O.O.L.E.A.N (browsing direct company job postings).
 
 ## Scripts
 - `npm run dev` — Vite dev server.

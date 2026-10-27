@@ -6,6 +6,9 @@ const initialState: JobsQueryParams = {
   workplaceType: '',
   employmentType: '',
   country: '',
+  company: '',
+  postedWithin: undefined,
+  isRemote: false,
   hasSalary: false,
   salaryMin: undefined,
   salaryInterval: undefined,
@@ -21,6 +24,18 @@ export const filterSlice = createSlice({
   reducers: {
     setSearch: (state, action: PayloadAction<string>) => {
       state.search = action.payload;
+      state.page = 1;
+    },
+    setCompany: (state, action: PayloadAction<string>) => {
+      state.company = action.payload;
+      state.page = 1;
+    },
+    setPostedWithin: (state, action: PayloadAction<'1d' | '7d' | '30d' | undefined>) => {
+      state.postedWithin = action.payload;
+      state.page = 1;
+    },
+    setIsRemote: (state, action: PayloadAction<boolean>) => {
+      state.isRemote = action.payload;
       state.page = 1;
     },
     setWorkplaceType: (state, action: PayloadAction<WorkplaceType | ''>) => {
@@ -70,6 +85,9 @@ export const filterSlice = createSlice({
 
 export const {
   setSearch,
+  setCompany,
+  setPostedWithin,
+  setIsRemote,
   setWorkplaceType,
   setEmploymentType,
   setCountry,

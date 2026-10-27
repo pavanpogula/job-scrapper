@@ -1,12 +1,12 @@
 # Agent Context
 
-Authoritative quick context for AI coding agents. Last updated: 2026-10-27 (ADR-0019).
+Authoritative quick context for AI coding agents. Last updated: 2026-10-27 (ADR-0020).
 
 ## Components & Entry Points
 - **Scraper:** `backend/src/core/Scraper.ts` (single process / IPC worker), `backend/src/core/ClusterScraper.ts` (parallel OS worker coordinator), `backend/src/core/ScraperCSV.ts` (streaming CSV exporter).
 - **Cache Publisher:** `backend/src/cache/Publisher.ts` (atomic generation swap, sanity gating, details diffing), `backend/src/cache/CacheCli.ts`.
 - **Backend API:** `backend/src/api/Server.ts` (Express 5 REST API), `backend/src/api/contract.ts`, `backend/src/api/db/queries.ts`, `backend/src/api/cache/ReadThrough.ts` (LRU + Redis read-through), `backend/src/api/middleware/dbGuard.ts` (concurrency guard & deduplication), `backend/src/api/middleware/cacheControl.ts` (CDN caching headers), `backend/api/index.ts` (Vercel serverless entry point).
-- **Frontend UI:** `frontend/` (React 19, TypeScript, Vite, Redux Toolkit, MUI 9).
+- **Frontend UI:** `frontend/` (React 19, TypeScript, Vite, Redux Toolkit, MUI 9; B.O.O.L.E.A.N).
 
 ## CLI Commands
 - `npm run scrape:parallel [-- --workers=N]`: Multi-worker parallel scrape into PostgreSQL with automatic cache publish.

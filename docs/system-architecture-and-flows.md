@@ -9,7 +9,7 @@
 ```mermaid
 flowchart LR
   subgraph Browser
-    UI["React UI<br/>frontend/ (Vite build)"]
+    UI["React UI (B.O.O.L.E.A.N)<br/>frontend/ (Vite build)"]
   end
   subgraph Vercel["Vercel (Hobby)"]
     CDN["Vercel CDN + WAF rate-limit rule"]

@@ -8,17 +8,17 @@ import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 export const AboutPage: React.FC = () => {
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      <title>About | Ashby Job Index</title>
+      <title>About | B.O.O.L.E.A.N</title>
       <meta
         name="description"
-        content="About the open public index of direct Ashby ATS job postings."
+        content="About B.O.O.L.E.A.N — the open public directory of direct company career postings."
       />
       <Box sx={{ mb: 5 }}>
         <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '1.75rem', sm: '2.25rem' }, fontWeight: 700, mb: 1.5 }}>
-          About the Ashby Job Index
+          About B.O.O.L.E.A.N
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          A high-performance, open public index of direct applicant tracking postings.
+          A high-performance directory of direct company job postings from official applicant tracking systems.
         </Typography>
       </Box>
 
@@ -31,7 +31,7 @@ export const AboutPage: React.FC = () => {
             Traditional job boards insert themselves as monetization intermediaries: requiring candidates to register accounts, harvesting user resumes, selling sponsored listings, and injecting delay.
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-            The Ashby Job Index solves this by tracking public ATS boards directly. Every role is verified and linked straight to the employer's official Ashby careers page with zero tracking or interference.
+            B.O.O.L.E.A.N indexes public company career boards directly. Every role is verified and linked straight to the employer's official application page with zero tracking or interference.
           </Typography>
         </Box>
 

@@ -5,7 +5,7 @@
 
 ## Scope & Architecture
 The frontend application comprises:
-1. **React 19 SPA:** Built with TypeScript, Vite, Redux Toolkit (RTK Query), and Material UI (MUI).
+1. **React 19 SPA (B.O.O.L.E.A.N):** Built with TypeScript, Vite, Redux Toolkit (RTK Query), and Material UI (MUI).
 2. **Core Capabilities:** Public job board browsing, debounced search, facet multi-select, detail drawer presentation, and mobile-responsive views.
 3. **API Integration:** Queries Express REST API endpoints (`/v1/jobs`, `/v1/companies`, `/v1/facets`, `/v1/meta`).
 
