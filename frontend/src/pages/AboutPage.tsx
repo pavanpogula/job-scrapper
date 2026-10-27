@@ -4,6 +4,7 @@ import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
 import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import { FounderCard } from '../components/brand/FounderCredit';
 
 export const AboutPage: React.FC = () => {
   return (
@@ -104,6 +105,13 @@ export const AboutPage: React.FC = () => {
           <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
             Listings are collected via Ashby's Public Job Posting API with automatic hosted GraphQL fallback. Closed positions are detected through change detection hashes and deactivated automatically.
           </Typography>
+        </Box>
+
+        <Box component="section" aria-labelledby="about-founder-heading">
+          <Typography id="about-founder-heading" variant="h6" component="h2" sx={{ fontWeight: 700, mb: 1.5 }}>
+            4. Founder
+          </Typography>
+          <FounderCard />
         </Box>
       </Stack>
     </Container>

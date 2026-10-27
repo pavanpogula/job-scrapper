@@ -28,7 +28,7 @@ All page routes are asynchronously chunked using `React.lazy` and wrapped in `<S
 | `/companies` | `CompaniesPage` | `GET /v1/companies` | Directory of verified hiring companies with uncropped logo tiles, search filter, active job counts, and "Most hiring / A–Z" sort toggle. |
 | `/companies/:slug` | `CompanyPage` (Overview tab) | `GET /v1/companies/:slug` | Company profile with hiring metrics, top departments, top locations, workplace mix, and salary transparency. |
 | `/companies/:slug/jobs` | `CompanyPage` (Jobs tab) | `GET /v1/companies/:slug`, `GET /v1/jobs?company=:slug` | Company job openings with newest 10 carousel, then **every** job via API paging (50 per page, "Showing x–y of N") grouped by department per page; in-company search goes to the API (`company` + `search`, BF-020 rules), never a client-side filter of loaded rows; two-pane master/detail. Location counts show "10+" because the profile lists at most 10. |
-| `/about` | `AboutPage` | — | Architectural principles, data integrity explanation, and project information. |
+| `/about` | `AboutPage` | — | Architectural principles, data integrity explanation, project information, and a "4. Founder" section with a LinkedIn preview card (`FounderCard`). |
 | `*` | `NotFoundPage` | — | Fallback 404 error page with action button returning to the job index. |
 
 ---
@@ -97,3 +97,8 @@ This executes:
 1. `npm --prefix frontend run typecheck` (`tsc -b --noEmit`)
 2. `npm --prefix frontend run lint` (ESLint 9 with react-hooks and jsx-a11y)
 3. `npm --prefix frontend run test` (Vitest suites covering facet formatting, default query parameters, DOMPurify sanitization, and API contract parity)
+
+### Founder credit
+- Founder details live in one place: `frontend/src/lib/site.ts` (`FOUNDER`). Edit there, not in components.
+- `components/brand/FounderCredit.tsx` renders the footer line "Founded by <name>" with a small LinkedIn icon (every page) and the About page `FounderCard` (photo avatar, name, "Founder · B.O.O.L.E.A.N", profile URL, "View on LinkedIn").
+- Links open in a new tab with `rel="noopener noreferrer"` and an accessible name that says so. The avatar shows `frontend/public/founder.jpg`, a self-hosted 320×320 crop of the founder's LinkedIn profile photo (LinkedIn's own image links are signed and expire, so they are never hotlinked); initials are the fallback if it fails to load. LinkedIn blue is used only on the icon (lightened in dark mode for contrast).
