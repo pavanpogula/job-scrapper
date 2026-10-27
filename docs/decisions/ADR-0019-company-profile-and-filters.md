@@ -17,14 +17,14 @@ The B.O.O.L.E.A.N web application requires dedicated company directory pages and
 ## Options Considered
 1. **Compute company profile on frontend from `/v1/jobs?company=slug` and `/v1/facets`**: Rejected because `/v1/facets` returns global facet counts across the entire corpus, not company-scoped counts, and fetching all jobs for a company to calculate facets client-side is inefficient and bandwidth-heavy.
 2. **Pre-render company profiles in Upstash Redis (`jc:v1:company:*`)**: Rejected because pre-rendering profiles for thousands of companies would inflate Redis memory usage and scrape publish duration. Serving through `ReadThroughService.serveView` as an uncacheable DB view with edge CDN caching (`s-maxage=300`) delivers sub-millisecond cached responses at the edge with zero Redis footprint.
-3. **Database query backed by Prisma relations and `ReadThroughService`**: Implement `queryCompanyProfile` in `queries.ts`, querying Prisma for active job counts, salary availability, latest publishedAt, and top 10 departments and locations by job count. Mount `GET /v1/companies/:slug` with edge caching matching `/v1/companies`.
+3. **Database query backed by Prisma relations and `ReadThroughService`**: Implement `queryCompanyProfile` in `queries.ts`, querying Prisma for active job counts, salary availability, latest publishedAt, and top 10 departments and locations by open-job count (a `job.groupBy` over every department/location the company uses, ties broken by name — never a capped, unordered relation list). Mount `GET /v1/companies/:slug` with edge caching matching `/v1/companies`.
 
 ## Decision
 Adopt Option 3:
 1. **Endpoint `GET /v1/companies/:slug`**: Returns `CompanyProfileDTO` (`slug`, `name`, `logoUrl`, `jobCount`, `withSalary`, `latestPublishedAt`, `workplaceTypes`, `employmentTypes`, `departments` [top 10], `locations` [top 10]). Validates slug against `/^[a-z0-9-]{1,100}$/` and requires company `status === 'ACTIVE'`; returns 404 `{ "error": "Company not found" }` otherwise.
 2. **`GET /v1/jobs?company=<slug>`**: Exact company slug filter combining with all search tokens and filters. Sets `isCacheableView: false` in cache key parsing.
 3. **`GET /v1/jobs?postedWithin=1d|7d|30d`**: Filters jobs where `COALESCE(lastUpdatedAt, publishedAt) >= now - window`. Unknown values are safely ignored. Sets `isCacheableView: false`.
-4. **`GET /v1/companies?sort=jobs|name`**: Default `name` (alphabetical). `sort=jobs` orders by `_count.jobs DESC`, then `name ASC`, then `slug ASC`.
+4. **`GET /v1/companies?sort=jobs|name`**: Default `name` (alphabetical). `sort=jobs` orders by **open** (active, listed) job count DESC, then `name ASC` (nulls last), then `slug ASC`. Prisma can only order by a relation's total count (which includes closed jobs), so open counts come from one `job.groupBy` by `companySlug` and ordering/paging happen in memory (~2k ACTIVE companies). It has its own cache key (`companies?page=N&sort=jobs`) and is never served from the pre-rendered A–Z generation.
 5. **Owner Decision O5 (BF-021)**: Ensure `totalPages = Math.max(1, Math.ceil(total / limit))` in both `queryCompanies` and `publishCacheGeneration`.
 6. **Owner Decision O14 (BF-022)**: Mount a catch-all middleware on `/v1` returning JSON 404 `{ "error": "Not found" }`.
 

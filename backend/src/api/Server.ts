@@ -304,11 +304,13 @@ app.get('/v1/companies', async (req: Request, res: Response) => {
   try {
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query.pageSize || '30'), 10) || 30));
-    const hasSearch = Boolean(req.query.search);
-    const isCacheable = !hasSearch && pageSize === 30;
-    const canonKey = `companies?page=${page}`;
-
     const queryParams = parseCompanyQueryParams(req.query as Record<string, unknown>);
+    const hasSearch = Boolean(req.query.search);
+    const byJobs = queryParams.sort === 'jobs';
+    // Pre-rendered pages are A-Z only; "most hiring" gets its own key and is never served from the generation
+    const isCacheable = !hasSearch && pageSize === 30 && !byJobs;
+    const canonKey = byJobs ? `companies?page=${page}&sort=jobs` : `companies?page=${page}`;
+
     const companies = await readThroughService.serveView<CompaniesResponseDTO>(
       canonKey,
       isCacheable,

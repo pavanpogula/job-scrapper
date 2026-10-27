@@ -30,6 +30,7 @@ The Prisma mock cannot evaluate text filters, so search correctness (BF-020) is 
 - The suite needs `TEST_DATABASE_URL` and **refuses any host other than `localhost`/`127.0.0.1`**. It runs `prisma db push` and wipes the job tables in that database, so never point it at a shared database. Without the variable the suite is skipped with a warning.
 - CI (`backend-ci.yml`) starts a `postgres:17.5` service container and always runs the suite.
 - Locally, start a throwaway database first, for example `docker run --rm -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=search_test -p 5432:5432 postgres:17.5`.
+- `tests/integration/Companies.test.ts` proves "most hiring" (`sort=jobs`) counts only open jobs and pages without loss, and that a company profile's top departments/locations are the real top 10 (ADR-0019).
 - `tests/integration/searchReference.ts` is an independent statement of the search rule (it must not import `src/lib/search.ts`); `searchSeed.ts` holds the hand-written edge-case jobs.
 
 ---

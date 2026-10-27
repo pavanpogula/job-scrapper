@@ -264,10 +264,11 @@ export async function queryCompanies(
     }
   }
 
-  const orderBy: Prisma.CompanyOrderByWithRelationInput[] =
-    params.sort === 'jobs'
-      ? [{ jobs: { _count: 'desc' } }, { name: 'asc' }, { slug: 'asc' }]
-      : [{ name: 'asc' }, { slug: 'asc' }];
+  if (params.sort === 'jobs') {
+    return queryCompaniesByOpenJobs(prisma, where, pageNum, limit);
+  }
+
+  const orderBy: Prisma.CompanyOrderByWithRelationInput[] = [{ name: 'asc' }, { slug: 'asc' }];
 
   const [companies, total] = await Promise.all([
     prisma.company.findMany({
@@ -296,6 +297,70 @@ export async function queryCompanies(
     pageSize: limit,
     totalPages: Math.max(1, Math.ceil(total / limit)),
   };
+}
+
+/**
+ * @summary "Most hiring" company page: orders by OPEN (active, listed) job count, then name, then slug
+ *
+ * Prisma can only order by a relation's total count, which would include closed jobs, so the open-job counts
+ * come from one groupBy and the ordering and paging happen in memory (about 2k ACTIVE companies).
+ */
+async function queryCompaniesByOpenJobs(
+  prisma: PrismaClient,
+  where: Prisma.CompanyWhereInput,
+  pageNum: number,
+  limit: number
+): Promise<CompaniesResponseDTO> {
+  const [companies, openCounts] = await Promise.all([
+    prisma.company.findMany({ where, select: { slug: true, name: true, logoUrl: true } }),
+    prisma.job.groupBy({
+      by: ['companySlug'],
+      where: { active: true, isListed: true },
+      _count: { _all: true },
+    }),
+  ]);
+  const openBySlug = new Map(openCounts.map((g) => [g.companySlug, g._count._all]));
+  const ranked = companies
+    .map((c) => ({ slug: c.slug, name: c.name, logoUrl: c.logoUrl, jobCount: openBySlug.get(c.slug) ?? 0 }))
+    .sort(
+      (a, b) =>
+        b.jobCount - a.jobCount ||
+        compareNullsLast(a.name, b.name) ||
+        (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0)
+    );
+  const total = ranked.length;
+  return {
+    data: ranked.slice((pageNum - 1) * limit, pageNum * limit),
+    total,
+    page: pageNum,
+    pageSize: limit,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  };
+}
+
+/**
+ * @summary Ascending string comparison with nulls last, matching Postgres ORDER BY name ASC
+ */
+function compareNullsLast(a: string | null, b: string | null): number {
+  if (a === b) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return a < b ? -1 : 1;
+}
+
+/**
+ * @summary Top N facet values by open-job count, ties broken by name, from a groupBy over a relation id
+ */
+function topByCount(
+  groups: { id: string | null; count: number }[],
+  names: Map<string, string>,
+  n: number
+): FacetCountDTO[] {
+  return groups
+    .filter((g): g is { id: string; count: number } => g.id !== null && names.has(g.id))
+    .map((g) => ({ value: names.get(g.id) as string, count: g.count }))
+    .sort((a, b) => b.count - a.count || (a.value < b.value ? -1 : a.value > b.value ? 1 : 0))
+    .slice(0, n);
 }
 
 /**
@@ -330,8 +395,8 @@ export async function queryCompanyProfile(
     latestJob,
     workplaceGroups,
     employmentGroups,
-    deptRows,
-    locRows,
+    deptGroups,
+    locGroups,
   ] = await Promise.all([
     prisma.job.count({ where: jobWhere }),
     prisma.job.count({
@@ -355,26 +420,16 @@ export async function queryCompanyProfile(
       where: { ...jobWhere, employmentType: { not: null } },
       _count: { _all: true },
     }),
-    prisma.department.findMany({
-      where: { jobs: { some: jobWhere } },
-      select: {
-        name: true,
-        _count: {
-          select: { jobs: { where: jobWhere } },
-        },
-      },
-      take: 50,
-    }).catch((): { name: string; _count: { jobs: number } }[] => []),
-    prisma.location.findMany({
-      where: { jobs: { some: jobWhere } },
-      select: {
-        name: true,
-        _count: {
-          select: { jobs: { where: jobWhere } },
-        },
-      },
-      take: 50,
-    }).catch((): { name: string; _count: { jobs: number } }[] => []),
+    prisma.job.groupBy({
+      by: ['departmentId'],
+      where: { ...jobWhere, departmentId: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.job.groupBy({
+      by: ['locationId'],
+      where: { ...jobWhere, locationId: { not: null } },
+      _count: { _all: true },
+    }),
   ]);
 
   const workplaceTypes: FacetCountDTO[] = workplaceGroups
@@ -385,15 +440,23 @@ export async function queryCompanyProfile(
     .map((g) => ({ value: g.employmentType!, count: g._count._all }))
     .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
 
-  const departments: FacetCountDTO[] = (deptRows || [])
-    .map((d) => ({ value: d.name, count: d._count?.jobs ?? 0 }))
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
-    .slice(0, 10);
-
-  const locations: FacetCountDTO[] = (locRows || [])
-    .map((l) => ({ value: l.name, count: l._count?.jobs ?? 0 }))
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
-    .slice(0, 10);
+  // Every department/location this company uses is counted, then the top 10 are taken (ties by name)
+  const deptIds = deptGroups.map((g) => g.departmentId).filter((id): id is string => id !== null);
+  const locIds = locGroups.map((g) => g.locationId).filter((id): id is string => id !== null);
+  const [deptNames, locNames] = await Promise.all([
+    deptIds.length ? prisma.department.findMany({ where: { id: { in: deptIds } }, select: { id: true, name: true } }) : [],
+    locIds.length ? prisma.location.findMany({ where: { id: { in: locIds } }, select: { id: true, name: true } }) : [],
+  ]);
+  const departments = topByCount(
+    deptGroups.map((g) => ({ id: g.departmentId, count: g._count._all })),
+    new Map(deptNames.map((d) => [d.id, d.name])),
+    10
+  );
+  const locations = topByCount(
+    locGroups.map((g) => ({ id: g.locationId, count: g._count._all })),
+    new Map(locNames.map((l) => [l.id, l.name])),
+    10
+  );
 
   return {
     slug: company.slug,

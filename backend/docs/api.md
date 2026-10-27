@@ -89,7 +89,7 @@ Paginated directory of active hiring companies.
   - `page` (number, default: 1)
   - `pageSize` (number, default: 20)
   - `search` (string, optional)
-  - `sort` (string, optional, default: `name`): `'jobs'` (most active jobs first, then name, then slug) or `'name'` (alphabetical by name, then slug).
+  - `sort` (string, optional, default: `name`): `'jobs'` (most **open** jobs first — active and listed only, closed jobs never count — then name, then slug; served from the database, never from the pre-rendered A–Z pages, under its own cache key) or `'name'` (alphabetical by name, then slug).
 - **Response:**
   `totalPages` is guaranteed to be at least 1 even when the company collection is empty (Owner decision O5 / BF-021).
   ```json

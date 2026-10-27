@@ -6,6 +6,7 @@
 
 import request from 'supertest';
 import app from '../../src/api/Server';
+import { readThroughService } from '../../src/api/cache/ReadThrough';
 import { buildSearchWhere } from '../../src/lib/search';
 import { mockJob, mockCompany, mockDepartment, mockLocation } from '../../__mocks__/@prisma/client';
 import sampleJob from '../fixtures/api/sample-job.json';
@@ -473,19 +474,41 @@ describe('API Server Contract & Snapshot Tests', () => {
       );
     });
 
-    it('sorts companies by job count descending when sort=jobs', async () => {
-      mockCompany.findMany.mockResolvedValueOnce([]);
-      mockCompany.count.mockResolvedValueOnce(0);
+    it('sorts companies by OPEN job count when sort=jobs (ordering proven in tests/integration/Companies.test.ts)', async () => {
+      mockCompany.findMany.mockResolvedValueOnce([
+        { slug: 'old-co', name: 'Old Co', logoUrl: null },
+        { slug: 'hiring-co', name: 'Hiring Co', logoUrl: null },
+      ]);
+      mockJob.groupBy.mockResolvedValueOnce([
+        { companySlug: 'old-co', _count: { _all: 1 } },
+        { companySlug: 'hiring-co', _count: { _all: 5 } },
+      ]);
 
-      await request(app)
+      const res = await request(app)
         .get('/v1/companies?sort=jobs')
         .set('X-Forwarded-For', getNextIp());
 
-      expect(mockCompany.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          orderBy: [{ jobs: { _count: 'desc' } }, { name: 'asc' }, { slug: 'asc' }],
-        })
+      expect(res.status).toBe(200);
+      expect(res.body.data.map((c: { slug: string; jobCount: number }) => [c.slug, c.jobCount])).toEqual([
+        ['hiring-co', 5],
+        ['old-co', 1],
+      ]);
+      expect(mockJob.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({ by: ['companySlug'], where: { active: true, isListed: true } })
       );
+    });
+
+    it('never serves sort=jobs from the A-Z cache key or the pre-rendered generation', async () => {
+      const spy = jest.spyOn(readThroughService, 'serveView');
+      mockCompany.findMany.mockResolvedValueOnce([]);
+      mockJob.groupBy.mockResolvedValueOnce([]);
+
+      await request(app)
+        .get('/v1/companies?sort=jobs&page=2')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(spy).toHaveBeenCalledWith('companies?page=2&sort=jobs', false, expect.anything(), expect.any(Function), expect.anything());
+      spy.mockRestore();
     });
 
     it('returns 200 with totalPages=1 when no companies match (O5)', async () => {
@@ -519,13 +542,11 @@ describe('API Server Contract & Snapshot Tests', () => {
       });
       mockJob.groupBy
         .mockResolvedValueOnce([{ workplaceType: 'Remote', _count: { _all: 3 } }]) // workplaceTypes
-        .mockResolvedValueOnce([{ employmentType: 'FullTime', _count: { _all: 5 } }]); // employmentTypes
-      mockDepartment.findMany.mockResolvedValueOnce([
-        { name: 'Engineering', _count: { jobs: 4 } },
-      ]);
-      mockLocation.findMany.mockResolvedValueOnce([
-        { name: 'San Francisco', _count: { jobs: 3 } },
-      ]);
+        .mockResolvedValueOnce([{ employmentType: 'FullTime', _count: { _all: 5 } }]) // employmentTypes
+        .mockResolvedValueOnce([{ departmentId: 'dept-eng', _count: { _all: 4 } }]) // departments by open jobs
+        .mockResolvedValueOnce([{ locationId: 'loc-sf', _count: { _all: 3 } }]); // locations by open jobs
+      mockDepartment.findMany.mockResolvedValueOnce([{ id: 'dept-eng', name: 'Engineering' }]);
+      mockLocation.findMany.mockResolvedValueOnce([{ id: 'loc-sf', name: 'San Francisco' }]);
 
       const res = await request(app)
         .get('/v1/companies/acme-corp')
