@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(ui)**: "Founded by Pavan Reddy Pogula" credit with a LinkedIn link.
+  - Footer (every page): one quiet line "Founded by <name>" with a small LinkedIn icon; About page: new "4. Founder" section with a compact LinkedIn preview card (profile photo avatar, name, "Founder · B.O.O.L.E.A.N", profile URL, "View on LinkedIn" button).
+  - Single source of truth `frontend/src/lib/site.ts` (`FOUNDER`); component `frontend/src/components/brand/FounderCredit.tsx`. New-tab links use `noopener noreferrer` and accessible names; the avatar is `frontend/public/founder.jpg`, a self-hosted 320×320 (28 KB) crop of the founder's LinkedIn photo — never hotlinked, because LinkedIn image links expire — with initials as the fallback.
+  - Tests: `frontend/src/test/founderCredit.test.tsx`. Docs: `frontend/docs/frontend-ui.md`, `frontend/docs/testing.md`.
+
 - **feat(ui)**: B.O.O.L.E.A.N rebrand, LinkedIn-style job browsing, and company pages (ADR-0020).
   - Brand & Identity: User-facing rebrand to `B.O.O.L.E.A.N` (`BrandMark.tsx` with "B" mark and monospace tracking) across `Header` and `Footer`. Updated `<title>` to `"B.O.O.L.E.A.N · Direct jobs from company career boards"`, replaced favicon with SVG "B" badge, updated `AboutPage.tsx` copy. Kept repo, packages, and API endpoints unchanged. Never expanded acronym.
   - Desktop Master/Detail (`BrowsePage.tsx`): Replaced single-column layout with desktop two-pane ergonomics (scrollable `JobList` on left, sticky `JobDetailPanel` on right). First job auto-selected on desktop; selected job synchronized with `?jobId=` search param. Detail prefetched on card hover/focus (`usePrefetch('getJobById')`), focus shifted to detail heading on selection. Mobile (< md) uses single-column list with direct route navigation to `/jobs/:id`.

@@ -2,6 +2,7 @@ import React from 'react';
 import { Container, Box, Typography, Link, Stack } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { BrandMark } from './brand/BrandMark';
+import { FounderFooterCredit } from './brand/FounderCredit';
 
 export const Footer: React.FC = () => {
   return (
@@ -29,6 +30,7 @@ export const Footer: React.FC = () => {
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
               Direct listings collected straight from verified company career boards. No accounts, no candidate data retention, no middlemen.
             </Typography>
+            <FounderFooterCredit />
           </Box>
 
           <Stack
