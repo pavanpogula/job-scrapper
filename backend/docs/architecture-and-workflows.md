@@ -190,6 +190,11 @@ sequenceDiagram
 ```
 
 **Important behaviours**
+- **ATS Adapter Boundary (ADR-0021):** ATS ingestion is abstracted behind `AtsClient` (`src/lib/ats/AtsClient.ts`).
+  `AshbyAtsClient` implements the interface wrapping `fetchAshbyBoardWithFallback()` and the pure normalizer `normalizeAshbyJob()`.
+  Scraper core maintains isolated `AdaptiveLimiter` instances per ATS source so 429 throttling on one ATS does not affect another,
+  dispatches by company `source`, filters DB queries by enabled sources, and keys all job deactivation, empty-board checks,
+  and DB lookups by `NormalizedJob.legacyKey` (`ashbyId`).
 - **Concurrency:** `CONCURRENCY_LIMIT = 15` (`src/core/Scraper.ts`), overridable via `runAll({ concurrency })`. Uses the
   adaptive `createLimiter()` (`src/lib/Concurrency.ts`): `onRateLimit()` halves concurrency (floor `minConcurrency = 2`)
   and pauses dispatch for `defaultCooldownMs = 2000`; `onSuccess()` adds +1 after `recoveryThreshold = 25` consecutive

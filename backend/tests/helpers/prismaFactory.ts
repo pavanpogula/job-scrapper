@@ -237,6 +237,14 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
                     result = result.filter(c => set.has(c.status));
                 }
             }
+            if (args?.where?.source) {
+                if (typeof args.where.source === 'string') {
+                    result = result.filter(c => (c.source || 'ASHBY') === args.where.source);
+                } else if (args.where.source?.in) {
+                    const set = new Set(args.where.source.in);
+                    result = result.filter(c => set.has(c.source || 'ASHBY'));
+                }
+            }
             if (args?.where?.slug) {
                 if (typeof args.where.slug === 'string') {
                     result = result.filter(c => c.slug === args.where.slug);

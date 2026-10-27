@@ -93,6 +93,39 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 
 ## `../src/lib/`
 
+### [ats/AtsClient.ts](../src/lib/ats/AtsClient.ts) — ATS Client Interface & Normalized Models
+| Symbol | Description |
+|---|---|
+| `type AtsSource` | `'ashby' \| 'greenhouse'` |
+| `interface BoardRef` | `{ slug: string, source: AtsSource, atsToken: string }` |
+| `interface NormalizedJob` | Neutral normalized job model with `externalId`, `legacyKey`, `title`, `salary`, `applyUrl`, etc. |
+| `interface BoardFetchResult` | Result of board fetch with `fetchMode: 'primary' \| 'fallback' \| 'none'`, `jobs: NormalizedJob[]`, `notFound`, `rateLimited` |
+| `interface CompanyMetadataResult` | Result of company metadata fetch with `status`, `name`, `logoUrl`, `retryAfterSeconds` |
+| `interface CanonicalUrls` | Canonical `jobUrl`, `applyUrl`, `boardUrl` |
+| `interface AtsClient` | Neutral client interface: `fetchBoard`, `fetchCompanyMetadata`, `canonicalUrls` |
+
+### [ats/AshbyAtsClient.ts](../src/lib/ats/AshbyAtsClient.ts) — Ashby ATS Adapter
+| Symbol | Description |
+|---|---|
+| `normalizeAshbyJob(job, companySlug, sourceMode)` | Pure field mapping converting raw `AshbyJob` to `NormalizedJob` |
+| `class AshbyAtsClient implements AtsClient` | Implements `fetchBoard` via `fetchAshbyBoardWithFallback`, `fetchCompanyMetadata` via `fetchOrganizationMetadata`, and canonical URLs |
+
+### [ats/source.ts](../src/lib/ats/source.ts) — ATS Source Mappings & Validation
+| Symbol | Description |
+|---|---|
+| `SUPPORTED_ATS_SOURCES` | `['ashby', 'greenhouse'] as const` |
+| `toDbAts(source)` | Converts lowercase `AtsSource` to uppercase Prisma `DbAts` enum (`'ASHBY'`, `'GREENHOUSE'`) |
+| `toAtsSource(dbAts)` | Converts DB enum/string to `AtsSource`, defaulting to `'ashby'` |
+| `isAtsSource(value)` | Type-guard checking whether string is a valid `AtsSource` |
+| `parseAtsSources(raw)` | Parses comma-separated sources string, deduplicating and validating each against supported sources |
+
+### [ats/urls.ts](../src/lib/ats/urls.ts) — Pure ATS URL Builders (No HTTP Imports)
+| Symbol | Description |
+|---|---|
+| `jobUrl(source, token, externalId)` | Generates canonical public job posting URL |
+| `boardUrl(source, token)` | Generates canonical public company board URL |
+| `applyUrl(source, token, externalId)` | Generates canonical direct application URL |
+
 ### [AshbyClient.ts](../src/lib/AshbyClient.ts)
 | Symbol | Line | Description |
 |---|---|---|

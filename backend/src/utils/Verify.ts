@@ -40,24 +40,25 @@ export async function verifyDatabase(): Promise<DbVerificationReport> {
         departmentsTotal,
         locationsTotal
     ] = await Promise.all([
-        prisma.company.count(),
-        prisma.company.count({ where: { status: 'ACTIVE' } }),
-        prisma.company.count({ where: { status: 'NOT_FOUND' } }),
-        prisma.job.count(),
-        prisma.job.count({ where: { active: true } }),
-        prisma.job.count({ where: { active: false } }),
-        prisma.job.count({ where: { salaryMin: { not: null } } }),
+        prisma.company.count({ where: { source: 'ASHBY' } }),
+        prisma.company.count({ where: { status: 'ACTIVE', source: 'ASHBY' } }),
+        prisma.company.count({ where: { status: 'NOT_FOUND', source: 'ASHBY' } }),
+        prisma.job.count({ where: { source: 'ASHBY' } }),
+        prisma.job.count({ where: { active: true, source: 'ASHBY' } }),
+        prisma.job.count({ where: { active: false, source: 'ASHBY' } }),
+        prisma.job.count({ where: { salaryMin: { not: null }, source: 'ASHBY' } }),
         prisma.department.count(),
         prisma.location.count()
     ]);
 
-    console.log(`📊 Table Counts:`);
+    console.log(`📊 Table Counts (ASHBY):`);
     console.log(`   Companies   : ${companiesTotal} (ACTIVE: ${companiesActive}, NOT_FOUND: ${companiesNotFound})`);
     console.log(`   Jobs        : ${jobsTotal} (Active: ${jobsActive}, Inactive: ${jobsInactive}, With Salary: ${jobsWithSalary})`);
     console.log(`   Departments : ${departmentsTotal}`);
     console.log(`   Locations   : ${locationsTotal}`);
 
     const companiesPerSlug = await prisma.company.findMany({
+        where: { source: 'ASHBY' },
         include: { _count: { select: { jobs: true } } },
         orderBy: { jobs: { _count: 'desc' } },
         take: 15
@@ -69,6 +70,7 @@ export async function verifyDatabase(): Promise<DbVerificationReport> {
     }
 
     const sampleJobs = await prisma.job.findMany({
+        where: { source: 'ASHBY' },
         take: 500,
         select: {
             ashbyId: true,
@@ -95,7 +97,7 @@ export async function verifyDatabase(): Promise<DbVerificationReport> {
     console.log(`   - Null-Byte JSONB Issues : ${nullByteMetadataIssues}`);
 
     const topSalaryJobs = await prisma.job.findMany({
-        where: { salaryMax: { not: null }, salaryCurrency: 'USD' },
+        where: { source: 'ASHBY', salaryMax: { not: null }, salaryCurrency: 'USD' },
         orderBy: { salaryMax: 'desc' },
         take: 5,
         include: { location: true }

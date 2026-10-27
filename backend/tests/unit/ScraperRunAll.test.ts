@@ -9,7 +9,11 @@ import { FakeRedis } from '../helpers/fakeRedis';
 import { Prisma } from '@prisma/client';
 
 const statefulPrisma = createStatefulPrisma({
-    companies: [{ slug: 'acme-corp', status: 'ACTIVE' }],
+    companies: [
+        { slug: 'acme-corp', status: 'ACTIVE' },
+        { slug: 'failing-corp', status: 'ACTIVE' },
+        { slug: 'healthy-corp', status: 'ACTIVE' }
+    ],
     jobs: [
         {
             ashbyId: 'old-stale-job',
@@ -385,6 +389,30 @@ describe('AshbyScraper runAll() Harness (P1-T03)', () => {
         expect(apiError?.companySlug).toBe('acme-corp');
         expect(apiError?.httpStatus).toBe(503);
         expect(apiError?.attempts).toBe(3);
+    });
+
+    test('Ashby rate-limit and GraphQL fallback messages stay byte-identical (issue fingerprints)', async () => {
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: [],
+            source: 'none',
+            rateLimited: true,
+            notFound: false
+        });
+        const rateReport = await new AshbyScraper().runAll({ slugs: ['acme-corp'], concurrency: 1, saveTelemetry: false });
+        expect(rateReport.events.find(e => e.category === 'rate_limited')?.message)
+            .toBe('HTTP 429 Too Many Requests received from Posting API');
+
+        (fetchAshbyBoardWithFallback as jest.Mock).mockResolvedValueOnce({
+            slug: 'acme-corp',
+            jobs: [],
+            source: 'graphql',
+            rateLimited: false,
+            notFound: false
+        });
+        const fallbackReport = await new AshbyScraper().runAll({ slugs: ['acme-corp'], concurrency: 1, saveTelemetry: false });
+        expect(fallbackReport.events.find(e => e.category === 'graphql_fallback')?.message)
+            .toBe('Posting API returned 404/403; recovered board via Ashby hosted GraphQL API');
     });
 
     test('graphql does not overwrite rest content', async () => {

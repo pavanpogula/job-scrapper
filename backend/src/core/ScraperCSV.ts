@@ -144,7 +144,7 @@ export async function scrapeToCSV() {
 
     // Get all active companies from database
     const companies = await prisma.company.findMany({
-        where: { status: 'ACTIVE' },
+        where: { status: 'ACTIVE', source: 'ASHBY' },
         select: { slug: true }
     });
 

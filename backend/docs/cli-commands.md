@@ -12,8 +12,8 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run seed [-- --all]` | `src/utils/Seed.ts` | ✅ | — | — | `Company` rows | 0 (`.catch(console.error)`) |
 | `npm run discover [-- --common-crawl] [-- --enrich]` | `src/discovery/CdxWorker.ts` | ✅ | — | Wayback CDX (+ CommonCrawl, + Ashby HTML) | `Company` rows (`name`/`logoUrl` with `--enrich`) | 1 |
 | `npm run process:cdx -- <file.json>` | `src/utils/ProcessCdxData.ts` | — | — | — | `./extracted-slugs.json` (CWD) | non-zero only on thrown read/parse error |
-| `npm run scrape` | `src/core/Scraper.ts` | ✅ | optional | Ashby REST (+ GraphQL fallback) | `Job`, `Department`, `Location`, `Company.status` (`NOT_FOUND` — in practice never reached, see 05), Redis `job:*:hash`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 1 |
-| `npm run scrape:parallel [-- --workers=N]` | `src/core/ClusterScraper.ts` (forks `Scraper.ts --ipc-worker`) | ✅ | optional | Ashby REST (+ GraphQL fallback) | same as `scrape`, report merged across workers | 1 |
+| `npm run scrape [-- --sources=s1,s2] [-- --slugs=a,b]` | `src/core/Scraper.ts` | ✅ | optional | Ashby REST (+ GraphQL fallback) | `Job`, `Department`, `Location`, `Company.status`, Redis `job:*:hash`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 1 |
+| `npm run scrape:parallel [-- --workers=N] [-- --sources=s1,s2] [-- --slugs=a,b]` | `src/core/ClusterScraper.ts` (forks `Scraper.ts --ipc-worker`) | ✅ | optional | Ashby REST (+ GraphQL fallback) | same as `scrape`, report merged across workers | 1 |
 | `npm run scrape:csv` | `src/core/ScraperCSV.ts` | ✅ (read) | — | Ashby REST (+ GraphQL fallback) | `output/jobs_YYYY-MM-DD.csv`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 0 (`.catch(console.error)`) |
 | `npm run scrape:csv -- --upload-cloud` | same | ✅ (read) | — | Ashby + Google Drive | CSV + Drive file (service account) | 0 |
 | `npm run db:menu` | `src/database/DbMenu.ts` | ✅ | — | — | read-only (unless raw SQL in option 7 mutates!) | 0 |
@@ -21,7 +21,7 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run db:clean` | `../src/database/DbClean.ts` | ✅ | — | — | nothing (dry run) | 0 (errors caught & logged) |
 | `npm run db:clean -- --execute` | same | ✅ | — | — | **deletes** `Job` + `Company` rows with invalid slugs | 0 |
 | `npm run db:backfill-source` | `src/database/BackfillSource.ts` | ✅ | — | — | backfills `externalId` & `atsToken`, creates unique indexes | 1 |
-| `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force]` | `../src/utils/EnrichCompanies.ts` | ✅ | — | Ashby hosted boards | updates `Company.name` & `Company.logoUrl` | 1 |
+| `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force] [-- --sources=s1,s2]` | `../src/utils/EnrichCompanies.ts` | ✅ | — | Ashby hosted boards | updates `Company.name` & `Company.logoUrl` | 1 |
 | `npm run verify` | `../src/utils/Verify.ts` | ✅ | — | — | read-only (console report) | 1 |
 | `npm run api:start` | `../src/api/Server.ts` | ✅ | — | — | HTTP server on port 3001 with rate limiting and static UI serving | 1 |
 | `npm run prisma:studio` | Prisma CLI (`npx prisma studio`) | ✅ | — | — | GUI (can edit rows) | — |
@@ -74,16 +74,14 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
 - No DB access (but it imports `CdxWorker.ts`, which constructs an unused `PrismaClient`).
 
 ### `npm run scrape` — `src/core/Scraper.ts`
-- Flags: none for normal mode. `--ipc-worker` is internal (used by `scrape:parallel`): the process waits for one IPC
-  message `{ workerId, slugs, concurrency }`, scrapes only those slugs, sends back
-  `{ type: 'worker_done', workerId, report }` (or `{ type: 'worker_error', workerId, error }`) and does **not** write
-  report files itself.
-- Scrapes every `Company` with `status = 'ACTIVE'`. Concurrency 15 (adaptive, see `createLimiter()`), DB batch 100.
+- Flags:
+  * `--sources=ashby[,greenhouse]`: comma-separated ATS sources to scrape (default: `ashby`). Unknown source exits 1.
+  * `--slugs=slug1,slug2`: explicit list of company slugs to scrape. Unknown or disabled-source slugs are skipped with error tracker events.
+  * `--ipc-worker`: internal (used by `scrape:parallel`): waits for IPC message `{ workerId, slugs, concurrency, sources }`, scrapes assigned shard, replies `worker_done` / `worker_error`.
+- Scrapes every `Company` with `status = 'ACTIVE'` matching enabled sources. Concurrency 15 (adaptive per-source limiter, see `createLimiter()`), DB batch 100.
 - Startup pre-warm: loads all `Department`/`Location` rows into memory and the distinct `companySlug`s that have
   `active = true` jobs (used to skip the stale-job `updateMany` for companies that never had jobs).
-- Per company: `GET https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true` with retry, GraphQL
-  fallback on `404/403/400`; 404 after fallback counts as a NOT_FOUND strike (threshold 3, in-memory per run — see
-  [05 → CompanyStatus](./database-and-cache.md#enum-companystatus)); successful fetch → `deactivateStaleJobs()`.
+- Per company: dispatches to registered `AtsClient` (`fetchBoard(boardRef)`). For Ashby: `GET https://api.ashbyhq.com/posting-api/job-board/{atsToken}?includeCompensation=true` with retry, GraphQL fallback on `404/403/400`; 404 after fallback counts as a NOT_FOUND strike (threshold 3, in-memory per run); successful fetch → `deactivateStaleJobs()`.
 - Logs: start banner (company count, concurrency, batch size, `Redis: ✅ Connected` / `⚠️ Disabled`);
   `✅ slug: N jobs (M changed)` per company **only when ≤ 50 companies are scraped**; `[Sanitizer] slug: filtered N…`
   warnings; `📊 Progress: X/Y companies | J jobs found (concurrency: C)` **every 50 companies** and at the end;
@@ -92,9 +90,11 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
 - Exit code 1 on unhandled error (after `prisma.$disconnect()`).
 
 ### `npm run scrape:parallel [-- --workers=N]` — `src/core/ClusterScraper.ts`
-- Flag: `--workers=N` (integer ≥ 1; invalid values ignored). Default = `min(4, max(2, os.cpus().length))`. The result is
-  capped at the number of active companies (`resolveWorkerCount()`).
-- Loads `ACTIVE` slugs once, disconnects Prisma, splits them round-robin (`partitionSlugs()`), and forks one child per
+- Flags:
+  * `--workers=N` (integer ≥ 1; invalid values ignored). Default = `min(4, max(2, os.cpus().length))`. The result is capped at the number of active companies (`resolveWorkerCount()`).
+  * `--sources=ashby[,greenhouse]`: comma-separated ATS sources (default: `ashby`). Unknown source exits 1.
+  * `--slugs=slug1,slug2`: explicit list of company slugs to scrape across workers.
+- Loads `ACTIVE` companies filtered by enabled sources once, disconnects Prisma, splits them with source interleaving round-robin (`partitionSlugs()`), and forks one child per
   shard: `fork(path.join(__dirname, 'Scraper.ts'), ['--ipc-worker'], { execArgv, stdio: [..., 'ipc'] })`, where `execArgv`
   reuses `process.execArgv` if it already contains `ts-node`, otherwise appends `-r ts-node/register`.
 - Per-worker HTTP concurrency: **12** when > 100 active companies, otherwise `max(5, ceil(20 / shards))`.
@@ -150,6 +150,14 @@ Interactive `readline` loop (`Select an option [1-8]`). Runs on import (no `requ
 - `--execute`: `job.deleteMany({ companySlug in invalidSlugs })` then `company.deleteMany({ id in invalidIds })`.
 - ⚠️ *Note:* `README.md` used to describe this as "remove old jobs"; it actually purges companies with *invalid slugs*
   (and their dependent jobs), not aged records.
+
+### `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force] [-- --sources=s1,s2]` — `src/utils/EnrichCompanies.ts`
+- Flags:
+  * `--concurrency=N`: HTTP request concurrency (default 15).
+  * `--limit=N`: Maximum number of companies to enrich.
+  * `--force`: Force enrichment for all companies, not just those missing name or logo.
+  * `--sources=ashby[,greenhouse]`: comma-separated ATS sources to enrich (default: `ashby`). Unknown source exits 1.
+- Queries active hiring companies matching enabled sources, dispatches to the source's registered `AtsClient.fetchCompanyMetadata`. Companies with an unregistered source are skipped and counted (never dispatched to Ashby).
 
 ### `npm run verify` — `src/utils/Verify.ts`
 - Prints counts: `Company` total / `ACTIVE` / `NOT_FOUND`; `Job` total / active / inactive / with salary

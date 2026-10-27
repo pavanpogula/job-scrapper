@@ -373,6 +373,37 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
+                        <span>ats</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ats_AshbyAtsClient_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>AshbyAtsClient.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ats_AtsClient_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>AtsClient.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ats_source_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>source.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ats_urls_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>urls.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
                         <span>cache</span>
                     </div>
                     <ul><li>
@@ -680,6 +711,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ClusterPartition_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ClusterPartition.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_ClusterScraper_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ClusterScraper.test.ts</span>
@@ -689,6 +726,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_CompanyHealth_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>CompanyHealth.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_CompanySelectionFilter_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>CompanySelectionFilter.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -722,9 +765,21 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_DeactivationLegacyKey_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>DeactivationLegacyKey.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_EnrichCompanies_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>EnrichCompanies.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_EnrichmentDispatch_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>EnrichmentDispatch.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -749,6 +804,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_GenerateReadme_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GenerateReadme.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_GoldenEquivalence_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GoldenEquivalence.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -785,6 +846,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_PathResolution_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>PathResolution.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_PerSourceLimiter_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>PerSourceLimiter.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1572,7 +1639,7 @@
       },
       {
         "name": "partitionSlugs()",
-        "desc": "Distributes company slugs evenly across N worker shards using round-robin partitioning"
+        "desc": "Distributes company slugs evenly across N worker shards using round-robin partitioning with source interleaving"
       },
       {
         "name": "runWorkerShard()",
@@ -1637,7 +1704,7 @@
       },
       {
         "label": "Functions",
-        "value": "9"
+        "value": "10"
       }
     ],
     "functions": [
@@ -1648,6 +1715,10 @@
       {
         "name": "computeJobContentHash()",
         "desc": "Computes 32-character MD5 content hash over explicit fields after sanitization"
+      },
+      {
+        "name": "getLimiter()",
+        "desc": "Gets or creates an adaptive concurrency limiter for a specific ATS source"
       },
       {
         "name": "deactivateStaleJobs()",
@@ -1671,7 +1742,7 @@
       },
       {
         "name": "processCompanyJobs()",
-        "desc": "Processes a single company's jobs, sanitizing fields and metadata before returning prepared job records"
+        "desc": "Processes normalized jobs, resolving department and location and computing contentHash"
       },
       {
         "name": "runAll()",
@@ -2335,6 +2406,154 @@
       {
         "name": "sanitizeJobBatch()",
         "desc": "Validates and sanitizes an array of raw Ashby jobs, filtering out corrupt objects and collecting validation issues"
+      }
+    ]
+  },
+  "src_lib_ats_AshbyAtsClient_ts": {
+    "name": "AshbyAtsClient.ts",
+    "path": "src/lib/ats/AshbyAtsClient.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Implements AtsClient for Ashby job boards, wrapping fetchAshbyBoardWithFallback and normalizing jobs",
+    "tags": [
+      "ATS",
+      "Ashby",
+      "Adapter",
+      "Normalizer",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "normalizeAshbyJob()",
+        "desc": "Pure normalizer converting an AshbyJob payload to a normalized source-agnostic job model"
+      },
+      {
+        "name": "fetchBoard()",
+        "desc": "Fetches active job postings from an Ashby board and normalizes all records"
+      },
+      {
+        "name": "fetchCompanyMetadata()",
+        "desc": "Fetches company organization metadata (name, logo) from Ashby hosted careers page"
+      },
+      {
+        "name": "canonicalUrls()",
+        "desc": "Builds canonical URL set for an Ashby job and board"
+      }
+    ]
+  },
+  "src_lib_ats_AtsClient_ts": {
+    "name": "AtsClient.ts",
+    "path": "src/lib/ats/AtsClient.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Common interfaces and data models for ATS board fetching, job normalization, and company metadata retrieval",
+    "tags": [
+      "ATS",
+      "Interface",
+      "Normalization",
+      "Multi-source",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "src_lib_ats_source_ts": {
+    "name": "source.ts",
+    "path": "src/lib/ats/source.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Single source of truth for converting between DB Ats enums ('ASHBY', 'GREENHOUSE') and normalized lowercase source tokens ('ashby', 'greenhouse')",
+    "tags": [
+      "ATS",
+      "Multi-source",
+      "Enum",
+      "Mapping",
+      "Validation",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "toDbAts()",
+        "desc": "Converts a lowercase ATS source to its uppercase Prisma DB enum representation"
+      },
+      {
+        "name": "toAtsSource()",
+        "desc": "Converts an uppercase Prisma DB enum or raw string to a normalized lowercase AtsSource"
+      },
+      {
+        "name": "isAtsSource()",
+        "desc": "Type-guard asserting whether a string is a valid AtsSource"
+      },
+      {
+        "name": "parseAtsSources()",
+        "desc": "Parses a comma-delimited string of sources (e.g. \"ashby,greenhouse\") into an array of AtsSource. Throws on unknown sources."
+      }
+    ]
+  },
+  "src_lib_ats_urls_ts": {
+    "name": "urls.ts",
+    "path": "src/lib/ats/urls.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Builds canonical job, board, and application URLs without HTTP dependencies (safe for Vercel edge/API bundle)",
+    "tags": [
+      "ATS",
+      "URLs",
+      "Builders",
+      "Routing",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "jobUrl()",
+        "desc": "Builds the canonical public job posting URL for an ATS source and board token"
+      },
+      {
+        "name": "boardUrl()",
+        "desc": "Builds the canonical public job board URL for an ATS source and board token"
+      },
+      {
+        "name": "applyUrl()",
+        "desc": "Builds the canonical direct application URL for an ATS source and board token"
       }
     ]
   },
@@ -3284,6 +3503,32 @@
     ],
     "functions": []
   },
+  "tests_unit_ClusterPartition_test_ts": {
+    "name": "ClusterPartition.test.ts",
+    "path": "tests/unit/ClusterPartition.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Tests source parsing, partitionSlugs with source interleaving, and backward compatibility",
+    "tags": [
+      "Unit",
+      "Cluster",
+      "Partition",
+      "Interleaving",
+      "CLI",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_unit_ClusterScraper_test_ts": {
     "name": "ClusterScraper.test.ts",
     "path": "tests/unit/ClusterScraper.test.ts",
@@ -3321,6 +3566,32 @@
       "Quarantine",
       "Scraper",
       "Resilience"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_CompanySelectionFilter_test_ts": {
+    "name": "CompanySelectionFilter.test.ts",
+    "path": "tests/unit/CompanySelectionFilter.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Asserts that GREENHOUSE companies are never selected or fetched when sources = ['ashby']",
+    "tags": [
+      "Unit",
+      "Filter",
+      "Multi-Source",
+      "AtsClient",
+      "Quarantine Prevention",
+      "ADR-0021"
     ],
     "info": [
       {
@@ -3456,6 +3727,31 @@
     ],
     "functions": []
   },
+  "tests_unit_DeactivationLegacyKey_test_ts": {
+    "name": "DeactivationLegacyKey.test.ts",
+    "path": "tests/unit/DeactivationLegacyKey.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Asserts that deactivateStaleJobs receives legacyKey and preserves active jobs present on board",
+    "tags": [
+      "Unit",
+      "Deactivation",
+      "LegacyKey",
+      "Scraper",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_unit_EnrichCompanies_test_ts": {
     "name": "EnrichCompanies.test.ts",
     "path": "tests/unit/EnrichCompanies.test.ts",
@@ -3468,6 +3764,31 @@
       "Backoff",
       "RateLimit",
       "SCR-22"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_EnrichmentDispatch_test_ts": {
+    "name": "EnrichmentDispatch.test.ts",
+    "path": "tests/unit/EnrichmentDispatch.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Asserts that companies from unregistered sources are skipped and counted during enrichment",
+    "tags": [
+      "Unit",
+      "Enrichment",
+      "Multi-Source",
+      "AtsClient",
+      "ADR-0021"
     ],
     "info": [
       {
@@ -3563,6 +3884,32 @@
       "Markdown",
       "CSV Parsing",
       "Table Generator"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_GoldenEquivalence_test_ts": {
+    "name": "GoldenEquivalence.test.ts",
+    "path": "tests/unit/GoldenEquivalence.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Asserts that normalizeAshbyJob matches golden fixture field-for-field including contentHash and legacyKey",
+    "tags": [
+      "Unit",
+      "Golden",
+      "Normalizer",
+      "AtsClient",
+      "Invariant",
+      "ADR-0021"
     ],
     "info": [
       {
@@ -3710,6 +4057,32 @@
       "paths",
       "cwd",
       "import-isolation"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_PerSourceLimiter_test_ts": {
+    "name": "PerSourceLimiter.test.ts",
+    "path": "tests/unit/PerSourceLimiter.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Asserts that 429 on one ATS source does not affect another source's concurrency limiter",
+    "tags": [
+      "Unit",
+      "Concurrency",
+      "Limiter",
+      "Multi-Source",
+      "AtsClient",
+      "ADR-0021"
     ],
     "info": [
       {
