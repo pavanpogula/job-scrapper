@@ -497,6 +497,19 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
+                        <span>contract</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('tests_contract_ContractFixtures_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ContractFixtures.test.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
                         <span>e2e</span>
                     </div>
                     <ul><li>
@@ -2545,6 +2558,40 @@
       {
         "name": "verifyDatabase()",
         "desc": "Audits database row counts, company statuses, salary coverage, and job data sanitization integrity"
+      }
+    ]
+  },
+  "tests_contract_ContractFixtures_test_ts": {
+    "name": "ContractFixtures.test.ts",
+    "path": "tests/contract/ContractFixtures.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Golden API contract fixture test asserting deterministic endpoint shapes and cache HIT == MISS parity",
+    "tags": [
+      "contract",
+      "fixtures",
+      "api",
+      "parity",
+      "P8a"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "2"
+      }
+    ],
+    "functions": [
+      {
+        "name": "createSampleJob()",
+        "desc": "Creates a deterministic sample job object for database seeding"
+      },
+      {
+        "name": "assertOrUpdateFixture()",
+        "desc": "Compares response payload against committed contract fixture or updates fixture file when UPDATE_CONTRACT_FIXTURES=1"
       }
     ]
   },

@@ -276,4 +276,18 @@ npm --prefix backend test -- backend/tests/unit/Hardening.test.ts
 
 # Read-through cache integration tests
 npm --prefix backend test -- backend/tests/unit/ReadThrough.test.ts
+
+# API contract fixture and cache HIT == MISS parity tests
+npm --prefix backend test -- tests/contract/ContractFixtures.test.ts
 ```
+
+### Contract Fixtures & Parity Testing
+Golden contract fixtures are generated from supertest against Express with deterministic fake timers and seeded mocks:
+```bash
+# Generate/update contract fixtures
+npm --prefix backend run contract:fixtures
+
+# Sync fixtures to frontend byte-for-byte
+node scripts/contract/sync-fixtures.mjs
+```
+The test suite in `backend/tests/contract/ContractFixtures.test.ts` validates deterministic endpoint output shapes and guarantees cache HIT == MISS parity (BF-019). The repo-level guard `scripts/repo-tests/contract-sync.test.mjs` verifies that frontend fixtures remain in byte-for-byte lockstep with backend fixtures.

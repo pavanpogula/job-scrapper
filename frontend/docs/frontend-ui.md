@@ -38,6 +38,9 @@ All page routes are asynchronously chunked using `React.lazy` and wrapped in `<S
   - `getMeta()`
 - **Filter Slice (`src/store/slices/filterSlice.ts`):** Stores normalized filter parameters in memory and synchronizes with URL parameters via `src/hooks/useJobFilters.ts`.
 - **Theme Slice (`src/store/slices/themeSlice.ts`):** Persists dark/light preference in `localStorage` and toggles `.dark` CSS class on `document.documentElement`.
+- **Supported Query Parameters & Sort Orders (O4 Alignment):**
+  - Search query (`search`), Workplace type (`workplaceType`), Employment type (`employmentType`), Country (`country`), Remote flag (`isRemote`), Compensation filters (`hasSalary`, `salaryMin`, `salaryInterval`).
+  - Sort keys: `publishedAt` (default), `salary`, `company`. Legacy `title` sort and unsupported query parameters (`company`, `department`, `location`, `city`) were removed to align strictly with backend API capabilities.
 - **Client Rate Gate Removed (ADR-0011):** The legacy in-memory 10 req/min client-side gate was completely removed in favor of edge Vercel WAF rules and server-side `DbGuard` backpressure.
 
 ---

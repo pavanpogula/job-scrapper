@@ -1,0 +1,42 @@
+{
+  "workplaceTypes": [
+    {
+      "value": "Remote",
+      "count": 3
+    },
+    {
+      "value": "OnSite",
+      "count": 2
+    }
+  ],
+  "employmentTypes": [
+    {
+      "value": "FullTime",
+      "count": 5
+    }
+  ],
+  "countries": [
+    {
+      "value": "US",
+      "count": 3
+    },
+    {
+      "value": "CA",
+      "count": 2
+    }
+  ],
+  "departments": [
+    {
+      "value": "Engineering",
+      "count": 0
+    },
+    {
+      "value": "Product",
+      "count": 0
+    }
+  ],
+  "hasSalary": {
+    "yes": 5,
+    "no": 0
+  }
+}

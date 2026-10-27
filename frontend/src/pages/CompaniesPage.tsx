@@ -133,7 +133,7 @@ export const CompaniesPage: React.FC = () => {
                   <Stack direction="row" spacing={2} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
                     <Avatar
                       src={company.logoUrl || undefined}
-                      alt={`${company.name} logo`}
+                      alt={`${company.name || company.slug} logo`}
                       variant="rounded"
                       sx={{
                         width: 40,
@@ -146,7 +146,7 @@ export const CompaniesPage: React.FC = () => {
                         borderColor: 'divider',
                       }}
                     >
-                      {!company.logoUrl && (company.name.charAt(0) || <BusinessIcon />)}
+                      {!company.logoUrl && ((company.name ? company.name.charAt(0) : company.slug.charAt(0)) || <BusinessIcon />)}
                     </Avatar>
 
                     <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -160,7 +160,7 @@ export const CompaniesPage: React.FC = () => {
                           textOverflow: 'ellipsis',
                         }}
                       >
-                        {company.name}
+                        {company.name || company.slug}
                       </Typography>
                       <Typography
                         variant="caption"

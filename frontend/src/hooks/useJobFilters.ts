@@ -9,6 +9,25 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { syncFromUrl, resetFilters } from '../store/slices/filterSlice';
 import { JobsQueryParams, WorkplaceType, EmploymentType } from '../types/api';
 
+type SortBy = NonNullable<JobsQueryParams['sortBy']>;
+type SortOrder = NonNullable<JobsQueryParams['sortOrder']>;
+
+const SUPPORTED_SORTS: readonly SortBy[] = ['publishedAt', 'salary', 'company'];
+
+/**
+ * @summary Parses the `sort` URL param, falling back to publishedAt for unsupported values (e.g. old ?sort=title bookmarks)
+ */
+export function parseSortParam(raw: string | null): SortBy {
+  return SUPPORTED_SORTS.find((s) => s === raw) ?? 'publishedAt';
+}
+
+/**
+ * @summary Parses the `order` URL param, falling back to desc for anything but asc/desc
+ */
+export function parseOrderParam(raw: string | null): SortOrder {
+  return raw === 'asc' ? 'asc' : 'desc';
+}
+
 export function useJobFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
   const dispatch = useAppDispatch();
@@ -21,8 +40,8 @@ export function useJobFilters() {
     const employment = (searchParams.get('employment') || '') as EmploymentType | '';
     const country = searchParams.get('country') || '';
     const salary = searchParams.get('salary') === '1' || searchParams.get('salary') === 'true';
-    const sort = (searchParams.get('sort') || 'publishedAt') as JobsQueryParams['sortBy'];
-    const order = (searchParams.get('order') || 'desc') as 'asc' | 'desc';
+    const sort = parseSortParam(searchParams.get('sort'));
+    const order = parseOrderParam(searchParams.get('order'));
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
 
     dispatch(

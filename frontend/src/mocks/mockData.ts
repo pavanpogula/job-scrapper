@@ -176,33 +176,34 @@ Requirements:
   <li>Proven track record crafting design systems and accessible UI components.</li>
   <li>Passion for user experience, typography, animations, and micro-interactions.</li>
 </ul>`,
+  secondaryLocations: ['Remote (Worldwide)'],
+  companyJobCount: 42,
   company: {
     slug: 'deel',
     name: 'Deel',
     logoUrl: 'https://cdn.ashbyhq.com/org/deel/logo.png',
-    jobCount: 42,
   }
 };
 
 export const MOCK_FACETS: FacetsData = {
   workplaceTypes: [
-    { value: 'Remote', label: 'Remote', count: 10633 },
-    { value: 'OnSite', label: 'On-site', count: 9917 },
-    { value: 'Hybrid', label: 'Hybrid', count: 8697 },
+    { value: 'Remote', count: 10633 },
+    { value: 'OnSite', count: 9917 },
+    { value: 'Hybrid', count: 8697 },
   ],
   employmentTypes: [
-    { value: 'FullTime', label: 'Full-time', count: 31881 },
-    { value: 'Contract', label: 'Contract', count: 1217 },
-    { value: 'PartTime', label: 'Part-time', count: 501 },
-    { value: 'Intern', label: 'Internship', count: 359 },
-    { value: 'Temporary', label: 'Temporary', count: 79 },
+    { value: 'FullTime', count: 31881 },
+    { value: 'Contract', count: 1217 },
+    { value: 'PartTime', count: 501 },
+    { value: 'Intern', count: 359 },
+    { value: 'Temporary', count: 79 },
   ],
   countries: [
-    { value: 'US', label: 'United States', count: 18450 },
-    { value: 'GB', label: 'United Kingdom', count: 3200 },
-    { value: 'CA', label: 'Canada', count: 2150 },
-    { value: 'DE', label: 'Germany', count: 1800 },
-    { value: 'FR', label: 'France', count: 1100 },
+    { value: 'US', count: 18450 },
+    { value: 'GB', count: 3200 },
+    { value: 'CA', count: 2150 },
+    { value: 'DE', count: 1800 },
+    { value: 'FR', count: 1100 },
   ],
   departments: [
     { value: 'Engineering', count: 14200 },

@@ -20,6 +20,7 @@ All backend test commands are executed from the repository root with `npm --pref
 | Typecheck tests | `npm --prefix backend run typecheck:test` |
 | Lint backend code | `npm --prefix backend run lint` |
 | Search integration tests (real PostgreSQL) | `TEST_DATABASE_URL=postgresql://test:test@localhost:5432/search_test npm --prefix backend run test:integration` |
+| Update contract fixtures | `npm --prefix backend run contract:fixtures` |
 
 ### 1.1 Real-database integration tests (`tests/integration/`)
 
@@ -45,8 +46,9 @@ The Prisma mock cannot evaluate text filters, so search correctness (BF-020) is 
 ## 3. Test Structure & Categories
 
 - `backend/tests/unit/`: Fast unit tests covering scrapers, sanitizers, circuit breakers, cache keys, and API controllers.
+- `backend/tests/contract/`: Deterministic supertest suite (`ContractFixtures.test.ts`) validating API endpoint contracts and asserting cache HIT == MISS parity (BF-019).
 - `backend/tests/e2e/`: End-to-end scraper pipeline and discovery pipeline tests.
-- `backend/tests/fixtures/`: Fixed JSON payloads for error reports and test cases.
+- `backend/tests/fixtures/`: Fixed JSON payloads for error reports, API mocks, and contract fixtures.
 - `backend/tests/helpers/`: Test factories and mock utilities.
 
 ---
