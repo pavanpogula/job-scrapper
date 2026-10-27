@@ -13,6 +13,8 @@ import {
   isValidId,
 } from '../contract';
 import { buildSearchWhere, tokenizeSearch } from '../../lib/search';
+import { boardUrl } from '../../lib/ats/urls';
+import { toAtsSource, toDbAts } from '../../lib/ats/source';
 import type {
   JobQueryParams,
   CompanyQueryParams,
@@ -24,7 +26,7 @@ import type {
   FacetCountDTO,
 } from '../types';
 
-export const SLUG_REGEX = /^[a-z0-9-]{1,100}$/;
+export const SLUG_REGEX = /^[a-z0-9_-]{1,100}$/;
 
 export type { JobQueryParams, CompanyQueryParams, CompanyProfileDTO };
 
@@ -53,6 +55,10 @@ export async function queryJobs(
 
   if (params.workplaceType) {
     where.workplaceType = params.workplaceType;
+  }
+
+  if (params.source === 'ashby' || params.source === 'greenhouse') {
+    where.source = toDbAts(params.source);
   }
 
   if (params.employmentType) {
@@ -182,8 +188,13 @@ export async function queryJobDetail(
  * @summary Computes faceted counts for filters with deterministic ordering
  */
 export async function computeFacets(prisma: PrismaClient): Promise<FacetsResponseDTO> {
-  const [workplaceGroups, employmentGroups, countryGroups, deptRows, withSalaryCount, totalActive] =
+  const [sourceGroups, workplaceGroups, employmentGroups, countryGroups, deptRows, withSalaryCount, totalActive] =
     await Promise.all([
+      prisma.job.groupBy({
+        by: ['source'],
+        where: { active: true, isListed: true },
+        _count: { _all: true },
+      }),
       prisma.job.groupBy({
         by: ['workplaceType'],
         where: { active: true, isListed: true, workplaceType: { not: null } },
@@ -219,6 +230,10 @@ export async function computeFacets(prisma: PrismaClient): Promise<FacetsRespons
       prisma.job.count({ where: { active: true, isListed: true } }),
     ]);
 
+  const sources = sourceGroups
+    .map((g) => ({ value: toAtsSource(g.source), count: g._count._all }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+
   const countries = countryGroups
     .map((g) => ({ value: g.country!, count: g._count._all }))
     .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
@@ -230,6 +245,7 @@ export async function computeFacets(prisma: PrismaClient): Promise<FacetsRespons
     .slice(0, 30);
 
   return {
+    sources,
     workplaceTypes: workplaceGroups.map((g) => ({ value: g.workplaceType!, count: g._count._all })),
     employmentTypes: employmentGroups.map((g) => ({ value: g.employmentType!, count: g._count._all })),
     countries,
@@ -286,12 +302,18 @@ export async function queryCompanies(
   ]);
 
   return {
-    data: companies.map((c) => ({
-      slug: c.slug,
-      name: c.name,
-      logoUrl: c.logoUrl,
-      jobCount: c._count?.jobs ?? 0,
-    })),
+    data: companies.map((c) => {
+      const src = toAtsSource(c.source);
+      const token = c.atsToken ?? (c.slug.startsWith('gh--') ? c.slug.slice(4) : c.slug);
+      return {
+        slug: c.slug,
+        name: c.name,
+        logoUrl: c.logoUrl,
+        source: src,
+        boardUrl: boardUrl(src, token),
+        jobCount: c._count?.jobs ?? 0,
+      };
+    }),
     total,
     page: pageNum,
     pageSize: limit,
@@ -312,7 +334,7 @@ async function queryCompaniesByOpenJobs(
   limit: number
 ): Promise<CompaniesResponseDTO> {
   const [companies, openCounts] = await Promise.all([
-    prisma.company.findMany({ where, select: { slug: true, name: true, logoUrl: true } }),
+    prisma.company.findMany({ where, select: { slug: true, name: true, logoUrl: true, source: true, atsToken: true } }),
     prisma.job.groupBy({
       by: ['companySlug'],
       where: { active: true, isListed: true },
@@ -321,7 +343,18 @@ async function queryCompaniesByOpenJobs(
   ]);
   const openBySlug = new Map(openCounts.map((g) => [g.companySlug, g._count._all]));
   const ranked = companies
-    .map((c) => ({ slug: c.slug, name: c.name, logoUrl: c.logoUrl, jobCount: openBySlug.get(c.slug) ?? 0 }))
+    .map((c) => {
+      const src = toAtsSource(c.source);
+      const token = c.atsToken ?? (c.slug.startsWith('gh--') ? c.slug.slice(4) : c.slug);
+      return {
+        slug: c.slug,
+        name: c.name,
+        logoUrl: c.logoUrl,
+        source: src,
+        boardUrl: boardUrl(src, token),
+        jobCount: openBySlug.get(c.slug) ?? 0,
+      };
+    })
     .sort(
       (a, b) =>
         b.jobCount - a.jobCount ||
@@ -377,7 +410,7 @@ export async function queryCompanyProfile(
 
   const company = await prisma.company.findFirst({
     where: { slug: normalizedSlug, status: 'ACTIVE' },
-    select: { slug: true, name: true, logoUrl: true },
+    select: { slug: true, name: true, logoUrl: true, source: true, atsToken: true },
   });
   if (!company) {
     return null;
@@ -458,10 +491,15 @@ export async function queryCompanyProfile(
     10
   );
 
+  const src = toAtsSource(company.source);
+  const token = company.atsToken ?? (company.slug.startsWith('gh--') ? company.slug.slice(4) : company.slug);
+
   return {
     slug: company.slug,
     name: company.name,
     logoUrl: company.logoUrl,
+    source: src,
+    boardUrl: boardUrl(src, token),
     jobCount,
     withSalary,
     latestPublishedAt: latestJob?.publishedAt ? latestJob.publishedAt.toISOString() : null,

@@ -30,10 +30,12 @@ exports[`API Server Contract & Snapshot Tests GET /v1/companies returns 200 with
 {
   "data": [
     {
+      "boardUrl": "https://jobs.ashbyhq.com/acme-corp",
       "jobCount": 42,
       "logoUrl": "https://logo.com/acme.png",
       "name": "Acme Corp",
       "slug": "acme-corp",
+      "source": "ashby",
     },
   ],
   "page": 1,
@@ -71,6 +73,12 @@ exports[`API Server Contract & Snapshot Tests GET /v1/facets returns 200 with fa
     "no": 3,
     "yes": 12,
   },
+  "sources": [
+    {
+      "count": 20,
+      "value": "ashby",
+    },
+  ],
   "workplaceTypes": [
     {
       "count": 10,
@@ -94,6 +102,7 @@ exports[`API Server Contract & Snapshot Tests GET /v1/jobs returns 200 with pagi
       "createdAt": "2026-03-01T00:00:00.000Z",
       "department": "Engineering",
       "employmentType": "FullTime",
+      "externalId": "c7a1e2f3-4b5c-6d7e-8f9a-0b1c2d3e4f5a",
       "id": "e4b52cb5-3d8a-4d2a-89a1-cb9cf540192a",
       "isListed": true,
       "isRemote": true,
@@ -106,6 +115,7 @@ exports[`API Server Contract & Snapshot Tests GET /v1/jobs returns 200 with pagi
       "salaryInterval": "1 YEAR",
       "salaryMax": 200000,
       "salaryMin": 150000,
+      "source": "ashby",
       "title": "Senior Software Engineer",
       "updatedAt": "2026-03-01T00:00:00.000Z",
       "workplaceType": "Remote",
@@ -129,9 +139,11 @@ exports[`API Server Contract & Snapshot Tests GET /v1/jobs/:id returns 200 with 
   "ashbyId": "c7a1e2f3-4b5c-6d7e-8f9a-0b1c2d3e4f5a",
   "city": "San Francisco",
   "company": {
+    "boardUrl": "https://jobs.ashbyhq.com/acme-corp",
     "logoUrl": "https://logo.com/acme.png",
     "name": "Acme Corp",
     "slug": "acme-corp",
+    "source": "ashby",
   },
   "companyJobCount": 0,
   "companyLogoUrl": "https://logo.com/acme.png",
@@ -142,6 +154,7 @@ exports[`API Server Contract & Snapshot Tests GET /v1/jobs/:id returns 200 with 
   "descriptionHtml": "<p>Build scalable backend systems</p>",
   "descriptionPlain": "Build scalable backend systems",
   "employmentType": "FullTime",
+  "externalId": "c7a1e2f3-4b5c-6d7e-8f9a-0b1c2d3e4f5a",
   "id": "e4b52cb5-3d8a-4d2a-89a1-cb9cf540192a",
   "isListed": true,
   "isRemote": true,
@@ -158,6 +171,7 @@ exports[`API Server Contract & Snapshot Tests GET /v1/jobs/:id returns 200 with 
   "secondaryLocations": [
     "New York, US",
   ],
+  "source": "ashby",
   "team": "Core Platform",
   "title": "Senior Software Engineer",
   "workplaceType": "Remote",

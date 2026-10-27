@@ -17,6 +17,7 @@ import error404 from './fixtures/contract/error.404.json';
 import companyProfileFound from './fixtures/contract/company-profile.found.json';
 import companyProfileNotFound from './fixtures/contract/company-profile.not-found.json';
 import jobsCompany from './fixtures/contract/jobs.company.json';
+import jobsSourceGreenhouse from './fixtures/contract/jobs.source-greenhouse.json';
 import companiesSortedByJobs from './fixtures/contract/companies.sorted-by-jobs.json';
 
 import type {
@@ -41,6 +42,7 @@ jobsDefault satisfies JobsResponse;
 jobsFiltered satisfies JobsResponse;
 jobsEmpty satisfies JobsResponse;
 jobsCompany satisfies JobsResponse;
+jobsSourceGreenhouse satisfies JobsResponse;
 jobDetailFound satisfies JobDetail;
 facetsDefault satisfies FacetsData;
 companiesDefault satisfies CompaniesResponse;
@@ -57,6 +59,8 @@ type Equal<X, Y> = (<T>() => T extends X ? 1 : 2) extends (<T>() => T extends Y 
 const JOB_LIST_ITEM_KEYS = [
   'id',
   'ashbyId',
+  'source',
+  'externalId',
   'title',
   'companySlug',
   'companyName',
@@ -87,6 +91,8 @@ const _checkJobListItemKeys: _AssertJobListItemKeys = true;
 const JOB_DETAIL_KEYS = [
   'id',
   'ashbyId',
+  'source',
+  'externalId',
   'title',
   'applyUrl',
   'jobUrl',
@@ -139,6 +145,7 @@ type _AssertJobsResponseKeys = Equal<typeof JOBS_RESPONSE_KEYS[number], keyof Jo
 const _checkJobsResponseKeys: _AssertJobsResponseKeys = true;
 
 const FACETS_DATA_KEYS = [
+  'sources',
   'workplaceTypes',
   'employmentTypes',
   'countries',
@@ -163,6 +170,8 @@ const COMPANY_SUMMARY_KEYS = [
   'name',
   'logoUrl',
   'jobCount',
+  'source',
+  'boardUrl',
 ] as const satisfies readonly (keyof CompanySummary)[];
 type _AssertCompanySummaryKeys = Equal<typeof COMPANY_SUMMARY_KEYS[number], keyof CompanySummary>;
 const _checkCompanySummaryKeys: _AssertCompanySummaryKeys = true;
@@ -171,6 +180,8 @@ const COMPANY_DETAIL_KEYS = [
   'name',
   'slug',
   'logoUrl',
+  'source',
+  'boardUrl',
 ] as const satisfies readonly (keyof CompanyDetail)[];
 type _AssertCompanyDetailKeys = Equal<typeof COMPANY_DETAIL_KEYS[number], keyof CompanyDetail>;
 const _checkCompanyDetailKeys: _AssertCompanyDetailKeys = true;
@@ -180,6 +191,8 @@ const COMPANY_PROFILE_KEYS = [
   'name',
   'logoUrl',
   'jobCount',
+  'source',
+  'boardUrl',
   'withSalary',
   'latestPublishedAt',
   'workplaceTypes',
@@ -238,6 +251,17 @@ describe('P8a: Frontend API Contract Parity & Fixture Validation', () => {
         expect(Object.keys(job).sort()).toEqual([...JOB_LIST_ITEM_KEYS].sort());
       }
       expect(Object.keys(jobsFiltered.meta).sort()).toEqual([...PAGINATION_META_KEYS].sort());
+    });
+
+    it('validates jobs.source-greenhouse.json matches exact response and Greenhouse item shape', () => {
+      expect(Object.keys(jobsSourceGreenhouse).sort()).toEqual([...JOBS_RESPONSE_KEYS].sort());
+      expect(jobsSourceGreenhouse.data.length).toBeGreaterThan(0);
+      for (const job of jobsSourceGreenhouse.data) {
+        expect(Object.keys(job).sort()).toEqual([...JOB_LIST_ITEM_KEYS].sort());
+        expect(job.source).toBe('greenhouse');
+        expect(typeof job.externalId).toBe('string');
+      }
+      expect(Object.keys(jobsSourceGreenhouse.meta).sort()).toEqual([...PAGINATION_META_KEYS].sort());
     });
 
     it('validates jobs.empty.json matches exact response and empty data shape', () => {

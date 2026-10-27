@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { JobsQueryParams, WorkplaceType, EmploymentType, SalaryInterval } from '../../types/api';
 
 const initialState: JobsQueryParams = {
+  source: '',
   search: '',
   workplaceType: '',
   employmentType: '',
@@ -22,6 +23,10 @@ export const filterSlice = createSlice({
   name: 'filters',
   initialState,
   reducers: {
+    setSource: (state, action: PayloadAction<'ashby' | 'greenhouse' | ''>) => {
+      state.source = action.payload;
+      state.page = 1;
+    },
     setSearch: (state, action: PayloadAction<string>) => {
       state.search = action.payload;
       state.page = 1;
@@ -84,6 +89,7 @@ export const filterSlice = createSlice({
 });
 
 export const {
+  setSource,
   setSearch,
   setCompany,
   setPostedWithin,

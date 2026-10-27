@@ -7,18 +7,23 @@ export type WorkplaceType = 'Remote' | 'OnSite' | 'Hybrid';
 export type EmploymentType = 'FullTime' | 'PartTime' | 'Contract' | 'Intern' | 'Temporary';
 export type SalaryInterval = '1 YEAR' | '1 HOUR' | '1 MONTH' | '1 WEEK' | '1 DAY';
 export type LastUpdatedSource = 'ashby' | 'detected' | 'published' | 'firstSeen';
+export type JobSource = 'ashby' | 'greenhouse';
 
 export interface CompanySummary {
   slug: string;
   name: string | null;
   logoUrl: string | null;
   jobCount: number;
+  source?: JobSource | string;
+  boardUrl?: string;
 }
 
 export interface CompanyDetail {
   name: string | null;
   slug: string;
   logoUrl: string | null;
+  source?: JobSource | string;
+  boardUrl?: string;
 }
 
 export interface CompaniesResponse {
@@ -66,6 +71,8 @@ export interface HealthResponse {
 export interface JobListItem {
   id: string;
   ashbyId: string;
+  source?: JobSource | string;
+  externalId?: string;
   title: string;
   companySlug: string;
   companyName: string | null;
@@ -110,6 +117,7 @@ export interface FacetCount {
 }
 
 export interface FacetsData {
+  sources?: FacetCount[];
   workplaceTypes: FacetCount[];
   employmentTypes: FacetCount[];
   countries: FacetCount[];
@@ -136,6 +144,8 @@ export interface CompanyProfile {
   name: string | null;
   logoUrl: string | null;
   jobCount: number;
+  source?: JobSource | string;
+  boardUrl?: string;
   withSalary: number;
   latestPublishedAt: string | null;
   workplaceTypes: FacetCount[];
@@ -145,6 +155,7 @@ export interface CompanyProfile {
 }
 
 export interface JobsQueryParams {
+  source?: 'ashby' | 'greenhouse' | '';
   search?: string;
   country?: string;
   company?: string;

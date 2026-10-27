@@ -1,6 +1,8 @@
 {
   "id": "00000000-0000-4000-8000-000000000001",
   "ashbyId": "ashby-job-1",
+  "source": "ashby",
+  "externalId": "ashby-job-1",
   "title": "Senior Software Engineer 1",
   "applyUrl": "https://jobs.ashbyhq.com/example/job-1",
   "jobUrl": "https://jobs.ashbyhq.com/acme-corp/ashby-job-1",
@@ -34,6 +36,8 @@
   "company": {
     "name": "Acme Corp",
     "slug": "acme-corp",
-    "logoUrl": null
+    "logoUrl": null,
+    "source": "ashby",
+    "boardUrl": "https://jobs.ashbyhq.com/acme-corp"
   }
 }

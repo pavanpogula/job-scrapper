@@ -26,14 +26,14 @@ flowchart LR
     FIXER["fixer job<br/>anthropics/claude-code-action (Claude Code)"]
     PRSTEP["push branch + open PR<br/>(GitHub App token, deterministic step)"]
   end
-  ASHBY["Ashby posting-api + GraphQL fallback"]
+  ATS["ATS APIs: Ashby (REST/GraphQL) & Greenhouse (Job Board REST)"]
   OWNER(("Owner reviews + merges PR"))
 
   UI -->|GET /v1/*| CDN --> FN
   CDN --> STATIC
   FN -->|"1. cache read (HGET)"| REDIS
   FN -->|"2. fail-safe read"| PG
-  SCRAPE -->|fetch boards| ASHBY
+  SCRAPE -->|fetch boards| ATS
   SCRAPE -->|"write jobs (DB first)"| PG
   SCRAPE -->|"publish generation from DB snapshot"| REDIS
   SCRAPE --> CLASSIFY -->|actionable| FIXER --> PRSTEP --> OWNER

@@ -6,7 +6,8 @@
 
 import type { Prisma } from '@prisma/client';
 import type { JobListItemDTO, JobDetailDTO } from './types';
-import { jobUrl as buildJobUrl } from '../lib/ats/urls';
+import { jobUrl as buildJobUrl, boardUrl } from '../lib/ats/urls';
+import { toAtsSource } from '../lib/ats/source';
 
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -24,6 +25,8 @@ export function isValidId(id: string): boolean {
 export const LIST_SELECT = {
   id: true,
   ashbyId: true,
+  source: true,
+  externalId: true,
   title: true,
   companySlug: true,
   departmentId: true,
@@ -69,6 +72,8 @@ export const LIST_SELECT = {
 export const DETAIL_SELECT = {
   id: true,
   ashbyId: true,
+  source: true,
+  externalId: true,
   title: true,
   companySlug: true,
   departmentId: true,
@@ -97,6 +102,8 @@ export const DETAIL_SELECT = {
       name: true,
       slug: true,
       logoUrl: true,
+      source: true,
+      atsToken: true,
       _count: {
         select: {
           jobs: {
@@ -134,6 +141,8 @@ export function toJobListItem(job: JobWithListRelations): JobListItemDTO {
   return {
     id: job.id,
     ashbyId: job.ashbyId,
+    source: toAtsSource(job.source as string),
+    externalId: job.externalId ?? job.ashbyId,
     title: job.title,
     companySlug: job.companySlug,
     companyName,
@@ -191,10 +200,19 @@ export function toJobDetail(job: JobWithDetailRelations): JobDetailDTO {
         .filter((loc: unknown): loc is string => Boolean(loc))
     : [];
 
+  const jobSource = toAtsSource(job.source as string);
+  const externalId = (job.externalId as string | undefined) ?? (job.ashbyId as string | undefined) ?? (job.id as string);
+  const companySource = toAtsSource((job.company?.source as string | undefined) ?? (job.source as string | undefined));
+  const rawCompanySlug = (job.companySlug as string | undefined) || (job.company?.slug as string | undefined) || '';
+  const token =
+    (job.company?.atsToken as string | undefined) ??
+    (rawCompanySlug.startsWith('gh--') ? rawCompanySlug.slice(4) : rawCompanySlug);
+  const companyBoardUrl = boardUrl(companySource, token);
+
   const jobUrl =
     typeof meta.jobUrl === 'string' && meta.jobUrl.length > 0
       ? meta.jobUrl
-      : buildJobUrl('ashby', job.companySlug, job.ashbyId);
+      : buildJobUrl(jobSource, token, externalId);
 
   const descriptionHtml = typeof meta.descriptionHtml === 'string' ? meta.descriptionHtml : '';
   const descriptionPlain = typeof meta.descriptionPlain === 'string' ? meta.descriptionPlain : '';
@@ -203,6 +221,8 @@ export function toJobDetail(job: JobWithDetailRelations): JobDetailDTO {
   return {
     id: job.id,
     ashbyId: job.ashbyId,
+    source: jobSource,
+    externalId,
     title: job.title,
     applyUrl: job.applyUrl,
     jobUrl,
@@ -238,6 +258,8 @@ export function toJobDetail(job: JobWithDetailRelations): JobDetailDTO {
           name: job.company.name,
           slug: job.company.slug,
           logoUrl: job.company.logoUrl,
+          source: companySource,
+          boardUrl: companyBoardUrl,
         }
       : null,
   };
@@ -248,12 +270,16 @@ export interface SingleFilter {
   employmentType?: string;
   country?: string;
   hasSalary?: boolean | string;
+  source?: string;
 }
 
 /**
  * @summary Evaluates whether a job item matches a single filter criteria
  */
 export function matchesFilter(item: JobListItemDTO, filter: SingleFilter): boolean {
+  if (filter.source && item.source !== filter.source) {
+    return false;
+  }
   if (filter.workplaceType && item.workplaceType !== filter.workplaceType) {
     return false;
   }

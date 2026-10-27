@@ -50,7 +50,7 @@ export const Footer: React.FC = () => {
               underline="hover"
               sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
             >
-              Ashby Public API <OpenInNewIcon sx={{ fontSize: 12 }} />
+              Ashby & Greenhouse public job APIs <OpenInNewIcon sx={{ fontSize: 12 }} />
             </Link>
             <Typography variant="caption" color="text.secondary">·</Typography>
             <Typography variant="caption" color="text.secondary">

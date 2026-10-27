@@ -343,6 +343,8 @@ export async function publishCacheGeneration(
       name: c.name,
       logoUrl: c.logoUrl,
       jobCount: c.jobCount ?? 0,
+      source: c.source,
+      boardUrl: c.boardUrl,
     }));
     const totalCompanies = companiesResult.total || allCompanies.length;
     const companyTotalPages = Math.max(1, Math.ceil(totalCompanies / 30));

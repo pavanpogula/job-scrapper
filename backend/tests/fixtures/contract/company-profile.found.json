@@ -2,6 +2,8 @@
   "slug": "acme-corp",
   "name": "Acme Corp",
   "logoUrl": "https://example.com/acme-logo.png",
+  "source": "ashby",
+  "boardUrl": "https://jobs.ashbyhq.com/acme-corp",
   "jobCount": 3,
   "withSalary": 3,
   "latestPublishedAt": "2026-02-15T10:05:00.000Z",

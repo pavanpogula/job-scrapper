@@ -41,6 +41,7 @@ All frontend test commands are executed from the repository root with `npm --pre
 - `src/test/jobFreshness.test.tsx`: Integration test with MSW asserting job cards render the freshness label as `<time>` elements, including the `publishedAt` fallback for cache bodies without the new fields.
 - `src/test/jobCard.test.tsx`: Component tests for `JobCard` verifying human labels, uncropped logo / fallback initial, formatted salary, freshness `<time>` tags, company links, and omission of inline apply buttons (ADR-0020).
 - `src/test/twoPaneAndFilters.test.tsx`: Integration tests for desktop two-pane layout, filter pills (`postedWithin`, `isRemote`, `hasSalary`), and `?company=` deep linking (ADR-0020).
+- `src/test/sourceBadge.test.tsx`: Tests for `SourceBadge` component, ATS source filter pill in `JobFiltersBar`, `boardUrl` external links on `CompanyHeader` and `CompanyCard`, and source-neutralized copy (ADR-0021).
 - `src/test/founderCredit.test.tsx`: Footer "Founded by" credit and About page founder card link to the LinkedIn profile, open in a new tab with `noopener noreferrer`, and have accessible names; founder details come from `lib/site.ts`.
 - `src/test/companyJobsTab.test.tsx`: Company Jobs tab reaches every job: real total and "Showing x–y of N", API paging to the last page, in-company search sent to the API (`company` + `search`, page reset), and "10+ locations" for a capped list (ADR-0020).
 - `src/test/companyPage.test.tsx`: Integration tests for `CompanyPage` Overview and Jobs tabs, department grouping, and 404 state (ADR-0020).

@@ -12,7 +12,7 @@ import SearchOffIcon from '@mui/icons-material/SearchOff';
 export const NotFoundPage: React.FC = () => {
   return (
     <Container maxWidth="sm" sx={{ py: 12, textAlign: 'center' }}>
-      <title>Page Not Found | Ashby Job Index</title>
+      <title>Page Not Found | B.O.O.L.E.A.N</title>
       <meta name="description" content="The requested page could not be found." />
 
       <Paper elevation={0} sx={{ p: 6, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>

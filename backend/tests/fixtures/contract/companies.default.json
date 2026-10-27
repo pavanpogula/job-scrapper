@@ -4,16 +4,28 @@
       "slug": "acme-corp",
       "name": "Acme Corp",
       "logoUrl": "https://example.com/acme-logo.png",
+      "source": "ashby",
+      "boardUrl": "https://jobs.ashbyhq.com/acme-corp",
       "jobCount": 3
     },
     {
       "slug": "beta-inc",
       "name": "Beta Inc",
       "logoUrl": null,
+      "source": "ashby",
+      "boardUrl": "https://jobs.ashbyhq.com/beta-inc",
       "jobCount": 2
+    },
+    {
+      "slug": "gh--stripe",
+      "name": "Stripe",
+      "logoUrl": null,
+      "source": "greenhouse",
+      "boardUrl": "https://job-boards.greenhouse.io/stripe",
+      "jobCount": 1
     }
   ],
-  "total": 2,
+  "total": 3,
   "page": 1,
   "pageSize": 30,
   "totalPages": 1

@@ -47,7 +47,7 @@ export const CompanyPage: React.FC = () => {
             Company Not Found
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            We could not find an active career board for "{slug}". The company may not be actively hiring on Ashby.
+            We could not find an active career board for "{slug}". The company may not have active public openings.
           </Typography>
           <Button
             component={RouterLink}
@@ -111,7 +111,7 @@ export const CompanyPage: React.FC = () => {
               Company Not Found
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              We could not find an active career board for "{slug}". The company may not be actively hiring on Ashby.
+              We could not find an active career board for "{slug}". The company may not have active public openings.
             </Typography>
             <Button
               component={RouterLink}

@@ -97,6 +97,8 @@ describe('GreenhouseClient & normalizeGreenhouseJob (BF-023)', () => {
       const fakeDbRow: JobWithDetailRelations = {
         id: 'uuid-1',
         ashbyId: norm.legacyKey,
+        source: 'GREENHOUSE',
+        externalId: norm.externalId,
         title: norm.title,
         companySlug: discordRef.slug,
         departmentId: 'dept-1',
@@ -120,11 +122,15 @@ describe('GreenhouseClient & normalizeGreenhouseJob (BF-023)', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         metadata: norm.raw as JobWithDetailRelations['metadata'],
-        company: { name: 'Discord', slug: 'gh--discord', logoUrl: null, _count: { jobs: 3 } },
+        company: { name: 'Discord', slug: 'gh--discord', logoUrl: null, source: 'GREENHOUSE', atsToken: 'discord', _count: { jobs: 3 } },
         department: { name: 'Policy' },
         location: { name: 'San Francisco Bay Area' },
       };
       const detailDto = toJobDetail(fakeDbRow);
+      expect(detailDto.source).toBe('greenhouse');
+      expect(detailDto.externalId).toBe(norm.externalId);
+      expect(detailDto.company?.source).toBe('greenhouse');
+      expect(detailDto.company?.boardUrl).toBe('https://job-boards.greenhouse.io/discord');
       expect(detailDto.descriptionHtml).toBe(norm.descriptionHtml);
       expect(detailDto.descriptionPlain).toBe(norm.descriptionPlain);
       expect(detailDto.jobUrl).toBe('https://job-boards.greenhouse.io/discord/jobs/8806482002');
