@@ -110,6 +110,24 @@ const CATEGORY_BF_MAP: Record<string, string[]> = {
 };
 
 /**
+ * @summary Resolves source-aware related BF IDs for an issue category and source
+ */
+export function resolveRelatedBF(category: string, source?: string): string[] {
+    if (source === 'greenhouse') {
+        if (category === 'api_error' || category === 'not_found') {
+            return ['BF-023'];
+        }
+        if (category === 'rate_limited') {
+            return ['BF-014', 'BF-015', 'BF-023'];
+        }
+        if (category === 'validation_filtered' || category === 'validation_sanitized') {
+            return ['BF-002', 'BF-003', 'BF-004', 'BF-023'];
+        }
+    }
+    return CATEGORY_BF_MAP[category] || [];
+}
+
+/**
  * @summary Classifies an ErrorReportDocument against rules R-*, updates run-history.json, and produces classified issues
  * @param report Parsed ErrorReportDocument v2.0
  * @param options Configuration for paths, history, and open PRs
@@ -162,6 +180,7 @@ export function classifyReport(
     const issueMap = new Map<string, {
         fingerprint: string;
         category: string;
+        source?: string;
         subkind?: string;
         field?: string;
         normalizedMsg: string;
@@ -172,10 +191,16 @@ export function classifyReport(
 
     for (const ev of allEvents) {
         const fp = computeIssueFingerprint(ev.category, ev.subkind, ev.field, ev.message);
+        const evSource =
+            ev.source ||
+            (ev.message?.includes('Greenhouse Board API') || ev.companySlug?.startsWith('gh--')
+                ? 'greenhouse'
+                : undefined);
         if (!issueMap.has(fp)) {
             issueMap.set(fp, {
                 fingerprint: fp,
                 category: ev.category,
+                source: evSource,
                 subkind: ev.subkind,
                 field: ev.field,
                 normalizedMsg: normalizeMessage(ev.message),
@@ -185,6 +210,9 @@ export function classifyReport(
             });
         }
         const item = issueMap.get(fp)!;
+        if (!item.source && evSource) {
+            item.source = evSource;
+        }
         item.count++;
         if (ev.companySlug) item.companies.add(ev.companySlug);
         if (ev.id && item.eventIds.length < 5) item.eventIds.push(ev.id);
@@ -232,7 +260,7 @@ export function classifyReport(
         const status = determineStatus(fp);
         const consecutiveRuns = getConsecutiveRuns(fp);
         const openPr = findOpenPr(fp);
-        const relatedBF = CATEGORY_BF_MAP[item.category] || [];
+        const relatedBF = resolveRelatedBF(item.category, item.source);
 
         let actionable = false;
         let severity: Severity = 'S3';

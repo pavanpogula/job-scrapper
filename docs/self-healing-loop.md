@@ -42,6 +42,11 @@ Reports are classified by `src/lib/ReportClassifier.ts` against the telemetry ru
 | R-STOP-1 | `fixAttempts` ≥ 2 on open `fix-failed` issue | Stop fixer; label `needs-human` |
 | R-REGRESS-1 | `status === 'regressed'` | Actionable S1, handled first |
 
+### Multi-Source Telemetry (`source` & `summary.bySource`)
+- Every `RecordedErrorEvent` in a v2 report may carry an optional `source: 'ashby' | 'greenhouse'` field identifying the ATS adapter that emitted it (`gh--*` company slugs also indicate Greenhouse when `source` is omitted).
+- `summary.bySource[source]` aggregates per-ATS counters (`companiesAttempted`, `companiesWithJobs`, `jobsCollected`, `notFound`, `apiErrors`) across single-process and cluster runs (`ErrorTracker.mergeReports` sums `bySource` per source).
+- `ReportClassifier` maps `relevantBfs` in a source-aware manner: Ashby `api_error` / `not_found` events map to `['BF-001', 'BF-015']` / `['BF-001', 'BF-006']`, whereas Greenhouse `api_error` / `not_found` events map to `['BF-023', 'BF-015']` / `['BF-023', 'BF-006']` (never `BF-001`, which is Ashby GraphQL fallback). Existing Ashby telemetry message strings remain byte-identical so fingerprint hashes never reset.
+
 ---
 
 ## 3. The 9-Step Fixer Protocol

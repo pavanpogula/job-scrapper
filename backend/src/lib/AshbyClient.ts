@@ -6,6 +6,16 @@
 
 import axios from 'axios';
 import { sanitizeJobBatch, ValidationIssue } from './Sanitizer';
+import {
+    classifyFetchFailure,
+    computeRetryDelayMs,
+    getErrorHeaders,
+    getHttpStatus,
+    isRetryableError,
+    parseRetryAfterSeconds
+} from './ats/http';
+
+export { isRetryableError };
 
 /**
  * Browser-like HTTP headers to prevent WAF / bot-detection 403 blocks
@@ -123,22 +133,6 @@ query ApiJobBoardWithTeams($organizationHostedJobsPageName: String!) {
   }
 }
 `;
-
-/**
- * @summary Determines whether an Axios error is transient and should be retried
- */
-export function isRetryableError(error: any): boolean {
-    if (!error) return false;
-    const status = error.response?.status;
-    if (status === 429 || status === 500 || status === 502 || status === 503 || status === 504) {
-        return true;
-    }
-    const code = error.code;
-    if (code === 'ECONNABORTED' || code === 'ETIMEDOUT' || code === 'ECONNRESET') {
-        return true;
-    }
-    return false;
-}
 
 /**
  * @summary Extracts normalized salary min, max, currency, and interval from Ashby compensation structures
@@ -286,17 +280,10 @@ export async function fetchOrganizationMetadata(
                 org.theme?.logoSquareImageUrl ||
                 undefined
         };
-    } catch (err: any) {
-        const status = err?.response?.status;
+    } catch (err: unknown) {
+        const status = getHttpStatus(err);
         if (status === 429) {
-            let retryAfterSeconds: number | undefined;
-            const headerVal = err.response?.headers?.['retry-after'];
-            if (headerVal) {
-                const parsed = parseInt(String(headerVal), 10);
-                if (!isNaN(parsed) && parsed > 0) {
-                    retryAfterSeconds = Math.min(parsed, 10);
-                }
-            }
+            const retryAfterSeconds = parseRetryAfterSeconds(getErrorHeaders(err), 10);
             return { status: 'rate_limited', retryAfterSeconds };
         }
         if (status === 404) {
@@ -317,7 +304,7 @@ export async function fetchAshbyBoardWithFallback(
     const query = includeCompensation ? '?includeCompensation=true' : '';
     const url = `https://api.ashbyhq.com/posting-api/job-board/${companySlug}${query}`;
 
-    let lastError: any = null;
+    let lastError: unknown = null;
     let sawRateLimit = false;
     let attemptsCount = 0;
 
@@ -337,26 +324,15 @@ export async function fetchAshbyBoardWithFallback(
                 source: 'rest',
                 validationIssues: issues
             };
-        } catch (err: any) {
+        } catch (err: unknown) {
             lastError = err;
-            const status = err?.response?.status;
+            const status = getHttpStatus(err);
             if (status === 429) {
                 sawRateLimit = true;
             }
 
             if (attempt < maxRetries && isRetryableError(err)) {
-                let delay = baseDelayMs * Math.pow(2, attempt) + Math.floor(Math.random() * 100);
-
-                if (status === 429) {
-                    const retryAfterHeader = err?.response?.headers?.['retry-after'] || err?.response?.headers?.['Retry-After'];
-                    if (retryAfterHeader) {
-                        const parsedSeconds = parseInt(String(retryAfterHeader), 10);
-                        if (!isNaN(parsedSeconds) && parsedSeconds > 0) {
-                            delay = Math.min(parsedSeconds, 10) * 1000;
-                        }
-                    }
-                }
-
+                const delay = computeRetryDelayMs(attempt, baseDelayMs, status, getErrorHeaders(err));
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
@@ -364,8 +340,7 @@ export async function fetchAshbyBoardWithFallback(
         }
     }
 
-    const isAxiosErr = axios.isAxiosError(lastError) || Boolean(lastError?.isAxiosError);
-    const status = isAxiosErr ? lastError?.response?.status : undefined;
+    const status = getHttpStatus(lastError);
 
     // If Posting API returned 404 or 403/400, try the browser GraphQL endpoint
     if (status === 404 || status === 403 || status === 400) {
@@ -392,23 +367,7 @@ export async function fetchAshbyBoardWithFallback(
         }
     }
 
-    let failureKind: 'http' | 'timeout' | 'network' = 'http';
-    let failureCode: string | undefined = undefined;
-
-    if (status) {
-        failureKind = 'http';
-        failureCode = `http/${status}/${attemptsCount}`;
-    } else if (
-        lastError?.code === 'ECONNABORTED' ||
-        lastError?.code === 'ETIMEDOUT' ||
-        (lastError?.message && lastError.message.toLowerCase().includes('timeout'))
-    ) {
-        failureKind = 'timeout';
-        failureCode = 'timeout';
-    } else {
-        failureKind = 'network';
-        failureCode = lastError?.code || 'network';
-    }
+    const failure = classifyFetchFailure(lastError, attemptsCount);
 
     return {
         slug: companySlug,
@@ -416,11 +375,6 @@ export async function fetchAshbyBoardWithFallback(
         notFound: false,
         rateLimited: sawRateLimit,
         source: 'none',
-        failure: {
-            kind: failureKind,
-            status,
-            code: failureCode,
-            attempts: attemptsCount
-        }
+        failure
     };
 }

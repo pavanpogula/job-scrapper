@@ -136,4 +136,61 @@ describe('ErrorTracker v2 Suite (P1-T10 / TEST-07)', () => {
         expect(merged.categories.api_error.count).toBe(2);
         expect(merged.events).toHaveLength(2);
     });
+
+    test('records optional source on events and sums summary.bySource across workers', () => {
+        const w1 = new ErrorTracker('db_scrape');
+        w1.recordSourceAttempt('ashby');
+        w1.recordSourceAttempt('greenhouse');
+        w1.recordSourceJobs('ashby', 25);
+        w1.recordSourceNotFound('greenhouse');
+        w1.recordEvent({
+            category: 'api_error',
+            source: 'greenhouse',
+            companySlug: 'gh--stripe',
+            message: 'Greenhouse Board API failed (http/503/3) after 3 attempts',
+            actionTaken: 'retry_exhausted'
+        });
+
+        const w2 = new ErrorTracker('db_scrape');
+        w2.recordSourceAttempt('ashby');
+        w2.recordSourceAttempt('greenhouse');
+        w2.recordSourceJobs('greenhouse', 40);
+        w2.recordEvent({
+            category: 'api_error',
+            source: 'ashby',
+            companySlug: 'acme',
+            message: 'Posting API failed (http/502/3) after 3 attempts',
+            actionTaken: 'retry_exhausted'
+        });
+
+        const r1 = w1.buildReport();
+        const r2 = w2.buildReport();
+
+        expect(r1.events[0].source).toBe('greenhouse');
+        expect(r1.summary.bySource?.greenhouse).toEqual({
+            companiesAttempted: 1,
+            companiesWithJobs: 0,
+            jobsCollected: 0,
+            notFound: 1,
+            apiErrors: 1
+        });
+
+        const merged = ErrorTracker.mergeReports([r1, r2], Date.now() - 2000, 'cluster');
+        expect(merged.summary.bySource).toEqual({
+            ashby: {
+                companiesAttempted: 2,
+                companiesWithJobs: 1,
+                jobsCollected: 25,
+                notFound: 0,
+                apiErrors: 1
+            },
+            greenhouse: {
+                companiesAttempted: 2,
+                companiesWithJobs: 1,
+                jobsCollected: 40,
+                notFound: 1,
+                apiErrors: 1
+            }
+        });
+    });
 });

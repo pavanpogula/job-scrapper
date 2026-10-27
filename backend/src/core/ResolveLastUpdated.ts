@@ -11,6 +11,7 @@ export interface PrevJobState {
     contentHash: string;
     lastUpdatedAt?: Date | string | null;
     lastUpdatedSource?: string | null;
+    metadata?: unknown;
 }
 
 export interface NextJobInput {
@@ -19,11 +20,24 @@ export interface NextJobInput {
     publishedAt?: Date | string | null;
     active?: boolean;
     isRawTouch?: boolean;
+    metadata?: unknown;
 }
 
 export interface LastUpdatedResolution {
     lastUpdatedAt: Date | null;
     lastUpdatedSource: LastUpdatedSource | null;
+}
+
+/**
+ * Extracts _normVersion from a job metadata payload if present.
+ * @param metadata Raw metadata object
+ * @returns _normVersion value or undefined
+ */
+function extractNormVersion(metadata: unknown): unknown {
+    if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+        return (metadata as Record<string, unknown>)._normVersion;
+    }
+    return undefined;
 }
 
 /**
@@ -108,6 +122,14 @@ export function resolveLastUpdated(
 
     // Rule 4: Unchanged active rows
     if (!hashChanged) {
+        return { lastUpdatedAt: storedDate, lastUpdatedSource: storedSource };
+    }
+
+    // Rule 6 (G3 / ADR-0021): Normalizer version bump (_normVersion changed)
+    // Update the row in DB (via batchUpsertJobs) but keep stored lastUpdatedAt/lastUpdatedSource
+    const prevNormVersion = extractNormVersion(prev.metadata);
+    const nextNormVersion = extractNormVersion(next.metadata);
+    if (prevNormVersion !== nextNormVersion) {
         return { lastUpdatedAt: storedDate, lastUpdatedSource: storedSource };
     }
 

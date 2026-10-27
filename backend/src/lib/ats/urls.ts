@@ -46,7 +46,7 @@ export function applyUrl(source: AtsSource, token: string, externalId: string): 
 
   switch (source) {
     case 'greenhouse':
-      return `https://job-boards.greenhouse.io/${cleanToken}/jobs/${cleanId}#app`;
+      return `https://job-boards.greenhouse.io/${cleanToken}/jobs/${cleanId}`;
     case 'ashby':
     default:
       return `https://jobs.ashbyhq.com/${cleanToken}/${cleanId}/application`;

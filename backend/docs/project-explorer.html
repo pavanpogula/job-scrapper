@@ -281,6 +281,12 @@
                         <span>Companies.ts</span>
                         
                     </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_config_GreenhouseBoards_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GreenhouseBoards.ts</span>
+                        
+                    </div>
                 </li></ul>
                 </li><li class="">
                     <div class="tree-item folder" onclick="toggleFolder(this)">
@@ -385,6 +391,18 @@
                     <div class="tree-item file" onclick="showFile('src_lib_ats_AtsClient_ts')">
                         <span class="material-icons-round">description</span>
                         <span>AtsClient.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ats_GreenhouseClient_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GreenhouseClient.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ats_http_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>http.ts</span>
                         
                     </div>
                 </li><li>
@@ -517,6 +535,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('src_utils_SeedGreenhouse_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>SeedGreenhouse.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_utils_Verify_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Verify.ts</span>
@@ -629,6 +653,12 @@
                     <div class="tree-item file" onclick="showFile('tests_integration_Companies_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Companies.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_GreenhouseCoexistence_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GreenhouseCoexistence.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -816,6 +846,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_GoogleDrive_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GoogleDrive.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_GreenhouseClient_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GreenhouseClient.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1607,6 +1643,31 @@
     ],
     "functions": []
   },
+  "src_config_GreenhouseBoards_ts": {
+    "name": "GreenhouseBoards.ts",
+    "path": "src/config/GreenhouseBoards.ts",
+    "icon": "📋",
+    "iconClass": "green",
+    "summary": "Initial curated list of Greenhouse board tokens used by seed:greenhouse before broad discovery",
+    "tags": [
+      "Config",
+      "Greenhouse",
+      "Seed",
+      "Boards",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "src_core_ClusterScraper_ts": {
     "name": "ClusterScraper.ts",
     "path": "src/core/ClusterScraper.ts",
@@ -1670,10 +1731,14 @@
       },
       {
         "label": "Functions",
-        "value": "2"
+        "value": "3"
       }
     ],
     "functions": [
+      {
+        "name": "extractNormVersion()",
+        "desc": "Extracts _normVersion from a job metadata payload if present."
+      },
       {
         "name": "parseValidDate()",
         "desc": "Safely parses any date representation, returning null for invalid or unparseable values."
@@ -2049,14 +2114,10 @@
       },
       {
         "label": "Functions",
-        "value": "5"
+        "value": "4"
       }
     ],
     "functions": [
-      {
-        "name": "isRetryableError()",
-        "desc": "Determines whether an Axios error is transient and should be retried"
-      },
       {
         "name": "extractSalary()",
         "desc": "Extracts normalized salary min, max, currency, and interval from Ashby compensation structures"
@@ -2163,7 +2224,7 @@
       },
       {
         "label": "Functions",
-        "value": "9"
+        "value": "13"
       }
     ],
     "functions": [
@@ -2174,6 +2235,22 @@
       {
         "name": "constructor()",
         "desc": "Initializes a new ErrorTracker instance for a scrape run"
+      },
+      {
+        "name": "ensureSourceStats()",
+        "desc": "Returns or initializes per-source telemetry summary counters"
+      },
+      {
+        "name": "recordSourceAttempt()",
+        "desc": "Increments companiesAttempted for a given ATS source"
+      },
+      {
+        "name": "recordSourceJobs()",
+        "desc": "Increments companiesWithJobs and jobsCollected for a given ATS source when jobs > 0"
+      },
+      {
+        "name": "recordSourceNotFound()",
+        "desc": "Increments notFound counter for a given ATS source"
       },
       {
         "name": "recordEvent()",
@@ -2327,7 +2404,7 @@
       },
       {
         "label": "Functions",
-        "value": "3"
+        "value": "4"
       }
     ],
     "functions": [
@@ -2338,6 +2415,10 @@
       {
         "name": "computeIssueFingerprint()",
         "desc": "Computes deterministic SHA-1 fingerprint for an issue based on category, subkind, field, and normalized message"
+      },
+      {
+        "name": "resolveRelatedBF()",
+        "desc": "Resolves source-aware related BF IDs for an issue category and source"
       },
       {
         "name": "classifyReport()",
@@ -2373,7 +2454,7 @@
     "functions": [
       {
         "name": "decodeHtmlEntities()",
-        "desc": "Decodes common HTML entities in single-line text fields (title, location, department)"
+        "desc": "Decodes HTML named and numeric (decimal/hex) entities in a single pass (unescapes once)"
       },
       {
         "name": "sanitizeText()",
@@ -2475,6 +2556,129 @@
       }
     ],
     "functions": []
+  },
+  "src_lib_ats_GreenhouseClient_ts": {
+    "name": "GreenhouseClient.ts",
+    "path": "src/lib/ats/GreenhouseClient.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Implements AtsClient for public Greenhouse Job Board API (v1) with gzip, retry/backoff, 404/429 handling, and pure job normalization",
+    "tags": [
+      "ATS",
+      "Greenhouse",
+      "Normalizer",
+      "Client",
+      "BF-023",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "10"
+      }
+    ],
+    "functions": [
+      {
+        "name": "buildGreenhouseCanonicalJobUrl()",
+        "desc": "Builds a canonical Greenhouse job URL from atsToken, preferring the host from absoluteUrl when it is a *.greenhouse.io host"
+      },
+      {
+        "name": "parseGreenhouseLocations()",
+        "desc": "Splits a Greenhouse location.name string into primary location and deduplicated secondary locations"
+      },
+      {
+        "name": "parseGreenhouseOfficePostal()",
+        "desc": "Parses the first non-null offices[].location from the right into country, region, city, and postal object"
+      },
+      {
+        "name": "extractMetadataWorkplaceType()",
+        "desc": "Extracts Workplace Type from Greenhouse custom metadata[] entries if present"
+      },
+      {
+        "name": "inferEmploymentTypeFromTitle()",
+        "desc": "Infers employmentType from job title when explicit ATS field is absent"
+      },
+      {
+        "name": "extractGreenhouseSalary()",
+        "desc": "Extracts salary from the first Greenhouse pay_input_ranges entry (cents -> units, hourly vs yearly interval)"
+      },
+      {
+        "name": "normalizeGreenhouseJob()",
+        "desc": "Pure normalizer converting a Greenhouse raw job payload into a source-agnostic NormalizedJob"
+      },
+      {
+        "name": "fetchBoard()",
+        "desc": "Fetches all active jobs from a Greenhouse board with retry/backoff, 404/429 handling, and normalization"
+      },
+      {
+        "name": "fetchCompanyMetadata()",
+        "desc": "Fetches company display name from Greenhouse board info endpoint GET /v1/boards/{token}"
+      },
+      {
+        "name": "canonicalUrls()",
+        "desc": "Builds canonical URL set for a Greenhouse job and board from atsToken (never from gh-- slug)"
+      }
+    ]
+  },
+  "src_lib_ats_http_ts": {
+    "name": "http.ts",
+    "path": "src/lib/ats/http.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Provides retryable error detection, Retry-After header parsing (10s cap), backoff calculation, and structured failure classification for ATS clients",
+    "tags": [
+      "ATS",
+      "HTTP",
+      "Retry",
+      "Rate Limiting",
+      "Backoff",
+      "BF-015",
+      "BF-023"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "7"
+      }
+    ],
+    "functions": [
+      {
+        "name": "asErrorObject()",
+        "desc": "Narrows an unknown caught value to an error object shape with optional response/code fields"
+      },
+      {
+        "name": "getHttpStatus()",
+        "desc": "Extracts the HTTP status code from an Axios or mock error if present"
+      },
+      {
+        "name": "getErrorHeaders()",
+        "desc": "Extracts response headers from an Axios or mock error if present"
+      },
+      {
+        "name": "isRetryableError()",
+        "desc": "Determines whether an HTTP/network error is transient and should be retried"
+      },
+      {
+        "name": "parseRetryAfterSeconds()",
+        "desc": "Parses Retry-After header in seconds, capped at maxSeconds (default 10s per BF-015)"
+      },
+      {
+        "name": "computeRetryDelayMs()",
+        "desc": "Computes backoff delay in milliseconds, honoring Retry-After on HTTP 429 (capped at 10s)"
+      },
+      {
+        "name": "classifyFetchFailure()",
+        "desc": "Classifies an exhausted fetch error into http, timeout, or network failure metadata"
+      }
+    ]
   },
   "src_lib_ats_source_ts": {
     "name": "source.ts",
@@ -2840,6 +3044,41 @@
       }
     ]
   },
+  "src_utils_SeedGreenhouse_ts": {
+    "name": "SeedGreenhouse.ts",
+    "path": "src/utils/SeedGreenhouse.ts",
+    "icon": "🌱",
+    "iconClass": "green",
+    "summary": "Validates Greenhouse board tokens via GET /v1/boards/{token} and upserts Company rows with gh--<token> slugs and source GREENHOUSE",
+    "tags": [
+      "Seed",
+      "Greenhouse",
+      "Setup",
+      "Company",
+      "BF-023",
+      "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "2"
+      }
+    ],
+    "functions": [
+      {
+        "name": "parseGreenhouseSeedTokens()",
+        "desc": "Parses CLI arguments into a deduplicated list of lowercase Greenhouse tokens"
+      },
+      {
+        "name": "seedGreenhouse()",
+        "desc": "Validates each Greenhouse token with GET /v1/boards/{token} and upserts Company { slug: 'gh--' + token, source: GREENHOUSE, atsToken: token, name } by (source, atsToken)"
+      }
+    ]
+  },
   "src_utils_Verify_ts": {
     "name": "Verify.ts",
     "path": "src/utils/Verify.ts",
@@ -3040,6 +3279,33 @@
       "companies",
       "postgres",
       "ADR-0019"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_integration_GreenhouseCoexistence_test_ts": {
+    "name": "GreenhouseCoexistence.test.ts",
+    "path": "tests/integration/GreenhouseCoexistence.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Proves on real Postgres that Ashby `stripe` and Greenhouse `gh--stripe` coexist without cross-source deactivation or quarantine, and (source, externalId) uniqueness holds",
+    "tags": [
+      "Integration",
+      "Postgres",
+      "Greenhouse",
+      "Ashby",
+      "Coexistence",
+      "BF-023",
+      "ADR-0021"
     ],
     "info": [
       {
@@ -3935,6 +4201,32 @@
       "Upload",
       "OAuth",
       "JWT"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_GreenhouseClient_test_ts": {
+    "name": "GreenhouseClient.test.ts",
+    "path": "tests/unit/GreenhouseClient.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Tests Greenhouse board fetching, retry/404/429 handling, job normalization, entity decoding, deactivation safety, and seeding",
+    "tags": [
+      "Unit Test",
+      "Greenhouse",
+      "AtsClient",
+      "Normalizer",
+      "BF-023",
+      "ADR-0021"
     ],
     "info": [
       {

@@ -110,6 +110,21 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `normalizeAshbyJob(job, companySlug, sourceMode)` | Pure field mapping converting raw `AshbyJob` to `NormalizedJob` |
 | `class AshbyAtsClient implements AtsClient` | Implements `fetchBoard` via `fetchAshbyBoardWithFallback`, `fetchCompanyMetadata` via `fetchOrganizationMetadata`, and canonical URLs |
 
+### [ats/GreenhouseClient.ts](../src/lib/ats/GreenhouseClient.ts) — Greenhouse ATS Adapter & Normalizer (BF-023)
+| Symbol | Description |
+|---|---|
+| `normalizeGreenhouseJob(raw, ref, issues?)` | Pure field mapping & validation converting a raw Greenhouse job post to `NormalizedJob` (`legacyKey = greenhouse:<id>`, single-pass entity unescape, cents→units salary, office postal parsing, `_normVersion: 1`) |
+| `class GreenhouseClient implements AtsClient` | Implements `fetchBoard` (`GET /v1/boards/{token}/jobs?content=true&pay_transparency=true`), `fetchCompanyMetadata` (`GET /v1/boards/{token}`), and `canonicalUrls` |
+
+### [ats/http.ts](../src/lib/ats/http.ts) — Shared ATS HTTP Retry & Failure Helpers
+| Symbol | Description |
+|---|---|
+| `MAX_RETRY_AFTER_SECONDS = 10` | Maximum `Retry-After` delay cap in seconds |
+| `isRetryableError(error)` | Returns `true` for HTTP 429/500/502/503/504 and `ECONNABORTED`/`ETIMEDOUT`/`ECONNRESET` |
+| `parseRetryAfterSeconds(headers)` | Parses numeric or HTTP-date `Retry-After` header capped at 10 s |
+| `computeRetryDelayMs(attempt, baseDelayMs, retryAfterSeconds)` | Computes retry delay using `Retry-After` or exponential backoff + jitter |
+| `classifyFetchFailure(error, attempts)` | Classifies exhausted retry errors into `{ kind: 'http' \| 'timeout' \| 'network', status?, code?, attempts }` |
+
 ### [ats/source.ts](../src/lib/ats/source.ts) — ATS Source Mappings & Validation
 | Symbol | Description |
 |---|---|
@@ -228,6 +243,8 @@ No exports; **runs on import** (L66). *(private)* `inspectDatabase()` (L14) — 
 | [Seed.ts](../src/utils/Seed.ts) | `loadTargetSlugs(useExtractedFile = false)` | L17 | `extracted-slugs.json` (cwd) when flag set and file is an array, else `TARGET_COMPANIES` |
 | | `seed({ useExtractedSlugs? })` | L33 | Memory diff vs existing slugs, then `company.createMany({ status: 'ACTIVE' }, skipDuplicates)` |
 | | `require.main` guard | L70 | Reads `--all` |
+| [SeedGreenhouse.ts](../src/utils/SeedGreenhouse.ts) | `parseSeedGreenhouseTokens(argv)` | L26 | Parses comma-separated token list from CLI args or falls back to `CURATED_GREENHOUSE_BOARDS` |
+| | `seedGreenhouse(options?)` | L53 | Validates each token via `GreenhouseClient.fetchCompanyMetadata` and upserts `Company` (`slug = gh--<token>`, `source = GREENHOUSE`) by `source_atsToken` |
 | [ProcessCdxData.ts](../src/utils/ProcessCdxData.ts) | `processRawCDXData(rows)` (exported at L131) | L17 | Filters raw CDX rows to valid slugs, prints `TARGET_COMPANIES` block, writes `extracted-slugs.json`, returns sorted slugs |
 | | `inputFile` *(private)* | L11 | `process.argv[2]`, read at module load |
 | | `require.main` guard | L119 | Reads/parses the input file, or prints usage |
@@ -238,6 +255,7 @@ No exports; **runs on import** (L66). *(private)* `inspectDatabase()` (L14) — 
 ## `../src/config/`
 
 - [Companies.ts](../src/config/Companies.ts) — `TARGET_COMPANIES: string[]` (L10): `deel`, `remote`, `reddit`, `multiverse`, `1password`, `abridge`, `go-augment` (`go-augment` exercises the GraphQL fallback). Note: at time of analysis `remote` returned 404 and `deel`/`reddit` returned 0 jobs from Ashby.
+- [GreenhouseBoards.ts](../src/config/GreenhouseBoards.ts) — `CURATED_GREENHOUSE_BOARDS: readonly string[]`: `discord`, `figma`, `gitlab`, `airbnb`, `stripe`.
 
 ## `../scripts/`
 

@@ -1,0 +1,72 @@
+{
+  "jobs": [
+    {
+      "id": 9100001,
+      "title": "Distributed Systems Engineer",
+      "updated_at": "2026-10-23T09:00:00Z",
+      "first_published": "2026-10-05T09:00:00Z",
+      "location": {
+        "name": "San Francisco, CA • New York, NY • Seattle, WA"
+      },
+      "absolute_url": "https://job-boards.greenhouse.io/stripe/jobs/9100001",
+      "content": "&lt;p&gt;Bullet-separated multi-location job.&lt;/p&gt;",
+      "departments": [{ "id": 1, "name": "Infrastructure" }],
+      "offices": [
+        { "id": 1, "name": "Remote", "location": null },
+        { "id": 2, "name": "Lisbon", "location": "Lisbon, Portugal" }
+      ],
+      "metadata": [
+        { "id": 100, "name": "Workplace Type", "value": "Hybrid", "value_type": "single_select" }
+      ]
+    },
+    {
+      "id": 9100002,
+      "title": "Security Operations Analyst",
+      "updated_at": "2026-10-23T10:00:00Z",
+      "first_published": "2026-10-06T09:00:00Z",
+      "location": {
+        "name": "Dublin, Ireland; London, United Kingdom; or Berlin, Germany"
+      },
+      "absolute_url": "https://job-boards.eu.greenhouse.io/stripe/jobs/9100002",
+      "content": "&lt;p&gt;Semicolon and or separated locations.&lt;/p&gt;",
+      "departments": [{ "id": 2, "name": "Security" }],
+      "offices": [
+        { "id": 3, "name": "Dublin", "location": "Dublin, Leinster, Ireland" }
+      ],
+      "metadata": [
+        { "id": 101, "name": "Workplace Type", "value": "On-site", "value_type": "single_select" }
+      ]
+    },
+    {
+      "id": 9100003,
+      "title": "Account Executive",
+      "updated_at": "2026-10-23T11:00:00Z",
+      "first_published": "2026-10-07T09:00:00Z",
+      "location": {
+        "name": "Chicago, IL, or New York, NY or Chicago, IL"
+      },
+      "absolute_url": "https://job-boards.greenhouse.io/stripe/jobs/9100003",
+      "content": "&lt;p&gt;Comma-or and duplicate location entries.&lt;/p&gt;",
+      "departments": [],
+      "offices": [],
+      "metadata": []
+    },
+    {
+      "id": 9100004,
+      "title": "General Application",
+      "updated_at": "2026-10-23T12:00:00Z",
+      "first_published": "2026-10-08T09:00:00Z",
+      "location": {
+        "name": "N/A"
+      },
+      "absolute_url": "https://job-boards.greenhouse.io/stripe/jobs/9100004",
+      "content": "&lt;p&gt;N/A location handling.&lt;/p&gt;",
+      "departments": [],
+      "offices": [],
+      "metadata": []
+    }
+  ],
+  "meta": {
+    "total": 4
+  }
+}

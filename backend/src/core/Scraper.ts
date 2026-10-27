@@ -21,6 +21,7 @@ import { publishCacheGeneration, recordScrapeFinished } from '../cache/Publisher
 import { resolveLastUpdated, PrevJobState } from './ResolveLastUpdated';
 import { AtsClient, BoardRef, NormalizedJob } from '../lib/ats/AtsClient';
 import { AshbyAtsClient } from '../lib/ats/AshbyAtsClient';
+import { GreenhouseClient } from '../lib/ats/GreenhouseClient';
 import { AtsSource, DbAts, parseAtsSources, toDbAts, toAtsSource } from '../lib/ats/source';
 
 const prisma = new PrismaClient();
@@ -156,12 +157,14 @@ export interface ProcessedJob {
 
 export interface AshbyScraperOptions {
     clients?: Map<AtsSource, AtsClient>;
+    prisma?: PrismaClient;
 }
 
 /**
  * @summary High-performance scraper class with adaptive concurrency, 3-strike quarantine, stale job deactivation, and streaming batch DB writes
  */
 export class AshbyScraper {
+    private db: PrismaClient;
     private clients: Map<AtsSource, AtsClient>;
     private limiters = new Map<AtsSource, AdaptiveLimiter>();
     private departmentCache = new Map<string, string>();
@@ -172,11 +175,14 @@ export class AshbyScraper {
     private hasLoadedExistingJobSlugs = false;
 
     constructor(options: AshbyScraperOptions = {}) {
+        this.db = options.prisma ?? prisma;
         if (options.clients) {
             this.clients = new Map(options.clients);
         } else {
-            this.clients = new Map();
-            this.clients.set('ashby', new AshbyAtsClient());
+            this.clients = new Map<AtsSource, AtsClient>([
+                ['ashby', new AshbyAtsClient()],
+                ['greenhouse', new GreenhouseClient()]
+            ]);
         }
     }
 
@@ -199,7 +205,7 @@ export class AshbyScraper {
         companySlug: string,
         activeAshbyIds: string[]
     ): Promise<number> {
-        const updateManyFn = (prisma.job as any)?.updateMany;
+        const updateManyFn = (this.db.job as any)?.updateMany;
         if (typeof updateManyFn !== 'function') return 0;
 
         try {
@@ -271,7 +277,7 @@ export class AshbyScraper {
 
         const promise = (async () => {
             try {
-                const dept = await prisma.department.upsert({
+                const dept = await this.db.department.upsert({
                     where: { name },
                     update: {},
                     create: { name }
@@ -279,7 +285,7 @@ export class AshbyScraper {
                 this.departmentCache.set(name, dept.id);
                 return dept.id;
             } catch (err) {
-                const findUniqueFn = (prisma.department as any)?.findUnique;
+                const findUniqueFn = (this.db.department as any)?.findUnique;
                 if (typeof findUniqueFn === 'function') {
                     const existing = await findUniqueFn({ where: { name } });
                     if (existing?.id) {
@@ -315,7 +321,7 @@ export class AshbyScraper {
 
         const promise = (async () => {
             try {
-                const loc = await prisma.location.upsert({
+                const loc = await this.db.location.upsert({
                     where: { name },
                     update: {},
                     create: { name }
@@ -323,7 +329,7 @@ export class AshbyScraper {
                 this.locationCache.set(name, loc.id);
                 return loc.id;
             } catch (err) {
-                const findUniqueFn = (prisma.location as any)?.findUnique;
+                const findUniqueFn = (this.db.location as any)?.findUnique;
                 if (typeof findUniqueFn === 'function') {
                     const existing = await findUniqueFn({ where: { name } });
                     if (existing?.id) {
@@ -419,8 +425,8 @@ export class AshbyScraper {
             let succeededJobs: ProcessedJob[] = batch;
 
             try {
-                const findManyFn = (prisma.job as any)?.findMany;
-                const createManyFn = (prisma.job as any)?.createMany;
+                const findManyFn = (this.db.job as any)?.findMany;
+                const createManyFn = (this.db.job as any)?.createMany;
 
                 if (typeof findManyFn === 'function' && typeof createManyFn === 'function') {
                     // Fast bulk path: 1 SELECT + 1 INSERT (createMany) for new jobs, only upserting changed existing jobs
@@ -447,9 +453,9 @@ export class AshbyScraper {
                         }
                     }
 
-                    if (toRawTouch.length > 0 && typeof prisma.$executeRaw === 'function') {
+                    if (toRawTouch.length > 0 && typeof this.db.$executeRaw === 'function') {
                         const now = new Date();
-                        await prisma.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ANY(${toRawTouch})`.catch(() => {});
+                        await this.db.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ANY(${toRawTouch})`.catch(() => {});
                     }
 
                     if (toCreate.length > 0) {
@@ -492,8 +498,8 @@ export class AshbyScraper {
                     }
 
                     if (toUpdate.length > 0) {
-                        await prisma.$transaction(
-                            toUpdate.map(job => prisma.job.upsert(buildUpsertArgs(job, existingMap.get(job.ashbyId))))
+                        await this.db.$transaction(
+                            toUpdate.map(job => this.db.job.upsert(buildUpsertArgs(job, existingMap.get(job.ashbyId))))
                         );
                     }
                 } else {
@@ -502,7 +508,7 @@ export class AshbyScraper {
                     const toUpsert: { job: ProcessedJob; existing?: PrevJobState | null }[] = [];
 
                     for (const job of batch) {
-                        const findUniqueFn = (prisma.job as any)?.findUnique;
+                        const findUniqueFn = (this.db.job as any)?.findUnique;
                         let existing: (PrevJobState & { metadata?: { _source?: string } | null }) | null = null;
                         if (typeof findUniqueFn === 'function') {
                             existing = await findUniqueFn({
@@ -517,14 +523,14 @@ export class AshbyScraper {
                         toUpsert.push({ job, existing });
                     }
 
-                    if (toRawTouch.length > 0 && typeof prisma.$executeRaw === 'function') {
+                    if (toRawTouch.length > 0 && typeof this.db.$executeRaw === 'function') {
                         const now = new Date();
-                        await prisma.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ANY(${toRawTouch})`.catch(() => {});
+                        await this.db.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ANY(${toRawTouch})`.catch(() => {});
                     }
 
                     if (toUpsert.length > 0) {
-                        await prisma.$transaction(
-                            toUpsert.map(({ job, existing }) => prisma.job.upsert(buildUpsertArgs(job, existing)))
+                        await this.db.$transaction(
+                            toUpsert.map(({ job, existing }) => this.db.job.upsert(buildUpsertArgs(job, existing)))
                         );
                     }
                 }
@@ -535,7 +541,7 @@ export class AshbyScraper {
                 succeededJobs = [];
                 for (const job of batch) {
                     try {
-                        const findUniqueFn = (prisma.job as any)?.findUnique;
+                        const findUniqueFn = (this.db.job as any)?.findUnique;
                         let existing: (PrevJobState & { metadata?: { _source?: string } | null }) | null = null;
                         if (typeof findUniqueFn === 'function') {
                             existing = await findUniqueFn({
@@ -545,13 +551,13 @@ export class AshbyScraper {
                         }
                         if (job.fetchMode === 'fallback' && existing && existing.metadata?._source === 'rest') {
                             const now = new Date();
-                            if (typeof prisma.$executeRaw === 'function') {
-                                await prisma.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ${job.ashbyId}`.catch(() => {});
+                            if (typeof this.db.$executeRaw === 'function') {
+                                await this.db.$executeRaw`UPDATE "Job" SET "active" = true, "lastSeenAt" = ${now} WHERE "ashbyId" = ${job.ashbyId}`.catch(() => {});
                             }
                             succeededJobs.push(job);
                             continue;
                         }
-                        await prisma.job.upsert(buildUpsertArgs(job, existing));
+                        await this.db.job.upsert(buildUpsertArgs(job, existing));
                         succeededJobs.push(job);
                     } catch (jobErr: any) {
                         if (tracker) {
@@ -704,16 +710,16 @@ export class AshbyScraper {
         const enabledDbSources = enabledSources.map(toDbAts);
 
         // Pre-warm department and location caches in 2 queries to avoid per-company round trips
-        if (typeof (prisma.department as any)?.findMany === 'function') {
-            const depts = await (prisma.department as any).findMany({ select: { id: true, name: true } }).catch(() => []);
+        if (typeof (this.db.department as any)?.findMany === 'function') {
+            const depts = await (this.db.department as any).findMany({ select: { id: true, name: true } }).catch(() => []);
             for (const d of depts || []) this.departmentCache.set(d.name, d.id);
         }
-        if (typeof (prisma.location as any)?.findMany === 'function') {
-            const locs = await (prisma.location as any).findMany({ select: { id: true, name: true } }).catch(() => []);
+        if (typeof (this.db.location as any)?.findMany === 'function') {
+            const locs = await (this.db.location as any).findMany({ select: { id: true, name: true } }).catch(() => []);
             for (const l of locs || []) this.locationCache.set(l.name, l.id);
         }
-        if (typeof (prisma.job as any)?.findMany === 'function') {
-            const activeSlugs = await (prisma.job as any)
+        if (typeof (this.db.job as any)?.findMany === 'function') {
+            const activeSlugs = await (this.db.job as any)
                 .findMany({ where: { active: true }, select: { companySlug: true }, distinct: ['companySlug'] })
                 .catch(() => null);
             if (Array.isArray(activeSlugs)) {
@@ -740,7 +746,7 @@ export class AshbyScraper {
         }> = [];
 
         if (explicitSlugs) {
-            const rows = await prisma.company.findMany({
+            const rows = await this.db.company.findMany({
                 where: { slug: { in: explicitSlugs } },
                 select: {
                     slug: true,
@@ -786,7 +792,7 @@ export class AshbyScraper {
                 companies.push(row);
             }
         } else {
-            const rows = await prisma.company.findMany({
+            const rows = await this.db.company.findMany({
                 where: {
                     status: statusFilter,
                     source: { in: enabledDbSources }
@@ -857,6 +863,7 @@ export class AshbyScraper {
             };
 
             return limit(async () => {
+                tracker.recordSourceAttempt(atsSource);
                 try {
                     const boardResult = await client.fetchBoard(boardRef, {
                         includeCompensation: true
@@ -868,11 +875,12 @@ export class AshbyScraper {
                         limit.onRateLimit();
                         tracker.recordEvent({
                             category: 'rate_limited',
+                            source: atsSource,
                             companySlug: company.slug,
                             // Ashby text stays byte-identical: ReportClassifier fingerprints hash the message
                             message: atsSource === 'ashby'
                                 ? 'HTTP 429 Too Many Requests received from Posting API'
-                                : `HTTP 429 Too Many Requests received from ${atsSource} API`,
+                                : 'HTTP 429 Too Many Requests received from Greenhouse Board API',
                             actionTaken: 'throttled_concurrency'
                         });
                     } else {
@@ -883,6 +891,7 @@ export class AshbyScraper {
                         tracker.graphqlFallbacksUsed++;
                         tracker.recordEvent({
                             category: 'graphql_fallback',
+                            source: atsSource,
                             companySlug: company.slug,
                             message: 'Posting API returned 404/403; recovered board via Ashby hosted GraphQL API',
                             actionTaken: `recovered_${boardResult.jobs.length}_jobs`
@@ -894,11 +903,12 @@ export class AshbyScraper {
                     // Company health rules
                     if (boardResult.notFound) {
                         tracker.companiesNotFound++;
+                        tracker.recordSourceNotFound(atsSource);
                         const consecutiveNotFound = (company.consecutiveNotFound ?? 0) + 1;
                         const isQuarantined = consecutiveNotFound >= 3;
 
                         if (isQuarantined) {
-                            const updateManyFn = (prisma.job as any)?.updateMany;
+                            const updateManyFn = (this.db.job as any)?.updateMany;
                             if (typeof updateManyFn === 'function') {
                                 await updateManyFn({
                                     where: { companySlug: company.slug, active: true },
@@ -907,13 +917,14 @@ export class AshbyScraper {
                             }
                             tracker.recordEvent({
                                 category: 'company_quarantined',
+                                source: atsSource,
                                 companySlug: company.slug,
                                 message: `Quarantined company after ${consecutiveNotFound} consecutive 404 responses; deactivated active jobs`,
                                 actionTaken: 'status_not_found'
                             });
                         }
 
-                        await prisma.company.update({
+                        await this.db.company.update({
                             where: { slug: company.slug },
                             data: {
                                 consecutiveNotFound,
@@ -926,15 +937,15 @@ export class AshbyScraper {
 
                         if (activeIds.length === 0) {
                             let activeJobCount = 0;
-                            if (typeof (prisma.job as any)?.count === 'function') {
-                                activeJobCount = await (prisma.job as any).count({
+                            if (typeof (this.db.job as any)?.count === 'function') {
+                                activeJobCount = await (this.db.job as any).count({
                                     where: { companySlug: company.slug, active: true }
                                 }).catch(() => 0);
                             }
 
                             if (activeJobCount >= 5 && !company.pendingEmptySince) {
                                 // Defer deactivation for one run: record pendingEmptySince, emit suspicious_empty_board
-                                await prisma.company.update({
+                                await this.db.company.update({
                                     where: { slug: company.slug },
                                     data: {
                                         status: 'ACTIVE',
@@ -948,13 +959,14 @@ export class AshbyScraper {
 
                                 tracker.recordEvent({
                                     category: 'suspicious_empty_board',
+                                    source: atsSource,
                                     companySlug: company.slug,
                                     message: `Company with ${activeJobCount} active jobs returned an empty board; deactivation deferred for one run`,
                                     actionTaken: 'deferred_deactivation'
                                 });
                             } else {
                                 // Either activeJobCount < 5 or already pendingEmptySince was set
-                                await prisma.company.update({
+                                await this.db.company.update({
                                     where: { slug: company.slug },
                                     data: {
                                         status: 'ACTIVE',
@@ -972,7 +984,7 @@ export class AshbyScraper {
                             }
                         } else {
                             // Non-empty board: success resets strike counters and clears pendingEmptySince
-                            await prisma.company.update({
+                            await this.db.company.update({
                                 where: { slug: company.slug },
                                 data: {
                                     status: 'ACTIVE',
@@ -985,8 +997,8 @@ export class AshbyScraper {
                             }).catch(() => {});
 
                             // Touch lastSeenAt on existing jobs with one raw UPDATE per company
-                            if (activeIds.length > 0 && typeof prisma.$executeRaw === 'function') {
-                                await prisma.$executeRaw`UPDATE "Job" SET "lastSeenAt" = ${now} WHERE "companySlug" = ${company.slug} AND "ashbyId" = ANY(${activeIds})`.catch(() => {});
+                            if (activeIds.length > 0 && typeof this.db.$executeRaw === 'function') {
+                                await this.db.$executeRaw`UPDATE "Job" SET "lastSeenAt" = ${now} WHERE "companySlug" = ${company.slug} AND "ashbyId" = ANY(${activeIds})`.catch(() => {});
                             }
 
                             if (!this.hasLoadedExistingJobSlugs || this.companiesWithExistingJobs.has(company.slug)) {
@@ -1000,13 +1012,16 @@ export class AshbyScraper {
                         if (boardResult.failure) {
                             tracker.recordEvent({
                                 category: 'api_error',
+                                source: atsSource,
                                 subkind: boardResult.failure.kind === 'timeout'
                                     ? 'timeout'
                                     : boardResult.failure.kind === 'network'
                                     ? 'network'
                                     : `http_${boardResult.failure.status || '5xx'}`,
                                 companySlug: company.slug,
-                                message: `Posting API failed (${boardResult.failure.code || boardResult.failure.kind}) after ${boardResult.failure.attempts} attempts`,
+                                message: atsSource === 'ashby'
+                                    ? `Posting API failed (${boardResult.failure.code || boardResult.failure.kind}) after ${boardResult.failure.attempts} attempts`
+                                    : `Greenhouse Board API failed (${boardResult.failure.code || boardResult.failure.kind}) after ${boardResult.failure.attempts} attempts`,
                                 actionTaken: 'retry_exhausted',
                                 httpStatus: boardResult.failure.status,
                                 attempts: boardResult.failure.attempts
@@ -1016,13 +1031,14 @@ export class AshbyScraper {
                         if (consecutiveFailures >= 7) {
                             tracker.recordEvent({
                                 category: 'company_unreachable',
+                                source: atsSource,
                                 companySlug: company.slug,
                                 message: `Company fetch failed ${consecutiveFailures} consecutive times`,
                                 actionTaken: 'alert_unreachable'
                             });
                         }
 
-                        await prisma.company.update({
+                        await this.db.company.update({
                             where: { slug: company.slug },
                             data: {
                                 consecutiveFailures,
@@ -1032,7 +1048,7 @@ export class AshbyScraper {
                     }
 
                     if (boardResult.validationIssues && boardResult.validationIssues.length > 0) {
-                        tracker.recordValidationIssues(boardResult.validationIssues);
+                        tracker.recordValidationIssues(boardResult.validationIssues, atsSource);
                         const filteredCount = boardResult.validationIssues.filter(i => i.action === 'filtered').length;
                         if (filteredCount > 0) {
                             console.warn(
@@ -1044,6 +1060,7 @@ export class AshbyScraper {
                     if (boardResult.jobs.length > 0) {
                         tracker.companiesWithJobs++;
                         tracker.jobsCollected += boardResult.jobs.length;
+                        tracker.recordSourceJobs(atsSource, boardResult.jobs.length);
                         const processed = await this.processCompanyJobs(
                             boardResult.slug,
                             boardResult.jobs,
@@ -1069,6 +1086,7 @@ export class AshbyScraper {
                     tracker.companiesFailed++;
                     tracker.recordEvent({
                         category: 'company_error',
+                        source: atsSource,
                         companySlug: company.slug,
                         message: err.message || String(err),
                         actionTaken: 'skipped'

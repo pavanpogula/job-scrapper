@@ -228,4 +228,103 @@ describe('resolveLastUpdated', () => {
       expect(result.lastUpdatedSource).toBe('firstSeen');
     });
   });
+
+  describe('Rule 6: _normVersion Normalizer Drift Guard (G3 / ADR-0021)', () => {
+    it('preserves stored lastUpdatedAt and lastUpdatedSource when contentHash changes alongside _normVersion bump', () => {
+      const storedDate = new Date('2026-10-18T08:00:00.000Z');
+      const prev: PrevJobState = {
+        active: true,
+        contentHash: 'hash-v1',
+        lastUpdatedAt: storedDate,
+        lastUpdatedSource: 'published',
+        metadata: { _ats: 'greenhouse', _normVersion: 1 },
+      };
+      const next: NextJobInput = {
+        contentHash: 'hash-v2',
+        publishedAt: storedDate,
+        updatedAt: null,
+        metadata: { _ats: 'greenhouse', _normVersion: 2 },
+      };
+
+      const result = resolveLastUpdated(prev, next, baseNow);
+      expect(result.lastUpdatedAt).toEqual(storedDate);
+      expect(result.lastUpdatedSource).toBe('published');
+    });
+
+    it('advances lastUpdatedAt to now (detected) when contentHash changes and _normVersion is unchanged', () => {
+      const storedDate = new Date('2026-10-18T08:00:00.000Z');
+      const prev: PrevJobState = {
+        active: true,
+        contentHash: 'hash-old',
+        lastUpdatedAt: storedDate,
+        lastUpdatedSource: 'published',
+        metadata: { _ats: 'greenhouse', _normVersion: 1 },
+      };
+      const next: NextJobInput = {
+        contentHash: 'hash-edited',
+        publishedAt: storedDate,
+        updatedAt: null,
+        metadata: { _ats: 'greenhouse', _normVersion: 1 },
+      };
+
+      const result = resolveLastUpdated(prev, next, baseNow);
+      expect(result.lastUpdatedAt).toEqual(baseNow);
+      expect(result.lastUpdatedSource).toBe('detected');
+    });
+
+    it('keeps Ashby rows without _normVersion unaffected on contentHash change', () => {
+      const storedDate = new Date('2026-10-18T08:00:00.000Z');
+      const prev: PrevJobState = {
+        active: true,
+        contentHash: 'ashby-old',
+        lastUpdatedAt: storedDate,
+        lastUpdatedSource: 'published',
+        metadata: { _source: 'rest' },
+      };
+      const next: NextJobInput = {
+        contentHash: 'ashby-new',
+        publishedAt: storedDate,
+        metadata: { _source: 'rest' },
+      };
+
+      const result = resolveLastUpdated(prev, next, baseNow);
+      expect(result.lastUpdatedAt).toEqual(baseNow);
+      expect(result.lastUpdatedSource).toBe('detected');
+    });
+
+    it('never produces lastUpdatedSource = ashby for Greenhouse jobs (sourceUpdatedAt is null)', () => {
+      const pubDate = new Date('2026-10-15T12:00:00.000Z');
+      const created = resolveLastUpdated(
+        null,
+        {
+          contentHash: 'gh-hash-1',
+          publishedAt: pubDate,
+          updatedAt: null,
+          metadata: { _ats: 'greenhouse', _normVersion: 1 },
+        },
+        baseNow
+      );
+      expect(created.lastUpdatedSource).toBe('published');
+      expect(created.lastUpdatedSource).not.toBe('ashby');
+
+      const updated = resolveLastUpdated(
+        {
+          active: true,
+          contentHash: 'gh-hash-1',
+          lastUpdatedAt: pubDate,
+          lastUpdatedSource: 'published',
+          metadata: { _ats: 'greenhouse', _normVersion: 1 },
+        },
+        {
+          contentHash: 'gh-hash-2',
+          publishedAt: pubDate,
+          updatedAt: null,
+          metadata: { _ats: 'greenhouse', _normVersion: 1 },
+        },
+        baseNow
+      );
+      expect(updated.lastUpdatedSource).toBe('detected');
+      expect(updated.lastUpdatedSource).not.toBe('ashby');
+    });
+  });
 });

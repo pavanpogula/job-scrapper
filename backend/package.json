@@ -7,6 +7,7 @@
     "test:integration": "jest -c jest.integration.config.js --runInBand",
     "contract:fixtures": "UPDATE_CONTRACT_FIXTURES=1 jest tests/contract/ContractFixtures.test.ts",
     "seed": "npx ts-node src/utils/Seed.ts",
+    "seed:greenhouse": "npx ts-node src/utils/SeedGreenhouse.ts",
     "discover": "npx ts-node src/discovery/CdxWorker.ts",
     "scrape": "npx ts-node src/core/Scraper.ts",
     "scrape:parallel": "npx ts-node src/core/ClusterScraper.ts",
