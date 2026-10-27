@@ -8,6 +8,7 @@ The **Ashby Job Scraper** web frontend (`frontend/`) is a high-density, performa
 
 - **No Authentication / Zero Friction:** Users browse, filter, search, and click "Apply Direct". There are no logins, candidate tracking, resume uploading, or intermediate applications.
 - **Direct Employer ATS Links:** Every outbound application button navigates straight to the company's verified Ashby ATS job board (`https://jobs.ashbyhq.com/<companySlug>/<ashbyId>`) with `rel="noopener noreferrer"`.
+- **Search box:** placeholder "Search by job title, company or location (all words must match)". Pressing Enter sets `q` and resets to page 1; matching rules are in `backend/docs/api.md` (BF-020).
 - **URL as Source of Truth:** Filter parameters (`q`, `workplace`, `employment`, `country`, `salary`, `sort`, `page`) are bidirectional: modifying UI controls updates browser URL search params, and direct links or browser back/forward buttons faithfully reconstruct the filter state.
 - **Resilient Query State:** Uses `<QueryState>` wrapping network views to handle loading spinners, 404 not found states, 5xx retries, and automated 429 rate limit countdown auto-refetches based on `Retry-After` headers.
 

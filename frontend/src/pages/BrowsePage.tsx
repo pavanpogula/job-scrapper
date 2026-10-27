@@ -279,10 +279,10 @@ export const BrowsePage: React.FC = () => {
                 updateUrl({ search: searchTerm.trim(), page: 1 });
               }
             }}
-            placeholder="Search verified jobs by title, company, or keywords..."
+            placeholder="Search by job title, company or location (all words must match)"
             slotProps={{
               htmlInput: {
-                'aria-label': 'Search jobs by title or company',
+                'aria-label': 'Search jobs by title, company or location',
               },
               input: {
                 startAdornment: (

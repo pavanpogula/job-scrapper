@@ -61,6 +61,21 @@ jobs:
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # Throwaway PostgreSQL for the real-database search tests (BF-020); never production
+    services:
+      postgres:
+        image: postgres:17.5
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: search_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d search_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -99,6 +114,12 @@ jobs:
       - name: Run backend unit and contract tests
         run: npm test
         working-directory: backend
+
+      - name: Run search integration tests (real PostgreSQL)
+        run: npm run test:integration
+        working-directory: backend
+        env:
+          TEST_DATABASE_URL: postgresql://test:test@localhost:5432/search_test
 
       - name: Build backend
         run: npm run build

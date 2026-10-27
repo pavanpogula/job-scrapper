@@ -4,6 +4,8 @@
  * @tags cache, redis, keys, canonicalizer
  */
 
+import { canonicalSearch } from '../search';
+
 export const KEY_PREFIX = 'jc:v1:';
 export const KEY_CURRENT = 'jc:v1:current';
 export const KEY_DETAILS_INDEX = 'jc:v1:details:index';
@@ -123,9 +125,10 @@ export function parseJobsQuery(query: Record<string, any>) {
     }
   }
 
-  // 5. search
-  if (query.search && typeof query.search === 'string' && query.search.trim()) {
-    normalized.search = query.search.trim();
+  // 5. search (BF-020: same tokens in any order, case or spacing give identical results, so share one key)
+  if (typeof query.search === 'string') {
+    const search = canonicalSearch(query.search);
+    if (search) normalized.search = search;
   }
 
   // 6. workplaceType

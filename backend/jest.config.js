@@ -3,6 +3,8 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
+  // Real-database suites run separately via `npm run test:integration` (jest.integration.config.js)
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/integration/'],
   clearMocks: true,
   moduleNameMapper: {
     '^@prisma/client$': '<rootDir>/__mocks__/@prisma/client.ts'

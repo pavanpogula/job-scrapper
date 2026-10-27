@@ -48,6 +48,7 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-24 (BF-0
 - **BF-017:** Cache publishing orchestration, worker failure isolation, and exit code contract (guarded: `ClusterScraper.test.ts`, `Publisher.test.ts`, `ScraperRunAll.test.ts`).
 - **BF-018:** API cache read-through parity, detail sharding, negative 404 LRU cache (guarded: `ReadThrough.test.ts`, `Hardening.test.ts`, `HealthMeta.test.ts`).
 - **BF-019:** Cache bodies equal DB-path bodies, all company pages are cached, and an idle API Redis client connects before its first command (guarded: `CacheParity.test.ts`, `HealthMeta.test.ts`).
+- **BF-020:** Search: every word starts a word in title/company/department/location, any order (guarded: `Search.test.ts` on real Postgres, `SearchTokenize.test.ts`).
 
 ## Top Gotchas
 1. **Modules executing on import:** `DbMenu.ts`, `DbInspect.ts`, `GenerateDocs.ts` run on import—never import them into other modules.

@@ -10,7 +10,7 @@
 
 ## 🤖 Bug-Fix Agent Protocol
 
-All bug-fix workflows follow the mandatory 9-step self-healing protocol documented in [`docs/self-healing-loop.md`](./self-healing-loop.md). This registry serves as the authoritative checklist of Regression Invariants (`BF-001` through `BF-019+`). Every fix must check and preserve all invariants below before committing.
+All bug-fix workflows follow the mandatory 9-step self-healing protocol documented in [`docs/self-healing-loop.md`](./self-healing-loop.md). This registry serves as the authoritative checklist of Regression Invariants (`BF-001` through `BF-020+`). Every fix must check and preserve all invariants below before committing.
 
 ---
 
@@ -219,6 +219,13 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Implemented in:** `src/cache/Publisher.ts`, `src/api/cache/ReadThrough.ts`, `src/api/Server.ts`.
 - **Regression Invariant:** For every cached view, the gunzipped cache body equals the DB-path body for the same request (ignoring `meta.lastScrapeAt`/`generation`); every ACTIVE company page is cached; an idle API Redis client is connected before the first command.
 - **Guarding tests:** `tests/unit/CacheParity.test.ts`, `tests/unit/HealthMeta.test.ts`.
+
+### BF-020: Job search matches all words, in any order, at word starts
+- **Symptom:** Multi-word searches silently dropped most matching jobs. Live on 2026-10-26: `senior software engineer` returned 678 jobs, `senior engineer` only 106 (missing every "Senior Software Engineer"), `software engineer senior` returned 0, and `SF` returned 310 including noise such as titles containing "Tran**sf**er".
+- **Root cause & fix:** `queryJobs` matched the whole search text as one substring of title, company, department or location. `src/lib/search.ts` now splits the text into lowercase tokens (edge punctuation stripped; `c++`, `c#`, `node.js`, `r&d` kept; max 8 tokens of 50 chars, 100-char input) and requires **every** token to start a word (field start, or after space, `-`, `(`, `/`, `,`, `&`) in **any** of title, company name, department name or location name. LIKE wildcards (`%`, `_`, `\`) are escaped so they match literally. Cache keys canonicalise the search (sorted tokens), so equivalent searches share one entry; searches are still never pre-rendered.
+- **Implemented in:** `src/lib/search.ts`, `src/api/db/queries.ts`, `src/lib/cache/keys.ts`; UI placeholder in `frontend/src/pages/BrowsePage.tsx`.
+- **Regression Invariant:** For any search, `/v1/jobs` returns exactly the visible jobs in which every token starts a word in title, company, department or location; filters only narrow the result; walking every page returns each match exactly once with `meta.total` equal to the match count, in a stable order.
+- **Guarding tests:** `tests/integration/Search.test.ts` (real PostgreSQL, independent reference matcher), `tests/unit/SearchTokenize.test.ts`, `tests/unit/ApiServer.test.ts`, `frontend/src/test/searchBox.test.tsx`.
 
 ---
 
