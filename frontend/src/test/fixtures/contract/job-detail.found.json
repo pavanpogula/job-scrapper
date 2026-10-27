@@ -1,0 +1,39 @@
+{
+  "id": "00000000-0000-4000-8000-000000000001",
+  "ashbyId": "ashby-job-1",
+  "title": "Senior Software Engineer 1",
+  "applyUrl": "https://jobs.ashbyhq.com/example/job-1",
+  "jobUrl": "https://jobs.ashbyhq.com/acme-corp/ashby-job-1",
+  "companySlug": "acme-corp",
+  "companyName": "Acme Corp",
+  "companyLogoUrl": null,
+  "department": "Engineering",
+  "location": "San Francisco",
+  "country": "US",
+  "region": "CA",
+  "city": "San Francisco",
+  "isRemote": true,
+  "workplaceType": "Remote",
+  "employmentType": "FullTime",
+  "publishedAt": "2026-02-15T10:01:00.000Z",
+  "lastUpdatedAt": "2026-02-15T10:01:00.000Z",
+  "lastUpdatedSource": "published",
+  "salaryMin": 50000,
+  "salaryMax": 60000,
+  "salaryCurrency": "USD",
+  "salaryInterval": "1 YEAR",
+  "isListed": true,
+  "active": true,
+  "descriptionHtml": "<p>Job description for role 1</p>",
+  "descriptionPlain": "Job description for role 1",
+  "team": "Platform Engineering",
+  "secondaryLocations": [
+    "New York, US"
+  ],
+  "companyJobCount": 3,
+  "company": {
+    "name": "Acme Corp",
+    "slug": "acme-corp",
+    "logoUrl": null
+  }
+}

@@ -9,13 +9,13 @@ description: "Protocol for API response shape changes and backend/frontend type 
 
 > [!NOTE]
 > `backend/src/api/types.ts` is the single source of truth for backend API response and query DTOs.
-> The `contract:fixtures` script and `scripts/contract/sync-fixtures.mjs` land in Phase P8a (commands marked below are available from P8a).
+> Fixtures are generated via `backend` script `contract:fixtures` and mirrored byte-for-byte to `frontend` via `scripts/contract/sync-fixtures.mjs`.
 
 Any HTTP response-shape change MUST, in the same PR, do all of the following. A shape change means adding, removing or renaming a field, or changing its nullability, an enum, pagination, or the error body.
 
 1. Update `backend/src/api/types.ts` and the mapper.
-2. Run `npm --prefix backend run contract:fixtures` (available from P8a) and commit `backend/tests/fixtures/contract/*`.
-3. Run `node scripts/contract/sync-fixtures.mjs` (available from P8a) and commit the frontend copy.
+2. Run `npm --prefix backend run contract:fixtures` and commit `backend/tests/fixtures/contract/*`.
+3. Run `node scripts/contract/sync-fixtures.mjs` and commit the frontend copy.
 4. Update `frontend/src/types/api.ts` until `npm --prefix frontend run check` passes.
 5. Add a CHANGELOG entry tagged `contract`.
 6. If cached bodies change, the PR notes that the owner must deploy the backend (run **Deploy to Vercel** with `app=backend`) and then dispatch `scrape-daily publish_only=true`.

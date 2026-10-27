@@ -19,6 +19,7 @@ All backend test commands are executed from the repository root with `npm --pref
 | Watch mode | `npm --prefix backend test -- --watch` |
 | Typecheck tests | `npm --prefix backend run typecheck:test` |
 | Lint backend code | `npm --prefix backend run lint` |
+| Update contract fixtures | `npm --prefix backend run contract:fixtures` |
 
 ---
 
@@ -34,8 +35,9 @@ All backend test commands are executed from the repository root with `npm --pref
 ## 3. Test Structure & Categories
 
 - `backend/tests/unit/`: Fast unit tests covering scrapers, sanitizers, circuit breakers, cache keys, and API controllers.
+- `backend/tests/contract/`: Deterministic supertest suite (`ContractFixtures.test.ts`) validating API endpoint contracts and asserting cache HIT == MISS parity (BF-019).
 - `backend/tests/e2e/`: End-to-end scraper pipeline and discovery pipeline tests.
-- `backend/tests/fixtures/`: Fixed JSON payloads for error reports and test cases.
+- `backend/tests/fixtures/`: Fixed JSON payloads for error reports, API mocks, and contract fixtures.
 - `backend/tests/helpers/`: Test factories and mock utilities.
 
 ---

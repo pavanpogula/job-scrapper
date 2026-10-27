@@ -225,11 +225,11 @@
 - **Rollback command:** `git revert --no-edit 873664d 242840c`
 - **Rollback chain:** `revert P6b` -> `revert P6a (d53bc12)` -> `revert P5 range (ee71be1^..93981d1)` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
-### [ ] P7 — Backend types + strictness
+### [x] P7 — Backend types + strictness (merged)
 - **Branch:** `plan/mono-p7-types-backend`
-- **PR:** `pending`
+- **PR:** #17
 - **Merge method:** `squash`
-- **Commit SHAs:** `a074fad`
+- **Commit SHAs:** `3140c8c`
 - **Owner decisions used:** All default
 - **Verification evidence:**
   - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 59 repo-level tests).
@@ -239,8 +239,14 @@
   - Ratchet System: Added `backend/scripts/any-ratchet.mjs` and `frontend/scripts/any-ratchet.mjs` enforcing non-increasing `no-explicit-any` counts against `.any-baseline.json`. ESLint rule `@typescript-eslint/no-explicit-any: error` active on `backend/src/api/**` and `backend/api/**` with 0 errors.
   - Documentation & Rules: Updated canonical `docs/agents/rules/api-contract-sync.md`, synchronized agent shells via `sync-shells.mjs`, documented `types.ts` in `backend/docs/api.md`, and regenerated `backend/docs/project-explorer.html`.
 - **Owner actions:** None
-- **Rollback command:** `git revert <squash-sha>`
+- **Rollback command:** `git revert --no-edit 3140c8c`
 - **Rollback chain:** `revert P7` -> `revert P6b (873664d, 242840c)` -> `revert P6a (d53bc12)` -> `revert P5 range (ee71be1^..93981d1)` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
+
+> **Note on Interleaved Side PRs:**
+> Between P7 and P8a, three repository enhancements were merged into `main`:
+> - PR #15 (`4918483`): Manual Vercel deployments via GitHub Actions (`deploy.yml`, ADR-0016).
+> - PR #16 (`e17b9cf`): Agent branch publishing script (`scripts/agents/push-branch.sh`, ADR-0017).
+> - PR #18 (`a66bab7`): Job last updated timestamp feature across scraper, database, API, and UI (ADR-0018).
 
 ### [ ] P8a — Contract fixtures + frontend alignment
 - **Branch:** `plan/mono-p8a-contract-parity`
@@ -248,10 +254,18 @@
 - **Merge method:** `squash`
 - **Commit SHAs:** `pending`
 - **Owner decisions used:** O3, O4
-- **Verification evidence:** `pending`
+- **Verification evidence:**
+  - `scripts/check-all.sh --no-install`: Passed all 3 steps (`backend check:all`, `frontend check`, and 60 repo-level tests).
+  - Snapshot Invariant: `git diff --exit-code origin/main -- 'backend/tests/**/__snapshots__/**'` verified with 0 diff.
+  - Contract Fixtures: Added `backend/tests/contract/ContractFixtures.test.ts` generating 9 golden contract fixtures in `backend/tests/fixtures/contract/`, asserting deterministic output shapes and cache HIT == MISS parity (BF-019).
+  - Parity Sync: Added `scripts/contract/sync-fixtures.mjs` and repo test `scripts/repo-tests/contract-sync.test.mjs` ensuring byte-for-byte fixture parity between backend and frontend.
+  - Frontend Contract Testing: Rewrote `frontend/src/test/contract.test.ts` with compile-time `satisfies` checks and exhaustive runtime key-set validation using type-level `Equal<X, Y>` assertions and zero type casts.
+  - Frontend DTO & Query Alignment: Updated `frontend/src/types/api.ts` to align with backend response models (`companyName: string | null` with UI fallbacks, `company: CompanyDetail | null`, `companyJobCount: number`, `HealthResponse` matching backend DTO; removed `postalAddress`, `FacetCount.label`, and `JobsResponse.facets`). Removed `createdAt` and `updatedAt` from `JobDetail` (O3 default). Removed unsupported filters (`company`, `department`, `location`, `city`) and `sortBy=title` from UI controls and query params (O4 default), while keeping backend-supported `sortBy=company`.
+  - Fixture Cleanup: Removed legacy DB-row fixtures `frontend/src/test/fixtures/sample-job.json` and `sample-company.json`, recording both under `"deleted"` in `scripts/migration/move-map.json` (verified via `move-manifest.test.mjs`).
+  - Any-Ratchet: Maintained 0 increases in both workspaces (`backend`: 257 total, `frontend`: 2 total).
 - **Owner actions:** None
 - **Rollback command:** `git revert <squash-sha>`
-- **Rollback chain:** `revert P8a` -> ...
+- **Rollback chain:** `revert P8a` -> `revert P7 (3140c8c)` -> `revert P6b (873664d, 242840c)` -> `revert P6a (d53bc12)` -> `revert P5 range (ee71be1^..93981d1)` -> `revert P4b (e6fa663)` -> `revert P4a (7fd7ad6)` -> `revert P3b (af99478)` -> `revert P3a range (750394d^..e91e778)`
 
 ### [ ] P8b — Approved behaviour changes
 - **Branch:** `plan/mono-p8b-<slug>`

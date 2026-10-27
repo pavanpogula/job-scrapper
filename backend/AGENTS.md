@@ -29,8 +29,8 @@ Run from `backend/`:
 ## Type Synchronization Summary
 When modifying HTTP response shapes in `src/api/`:
 - Follow the canonical `api-contract-sync` rule (`docs/agents/rules/api-contract-sync.md`).
-- Update `backend/src/api/types.ts` (lands in P7) and the mapper in `src/api/Server.ts`.
-- Run `npm run contract:fixtures` (available from P8a) to regenerate backend contract fixtures.
+- Update `backend/src/api/types.ts` and the mapper in `src/api/Server.ts`.
+- Run `npm run contract:fixtures` to regenerate backend contract fixtures, sync with `node scripts/contract/sync-fixtures.mjs`, and verify `frontend/src/test/contract.test.ts`.
 - Coordinate with `frontend/src/types/api.ts` to ensure frontend type parity.
 - Changes must be additive-first; never remove fields the deployed frontend reads.
 

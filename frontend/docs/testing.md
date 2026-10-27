@@ -31,12 +31,20 @@ All frontend test commands are executed from the repository root with `npm --pre
 ## 3. Test Suites
 
 - `src/test/smoke.test.ts`: Sanity smoke test ensuring test environment and DOM setup function correctly.
-- `src/test/contract.test.ts`: Validates data structures returned by mocked endpoints against UI contract expectations.
+- `src/test/contract.test.ts`: Compile-time `satisfies` and exhaustive runtime key-set validation asserting that UI DTO types match shared API contract fixtures (`frontend/src/test/fixtures/contract/`).
 - `src/test/sanitize.test.ts`: Tests HTML sanitization and safe text rendering.
 - `src/test/defaultQuery.test.ts`: Verifies search parameter serialization and default query states.
 - `src/test/countryFacets.test.tsx`: Integration test with MSW asserting country display names and filter dispatch.
+- `src/test/sortParams.test.ts`: URL `sort`/`order` parsing; unsupported values such as old `?sort=title` bookmarks (removed in P8a/O4) fall back to `publishedAt`/`desc`.
 - `src/test/formatJobFreshness.test.ts`: Unit tests for the job freshness label helper (Updated / Posted / First seen, relative and absolute dates, clock skew, invalid input; ADR-0018).
 - `src/test/jobFreshness.test.tsx`: Integration test with MSW asserting job cards render the freshness label as `<time>` elements, including the `publishedAt` fallback for cache bodies without the new fields.
+
+### Contract Fixture Parity
+Frontend contract fixtures in `src/test/fixtures/contract/` are mirrored byte-for-byte from backend contract fixtures:
+```bash
+node scripts/contract/sync-fixtures.mjs
+```
+The repo test `scripts/repo-tests/contract-sync.test.mjs` verifies that frontend fixtures remain in byte-for-byte lockstep with backend contract fixtures.
 
 ---
 

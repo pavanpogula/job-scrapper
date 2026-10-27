@@ -39,6 +39,7 @@ export const JobDetailPage: React.FC = () => {
   const detailFreshness = formatDetailFreshness(job);
 
   const isClosed = job?.active === false;
+  const companyDisplayName = job ? (job.company?.name || job.companyName || job.companySlug || 'Ashby Employer') : 'Ashby Employer';
 
   return (
     <Container maxWidth="lg" sx={{ py: 4, mb: isMobile ? 8 : 4 }}>
@@ -63,10 +64,10 @@ export const JobDetailPage: React.FC = () => {
         {job && (
           <>
             {/* React 19 native metadata tags */}
-            <title>{`${job.title} at ${job.companyName || 'Ashby Employer'}`}</title>
+            <title>{`${job.title} at ${companyDisplayName}`}</title>
             <meta
               name="description"
-              content={`Apply for ${job.title} at ${job.companyName}. Verified direct posting on Ashby ATS.`}
+              content={`Apply for ${job.title} at ${companyDisplayName}. Verified direct posting on Ashby ATS.`}
             />
 
             {isClosed && (
@@ -97,7 +98,7 @@ export const JobDetailPage: React.FC = () => {
                       <Box
                         component="img"
                         src={job.companyLogoUrl}
-                        alt={`${job.companyName} logo`}
+                        alt={`${companyDisplayName} logo`}
                         loading="lazy"
                         sx={{
                           width: 44,
@@ -113,7 +114,7 @@ export const JobDetailPage: React.FC = () => {
                     )}
                     <Box>
                       <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                        {job.companyName}
+                        {companyDisplayName}
                       </Typography>
                       {job.department && (
                         <Typography variant="caption" color="text.secondary">
@@ -224,7 +225,7 @@ export const JobDetailPage: React.FC = () => {
                     </Typography>
                   ) : (
                     <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                      The full role description is hosted directly on {job.companyName}'s official application page.
+                      The full role description is hosted directly on {companyDisplayName}'s official application page.
                     </Typography>
                   )}
                 </Box>
@@ -252,7 +253,7 @@ export const JobDetailPage: React.FC = () => {
                   <Box sx={{ mt: 2.5, display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                     <VerifiedUserOutlinedIcon sx={{ fontSize: 18, color: 'success.main', mt: 0.2 }} />
                     <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-                      Direct employer ATS apply. You will apply on {job.companyName}'s official Ashby portal. No resume harvesting or accounts required.
+                      Direct employer ATS apply. You will apply on {companyDisplayName}'s official Ashby portal. No resume harvesting or accounts required.
                     </Typography>
                   </Box>
 
@@ -273,7 +274,7 @@ export const JobDetailPage: React.FC = () => {
                   <Stack direction="row" spacing={1.5} sx={{ mb: 1, alignItems: 'center' }}>
                     <BusinessOutlinedIcon fontSize="small" color="action" />
                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                      {job.companyName}
+                      {companyDisplayName}
                     </Typography>
                   </Stack>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
