@@ -427,13 +427,9 @@ export async function validateAndSeedGreenhouseTokens(
     let inserted = 0;
     let timedOutCount = 0;
 
-    for (const token of tokens) {
-        if (Date.now() >= options.deadline) {
-            timedOutCount++;
-            continue;
-        }
-
-        await limiter(async () => {
+    // Queue every token on the limiter so up to 5 are validated at once (a 429 slows all of them down)
+    const work = tokens.map((token) =>
+        limiter(async () => {
             if (Date.now() >= options.deadline) {
                 timedOutCount++;
                 return;
@@ -502,10 +498,34 @@ export async function validateAndSeedGreenhouseTokens(
                 }
                 // 404 is dropped (valid = false)
             }
-        });
-    }
+        })
+    );
+    await Promise.all(work);
 
     return { validated, inserted, timedOutCount };
+}
+
+/**
+ * @summary Parses --budget=N (a positive whole number) or --budget=all (no cap) into a token budget
+ */
+export function parseTokenBudget(raw: string): number {
+    const value = raw.trim().toLowerCase();
+    if (value === 'all') return Number.MAX_SAFE_INTEGER;
+    if (!/^\d+$/.test(value) || Number(value) < 1) {
+        throw new Error(`Invalid --budget="${raw}": use a positive whole number or "all"`);
+    }
+    return Number(value);
+}
+
+/**
+ * @summary Parses --time-budget-min=N (1 to 120 whole minutes) into milliseconds
+ */
+export function parseTimeBudgetMs(raw: string): number {
+    const value = raw.trim();
+    if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 120) {
+        throw new Error(`Invalid --time-budget-min="${raw}": use a whole number of minutes from 1 to 120`);
+    }
+    return Number(value) * 60 * 1000;
 }
 
 /**
@@ -647,7 +667,19 @@ if (require.main === module) {
     const sourceArg = process.argv.find(a => a.startsWith('--source='));
     const source = sourceArg ? (sourceArg.split('=')[1].toLowerCase() as 'ashby' | 'greenhouse') : undefined;
 
-    runDiscovery({ source, includeCommonCrawl, enrichMetadata })
+    let tokenBudget: number | undefined;
+    let timeBudgetMs: number | undefined;
+    try {
+        const budgetArg = process.argv.find(a => a.startsWith('--budget='));
+        if (budgetArg) tokenBudget = parseTokenBudget(budgetArg.split('=')[1]);
+        const timeArg = process.argv.find(a => a.startsWith('--time-budget-min='));
+        if (timeArg) timeBudgetMs = parseTimeBudgetMs(timeArg.split('=')[1]);
+    } catch (e: unknown) {
+        console.error(`❌ ${(e as Error).message}`);
+        process.exit(1);
+    }
+
+    runDiscovery({ source, includeCommonCrawl, enrichMetadata, tokenBudget, timeBudgetMs })
         .then(async () => {
             await prisma.$disconnect();
         })

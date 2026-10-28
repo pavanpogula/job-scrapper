@@ -11,6 +11,8 @@ import {
   fetchLatestCrawlId,
   isValidGreenhouseToken,
   isValidSlug,
+  parseTimeBudgetMs,
+  parseTokenBudget,
   runDiscovery,
   validateAndSeedGreenhouseTokens,
 } from '../../src/discovery/CdxWorker';
@@ -225,5 +227,64 @@ describe('Greenhouse Discovery', () => {
         })
       );
     });
+  });
+});
+
+describe('Greenhouse discovery budget and concurrency', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('validates up to 5 tokens at once (never more) and still handles every token', async () => {
+    const mockDb = {
+      company: { upsert: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}) },
+    } as unknown as import('@prisma/client').PrismaClient;
+
+    let inFlight = 0;
+    let peak = 0;
+    mockedAxios.get.mockImplementation((async () => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      await new Promise((r) => setTimeout(r, 15));
+      inFlight--;
+      return { status: 200, data: { name: 'Board' } };
+    }) as never);
+
+    const tokens = Array.from({ length: 30 }, (_, i) => `board${i}`);
+    const result = await validateAndSeedGreenhouseTokens(tokens, { deadline: Date.now() + 10000, prismaClient: mockDb });
+
+    expect(result.validated).toBe(30);
+    expect(result.inserted).toBe(30);
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(5);
+  });
+
+  it('stops starting new validations once the deadline passes and counts the rest as timed out', async () => {
+    const mockDb = {
+      company: { upsert: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}) },
+    } as unknown as import('@prisma/client').PrismaClient;
+    mockedAxios.get.mockImplementation((async () => {
+      await new Promise((r) => setTimeout(r, 20));
+      return { status: 200, data: { name: 'Board' } };
+    }) as never);
+
+    const tokens = Array.from({ length: 40 }, (_, i) => `slow${i}`);
+    const result = await validateAndSeedGreenhouseTokens(tokens, { deadline: Date.now() + 60, prismaClient: mockDb });
+
+    expect(result.validated + result.timedOutCount).toBe(40);
+    expect(result.timedOutCount).toBeGreaterThan(0);
+    expect(result.validated).toBeGreaterThan(0);
+  });
+
+  it('parses --budget (number or "all") and --time-budget-min, rejecting bad values', () => {
+    expect(parseTokenBudget('2000')).toBe(2000);
+    expect(parseTokenBudget(' ALL ')).toBe(Number.MAX_SAFE_INTEGER);
+    for (const bad of ['0', '-5', '1.5', 'abc', '', '10x']) {
+      expect(() => parseTokenBudget(bad)).toThrow(/Invalid --budget/);
+    }
+    expect(parseTimeBudgetMs('20')).toBe(20 * 60 * 1000);
+    for (const bad of ['0', '121', 'x', '', '2.5']) {
+      expect(() => parseTimeBudgetMs(bad)).toThrow(/Invalid --time-budget-min/);
+    }
   });
 });

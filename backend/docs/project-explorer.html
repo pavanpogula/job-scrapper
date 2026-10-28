@@ -2132,7 +2132,7 @@
       },
       {
         "label": "Functions",
-        "value": "13"
+        "value": "15"
       }
     ],
     "functions": [
@@ -2183,6 +2183,14 @@
       {
         "name": "validateAndSeedGreenhouseTokens()",
         "desc": "Validates candidate Greenhouse tokens with GET /v1/boards/{token} at <= 5 concurrent and upserts Company records"
+      },
+      {
+        "name": "parseTokenBudget()",
+        "desc": "Parses --budget=N (a positive whole number) or --budget=all (no cap) into a token budget"
+      },
+      {
+        "name": "parseTimeBudgetMs()",
+        "desc": "Parses --time-budget-min=N (1 to 120 whole minutes) into milliseconds"
       },
       {
         "name": "runDiscovery()",

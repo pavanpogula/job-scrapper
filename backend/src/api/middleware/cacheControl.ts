@@ -51,10 +51,16 @@ export function cacheControlMiddleware(req: Request, res: Response, next: NextFu
 
     if (isListOrMeta && status === 200) {
       const cacheHeader = res.getHeader('X-Cache');
-      if (cacheHeader === 'BYPASS') {
+      const cacheReason = res.getHeader('X-Cache-Reason');
+      // BYPASS normally means a degraded cache (circuit_open, budget_exhausted, no_generation): keep it short so the
+      // site recovers quickly. "not_configured" means there is no Redis at all, so BYPASS is the permanent state and
+      // the edge cache is the only cache: use the long time.
+      if (cacheHeader === 'BYPASS' && cacheReason !== 'not_configured') {
         res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=600');
       } else {
-        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400');
+        // Data changes only when a scrape finishes (a few times a day), so the edge may reuse an answer for an hour.
+        // Worst case a visitor sees data up to ~2h old (1h fresh + 1h stale-while-revalidate).
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=3600, stale-while-revalidate=3600, stale-if-error=86400');
         res.setHeader('Vercel-Cache-Tag', 'jobs-v1');
       }
       return;

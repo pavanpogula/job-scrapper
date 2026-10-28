@@ -96,7 +96,7 @@ sequenceDiagram
   participant R as Upstash Redis
   participant PG as Neon Postgres
   B->>C: GET /v1/jobs?page=2&workplaceType=Remote
-  alt CDN fresh (s-maxage 300)
+  alt CDN fresh (s-maxage 3600)
     C-->>B: 200 (cached at edge)
   else
     C->>F: forward
