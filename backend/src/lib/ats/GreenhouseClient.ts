@@ -207,7 +207,15 @@ export function parseGreenhousePlace(text: string | null | undefined): {
   const parts = text
     .split(',')
     // "Remote - California" / "Remote (U.S.)" -> "California" / "U.S."
-    .map((p) => sanitizeText(p).replace(/^remote\s*[-–:(]\s*/i, '').replace(/\)$/, '').trim())
+    .map((p) =>
+      sanitizeText(p)
+        .replace(/^remote\s*[-–:(]\s*/i, '')
+        .replace(/\)$/, '')
+        // US ZIP suffix: "NC - 27410" -> "NC", "TX 78701" -> "TX", a lone "10036" -> ""
+        .replace(/\s*[-–]?\s*\b\d{5}(?:-\d{4})?\s*$/, '')
+        .replace(/[\s,–-]+$/, '')
+        .trim()
+    )
     .filter((p) => p.length > 0 && p.toLowerCase() !== 'n/a');
   if (parts.length === 0) return empty;
 
@@ -242,7 +250,11 @@ export function parseGreenhousePlace(text: string | null | undefined): {
   if (!region && before.length >= 2) {
     region = before.slice(1).join(', ');
   }
-  const city = before.length >= 1 ? before[0] : null;
+  // Address-style parts ("Hawthorne at Friendly - 900 Hobbs Rd - Greensboro") keep only the last " - " segment.
+  // With a matched US state the city is the part right before it ("1114 Avenue, NYC, NY" -> NYC).
+  const rawCity =
+    before.length === 0 ? null : country === 'US' && region === parts[countryIdx] ? before[before.length - 1] : before[0];
+  const city = rawCity ? (rawCity.split(/\s+[-–]\s+/).pop() ?? rawCity).trim() || null : null;
 
   const postal: NormalizedPostal = {};
   if (country) postal.addressCountry = country;
@@ -252,7 +264,9 @@ export function parseGreenhousePlace(text: string | null | undefined): {
 }
 
 /**
- * @summary Parses the first offices[].location that yields a country; falls back to the job location text
+ * @summary Resolves country/region/city for a job. The job's own location text wins when it names a country
+ * ("Dublin, Ireland" stays Ireland even if the office list says Berlin). Otherwise the office list is used,
+ * preferring the office whose city equals the job's city ("Berlin" picks Berlin over Dublin), then the first one.
  */
 function parseGreenhouseOfficePostal(
   offices: GreenhouseOffice[] | null | undefined,
@@ -263,14 +277,29 @@ function parseGreenhouseOfficePostal(
   region: string | null;
   city: string | null;
 } {
-  if (Array.isArray(offices)) {
-    for (const office of offices) {
-      const parsed = parseGreenhousePlace(office?.location);
-      if (parsed.country) return parsed;
-    }
-  }
   const fromLocation = parseGreenhousePlace(locationText);
-  if (fromLocation.country) return fromLocation;
+  const parsedOffices = Array.isArray(offices)
+    ? offices.map((o) => parseGreenhousePlace(o?.location)).filter((p) => p.country)
+    : [];
+
+  if (fromLocation.country) {
+    // Same country and same city in an office: use the office's fuller data (full region name)
+    const fuller = parsedOffices.find(
+      (p) =>
+        p.country === fromLocation.country &&
+        p.region &&
+        p.city &&
+        fromLocation.city &&
+        p.city.toLowerCase() === fromLocation.city.toLowerCase()
+    );
+    return fuller ?? fromLocation;
+  }
+
+  if (parsedOffices.length > 0) {
+    const wanted = typeof locationText === 'string' ? sanitizeText(locationText).split(',')[0].trim().toLowerCase() : '';
+    const sameCity = wanted ? parsedOffices.find((p) => p.city && p.city.toLowerCase() === wanted) : undefined;
+    return sameCity ?? parsedOffices[0];
+  }
   if (typeof locationText === 'string' && US_TEXT_REGEX.test(locationText)) {
     return { postal: { addressCountry: 'US' }, country: 'US', region: null, city: null };
   }

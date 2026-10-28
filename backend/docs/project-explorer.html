@@ -988,12 +988,6 @@
                     </div>
                 </li></ul>
                 </li></ul>
-                </li><li>
-                    <div class="tree-item file" onclick="showFile('g5live_ts')">
-                        <span class="material-icons-round">description</span>
-                        <span>g5live.ts</span>
-                        
-                    </div>
                 </li></ul>
     </li>
             </ul>
@@ -1011,11 +1005,6 @@
             <h4>index.ts</h4>
             <p>Exports Express application for Vercel serverless runtime...</p>
         </div>
-<div class="overview-card" onclick="showFile('g5live_ts')">
-            <div class="card-icon blue">📝</div>
-            <h4>g5live.ts</h4>
-            <p>No description...</p>
-        </div>
 <div class="overview-card" onclick="showFile('prisma_schema_prisma')">
             <div class="card-icon purple">🗄️</div>
             <h4>schema.prisma</h4>
@@ -1030,6 +1019,11 @@
             <div class="card-icon cyan">📜</div>
             <h4>generate-readme.ts</h4>
             <p>Parses the latest CSV job export with RFC-4180 quote handlin...</p>
+        </div>
+<div class="overview-card" onclick="showFile('src_api_Server_ts')">
+            <div class="card-icon blue">📝</div>
+            <h4>Server.ts</h4>
+            <p>Serves REST API endpoints for jobs, companies, and facets qu...</p>
         </div></div>
             </div>
             <div id="fileDetail">
@@ -1075,27 +1069,6 @@
     "icon": "📝",
     "iconClass": "blue",
     "summary": "Exports Express application for Vercel serverless runtime",
-    "tags": [
-      "Undocumented"
-    ],
-    "info": [
-      {
-        "label": "Type",
-        "value": "TypeScript"
-      },
-      {
-        "label": "Functions",
-        "value": "0"
-      }
-    ],
-    "functions": []
-  },
-  "g5live_ts": {
-    "name": "g5live.ts",
-    "path": "g5live.ts",
-    "icon": "📝",
-    "iconClass": "blue",
-    "summary": "No description available",
     "tags": [
       "Undocumented"
     ],
@@ -2681,7 +2654,7 @@
       },
       {
         "name": "parseGreenhouseOfficePostal()",
-        "desc": "Parses the first offices[].location that yields a country; falls back to the job location text"
+        "desc": "Resolves country/region/city for a job. The job's own location text wins when it names a country"
       },
       {
         "name": "extractMetadataWorkplaceType()",
