@@ -22,6 +22,7 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run db:clean` | `../src/database/DbClean.ts` | ✅ | — | — | nothing (dry run) | 0 (errors caught & logged) |
 | `npm run db:clean -- --execute` | same | ✅ | — | — | **deletes** `Job` + `Company` rows with invalid slugs | 0 |
 | `npm run db:backfill-source` | `src/database/BackfillSource.ts` | ✅ | — | — | backfills `externalId` & `atsToken`, creates unique indexes | 1 |
+| `npm run source:deactivate -- <source> [--dry-run] [--i-know]` | `src/database/SourceDeactivate.ts` | ✅ | — | — | deactivates all active jobs for source (`active=false`) | 1 |
 | `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force] [-- --sources=s1,s2]` | `../src/utils/EnrichCompanies.ts` | ✅ | — | Ashby hosted boards | updates `Company.name` & `Company.logoUrl` | 1 |
 | `npm run verify` | `../src/utils/Verify.ts` | ✅ | — | — | read-only (console report) | 1 |
 | `npm run api:start` | `../src/api/Server.ts` | ✅ | — | — | HTTP server on port 3001 with rate limiting and static UI serving | 1 |
@@ -172,6 +173,13 @@ Interactive `readline` loop (`Select an option [1-8]`). Runs on import (no `requ
   * `--force`: Force enrichment for all companies, not just those missing name or logo.
   * `--sources=ashby[,greenhouse]`: comma-separated ATS sources to enrich (default: `ashby`). Unknown source exits 1.
 - Queries active hiring companies matching enabled sources, dispatches to the source's registered `AtsClient.fetchCompanyMetadata`. Companies with an unregistered source are skipped and counted (never dispatched to Ashby).
+
+### `npm run source:deactivate -- <source> [--dry-run] [--i-know]` — `src/database/SourceDeactivate.ts`
+- Emergency rollback CLI to deactivate all jobs for an ATS source (e.g. `greenhouse`) by setting `active = false`.
+- Leaves `Company.status` unchanged (empty Greenhouse boards remain hidden from public API listings and profiles via G5 rule).
+- Refuses to deactivate primary source `ashby` without `--i-know`.
+- `--dry-run`: only queries and prints active and total counts without mutating the database.
+- Used in `.github/workflows/scrape-daily.yml` via `deactivate_source` input to allow rolling back from GitHub Actions without production credentials.
 
 ### `npm run verify` — `src/utils/Verify.ts`
 - Prints counts: `Company` total / `ACTIVE` / `NOT_FOUND`; `Job` total / active / inactive / with salary

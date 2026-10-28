@@ -4,6 +4,7 @@ A TypeScript monorepo providing a high-performance batch scraper feeding Neon Po
 
 - **Live UI:** [https://job-scrapper-ui.vercel.app](https://job-scrapper-ui.vercel.app)
 - **Live API:** [https://job-scrapper-api-eight.vercel.app](https://job-scrapper-api-eight.vercel.app)
+- **Sources:** Ashby, Greenhouse
 
 ---
 

@@ -139,6 +139,7 @@ export function classifyReport(
         outputDir?: string;
         runHistoryPath?: string;
         githubOutput?: string;
+        stepSummary?: string;
         openPrs?: Array<{ headRefName: string; body: string }>;
     } = {}
 ): ClassificationResult {
@@ -467,6 +468,16 @@ export function classifyReport(
     markdown += `| DB active jobs | ${report.summary.dbActiveJobsAfter ?? report.summary.jobsCollected} | ${previousRun?.dbActiveJobs ?? '—'} | — |\n`;
     markdown += `| Not found / failed | ${report.summary.companiesNotFound} / ${report.summary.companiesFailed} | — | |\n\n`;
 
+    if (report.summary.bySource && Object.keys(report.summary.bySource).length > 0) {
+        markdown += `### By Source\n`;
+        markdown += `| Source | Companies Attempted | With Jobs | Jobs Collected | Not Found | Errors |\n`;
+        markdown += `|---|---|---|---|---|---|\n`;
+        for (const [src, s] of Object.entries(report.summary.bySource)) {
+            markdown += `| ${src} | ${s.companiesAttempted} | ${s.companiesWithJobs} | ${s.jobsCollected} | ${s.notFound} | ${s.apiErrors} |\n`;
+        }
+        markdown += '\n';
+    }
+
     if (hasActionable) {
         markdown += `## Actionable issues (${fixerIssues.length}) — fixer triggered: yes\n`;
         for (const iss of fixerIssues) {
@@ -511,6 +522,16 @@ export function classifyReport(
             fs.appendFileSync(options.githubOutput, outLines, 'utf8');
         } catch {
             // ignore github output error
+        }
+    }
+
+    // 8. Write to Step Summary if specified
+    const stepSummaryTarget = options.stepSummary || process.env.GITHUB_STEP_SUMMARY;
+    if (stepSummaryTarget) {
+        try {
+            fs.appendFileSync(stepSummaryTarget, markdown + '\n', 'utf8');
+        } catch {
+            // ignore step summary write error
         }
     }
 

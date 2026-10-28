@@ -27,6 +27,20 @@ on:
       fixture_report:
         description: 'Repo path of a v2 report fixture, e.g. backend/tests/fixtures/reports/actionable.json; skips scraping'
         default: ''
+      sources:
+        description: 'ATS sources to scrape (comma-separated, e.g. ashby,greenhouse; empty uses GREENHOUSE_ENABLED toggle)'
+        default: ''
+      force_publish:
+        description: 'Force cache publish (appends --force to cache:publish in publish_only path)'
+        type: boolean
+        default: false
+      deactivate_source:
+        description: 'Emergency rollback: deactivate all jobs for a source and skip scraping'
+        type: choice
+        options:
+          - 'none'
+          - 'greenhouse'
+        default: 'none'
 
 permissions:
   contents: read
@@ -60,6 +74,8 @@ jobs:
       CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       SCRAPE_WORKER_TIMEOUT_MS: '900000'
       GH_TOKEN: ${{ github.token }}
+      GREENHOUSE_ENABLED: ${{ vars.GREENHOUSE_ENABLED }}
+      EFFECTIVE_SOURCES: ${{ inputs.sources != '' && inputs.sources || (vars.GREENHOUSE_ENABLED == 'true' && 'ashby,greenhouse' || 'ashby') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -95,6 +111,10 @@ jobs:
           fi
         continue-on-error: true
 
+      - name: Deactivate source (emergency rollback)
+        if: inputs.deactivate_source != '' && inputs.deactivate_source != 'none'
+        run: npm run source:deactivate -- ${{ inputs.deactivate_source }}
+
       - name: Restore run history cache
         uses: actions/cache/restore@v6
         with:
@@ -105,20 +125,28 @@ jobs:
             scrape-history-
 
       - name: Enrich active companies metadata
-        if: inputs.fixture_report == '' || inputs.fixture_report == null
-        run: npm run enrich:companies
+        if: (inputs.fixture_report == '' || inputs.fixture_report == null) && (inputs.deactivate_source == '' || inputs.deactivate_source == 'none')
+        run: npm run enrich:companies -- --sources=$EFFECTIVE_SOURCES
         continue-on-error: true
 
       - name: Run scrape or fixture
         id: scrape
         run: |
           set +e
-          if [ -n "${{ inputs.fixture_report }}" ]; then
+          if [ -n "${{ inputs.deactivate_source }}" ] && [ "${{ inputs.deactivate_source }}" != "none" ]; then
+            echo "Source ${{ inputs.deactivate_source }} deactivated; skipping scrape."
+          elif [ -n "${{ inputs.fixture_report }}" ]; then
             npm run report:install-fixture -- "${{ inputs.fixture_report }}"; true
           elif [ "${{ inputs.publish_only }}" = "true" ]; then
-            npm run cache:publish
+            PUBLISH_ARGS=""
+            [ "${{ inputs.force_publish }}" = "true" ] && PUBLISH_ARGS="--force"
+            if [ -n "$PUBLISH_ARGS" ]; then
+              npm run cache:publish -- $PUBLISH_ARGS
+            else
+              npm run cache:publish
+            fi
           else
-            ARGS="--workers=${{ inputs.workers || '4' }}"
+            ARGS="--workers=${{ inputs.workers || '4' }} --sources=$EFFECTIVE_SOURCES"
             [ "${{ inputs.skip_publish }}" = "true" ] && ARGS="$ARGS --skip-publish"
             [ "${{ inputs.recheck_not_found }}" = "true" ] && ARGS="$ARGS --recheck-not-found"
             npm run scrape:parallel -- $ARGS

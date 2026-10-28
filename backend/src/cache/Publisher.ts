@@ -27,6 +27,7 @@ import {
   SingleFilter,
 } from '../api/contract';
 import { computeFacets, queryCompanies } from '../api/db/queries';
+import { toAtsSource } from '../lib/ats/source';
 
 export interface CachePublishOptions {
   runId: string;
@@ -58,6 +59,7 @@ export interface CachePublishResult {
   commands?: number;
   jobCount?: number;
   companiesWithJobs?: number;
+  bySource?: Record<string, number>;
   durationMs: number;
   step?: string;
   error?: string;
@@ -192,6 +194,12 @@ export async function publishCacheGeneration(
       snapshotJobs.map((j: any) => j.companySlug).filter(Boolean)
     ).size;
 
+    const bySource: Record<string, number> = {};
+    for (const j of snapshotJobs) {
+      const src = toAtsSource(j.source);
+      bySource[src] = (bySource[src] || 0) + 1;
+    }
+
     // Sanity Gate
     const lastPublishRaw = await redis.get(KEY_LAST_PUBLISH);
     let previousPublish: any = null;
@@ -203,17 +211,43 @@ export async function publishCacheGeneration(
       }
     }
 
-    if (previousPublish && previousPublish.jobCount > 0 && !force) {
-      const activeDrop = snapshotJobs.length < 0.7 * previousPublish.jobCount;
-      const hiringDrop = hiringCompaniesCount < 0.8 * (previousPublish.companiesWithJobs || 1);
+    if (previousPublish && !force) {
+      const activeDrop =
+        typeof previousPublish.jobCount === 'number' &&
+        previousPublish.jobCount > 0 &&
+        snapshotJobs.length < 0.7 * previousPublish.jobCount;
+      const hiringDrop =
+        typeof previousPublish.jobCount === 'number' &&
+        previousPublish.jobCount > 0 &&
+        hiringCompaniesCount < 0.8 * (previousPublish.companiesWithJobs || 1);
 
-      if (activeDrop || hiringDrop) {
+      // Per-source sanity gate: gate when any source with baseline >= 100 drops > 30%
+      let sourceGated = false;
+      let gatedSourceInfo: { source: string; baseline: number; current: number } | undefined;
+      const prevBySource: Record<string, number> = previousPublish.bySource || {};
+      for (const [src, baseline] of Object.entries(prevBySource)) {
+        if (typeof baseline === 'number' && baseline >= 100) {
+          const currentCount = bySource[src] || 0;
+          if (currentCount < 0.7 * baseline) {
+            sourceGated = true;
+            gatedSourceInfo = {
+              source: src,
+              baseline,
+              current: currentCount,
+            };
+            break;
+          }
+        }
+      }
+
+      if (activeDrop || hiringDrop || sourceGated) {
         if (options.tracker?.trackError) {
           options.tracker.trackError('sanity_gate_failed', {
             currentJobs: snapshotJobs.length,
             previousJobs: previousPublish.jobCount,
             currentHiring: hiringCompaniesCount,
             previousHiring: previousPublish.companiesWithJobs,
+            ...(sourceGated ? { gatedSource: gatedSourceInfo } : {}),
           });
         }
 
@@ -225,6 +259,7 @@ export async function publishCacheGeneration(
           status: 'gated',
           jobCount: snapshotJobs.length,
           companiesWithJobs: hiringCompaniesCount,
+          bySource,
           durationMs: Date.now() - startTime,
         };
       }
@@ -419,6 +454,7 @@ export async function publishCacheGeneration(
         commands: (redis.commandCount ?? 0) - initialCommandCount,
         jobCount: snapshotJobs.length,
         companiesWithJobs: hiringCompaniesCount,
+        bySource,
         durationMs: Date.now() - startTime,
       };
     }
@@ -542,6 +578,7 @@ export async function publishCacheGeneration(
       status: 'published',
       jobCount: snapshotJobs.length,
       companiesWithJobs: hiringCompaniesCount,
+      bySource,
     };
 
     const multi = redis.multi();
@@ -586,6 +623,7 @@ export async function publishCacheGeneration(
       commands: (redis.commandCount ?? 0) - initialCommandCount,
       jobCount: snapshotJobs.length,
       companiesWithJobs: hiringCompaniesCount,
+      bySource,
       durationMs: Date.now() - startTime,
     };
   } catch (error: any) {

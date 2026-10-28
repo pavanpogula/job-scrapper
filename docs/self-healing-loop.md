@@ -44,8 +44,9 @@ Reports are classified by `src/lib/ReportClassifier.ts` against the telemetry ru
 
 ### Multi-Source Telemetry (`source` & `summary.bySource`)
 - Every `RecordedErrorEvent` in a v2 report may carry an optional `source: 'ashby' | 'greenhouse'` field identifying the ATS adapter that emitted it (`gh--*` company slugs also indicate Greenhouse when `source` is omitted).
-- `summary.bySource[source]` aggregates per-ATS counters (`companiesAttempted`, `companiesWithJobs`, `jobsCollected`, `notFound`, `apiErrors`) across single-process and cluster runs (`ErrorTracker.mergeReports` sums `bySource` per source).
+- `summary.bySource[source]` aggregates per-ATS counters (`companiesAttempted`, `companiesWithJobs`, `jobsCollected`, `notFound`, `apiErrors`) across single-process and cluster runs (`ErrorTracker.mergeReports` sums `bySource` per source). `ReportClassifier` formats a `### By Source` breakdown table into run summaries and appends it to GitHub Actions `$GITHUB_STEP_SUMMARY`.
 - `ReportClassifier` maps `relevantBfs` in a source-aware manner: Ashby `api_error` / `not_found` events map to `['BF-001', 'BF-015']` / `['BF-001', 'BF-006']`, whereas Greenhouse `api_error` / `not_found` events map to `['BF-023', 'BF-015']` / `['BF-023', 'BF-006']` (never `BF-001`, which is Ashby GraphQL fallback). Existing Ashby telemetry message strings remain byte-identical so fingerprint hashes never reset.
+- **Per-Source Cache Sanity Gate:** `Publisher.ts` persists `bySource` active-job counts in `lastPublish`. The sanity gate evaluates both overall job drops (> 30%) and per-source job drops (> 30% from a baseline ≥ 100 jobs). If any source drops > 30% from a valid baseline, publication gates (exit 2). Sources with no baseline never gate. `--force` bypasses the gate.
 
 ---
 

@@ -481,7 +481,7 @@ export async function validateAndSeedGreenhouseTokens(
                                 await db.company.update({
                                     where: { slug },
                                     data: {
-                                        lastCheckedAt: new Date(),
+                                        lastEnrichedAt: new Date(),
                                         ...(meta.logoUrl ? { logoUrl: meta.logoUrl } : {}),
                                     },
                                 });

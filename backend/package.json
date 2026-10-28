@@ -16,6 +16,7 @@
     "db:backfill-source": "npx ts-node src/database/BackfillSource.ts",
     "db:inspect": "npx ts-node src/database/DbInspect.ts",
     "db:menu": "npx ts-node src/database/DbMenu.ts",
+    "source:deactivate": "npx ts-node src/database/SourceDeactivate.ts",
     "enrich:companies": "npx ts-node src/utils/EnrichCompanies.ts",
     "prisma:studio": "npx prisma studio",
     "docs:generate": "npx ts-node scripts/GenerateDocs.ts",

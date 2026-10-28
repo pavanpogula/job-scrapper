@@ -355,6 +355,12 @@
                         <span>NormalizeCountries.ts</span>
                         
                     </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_database_SourceDeactivate_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>SourceDeactivate.ts</span>
+                        
+                    </div>
                 </li></ul>
                 </li><li class="">
                     <div class="tree-item folder" onclick="toggleFolder(this)">
@@ -981,6 +987,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_SourceDeactivate_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>SourceDeactivate.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_Verify_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Verify.test.ts</span>
@@ -1109,7 +1121,7 @@
     "functions": [
       {
         "name": "Company",
-        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• source: Ats\\n• atsToken: String\\n• status: CompanyStatus\\n• consecutiveNotFound: Int\\n• consecutiveFailures: Int\\n• lastSuccessAt: DateTime\\n• lastCheckedAt: DateTime\\n• pendingEmptySince: DateTime\\n• jobs: Job[]\\n• createdAt: DateTime"
+        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• source: Ats\\n• atsToken: String\\n• status: CompanyStatus\\n• consecutiveNotFound: Int\\n• consecutiveFailures: Int\\n• lastSuccessAt: DateTime\\n• lastCheckedAt: DateTime\\n• lastEnrichedAt: DateTime\\n• pendingEmptySince: DateTime\\n• jobs: Job[]\\n• createdAt: DateTime"
       },
       {
         "name": "Department",
@@ -2063,6 +2075,37 @@
       {
         "name": "main()",
         "desc": "CLI entry point for country normalization"
+      }
+    ]
+  },
+  "src_database_SourceDeactivate_ts": {
+    "name": "SourceDeactivate.ts",
+    "path": "src/database/SourceDeactivate.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Emergency rollback CLI to deactivate all jobs for an ATS source (e.g. greenhouse) without affecting company status",
+    "tags": [
+      "Database",
+      "Rollback",
+      "Deactivate",
+      "Multi-source",
+      "ATS",
+      "G6"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "deactivateSource()",
+        "desc": "Deactivates all active jobs for a specific ATS source while leaving company status unchanged"
       }
     ]
   },
@@ -4822,6 +4865,32 @@
       "Seed",
       "Memory Diff",
       "Database"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_SourceDeactivate_test_ts": {
+    "name": "SourceDeactivate.test.ts",
+    "path": "tests/unit/SourceDeactivate.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Guards G6 rollback invariant: dry-run counts, real run touches target source only, ashby guard",
+    "tags": [
+      "Unit Test",
+      "Rollback",
+      "Deactivate",
+      "Multi-source",
+      "ATS",
+      "G6"
     ],
     "info": [
       {

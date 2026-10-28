@@ -175,6 +175,7 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
             for (const [key, current] of jobs.entries()) {
                 let matches = true;
                 if (w.companySlug && current.companySlug !== w.companySlug) matches = false;
+                if (w.source && (current.source || 'ASHBY') !== w.source) matches = false;
                 if (w.ashbyId?.notIn && w.ashbyId.notIn.includes(current.ashbyId)) matches = false;
                 if (w.active !== undefined && current.active !== w.active) matches = false;
 
