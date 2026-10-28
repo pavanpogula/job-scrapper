@@ -2,7 +2,7 @@
 
 A TypeScript monorepo providing a high-performance batch scraper feeding Neon PostgreSQL and Upstash Redis (`jc:v1:*` cache-first architecture), a serverless Express REST API deployed on Vercel, and a modern React 19 web application (B.O.O.L.E.A.N) for browsing and filtering direct company job postings across multiple applicant tracking systems (Ashby & Greenhouse).
 
-- **Live UI:** [https://job-scrapper-ui.vercel.app](https://job-scrapper-ui.vercel.app)
+- **Live UI:** [https://www.boolean.page](https://www.boolean.page) (also `boolean.page`, which redirects, and `job-scrapper-ui.vercel.app`)
 - **Live API:** [https://job-scrapper-api-eight.vercel.app](https://job-scrapper-api-eight.vercel.app)
 - **Sources:** Ashby, Greenhouse
 
