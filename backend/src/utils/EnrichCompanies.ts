@@ -61,36 +61,87 @@ export async function enrichActiveCompanies(options: {
 
     console.log('🔍 Identifying active hiring companies needing enrichment...');
 
-    // Find companies with active jobs
-    const activeCompanies = await prisma.company.findMany({
-        where: {
-            source: { in: enabledDbSources },
-            jobs: {
-                some: { active: true }
-            },
-            ...(options.forceAll
-                ? {}
-                : {
-                    OR: [
-                        { name: null },
-                        { logoUrl: null }
-                    ]
-                })
-        },
-        select: {
-            slug: true,
-            source: true,
-            atsToken: true,
-            name: true,
-            logoUrl: true
-        },
-        take: options.limit
-    });
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const candidateList: Array<{
+        slug: string;
+        source: string;
+        atsToken: string | null;
+        name: string | null;
+        logoUrl: string | null;
+    }> = [];
 
-    // Also include companies where name === slug as needing enrichment
-    const candidates = options.forceAll
-        ? activeCompanies
-        : activeCompanies.filter(c => !c.name || c.name === c.slug || !c.logoUrl);
+    // 1. Ashby candidates: active companies with active jobs needing name or logo
+    if (enabledDbSources.includes('ASHBY')) {
+        const ashbyCompanies = await prisma.company.findMany({
+            where: {
+                source: 'ASHBY',
+                jobs: {
+                    some: { active: true }
+                },
+                ...(options.forceAll
+                    ? {}
+                    : {
+                        OR: [
+                            { name: null },
+                            { logoUrl: null }
+                        ]
+                    })
+            },
+            select: {
+                slug: true,
+                source: true,
+                atsToken: true,
+                name: true,
+                logoUrl: true
+            },
+            take: options.limit
+        });
+        const filteredAshby = options.forceAll
+            ? ashbyCompanies
+            : ashbyCompanies.filter(c => !c.name || c.name === c.slug || !c.logoUrl);
+        candidateList.push(...filteredAshby);
+    }
+
+    // 2. Greenhouse candidates: active boards without a logo (or name), retried at most once per 7 days, capped at 200
+    if (enabledDbSources.includes('GREENHOUSE')) {
+        const greenhouseLimit = Math.min(options.limit ?? 200, 200);
+        const greenhouseCompanies = await prisma.company.findMany({
+            where: {
+                source: 'GREENHOUSE',
+                status: 'ACTIVE',
+                ...(options.forceAll
+                    ? {}
+                    : {
+                        OR: [
+                            { logoUrl: null },
+                            { name: null }
+                        ],
+                        AND: [
+                            {
+                                OR: [
+                                    { lastCheckedAt: null },
+                                    { lastCheckedAt: { lt: sevenDaysAgo } }
+                                ]
+                            }
+                        ]
+                    })
+            },
+            select: {
+                slug: true,
+                source: true,
+                atsToken: true,
+                name: true,
+                logoUrl: true
+            },
+            take: greenhouseLimit
+        });
+        const filteredGh = options.forceAll
+            ? greenhouseCompanies
+            : greenhouseCompanies.filter(c => !c.name || c.name === c.slug || !c.logoUrl);
+        candidateList.push(...filteredGh);
+    }
+
+    const candidates = candidateList;
 
     console.log(`🎯 Found ${candidates.length} active hiring companies to enrich (concurrency = ${concurrency})...`);
 
@@ -138,6 +189,7 @@ export async function enrichActiveCompanies(options: {
                     await prisma.company.update({
                         where: { slug: company.slug },
                         data: {
+                            ...(atsSource === 'greenhouse' ? { lastCheckedAt: new Date() } : {}),
                             ...(meta.name ? { name: meta.name } : {}),
                             ...(meta.logoUrl ? { logoUrl: meta.logoUrl } : {})
                         }
@@ -146,15 +198,22 @@ export async function enrichActiveCompanies(options: {
                     limiter.onSuccess();
                 } else {
                     failedCount++;
+                    if (atsSource === 'greenhouse') {
+                        await prisma.company.update({
+                            where: { slug: company.slug },
+                            data: { lastCheckedAt: new Date() }
+                        });
+                    }
                 }
 
                 if (processed % 100 === 0 || processed === candidates.length) {
                     console.log(`  📊 [${processed}/${candidates.length}] Enriched: ${enrichedCount} | No meta: ${failedCount} | Skipped: ${skippedCount}`);
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 processed++;
                 failedCount++;
-                if (err?.response?.status === 429) {
+                const status = (err as { response?: { status?: number } })?.response?.status;
+                if (status === 429) {
                     limiter.onRateLimit();
                 }
             }

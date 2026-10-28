@@ -11,7 +11,7 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 |---|---|:-:|:-:|---|---|---|
 | `npm run seed [-- --all]` | `src/utils/Seed.ts` | ✅ | — | — | `Company` rows | 0 (`.catch(console.error)`) |
 | `npm run seed:greenhouse [-- token1,token2]` | `src/utils/SeedGreenhouse.ts` | ✅ | — | Greenhouse Board API | `Company` rows (`gh--<token>`, `source=GREENHOUSE`) | 1 |
-| `npm run discover [-- --common-crawl] [-- --enrich]` | `src/discovery/CdxWorker.ts` | ✅ | — | Wayback CDX (+ CommonCrawl, + Ashby HTML) | `Company` rows (`name`/`logoUrl` with `--enrich`) | 1 |
+| `npm run discover [-- --source=greenhouse] [-- --common-crawl] [-- --enrich]` | `src/discovery/CdxWorker.ts` | ✅ | — | CommonCrawl / Wayback CDX | `Company` rows (`name`/`logoUrl` with `--enrich`) | 1 |
 | `npm run process:cdx -- <file.json>` | `src/utils/ProcessCdxData.ts` | — | — | — | `./extracted-slugs.json` (CWD) | non-zero only on thrown read/parse error |
 | `npm run scrape [-- --sources=s1,s2] [-- --slugs=a,b]` | `src/core/Scraper.ts` | ✅ | optional | Ashby REST (+ GraphQL fallback) | `Job`, `Department`, `Location`, `Company.status`, Redis `job:*:hash`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 1 |
 | `npm run scrape:parallel [-- --workers=N] [-- --sources=s1,s2] [-- --slugs=a,b]` | `src/core/ClusterScraper.ts` (forks `Scraper.ts --ipc-worker`) | ✅ | optional | Ashby REST (+ GraphQL fallback) | same as `scrape`, report merged across workers | 1 |
@@ -58,17 +58,24 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
 - When `status === 'ok'`, upserts `Company { slug: 'gh--' + token, source: 'GREENHOUSE', atsToken: token, name, status: 'ACTIVE' }` by `source_atsToken`. Skips `not_found` or `error` boards.
 - Not run in CI; for local throwaway DB testing before G6 production enablement.
 
-### `npm run discover [-- --common-crawl] [-- --enrich]` — `src/discovery/CdxWorker.ts`
-- See [02 → Workflow A1](./architecture-and-workflows.md#workflow-a1).
-- Always queries Wayback CDX (`http://web.archive.org/cdx/search/cdx`, `url=jobs.ashbyhq.com/*`, `collapse=urlkey`,
-  **`limit=1000`**).
-- `--common-crawl`: also queries `https://index.commoncrawl.org/CC-MAIN-2024-51-index` (JSONL, 15 s timeout).
-- `--enrich`: after each upsert, fetches `https://jobs.ashbyhq.com/{slug}`, parses `window.__appData.organization` and
-  updates `Company.name` / `Company.logoUrl` (`theme.logoWordmarkImageUrl` → `theme.logoSquareImageUrl`). One extra HTTP
-  request per slug, sequential.
-- Slugs go through `extractCompanySlug()` → `isValidSlug()`; each slug is upserted **one at a time**
-  (`update: {}`, `create: { slug, name: slug }`), printing one `.` per slug.
-- Output: `Found N URLs. Extracting slugs...`, `Found M unique company slugs.`, dots, `Discovery complete.`
+### `npm run discover [-- --source=greenhouse] [-- --common-crawl] [-- --enrich]` — `src/discovery/CdxWorker.ts`
+- Flags:
+  * `--source=greenhouse` (default `ashby`): select ATS discovery mode.
+  * `--common-crawl`: in Ashby mode, also queries CommonCrawl index (`CC-MAIN-2024-51`).
+  * `--enrich`: fetches and updates display name and company logo.
+- **Ashby Mode (`--source=ashby`, default):**
+  * Queries Wayback CDX (`http://web.archive.org/cdx/search/cdx`, `url=jobs.ashbyhq.com/*`, `collapse=urlkey`, `limit=1000`).
+  * Slugs go through `extractCompanySlug()` → `isValidSlug()`; upserted sequentially (`source: 'ASHBY'`).
+  * With `--enrich`, fetches `https://jobs.ashbyhq.com/{slug}` HTML for name and logo.
+- **Greenhouse Mode (`--source=greenhouse`):**
+  * Discovers latest Common Crawl crawl id from `https://index.commoncrawl.org/collinfo.json` (fallback `CC-MAIN-2024-51`).
+  * Queries Common Crawl paged CDX index across 4 hosts (`job-boards.greenhouse.io`, `boards.greenhouse.io`, `job-boards.eu.greenhouse.io`, `boards.eu.greenhouse.io`) with `showNumPages=true` and `page=0..N-1` with 504 retry and prefix fallbacks.
+  * Extracts tokens via `extractGreenhouseToken()` (including `embed/job_board?for=<token>`), enforces regex `^[a-z0-9][a-z0-9_-]{1,59}$`.
+  * Filters out tokens already in DB (`source: 'GREENHOUSE'`). Validates at most 500 new tokens per run. Stops cleanly at the 20-minute time budget.
+  * Validates with `GET https://boards-api.greenhouse.io/v1/boards/{token}` at ≤ 5 concurrent (200 → upsert `gh--<token>`, 404 → drop, 429 → back off).
+  * With `--enrich`, fetches best-effort logo from hosted board HTML `og:image` or header logo `<img>`.
+  * Prints discovery summary to console and appends to `$GITHUB_STEP_SUMMARY` when running in GitHub Actions.
+  * Discovered Greenhouse boards stay hidden from public company APIs and Redis cache until jobs are scraped.
 
 ### `npm run process:cdx -- <path>` — `src/utils/ProcessCdxData.ts`
 - Positional arg: `process.argv[2]` = path to a raw CDX JSON file (array-of-arrays, `[["original"],["url"],...]`).

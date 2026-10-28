@@ -13,8 +13,6 @@
   "src/lib/GoogleDriveUserOAuth.ts": 5,
   "src/lib/Sanitizer.ts": 6,
   "src/lib/cache/keys.ts": 4,
-  "src/utils/EnrichCompanies.ts": 1,
-  "tests/e2e/DiscoveryPipeline.test.ts": 5,
   "tests/helpers/fakeRedis.ts": 19,
   "tests/helpers/prismaFactory.ts": 47,
   "tests/unit/ApiGolden.test.ts": 2,

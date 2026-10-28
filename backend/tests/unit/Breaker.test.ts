@@ -13,6 +13,10 @@ describe('CircuitBreaker', () => {
     breaker = new CircuitBreaker({ failureThreshold: 3, cooldownMs: 30000 });
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('starts in CLOSED state and reports ok', () => {
     expect(breaker.isOpen()).toBe(false);
     expect(breaker.isBudgetExhausted()).toBe(false);

@@ -525,6 +525,49 @@ export function normalizeGreenhouseJob(
 }
 
 /**
+ * @summary Extracts best-effort company logo URL from Greenhouse hosted job board HTML
+ * Checks og:image meta tags first, then falls back to header logo <img>, requiring an absolute https:// URL
+ */
+export function extractGreenhouseLogo(html: string): string | undefined {
+  if (!html || typeof html !== 'string') return undefined;
+
+  // 1. og:image
+  const ogMatch =
+    html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i) ||
+    html.match(/<meta\s+[^>]*name=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*name=["']og:image["']/i);
+
+  let candidate: string | undefined = ogMatch ? ogMatch[1].trim() : undefined;
+
+  // 2. Header logo <img> fallback
+  if (!candidate) {
+    const headerImgMatch =
+      html.match(/<img\s+[^>]*id=["'](?:logo|header-logo)["'][^>]*src=["']([^"']+)["']/i) ||
+      html.match(/<img\s+[^>]*class=["'][^"']*\b(?:logo|header-logo)\b[^"']*["'][^>]*src=["']([^"']+)["']/i) ||
+      html.match(/<header[^>]*>[\s\S]*?<img\s+[^>]*src=["']([^"']+)["']/i) ||
+      html.match(/<div\s+[^>]*id=["']header["'][^>]*>[\s\S]*?<img\s+[^>]*src=["']([^"']+)["']/i);
+
+    if (headerImgMatch) {
+      candidate = headerImgMatch[1].trim();
+    }
+  }
+
+  if (!candidate) return undefined;
+
+  // 3. Absolute HTTPS validation
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol === 'https:') {
+      return parsed.toString();
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * @summary Greenhouse ATS client implementation behind the AtsClient interface
  */
 export class GreenhouseClient implements AtsClient {
@@ -642,28 +685,26 @@ export class GreenhouseClient implements AtsClient {
   }
 
   /**
-   * @summary Fetches company display name from Greenhouse board info endpoint GET /v1/boards/{token}
+   * @summary Fetches company display name from Greenhouse board info endpoint GET /v1/boards/{token} and best-effort logo from hosted board page
    */
-  public async fetchCompanyMetadata(ref: BoardRef): Promise<CompanyMetadataResult> {
+  public async fetchCompanyMetadata(
+    ref: BoardRef,
+    opts?: { includeLogo?: boolean }
+  ): Promise<CompanyMetadataResult> {
     const token = encodeURIComponent(ref.atsToken.trim().toLowerCase());
-    const url = `https://boards-api.greenhouse.io/v1/boards/${token}`;
+    const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${token}`;
+
+    let name: string | undefined = undefined;
 
     try {
-      const { data } = await axios.get<{ name?: string | null }>(url, {
+      const { data } = await axios.get<{ name?: string | null }>(apiUrl, {
         timeout: 10000,
         headers: GREENHOUSE_HEADERS,
       });
 
-      const name =
-        typeof data?.name === 'string' && data.name.trim().length > 0
-          ? sanitizeText(data.name)
-          : undefined;
-
-      return {
-        status: 'ok',
-        name,
-        logoUrl: undefined,
-      };
+      if (typeof data?.name === 'string' && data.name.trim().length > 0) {
+        name = sanitizeText(data.name);
+      }
     } catch (err: unknown) {
       const status = getHttpStatus(err);
       if (status === 429) {
@@ -675,6 +716,30 @@ export class GreenhouseClient implements AtsClient {
       }
       return { status: 'error' };
     }
+
+    // Best-effort logo fetch from hosted board page when includeLogo is not false
+    let logoUrl: string | undefined = undefined;
+    if (opts?.includeLogo !== false) {
+      try {
+        const pageUrl = `https://job-boards.greenhouse.io/${token}`;
+        const { data: html } = await axios.get<string>(pageUrl, {
+          timeout: 10000,
+          headers: GREENHOUSE_HEADERS,
+          responseType: 'text',
+        });
+        if (typeof html === 'string') {
+          logoUrl = extractGreenhouseLogo(html);
+        }
+      } catch {
+        // Best-effort: ignore HTML fetch failure
+      }
+    }
+
+    return {
+      status: 'ok',
+      name,
+      logoUrl,
+    };
   }
 
   /**

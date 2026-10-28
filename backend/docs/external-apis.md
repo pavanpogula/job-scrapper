@@ -194,7 +194,7 @@ First row is the header (skipped). Slug = first path segment. Errors → logged,
 
 For the bulk path, the same URL (without `limit`) is downloaded manually and fed to `npm run process:cdx -- file.json`.
 
-## 3b. CommonCrawl Index API
+## 3b. CommonCrawl Index API (Ashby)
 
 **Endpoint:** `GET https://index.commoncrawl.org/CC-MAIN-2024-51-index` (crawl ID hard-coded in `COMMON_CRAWL_INDEX_URL`)
 
@@ -205,8 +205,26 @@ For the bulk path, the same URL (without `limit`) is downloaded manually and fed
 | `fl` | `url` |
 
 `timeout: 15000`. **Response is JSONL** (one JSON object per line, e.g. `{"url": "https://jobs.ashbyhq.com/acme/…"}`);
-the code splits on `\n`, parses each line and keeps `.url`. Non-string body or any error → `[]`. No `page` parameter is
-sent, so only the first page of index results is read.
+the code splits on `\n`, parses each line and keeps `.url`. Non-string body or any error → `[]`. Reads up to `maxPages = 3` pages.
+
+## 3c. CommonCrawl Paged CDX API (Greenhouse Discovery & Enrichment)
+
+**Endpoints:**
+- Latest crawl ID: `GET https://index.commoncrawl.org/collinfo.json` (extracts latest crawl id, e.g. `CC-MAIN-...`, falling back to `CC-MAIN-2024-51` on network failure)
+- Common Crawl Index: `GET https://index.commoncrawl.org/{crawlId}-index`
+
+**Greenhouse Discovery Behaviour (`src/discovery/CdxWorker.ts` with `--source=greenhouse`):**
+- Crawls Greenhouse hosts: `job-boards.greenhouse.io`, `boards.greenhouse.io`, `job-boards.eu.greenhouse.io`, `boards.eu.greenhouse.io`.
+- Unpaged queries for Greenhouse hosts return 504 Gateway Timeout; discovery queries `showNumPages=true` to retrieve total page count, then pages `page=0..N-1` with retry and exponential backoff. On 504 timeouts or failures, falls back to narrower prefixes (`a*`..`z*`, `0*`..`9*`).
+- Token extraction: extracts first path segment lower-cased and `embed/job_board?for=<token>`; drops reserved segments (`embed`, `jobs`, `job_app`, `v1`, `api`, `static`, `assets`, etc.); enforces regex `^[a-z0-9][a-z0-9_-]{1,59}$`.
+- Budget & Filtering: filters out tokens already present in the database with `source = 'GREENHOUSE'`. Validates at most 500 new tokens per run. Stops cleanly when the 20-minute time budget is reached.
+- Validation: calls `GET https://boards-api.greenhouse.io/v1/boards/{token}` at ≤ 5 concurrent. 200 OK upserts `Company` with `slug = 'gh--' + token`, `source = 'GREENHOUSE'`, `atsToken = token`, `name`, `status = ACTIVE`. 404 drops the token. 429 backs off honoring `Retry-After`.
+- Empty Greenhouse boards stay hidden from `/v1/companies`, `/v1/companies/:slug`, and Redis Publisher until jobs are scraped.
+
+**Greenhouse Best-Effort Logo Enrichment (`src/lib/ats/GreenhouseClient.ts`, `src/utils/EnrichCompanies.ts`):**
+- Hosted page: `GET https://job-boards.greenhouse.io/{token}` (HTML).
+- Extracts `og:image` meta tag (or header logo `<img>` fallback). Requires an absolute `https://` URL; otherwise returns `null` (UI displays company initials).
+- Retried at most once per 7 days using `Company.lastCheckedAt`, capped at 200 companies per run in `enrich:companies`.
 
 ---
 

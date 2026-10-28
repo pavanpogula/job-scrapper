@@ -91,7 +91,7 @@
     <header class="header">
         <h1><span class="material-icons-round">folder_special</span> Job Scraper Project Explorer</h1>
         <p>Click any file to see details and functions</p>
-        <div class="generated">Auto-generated on 2026-10-27</div>
+        <div class="generated">Auto-generated on 2026-10-28</div>
     </header>
     <div class="main">
         <aside class="sidebar">
@@ -807,6 +807,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_EmptyGreenhouseHiding_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>EmptyGreenhouseHiding.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_EnrichCompanies_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>EnrichCompanies.test.ts</span>
@@ -858,6 +864,18 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_GreenhouseClient_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GreenhouseClient.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_GreenhouseDiscovery_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GreenhouseDiscovery.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_GreenhouseEnrichment_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GreenhouseEnrichment.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -2053,12 +2071,14 @@
     "path": "src/discovery/CdxWorker.ts",
     "icon": "🔍",
     "iconClass": "yellow",
-    "summary": "Auto-discovers companies from Wayback Machine CDX and CommonCrawl APIs, validates slugs, and enriches organization metadata",
+    "summary": "Auto-discovers companies from Wayback Machine CDX and CommonCrawl APIs, validates slugs/tokens, and enriches organization metadata for Ashby and Greenhouse",
     "tags": [
       "Discovery",
       "Wayback Machine",
       "CommonCrawl",
       "Validation",
+      "Greenhouse",
+      "Ashby",
       "Regex",
       "Blocklist"
     ],
@@ -2069,13 +2089,21 @@
       },
       {
         "label": "Functions",
-        "value": "6"
+        "value": "13"
       }
     ],
     "functions": [
       {
         "name": "isValidSlug()",
-        "desc": "Validates company slug against regex, length, blocklist, and numeric patterns"
+        "desc": "Validates company slug against regex, length, blocklist, and numeric patterns for Ashby"
+      },
+      {
+        "name": "isValidGreenhouseToken()",
+        "desc": "Validates Greenhouse board token format against regex, reserved segments, and length"
+      },
+      {
+        "name": "extractGreenhouseToken()",
+        "desc": "Extracts Greenhouse board token from job board or embed URL"
       },
       {
         "name": "fetchAshbyUrls()",
@@ -2091,11 +2119,31 @@
       },
       {
         "name": "enrichCompanyMetadata()",
-        "desc": "Enriches a company record in DB with real display name and logoUrl from Ashby's hosted page"
+        "desc": "Enriches a company record in DB with real display name and logoUrl"
+      },
+      {
+        "name": "fetchLatestCrawlId()",
+        "desc": "Fetches the latest Common Crawl crawl ID from collinfo.json, falling back to default"
+      },
+      {
+        "name": "fetchWithRetry()",
+        "desc": "Helper to retry an axios GET request with exponential backoff on 504 / 502 / 503 / 429"
+      },
+      {
+        "name": "crawlGreenhouseCommonCrawl()",
+        "desc": "Crawls Common Crawl for Greenhouse board URLs using paged CDX index"
+      },
+      {
+        "name": "fetchCommonCrawlPage()",
+        "desc": "Fetches a single page of JSONL lines from Common Crawl index"
+      },
+      {
+        "name": "validateAndSeedGreenhouseTokens()",
+        "desc": "Validates candidate Greenhouse tokens with GET /v1/boards/{token} at <= 5 concurrent and upserts Company records"
       },
       {
         "name": "runDiscovery()",
-        "desc": "Main discovery function. Fetches URLs, extracts slugs, upserts to DB."
+        "desc": "Main discovery function. Discovers company tokens for Ashby or Greenhouse and upserts to DB."
       }
     ]
   },
@@ -2584,7 +2632,7 @@
       },
       {
         "label": "Functions",
-        "value": "12"
+        "value": "13"
       }
     ],
     "functions": [
@@ -2625,12 +2673,16 @@
         "desc": "Pure normalizer converting a Greenhouse raw job payload into a source-agnostic NormalizedJob"
       },
       {
+        "name": "extractGreenhouseLogo()",
+        "desc": "Extracts best-effort company logo URL from Greenhouse hosted job board HTML"
+      },
+      {
         "name": "fetchBoard()",
         "desc": "Fetches all active jobs from a Greenhouse board with retry/backoff, 404/429 handling, and normalization"
       },
       {
         "name": "fetchCompanyMetadata()",
-        "desc": "Fetches company display name from Greenhouse board info endpoint GET /v1/boards/{token}"
+        "desc": "Fetches company display name from Greenhouse board info endpoint GET /v1/boards/{token} and best-effort logo from hosted board page"
       },
       {
         "name": "canonicalUrls()",
@@ -4063,6 +4115,33 @@
     ],
     "functions": []
   },
+  "tests_unit_EmptyGreenhouseHiding_test_ts": {
+    "name": "EmptyGreenhouseHiding.test.ts",
+    "path": "tests/unit/EmptyGreenhouseHiding.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Guards G5 invariant: queryCompanies and queryCompanyProfile exclude source = GREENHOUSE companies with no active listed jobs",
+    "tags": [
+      "Unit Test",
+      "Greenhouse",
+      "Hiding",
+      "Empty Companies",
+      "queryCompanies",
+      "queryCompanyProfile",
+      "G5"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_unit_EnrichCompanies_test_ts": {
     "name": "EnrichCompanies.test.ts",
     "path": "tests/unit/EnrichCompanies.test.ts",
@@ -4272,6 +4351,59 @@
       "Normalizer",
       "BF-023",
       "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_GreenhouseDiscovery_test_ts": {
+    "name": "GreenhouseDiscovery.test.ts",
+    "path": "tests/unit/GreenhouseDiscovery.test.ts",
+    "icon": "🔍",
+    "iconClass": "yellow",
+    "summary": "Unit tests for Greenhouse token extractor, paged Common Crawl client, token validator, and discovery pipeline",
+    "tags": [
+      "Unit Test",
+      "Discovery",
+      "Greenhouse",
+      "CommonCrawl",
+      "Validation",
+      "Token",
+      "Extractor"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_GreenhouseEnrichment_test_ts": {
+    "name": "GreenhouseEnrichment.test.ts",
+    "path": "tests/unit/GreenhouseEnrichment.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit tests for Greenhouse logo extraction, company metadata enrichment, 7-day retry rule, and 200/run cap",
+    "tags": [
+      "Unit Test",
+      "Enrichment",
+      "Greenhouse",
+      "Logo",
+      "Metadata",
+      "7-day-retry"
     ],
     "info": [
       {

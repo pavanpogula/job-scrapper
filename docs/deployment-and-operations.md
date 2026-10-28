@@ -92,6 +92,14 @@ the owner runs this workflow (ADR-0016).
 - **Any commit:** run the workflow again with `ref=<older commit SHA>`.
 - **Turn git deploys back on:** revert the PR that added `deploymentEnabled: false`.
 
+### 3.4 Weekly Discovery Workflow (`.github/workflows/discover-weekly.yml`)
+- **Triggers:** Cron schedule `0 4 * * 0` (04:00 UTC every Sunday) and manual `workflow_dispatch`.
+- **Inputs:** `common_crawl` (boolean, default true), `enrich` (boolean, default true).
+- **Concurrency:** `group: discovery-pipeline`, non-overlapping runs.
+- **Jobs:**
+  1. `discover`: Discovers and seeds new Ashby companies from Wayback CDX (+ Common Crawl). Gated by `vars.DISCOVERY_ENABLED != 'false'`. Syncs DB schema with `npx prisma db push --skip-generate` before running discovery.
+  2. `discover-greenhouse`: Discovers and seeds new Greenhouse companies from Common Crawl paged CDX index (`--source=greenhouse --enrich`). Runs after the Ashby job (`needs: discover`). Gated by repo variable `vars.DISCOVERY_GREENHOUSE_ENABLED == 'true'` (default off). Runs schema sync (`prisma db push`), then `npm run discover -- --source=greenhouse --enrich` with a 30-minute timeout. Outputs summary to step summary. Discovered companies remain hidden from public endpoints until jobs are scraped in G6.
+
 ---
 
 ## 4. Vercel & Edge Deployment (`frontend/vercel.json`, `backend/vercel.json`)
