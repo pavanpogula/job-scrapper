@@ -174,6 +174,8 @@ const US_STATE_NAMES = [
   'west virginia', 'wisconsin', 'wyoming',
 ];
 const US_STATE_NAME_SET = new Set(US_STATE_NAMES);
+const CA_PROVINCE_CODE_SET = new Set(['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT']);
+const US_MARKER_REGEX = /^(?:us|usa|u\.s\.a?\.?|united states)$/i;
 const US_STATE_CODE_SET = new Set([
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY',
   'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH',
@@ -213,10 +215,15 @@ export function parseGreenhousePlace(text: string | null | undefined): {
         .replace(/\)$/, '')
         // US ZIP suffix: "NC - 27410" -> "NC", "TX 78701" -> "TX", a lone "10036" -> ""
         .replace(/\s*[-–]?\s*\b\d{5}(?:-\d{4})?\s*$/, '')
-        .replace(/[\s,–-]+$/, '')
+        .replace(/[\s.,–-]+$/, '')
         .trim()
     )
-    .filter((p) => p.length > 0 && p.toLowerCase() !== 'n/a');
+    .filter((p) => p.length > 0 && p.toLowerCase() !== 'n/a')
+    // "Atlanta GA" / "Denver CO" / "Toronto ON" -> ["Atlanta", "GA"] so the region code is recognised
+    .flatMap((p) => {
+      const m = p.match(/^(.+?)\s+([A-Z]{2})$/);
+      return m && (US_STATE_CODE_SET.has(m[2]) || CA_PROVINCE_CODE_SET.has(m[2])) ? [m[1], m[2]] : [p];
+    });
   if (parts.length === 0) return empty;
 
   let country: string | null = null;
@@ -228,13 +235,23 @@ export function parseGreenhousePlace(text: string | null | undefined): {
     if (/\bremote\b/i.test(part) && i > 0) continue;
     // Full state names only count at the end of a short string ("Atlanta, Georgia"), so
     // "Tbilisi, Tbilisi, Georgia" style three-part strings keep their country.
-    if (isUsState(part, parts.length <= 2 || i < parts.length - 1)) {
+    // "Remote, US, Georgia": a US marker right before it makes Georgia the state, not the country
+    const afterUsMarker = i > 0 && US_MARKER_REGEX.test(parts[i - 1]);
+    if (isUsState(part, parts.length <= 2 || i < parts.length - 1 || afterUsMarker)) {
       country = 'US';
       region = part;
       countryIdx = i;
       break;
     }
-    const iso = toIsoCountry(part);
+    if (CA_PROVINCE_CODE_SET.has(part)) {
+      country = 'CA';
+      region = part;
+      countryIdx = i;
+      break;
+    }
+    // "United Kingdom - Deliveroo" (company suffix) and "Sao Paulo / SP / Brazil" (slash list) also name a country
+    const iso =
+      toIsoCountry(part) ?? toIsoCountry(part.split(/\s+[-–]\s+/)[0]) ?? toIsoCountry(part.split(/\s*\/\s*/).pop());
     if (iso) {
       country = iso;
       countryIdx = i;
@@ -246,14 +263,14 @@ export function parseGreenhousePlace(text: string | null | undefined): {
 
   if (countryIdx === -1) return empty;
 
-  const before = parts.slice(0, countryIdx);
+  const before = parts.slice(0, countryIdx).filter((p) => !/^remote\b/i.test(p) && !US_MARKER_REGEX.test(p));
   if (!region && before.length >= 2) {
     region = before.slice(1).join(', ');
   }
   // Address-style parts ("Hawthorne at Friendly - 900 Hobbs Rd - Greensboro") keep only the last " - " segment.
   // With a matched US state the city is the part right before it ("1114 Avenue, NYC, NY" -> NYC).
   const rawCity =
-    before.length === 0 ? null : country === 'US' && region === parts[countryIdx] ? before[before.length - 1] : before[0];
+    before.length === 0 ? null : region === parts[countryIdx] ? before[before.length - 1] : before[0];
   const city = rawCity ? (rawCity.split(/\s+[-–]\s+/).pop() ?? rawCity).trim() || null : null;
 
   const postal: NormalizedPostal = {};
