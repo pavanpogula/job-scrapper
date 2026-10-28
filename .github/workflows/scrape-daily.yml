@@ -155,7 +155,8 @@ jobs:
 
       - name: Classify scrape telemetry
         id: classify
-        if: always()
+        # A rollback run (deactivate_source) skips the scrape, so no report exists and classify would exit 1.
+        if: always() && (inputs.deactivate_source == '' || inputs.deactivate_source == 'none')
         run: npm run report:classify -- --github-output "$GITHUB_OUTPUT" --step-summary "$GITHUB_STEP_SUMMARY"
 
       - name: Upload scrape report artifact

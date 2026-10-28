@@ -65,6 +65,14 @@ test('scrape-daily.yml has SCRAPE_ENABLED and FIXER_ENABLED toggles', () => {
     (/** @type {any} */ s) => s.run?.includes('source:deactivate')
   );
   assert.ok(deactivateStep, 'source:deactivate step must exist in scrape-daily.yml');
+
+  // A rollback run skips the scrape, so classify (which needs a report and exits 1 without one) must be skipped too
+  const classifyStep = scrapeJob.steps?.find((/** @type {any} */ s) => s.id === 'classify');
+  assert.ok(classifyStep, 'classify step must exist in scrape-daily.yml');
+  assert.ok(
+    String(classifyStep.if).includes('inputs.deactivate_source'),
+    `classify step must be skipped for deactivate_source runs, found: ${classifyStep.if}`
+  );
   assert.ok(
     String(deactivateStep.if).includes('inputs.deactivate_source'),
     `deactivate step must check inputs.deactivate_source, found: ${deactivateStep.if}`

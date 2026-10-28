@@ -74,7 +74,7 @@ The matrix below documents where every secret is configured and consumed:
   `Publisher.ts` tracks active jobs `bySource`. If any source with a baseline ≥ 100 jobs drops > 30%, the sanity gate trips and exits with code 2. A new source with no previous baseline never gates.
 - **How to Roll Back:**
   1. Set repo variable `GREENHOUSE_ENABLED=false` (or run workflow with `sources=ashby`).
-  2. Run **Daily scrape** with `deactivate_source=greenhouse`. This runs `npm run source:deactivate -- greenhouse` to set `active=false` on all Greenhouse jobs and skips scraping. Empty Greenhouse companies remain hidden from public API listings.
+  2. Run **Daily scrape** with `deactivate_source=greenhouse`. This runs `npm run source:deactivate -- greenhouse` to set `active=false` on all Greenhouse jobs and skips scraping and the telemetry classify step (a rollback run has no scrape report, so classify would exit 1 and turn the run red). The result is printed in the run's step summary ("Deactivated N active jobs"). Empty Greenhouse companies remain hidden from public API listings.
   3. If Redis cache needs immediate updating, run **Daily scrape** with `publish_only=true` and `force_publish=true` (`--force` bypasses the per-source drop sanity gate to reset the baseline to Ashby-only).
 
 ---

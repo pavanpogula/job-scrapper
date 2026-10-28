@@ -4,6 +4,7 @@
  * @tags Database, Rollback, Deactivate, Multi-source, ATS, G6
  */
 
+import * as fs from 'fs';
 import { PrismaClient } from '@prisma/client';
 import { parseAtsSources, toDbAts, AtsSource } from '../lib/ats/source';
 
@@ -106,7 +107,22 @@ if (require.main === module) {
     dryRun,
     iKnow,
   })
-    .then(() => process.exit(0))
+    .then((result) => {
+      // Show the outcome on the GitHub run page: a rollback run skips scraping, so there is no scrape summary
+      if (process.env.GITHUB_STEP_SUMMARY) {
+        try {
+          fs.appendFileSync(
+            process.env.GITHUB_STEP_SUMMARY,
+            `### Source deactivation: ${result.source}\n- ${result.dryRun ? 'Dry run: would deactivate' : 'Deactivated'} **${
+              result.dryRun ? result.activeJobs : result.deactivatedCount
+            }** active jobs (${result.totalJobs} total). Company status unchanged.\n`
+          );
+        } catch {
+          // Ignore step summary write errors
+        }
+      }
+      process.exit(0);
+    })
     .catch((err) => {
       console.error(`❌ ${err.message}`);
       process.exit(1);
