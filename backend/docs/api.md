@@ -227,8 +227,9 @@ The API communicates cache lifecycle, debugging telemetry, and edge behavior thr
 
 | Response | `Cache-Control` Header | `Vercel-Cache-Tag` |
 |---|---|---|
-| **200 Lists, Facets, Companies, Meta** | `public, max-age=60, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400` | `jobs-v1` |
-| **200 with `X-Cache: BYPASS`** | `public, max-age=30, s-maxage=60, stale-while-revalidate=600` | *(none)* |
+| **200 Lists, Facets, Companies, Meta** | `public, max-age=60, s-maxage=3600, stale-while-revalidate=3600, stale-if-error=86400` | `jobs-v1` |
+| **200 with `X-Cache: BYPASS` and a degraded cache** (`X-Cache-Reason`: `circuit_open`, `budget_exhausted`, `no_generation`) | `public, max-age=30, s-maxage=60, stale-while-revalidate=600` | *(none)* |
+| **200 with `X-Cache: BYPASS` / `not_configured`** (no Redis at all: the normal state in production today) | same as Lists above (1 h edge cache) | `jobs-v1` |
 | **200 Job Detail** | `public, max-age=300, s-maxage=3600, stale-while-revalidate=86400` | `jobs-v1` |
 | **404 Job Detail** | `public, s-maxage=300` | *(none)* |
 | **4xx, 5xx, 429, `/health`** | `no-store` | *(none)* |

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **perf(api)**: edge cache for lists, filters, companies and totals raised from 1-5 minutes to 1 hour.
+  - Why: the data changes only when a scrape finishes (a few times a day), but list answers were reused for just 1-5 minutes, so most page views woke the database. In production (no Redis) the busy endpoints (`/v1/jobs` default and filters, `/v1/facets`, `/v1/meta`, `/v1/companies`) all answer with `X-Cache: BYPASS`, which used the shortest rule (60 s at the edge); searches and company pages used 5 minutes.
+  - Now `/v1/jobs`, `/v1/facets`, `/v1/companies`, `/v1/companies/:slug` and `/v1/meta` send `public, max-age=60, s-maxage=3600, stale-while-revalidate=3600, stale-if-error=86400` (the browser still revalidates after 60 s). `BYPASS` keeps the short rule only when it signals a degraded cache (`circuit_open`, `budget_exhausted`, `no_generation`); `not_configured` (no Redis at all) is the normal state and gets the long rule. Job detail was already 1 hour.
+  - Trade-off: after a scrape, visitors can see data up to about 2 hours old (1 h fresh + 1 h stale-while-revalidate); no purge is needed. Unusual searches have their own URL and still reach the database. Only a header value changes, no API shape change.
+  - Tests: `Hardening.test.ts` pins the long rule for list views and for `BYPASS`/`not_configured`, and keeps the short rule for a degraded cache (`no_generation`). Docs: `backend/docs/api.md`, `docs/deployment-and-operations.md`, `docs/system-architecture-and-flows.md`.
+
 - **feat(discovery)**: `--budget=N|all` and `--time-budget-min=M` for Greenhouse discovery, and validation 5 at a time.
   - Why: discovery checked only 500 new tokens per run, one at a time (a crawl found 3,829 candidates; 3,329 stayed unchecked), so covering everything took about 7 separate runs. `npm run discover -- --source=greenhouse --enrich --budget=all --time-budget-min=40` now checks every candidate in one run. Defaults are unchanged (500 tokens, 20 minutes), so the weekly workflow behaves as before.
   - `validateAndSeedGreenhouseTokens` queued each token with `await` inside the loop, so the limiter never ran more than one request at a time; it now queues all tokens on the adaptive limiter (at most 5 in flight, 429 backs off all of them). `parseTokenBudget` / `parseTimeBudgetMs` validate the flags (bad values exit 1).
