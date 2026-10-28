@@ -86,7 +86,7 @@ export async function seedGreenhouse(
     };
 
     try {
-      const meta = await client.fetchCompanyMetadata(ref);
+      const meta = await client.fetchCompanyMetadata(ref, { includeLogo: false });
       if (meta.status === 'not_found') {
         skippedNotFound++;
         console.warn(`  ⚠️ [404] Board "${token}" not found on Greenhouse; skipping`);

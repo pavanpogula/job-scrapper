@@ -174,6 +174,8 @@ const US_STATE_NAMES = [
   'west virginia', 'wisconsin', 'wyoming',
 ];
 const US_STATE_NAME_SET = new Set(US_STATE_NAMES);
+const CA_PROVINCE_CODE_SET = new Set(['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT']);
+const US_MARKER_REGEX = /^(?:us|usa|u\.s\.a?\.?|united states)$/i;
 const US_STATE_CODE_SET = new Set([
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY',
   'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH',
@@ -207,8 +209,21 @@ export function parseGreenhousePlace(text: string | null | undefined): {
   const parts = text
     .split(',')
     // "Remote - California" / "Remote (U.S.)" -> "California" / "U.S."
-    .map((p) => sanitizeText(p).replace(/^remote\s*[-–:(]\s*/i, '').replace(/\)$/, '').trim())
-    .filter((p) => p.length > 0 && p.toLowerCase() !== 'n/a');
+    .map((p) =>
+      sanitizeText(p)
+        .replace(/^remote\s*[-–:(]\s*/i, '')
+        .replace(/\)$/, '')
+        // US ZIP suffix: "NC - 27410" -> "NC", "TX 78701" -> "TX", a lone "10036" -> ""
+        .replace(/\s*[-–]?\s*\b\d{5}(?:-\d{4})?\s*$/, '')
+        .replace(/[\s.,–-]+$/, '')
+        .trim()
+    )
+    .filter((p) => p.length > 0 && p.toLowerCase() !== 'n/a')
+    // "Atlanta GA" / "Denver CO" / "Toronto ON" -> ["Atlanta", "GA"] so the region code is recognised
+    .flatMap((p) => {
+      const m = p.match(/^(.+?)\s+([A-Z]{2})$/);
+      return m && (US_STATE_CODE_SET.has(m[2]) || CA_PROVINCE_CODE_SET.has(m[2])) ? [m[1], m[2]] : [p];
+    });
   if (parts.length === 0) return empty;
 
   let country: string | null = null;
@@ -220,13 +235,23 @@ export function parseGreenhousePlace(text: string | null | undefined): {
     if (/\bremote\b/i.test(part) && i > 0) continue;
     // Full state names only count at the end of a short string ("Atlanta, Georgia"), so
     // "Tbilisi, Tbilisi, Georgia" style three-part strings keep their country.
-    if (isUsState(part, parts.length <= 2 || i < parts.length - 1)) {
+    // "Remote, US, Georgia": a US marker right before it makes Georgia the state, not the country
+    const afterUsMarker = i > 0 && US_MARKER_REGEX.test(parts[i - 1]);
+    if (isUsState(part, parts.length <= 2 || i < parts.length - 1 || afterUsMarker)) {
       country = 'US';
       region = part;
       countryIdx = i;
       break;
     }
-    const iso = toIsoCountry(part);
+    if (CA_PROVINCE_CODE_SET.has(part)) {
+      country = 'CA';
+      region = part;
+      countryIdx = i;
+      break;
+    }
+    // "United Kingdom - Deliveroo" (company suffix) and "Sao Paulo / SP / Brazil" (slash list) also name a country
+    const iso =
+      toIsoCountry(part) ?? toIsoCountry(part.split(/\s+[-–]\s+/)[0]) ?? toIsoCountry(part.split(/\s*\/\s*/).pop());
     if (iso) {
       country = iso;
       countryIdx = i;
@@ -238,11 +263,15 @@ export function parseGreenhousePlace(text: string | null | undefined): {
 
   if (countryIdx === -1) return empty;
 
-  const before = parts.slice(0, countryIdx);
+  const before = parts.slice(0, countryIdx).filter((p) => !/^remote\b/i.test(p) && !US_MARKER_REGEX.test(p));
   if (!region && before.length >= 2) {
     region = before.slice(1).join(', ');
   }
-  const city = before.length >= 1 ? before[0] : null;
+  // Address-style parts ("Hawthorne at Friendly - 900 Hobbs Rd - Greensboro") keep only the last " - " segment.
+  // With a matched US state the city is the part right before it ("1114 Avenue, NYC, NY" -> NYC).
+  const rawCity =
+    before.length === 0 ? null : region === parts[countryIdx] ? before[before.length - 1] : before[0];
+  const city = rawCity ? (rawCity.split(/\s+[-–]\s+/).pop() ?? rawCity).trim() || null : null;
 
   const postal: NormalizedPostal = {};
   if (country) postal.addressCountry = country;
@@ -252,7 +281,9 @@ export function parseGreenhousePlace(text: string | null | undefined): {
 }
 
 /**
- * @summary Parses the first offices[].location that yields a country; falls back to the job location text
+ * @summary Resolves country/region/city for a job. The job's own location text wins when it names a country
+ * ("Dublin, Ireland" stays Ireland even if the office list says Berlin). Otherwise the office list is used,
+ * preferring the office whose city equals the job's city ("Berlin" picks Berlin over Dublin), then the first one.
  */
 function parseGreenhouseOfficePostal(
   offices: GreenhouseOffice[] | null | undefined,
@@ -263,14 +294,29 @@ function parseGreenhouseOfficePostal(
   region: string | null;
   city: string | null;
 } {
-  if (Array.isArray(offices)) {
-    for (const office of offices) {
-      const parsed = parseGreenhousePlace(office?.location);
-      if (parsed.country) return parsed;
-    }
-  }
   const fromLocation = parseGreenhousePlace(locationText);
-  if (fromLocation.country) return fromLocation;
+  const parsedOffices = Array.isArray(offices)
+    ? offices.map((o) => parseGreenhousePlace(o?.location)).filter((p) => p.country)
+    : [];
+
+  if (fromLocation.country) {
+    // Same country and same city in an office: use the office's fuller data (full region name)
+    const fuller = parsedOffices.find(
+      (p) =>
+        p.country === fromLocation.country &&
+        p.region &&
+        p.city &&
+        fromLocation.city &&
+        p.city.toLowerCase() === fromLocation.city.toLowerCase()
+    );
+    return fuller ?? fromLocation;
+  }
+
+  if (parsedOffices.length > 0) {
+    const wanted = typeof locationText === 'string' ? sanitizeText(locationText).split(',')[0].trim().toLowerCase() : '';
+    const sameCity = wanted ? parsedOffices.find((p) => p.city && p.city.toLowerCase() === wanted) : undefined;
+    return sameCity ?? parsedOffices[0];
+  }
   if (typeof locationText === 'string' && US_TEXT_REGEX.test(locationText)) {
     return { postal: { addressCountry: 'US' }, country: 'US', region: null, city: null };
   }
@@ -525,6 +571,48 @@ export function normalizeGreenhouseJob(
 }
 
 /**
+ * Greenhouse stores a board's uploaded logo under this path on its CDN. Boards without an uploaded logo
+ * (e.g. Figma, Robinhood) set og:image to a marketing banner on another CDN, which must never become an avatar.
+ */
+const GREENHOUSE_LOGO_PATH = '/external_greenhouse_job_boards/logos/';
+
+/**
+ * @summary Extracts the board's own uploaded logo from Greenhouse hosted job board HTML, or undefined.
+ * Candidates (og:image, then header logo <img>) are accepted only when they are an absolute https URL on a
+ * greenhouse.io host under the Greenhouse logo path; any other og:image is a banner and the UI shows initials.
+ */
+export function extractGreenhouseLogo(html: string): string | undefined {
+  if (!html || typeof html !== 'string') return undefined;
+
+  const ogMatch =
+    html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i) ||
+    html.match(/<meta\s+[^>]*name=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*name=["']og:image["']/i);
+
+  const headerImgMatch =
+    html.match(/<img\s+[^>]*id=["'](?:logo|header-logo)["'][^>]*src=["']([^"']+)["']/i) ||
+    html.match(/<img\s+[^>]*class=["'][^"']*\b(?:logo|header-logo)\b[^"']*["'][^>]*src=["']([^"']+)["']/i) ||
+    html.match(/<header[^>]*>[\s\S]*?<img\s+[^>]*src=["']([^"']+)["']/i) ||
+    html.match(/<div\s+[^>]*id=["']header["'][^>]*>[\s\S]*?<img\s+[^>]*src=["']([^"']+)["']/i);
+
+  for (const raw of [ogMatch?.[1], headerImgMatch?.[1]]) {
+    if (!raw) continue;
+    try {
+      const parsed = new URL(decodeHtmlEntities(raw.trim()));
+      const host = parsed.hostname.toLowerCase();
+      const onGreenhouse = host === 'greenhouse.io' || host.endsWith('.greenhouse.io');
+      if (parsed.protocol === 'https:' && onGreenhouse && parsed.pathname.includes(GREENHOUSE_LOGO_PATH)) {
+        return parsed.toString();
+      }
+    } catch {
+      // Not an absolute URL: try the next candidate
+    }
+  }
+  return undefined;
+}
+
+/**
  * @summary Greenhouse ATS client implementation behind the AtsClient interface
  */
 export class GreenhouseClient implements AtsClient {
@@ -642,28 +730,26 @@ export class GreenhouseClient implements AtsClient {
   }
 
   /**
-   * @summary Fetches company display name from Greenhouse board info endpoint GET /v1/boards/{token}
+   * @summary Fetches company display name from Greenhouse board info endpoint GET /v1/boards/{token} and best-effort logo from hosted board page
    */
-  public async fetchCompanyMetadata(ref: BoardRef): Promise<CompanyMetadataResult> {
+  public async fetchCompanyMetadata(
+    ref: BoardRef,
+    opts?: { includeLogo?: boolean }
+  ): Promise<CompanyMetadataResult> {
     const token = encodeURIComponent(ref.atsToken.trim().toLowerCase());
-    const url = `https://boards-api.greenhouse.io/v1/boards/${token}`;
+    const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${token}`;
+
+    let name: string | undefined = undefined;
 
     try {
-      const { data } = await axios.get<{ name?: string | null }>(url, {
+      const { data } = await axios.get<{ name?: string | null }>(apiUrl, {
         timeout: 10000,
         headers: GREENHOUSE_HEADERS,
       });
 
-      const name =
-        typeof data?.name === 'string' && data.name.trim().length > 0
-          ? sanitizeText(data.name)
-          : undefined;
-
-      return {
-        status: 'ok',
-        name,
-        logoUrl: undefined,
-      };
+      if (typeof data?.name === 'string' && data.name.trim().length > 0) {
+        name = sanitizeText(data.name);
+      }
     } catch (err: unknown) {
       const status = getHttpStatus(err);
       if (status === 429) {
@@ -675,6 +761,30 @@ export class GreenhouseClient implements AtsClient {
       }
       return { status: 'error' };
     }
+
+    // Best-effort logo fetch from hosted board page when includeLogo is not false
+    let logoUrl: string | undefined = undefined;
+    if (opts?.includeLogo !== false) {
+      try {
+        const pageUrl = `https://job-boards.greenhouse.io/${token}`;
+        const { data: html } = await axios.get<string>(pageUrl, {
+          timeout: 10000,
+          headers: GREENHOUSE_HEADERS,
+          responseType: 'text',
+        });
+        if (typeof html === 'string') {
+          logoUrl = extractGreenhouseLogo(html);
+        }
+      } catch {
+        // Best-effort: ignore HTML fetch failure
+      }
+    }
+
+    return {
+      status: 'ok',
+      name,
+      logoUrl,
+    };
   }
 
   /**

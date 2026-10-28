@@ -55,4 +55,22 @@ test('discover-weekly.yml has DISCOVERY_ENABLED toggle', () => {
     String(discoverJob.if).includes("vars.DISCOVERY_ENABLED != 'false'"),
     `discover job must guard with vars.DISCOVERY_ENABLED != 'false', found: ${discoverJob.if}`
   );
+
+  const ghJob = parsed.jobs?.['discover-greenhouse'];
+  assert.ok(ghJob, 'discover-greenhouse job must exist in discover-weekly.yml');
+  assert.ok(
+    String(ghJob.if).includes("vars.DISCOVERY_GREENHOUSE_ENABLED == 'true'"),
+    `discover-greenhouse job must guard with vars.DISCOVERY_GREENHOUSE_ENABLED == 'true', found: ${ghJob.if}`
+  );
+  assert.equal(ghJob['timeout-minutes'] || ghJob.timeout_minutes, 30, 'discover-greenhouse must have 30 min timeout');
+  assert.equal(ghJob.needs, 'discover', 'discover-greenhouse must run after discover job');
+
+  const ghSteps = ghJob.steps || [];
+  const dbPushIndex = ghSteps.findIndex((s) => String(s.run).includes('prisma db push'));
+  assert.ok(dbPushIndex !== -1, 'discover-greenhouse must have a prisma db push step');
+  const runGhDiscoveryIndex = ghSteps.findIndex((s) =>
+    String(s.run).includes('npm run discover -- --source=greenhouse --enrich')
+  );
+  assert.ok(runGhDiscoveryIndex !== -1, 'discover-greenhouse must run npm run discover -- --source=greenhouse --enrich');
+  assert.ok(dbPushIndex < runGhDiscoveryIndex, 'discover-greenhouse db push must run before discovery');
 });

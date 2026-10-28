@@ -88,6 +88,9 @@ export interface AtsClient {
     ref: BoardRef,
     opts?: { includeCompensation?: boolean; maxRetries?: number; baseDelayMs?: number }
   ): Promise<BoardFetchResult>;
-  fetchCompanyMetadata(ref: BoardRef): Promise<CompanyMetadataResult>;
+  fetchCompanyMetadata(
+    ref: BoardRef,
+    opts?: { includeLogo?: boolean }
+  ): Promise<CompanyMetadataResult>;
   canonicalUrls(ref: BoardRef, externalId: string): CanonicalUrls;
 }

@@ -262,4 +262,72 @@ describeIfDb('BF-023 / ADR-0021: Ashby stripe and Greenhouse gh--stripe coexiste
       })
     ).rejects.toThrow();
   });
+
+  it('G5: upserts Greenhouse company with gh-- slug, is idempotent on re-run, and leaves Ashby rows untouched', async () => {
+    // Record current Ashby companies
+    const initialAshby = await prisma.company.findMany({
+      where: { source: 'ASHBY' },
+      orderBy: { slug: 'asc' },
+    });
+
+    // 1. Initial upsert of a discovered Greenhouse token
+    const token = 'airbnb';
+    const slug = `gh--${token}`;
+    const firstUpsert = await prisma.company.upsert({
+      where: {
+        source_atsToken: {
+          source: 'GREENHOUSE',
+          atsToken: token,
+        },
+      },
+      create: {
+        slug,
+        source: 'GREENHOUSE',
+        atsToken: token,
+        name: 'Airbnb Initial',
+        status: 'ACTIVE',
+      },
+      update: {
+        name: 'Airbnb Initial',
+        status: 'ACTIVE',
+      },
+    });
+
+    expect(firstUpsert.slug).toBe('gh--airbnb');
+    expect(firstUpsert.source).toBe('GREENHOUSE');
+    expect(firstUpsert.atsToken).toBe('airbnb');
+    expect(firstUpsert.name).toBe('Airbnb Initial');
+
+    // 2. Idempotent re-run with updated name
+    const secondUpsert = await prisma.company.upsert({
+      where: {
+        source_atsToken: {
+          source: 'GREENHOUSE',
+          atsToken: token,
+        },
+      },
+      create: {
+        slug,
+        source: 'GREENHOUSE',
+        atsToken: token,
+        name: 'Airbnb Updated',
+        status: 'ACTIVE',
+      },
+      update: {
+        name: 'Airbnb Updated',
+        status: 'ACTIVE',
+      },
+    });
+
+    expect(secondUpsert.id).toBe(firstUpsert.id);
+    expect(secondUpsert.slug).toBe('gh--airbnb');
+    expect(secondUpsert.name).toBe('Airbnb Updated');
+
+    // 3. Verify Ashby companies remain completely untouched
+    const afterAshby = await prisma.company.findMany({
+      where: { source: 'ASHBY' },
+      orderBy: { slug: 'asc' },
+    });
+    expect(afterAshby).toEqual(initialAshby);
+  });
 });

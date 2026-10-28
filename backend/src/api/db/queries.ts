@@ -268,7 +268,13 @@ export async function queryCompanies(
   const limit = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '30'), 10) || 30));
   const skip = (pageNum - 1) * limit;
 
-  const where: Prisma.CompanyWhereInput = { status: 'ACTIVE' };
+  const where: Prisma.CompanyWhereInput = {
+    status: 'ACTIVE',
+    NOT: {
+      source: 'GREENHOUSE',
+      jobs: { none: { active: true, isListed: true } },
+    },
+  };
 
   if (params.search && typeof params.search === 'string') {
     const s = params.search.trim().slice(0, 100);
@@ -409,7 +415,14 @@ export async function queryCompanyProfile(
   const normalizedSlug = slug.trim().toLowerCase();
 
   const company = await prisma.company.findFirst({
-    where: { slug: normalizedSlug, status: 'ACTIVE' },
+    where: {
+      slug: normalizedSlug,
+      status: 'ACTIVE',
+      NOT: {
+        source: 'GREENHOUSE',
+        jobs: { none: { active: true, isListed: true } },
+      },
+    },
     select: { slug: true, name: true, logoUrl: true, source: true, atsToken: true },
   });
   if (!company) {
@@ -464,6 +477,10 @@ export async function queryCompanyProfile(
       _count: { _all: true },
     }),
   ]);
+
+  if (company.source === 'GREENHOUSE' && jobCount === 0) {
+    return null;
+  }
 
   const workplaceTypes: FacetCountDTO[] = workplaceGroups
     .map((g) => ({ value: g.workplaceType!, count: g._count._all }))

@@ -203,16 +203,18 @@ describe('GreenhouseClient & normalizeGreenhouseJob (BF-023)', () => {
     it('splits multi-location strings on •, ;, , or, and or; parses 2-part offices ("Lisbon, Portugal"); maps N/A to empty string', () => {
       const fixture = readFixture<{ jobs: GreenhouseRawJob[] }>('board-multi-location.json');
 
-      // 1. Bullet-separated + first non-null office "Lisbon, Portugal" + Workplace Type = Hybrid
+      // 1. Bullet-separated + Workplace Type = Hybrid. The job location ("San Francisco, CA") names a US state,
+      //    so it wins over the unrelated "Lisbon, Portugal" office (offices only fill in when the text has no country).
       const j1 = normalizeGreenhouseJob(fixture.jobs[0], stripeRef)!;
       expect(j1.location).toBe('San Francisco, CA');
       expect(j1.secondaryLocations).toEqual(['New York, NY', 'Seattle, WA']);
-      expect(j1.country).toBe('PT');
-      expect(j1.region).toBeNull();
-      expect(j1.city).toBe('Lisbon');
+      expect(j1.country).toBe('US');
+      expect(j1.region).toBe('CA');
+      expect(j1.city).toBe('San Francisco');
       expect(j1.postal).toEqual({
-        addressCountry: 'PT',
-        addressLocality: 'Lisbon',
+        addressCountry: 'US',
+        addressRegion: 'CA',
+        addressLocality: 'San Francisco',
       });
       expect(j1.workplaceType).toBe('Hybrid');
       expect(j1.isRemote).toBe(false);
@@ -509,6 +511,21 @@ describe('parseGreenhousePlace (real Greenhouse office formats)', () => {
     ['Canada, Remote', 'CA', null, null],
     ['Remote - California', 'US', 'California', null],
     ['Remote (U.S.)', 'US', null, null],
+    ['Hawthorne at Friendly - 900 Hobbs Rd - Greensboro, NC - 27410', 'US', 'NC', 'Greensboro'],
+    ['Village at Midtown - 320 Stanton Rd - Mobile, AL - 36617', 'US', 'AL', 'Mobile'],
+    ['1114 Avenue of the Americas, NYC, NY, 10036', 'US', 'NY', 'NYC'],
+    ['Austin, TX 78701', 'US', 'TX', 'Austin'],
+    ['Atlanta GA', 'US', 'GA', 'Atlanta'],
+    ['Denver CO', 'US', 'CO', 'Denver'],
+    ['St. Louis MO', 'US', 'MO', 'St. Louis'],
+    ['Toronto, ON', 'CA', 'ON', 'Toronto'],
+    ['Shippingport, PA.', 'US', 'PA', 'Shippingport'],
+    ['Remote, US, Georgia', 'US', 'Georgia', null],
+    ['Panama City, Panama', 'PA', null, 'Panama City'],
+    ['Bogotá, Colombia', 'CO', null, 'Bogotá'],
+    ['Tel Aviv, Israel', 'IL', null, 'Tel Aviv'],
+    ['London, United Kingdom - Deliveroo', 'GB', null, 'London'],
+    ['Sao Paulo / SP / Brazil', 'BR', null, null],
     ['APAC', null, null, null],
     ['N/A', null, null, null],
   ])('%s -> %s', (text, country, region, city) => {
@@ -516,5 +533,44 @@ describe('parseGreenhousePlace (real Greenhouse office formats)', () => {
     expect(parsed.country).toBe(country);
     expect(parsed.region).toBe(region);
     expect(parsed.city).toBe(city);
+  });
+});
+
+describe('normalizeGreenhouseJob country precedence (real Greenhouse data)', () => {
+  const ref = { slug: 'gh--x', source: 'greenhouse' as const, atsToken: 'x' };
+  const job = (location: string, offices: string[]) =>
+    normalizeGreenhouseJob(
+      { id: 1, title: 'Engineer', location: { name: location }, offices: offices.map((l) => ({ location: l })), content: '' },
+      ref
+    );
+
+  it('the job location wins over the office list ("Dublin, Ireland" with a Berlin office stays Ireland)', () => {
+    const j = job('Dublin, Ireland', ['Berlin, Germany']);
+    expect(j?.country).toBe('IE');
+    expect(j?.city).toBe('Dublin');
+    expect(job('Remote - Ireland', ['Berlin, Germany'])?.country).toBe('IE');
+  });
+
+  it('parses a 2-part office ("Lisbon, Portugal") when the job location is just "Remote"', () => {
+    const j = job('Remote', ['Lisbon, Portugal']);
+    expect(j?.country).toBe('PT');
+    expect(j?.city).toBe('Lisbon');
+    expect(j?.postal).toEqual({ addressCountry: 'PT', addressLocality: 'Lisbon' });
+  });
+
+  it('falls back to the office list when the location text has no country', () => {
+    const j = job('Denver', ['Denver, Colorado, United States']);
+    expect(j?.country).toBe('US');
+    expect(j?.region).toBe('Colorado');
+  });
+
+  it('prefers the office whose city matches the job city, else the first office', () => {
+    expect(job('Berlin', ['Dublin, Ireland', 'Berlin, Germany'])?.country).toBe('DE');
+    expect(job('Remote', ['Dublin, Ireland', 'Berlin, Germany'])?.country).toBe('IE');
+  });
+
+  it('US address-style locations with a ZIP get US, not New Caledonia or Albania', () => {
+    expect(job('Brookefield - 2400 Cluette Dr - Raleigh, NC - 27615', [])?.country).toBe('US');
+    expect(job('Village at Midtown - 320 Stanton Rd - Mobile, AL - 36617', [])?.country).toBe('US');
   });
 });

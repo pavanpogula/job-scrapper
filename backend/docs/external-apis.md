@@ -167,7 +167,7 @@ or `null` on any failure. Used only by `enrichCompanyMetadata()` in `src/discove
 - `internal_job_id` repeats across distinct job posts — **never** dedupe on `internal_job_id`.
 - `title`, `company_name`, `updated_at` (stored in `raw` metadata only; `sourceUpdatedAt` is `null` in v1 per ADR-0021 so internal edits do not trigger false freshness updates), `first_published` (converted to ISO UTC `publishedAt`).
 - `location.name`: free text (`"Remote - USA"`, `"A • B"`, `"A; B"`, `"N/A"`). Primary `location` is the first segment split on `•`, `;`, or ` or ` (`"N/A"` → `""`); remaining segments go to `secondaryLocations`.
-- `offices[]`: first non-null `offices[].location` is parsed from the right (`last = country` via `toIsoCountry`, `first = city`, `middle = region` when 3 parts) to populate `postal`.
+- Country / region / city (`postal`): the job's own `location.name` (first segment) is parsed first; if it names a country it wins, even when the office list disagrees (a job in "Dublin, Ireland" with a Berlin office is Ireland). When an office has the same country and city, that office's fuller region name is used. If the text has no country ("Denver", "Remote"), the `offices[].location` list is used, preferring the office whose city equals the job's city, then the first one. Parsing is from the right (`last = country`, `first = city`, `middle = region`) with these rules: a trailing US ZIP (`NC - 27410`, `TX 78701`, `10036`) is dropped, a trailing US state code or full state name maps to `US` (never New Caledonia, Albania, Israel or the country Georgia), `Remote - X` prefixes are stripped, and address-style parts (`Name - 900 Hobbs Rd - Greensboro`) keep the last ` - ` segment as the city. Also handled: `City ST` without a comma (`Atlanta GA`), Canadian province codes (`Toronto, ON` -> CA), a trailing period (`PA.`), `US, Georgia` (a US marker before it makes it the state), a company suffix after the country (`United Kingdom - Deliveroo`) and slash lists (`Sao Paulo / SP / Brazil`).
 - `content`: **HTML-entity-escaped** (`&lt;`, `&gt;`, `&quot;`, `&amp;`, `&#39;`, numeric entities) — unescaped **exactly once** via single-pass `decodeHtmlEntities` before `sanitizeJobDescriptionHtml` and `sanitizeJobDescriptionPlain`. The raw escaped `content` is dropped from `raw` metadata so descriptions are never stored twice.
 - `pay_input_ranges[]` (returned only when `pay_transparency=true`): integer **cents** (`min_cents` / `max_cents` ÷ 100), `currency_type`, and interval `'1 HOUR'` when `title` (or fallback `blurb`) matches `/\bhourly\b|per hour/i`, else `'1 YEAR'`.
 - `raw` (`Job.metadata`) carries `descriptionHtml`, `descriptionPlain`, `jobUrl`, `team: null`, `secondaryLocations`, `_source: 'rest'`, `_ats: 'greenhouse'`, `_normVersion: 1`, `updated_at`, `departments`, `offices`, and `metadata`.
@@ -194,7 +194,7 @@ First row is the header (skipped). Slug = first path segment. Errors → logged,
 
 For the bulk path, the same URL (without `limit`) is downloaded manually and fed to `npm run process:cdx -- file.json`.
 
-## 3b. CommonCrawl Index API
+## 3b. CommonCrawl Index API (Ashby)
 
 **Endpoint:** `GET https://index.commoncrawl.org/CC-MAIN-2024-51-index` (crawl ID hard-coded in `COMMON_CRAWL_INDEX_URL`)
 
@@ -205,8 +205,26 @@ For the bulk path, the same URL (without `limit`) is downloaded manually and fed
 | `fl` | `url` |
 
 `timeout: 15000`. **Response is JSONL** (one JSON object per line, e.g. `{"url": "https://jobs.ashbyhq.com/acme/…"}`);
-the code splits on `\n`, parses each line and keeps `.url`. Non-string body or any error → `[]`. No `page` parameter is
-sent, so only the first page of index results is read.
+the code splits on `\n`, parses each line and keeps `.url`. Non-string body or any error → `[]`. Reads up to `maxPages = 3` pages.
+
+## 3c. CommonCrawl Paged CDX API (Greenhouse Discovery & Enrichment)
+
+**Endpoints:**
+- Latest crawl ID: `GET https://index.commoncrawl.org/collinfo.json` (extracts latest crawl id, e.g. `CC-MAIN-...`, falling back to `CC-MAIN-2024-51` on network failure)
+- Common Crawl Index: `GET https://index.commoncrawl.org/{crawlId}-index`
+
+**Greenhouse Discovery Behaviour (`src/discovery/CdxWorker.ts` with `--source=greenhouse`):**
+- Crawls Greenhouse hosts: `job-boards.greenhouse.io`, `boards.greenhouse.io`, `job-boards.eu.greenhouse.io`, `boards.eu.greenhouse.io`.
+- Unpaged queries for Greenhouse hosts return 504 Gateway Timeout; discovery queries `showNumPages=true` to retrieve total page count, then pages `page=0..N-1` with retry and exponential backoff. On 504 timeouts or failures, falls back to narrower prefixes (`a*`..`z*`, `0*`..`9*`).
+- Token extraction: extracts first path segment lower-cased and `embed/job_board?for=<token>`; drops reserved segments (`embed`, `jobs`, `job_app`, `v1`, `api`, `static`, `assets`, etc.); enforces regex `^[a-z0-9][a-z0-9_-]{1,59}$`.
+- Budget & Filtering: filters out tokens already present in the database with `source = 'GREENHOUSE'`. Validates at most 500 new tokens per run. Stops cleanly when the 20-minute time budget is reached.
+- Validation: calls `GET https://boards-api.greenhouse.io/v1/boards/{token}` at ≤ 5 concurrent. 200 OK upserts `Company` with `slug = 'gh--' + token`, `source = 'GREENHOUSE'`, `atsToken = token`, `name`, `status = ACTIVE`. 404 drops the token. 429 backs off honoring `Retry-After`.
+- Empty Greenhouse boards stay hidden from `/v1/companies`, `/v1/companies/:slug`, and Redis Publisher until jobs are scraped.
+
+**Greenhouse Best-Effort Logo Enrichment (`src/lib/ats/GreenhouseClient.ts`, `src/utils/EnrichCompanies.ts`):**
+- Hosted page: `GET https://job-boards.greenhouse.io/{token}` (HTML).
+- Extracts `og:image` (or the header logo `<img>`) and accepts it only when it is an absolute `https://` URL on a `greenhouse.io` host under `/external_greenhouse_job_boards/logos/` (the board's uploaded logo). Boards without one (e.g. Figma, Robinhood) set `og:image` to a 1200×630 marketing banner on another CDN, which is rejected: the result is `null` and the UI displays company initials. HTML entities (`&amp;`) in the URL are decoded.
+- Retried at most once per 7 days using `Company.lastCheckedAt`, capped at 200 companies per run in `enrich:companies`.
 
 ---
 

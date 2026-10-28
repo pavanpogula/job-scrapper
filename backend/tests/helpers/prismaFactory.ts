@@ -257,6 +257,21 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
                     result = result.filter(c => set.has(c.slug));
                 }
             }
+            if (args?.where?.NOT) {
+                const notCond = args.where.NOT;
+                if (notCond.source === 'GREENHOUSE' && notCond.jobs?.none) {
+                    result = result.filter(c => {
+                        const src = c.source || 'ASHBY';
+                        if (src !== 'GREENHOUSE') return true;
+                        const hasJobs = Array.from(jobs.values()).some(j =>
+                            j.companySlug === c.slug &&
+                            (notCond.jobs.none.active === undefined || j.active === notCond.jobs.none.active) &&
+                            (notCond.jobs.none.isListed === undefined || j.isListed === notCond.jobs.none.isListed)
+                        );
+                        return hasJobs;
+                    });
+                }
+            }
             if (args?.orderBy) {
                 const orders = Array.isArray(args.orderBy) ? args.orderBy : [args.orderBy];
                 result.sort((a, b) => {
