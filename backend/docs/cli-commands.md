@@ -73,7 +73,7 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
   * Extracts tokens via `extractGreenhouseToken()` (including `embed/job_board?for=<token>`), enforces regex `^[a-z0-9][a-z0-9_-]{1,59}$`.
   * Filters out tokens already in DB (`source: 'GREENHOUSE'`). Validates at most 500 new tokens per run. Stops cleanly at the 20-minute time budget.
   * Validates with `GET https://boards-api.greenhouse.io/v1/boards/{token}` at ≤ 5 concurrent (200 → upsert `gh--<token>`, 404 → drop, 429 → back off).
-  * With `--enrich`, fetches best-effort logo from hosted board HTML `og:image` or header logo `<img>`.
+  * With `--enrich`, fetches the board's own uploaded logo from the hosted board HTML (`og:image` or header `<img>`), accepted only when it is on the Greenhouse logo path; banners on other CDNs are ignored (initials shown).
   * Prints discovery summary to console and appends to `$GITHUB_STEP_SUMMARY` when running in GitHub Actions.
   * Discovered Greenhouse boards stay hidden from public company APIs and Redis cache until jobs are scraped.
 

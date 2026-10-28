@@ -223,7 +223,7 @@ the code splits on `\n`, parses each line and keeps `.url`. Non-string body or a
 
 **Greenhouse Best-Effort Logo Enrichment (`src/lib/ats/GreenhouseClient.ts`, `src/utils/EnrichCompanies.ts`):**
 - Hosted page: `GET https://job-boards.greenhouse.io/{token}` (HTML).
-- Extracts `og:image` meta tag (or header logo `<img>` fallback). Requires an absolute `https://` URL; otherwise returns `null` (UI displays company initials).
+- Extracts `og:image` (or the header logo `<img>`) and accepts it only when it is an absolute `https://` URL on a `greenhouse.io` host under `/external_greenhouse_job_boards/logos/` (the board's uploaded logo). Boards without one (e.g. Figma, Robinhood) set `og:image` to a 1200×630 marketing banner on another CDN, which is rejected: the result is `null` and the UI displays company initials. HTML entities (`&amp;`) in the URL are decoded.
 - Retried at most once per 7 days using `Company.lastCheckedAt`, capped at 200 companies per run in `enrich:companies`.
 
 ---

@@ -525,46 +525,45 @@ export function normalizeGreenhouseJob(
 }
 
 /**
- * @summary Extracts best-effort company logo URL from Greenhouse hosted job board HTML
- * Checks og:image meta tags first, then falls back to header logo <img>, requiring an absolute https:// URL
+ * Greenhouse stores a board's uploaded logo under this path on its CDN. Boards without an uploaded logo
+ * (e.g. Figma, Robinhood) set og:image to a marketing banner on another CDN, which must never become an avatar.
+ */
+const GREENHOUSE_LOGO_PATH = '/external_greenhouse_job_boards/logos/';
+
+/**
+ * @summary Extracts the board's own uploaded logo from Greenhouse hosted job board HTML, or undefined.
+ * Candidates (og:image, then header logo <img>) are accepted only when they are an absolute https URL on a
+ * greenhouse.io host under the Greenhouse logo path; any other og:image is a banner and the UI shows initials.
  */
 export function extractGreenhouseLogo(html: string): string | undefined {
   if (!html || typeof html !== 'string') return undefined;
 
-  // 1. og:image
   const ogMatch =
     html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
     html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i) ||
     html.match(/<meta\s+[^>]*name=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
     html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*name=["']og:image["']/i);
 
-  let candidate: string | undefined = ogMatch ? ogMatch[1].trim() : undefined;
+  const headerImgMatch =
+    html.match(/<img\s+[^>]*id=["'](?:logo|header-logo)["'][^>]*src=["']([^"']+)["']/i) ||
+    html.match(/<img\s+[^>]*class=["'][^"']*\b(?:logo|header-logo)\b[^"']*["'][^>]*src=["']([^"']+)["']/i) ||
+    html.match(/<header[^>]*>[\s\S]*?<img\s+[^>]*src=["']([^"']+)["']/i) ||
+    html.match(/<div\s+[^>]*id=["']header["'][^>]*>[\s\S]*?<img\s+[^>]*src=["']([^"']+)["']/i);
 
-  // 2. Header logo <img> fallback
-  if (!candidate) {
-    const headerImgMatch =
-      html.match(/<img\s+[^>]*id=["'](?:logo|header-logo)["'][^>]*src=["']([^"']+)["']/i) ||
-      html.match(/<img\s+[^>]*class=["'][^"']*\b(?:logo|header-logo)\b[^"']*["'][^>]*src=["']([^"']+)["']/i) ||
-      html.match(/<header[^>]*>[\s\S]*?<img\s+[^>]*src=["']([^"']+)["']/i) ||
-      html.match(/<div\s+[^>]*id=["']header["'][^>]*>[\s\S]*?<img\s+[^>]*src=["']([^"']+)["']/i);
-
-    if (headerImgMatch) {
-      candidate = headerImgMatch[1].trim();
+  for (const raw of [ogMatch?.[1], headerImgMatch?.[1]]) {
+    if (!raw) continue;
+    try {
+      const parsed = new URL(decodeHtmlEntities(raw.trim()));
+      const host = parsed.hostname.toLowerCase();
+      const onGreenhouse = host === 'greenhouse.io' || host.endsWith('.greenhouse.io');
+      if (parsed.protocol === 'https:' && onGreenhouse && parsed.pathname.includes(GREENHOUSE_LOGO_PATH)) {
+        return parsed.toString();
+      }
+    } catch {
+      // Not an absolute URL: try the next candidate
     }
   }
-
-  if (!candidate) return undefined;
-
-  // 3. Absolute HTTPS validation
-  try {
-    const parsed = new URL(candidate);
-    if (parsed.protocol === 'https:') {
-      return parsed.toString();
-    }
-    return undefined;
-  } catch {
-    return undefined;
-  }
+  return undefined;
 }
 
 /**
