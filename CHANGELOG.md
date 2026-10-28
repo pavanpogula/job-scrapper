@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+- **feat(discovery)**: `--budget=N|all` and `--time-budget-min=M` for Greenhouse discovery, and validation 5 at a time.
+  - Why: discovery checked only 500 new tokens per run, one at a time (a crawl found 3,829 candidates; 3,329 stayed unchecked), so covering everything took about 7 separate runs. `npm run discover -- --source=greenhouse --enrich --budget=all --time-budget-min=40` now checks every candidate in one run. Defaults are unchanged (500 tokens, 20 minutes), so the weekly workflow behaves as before.
+  - `validateAndSeedGreenhouseTokens` queued each token with `await` inside the loop, so the limiter never ran more than one request at a time; it now queues all tokens on the adaptive limiter (at most 5 in flight, 429 backs off all of them). `parseTokenBudget` / `parseTimeBudgetMs` validate the flags (bad values exit 1).
+  - Tests: `GreenhouseDiscovery.test.ts` (peak concurrency between 2 and 5, deadline stops new work and counts the rest as timed out, flag parsing). Docs: `backend/docs/cli-commands.md`.
 - **feat(ops)**: enable Greenhouse in the daily scrape behind GREENHOUSE_ENABLED (ADR-0021).
   - Workflow & Schedule Integration (`.github/workflows/scrape-daily.yml`): Added `workflow_dispatch` inputs `sources` (override, default empty), `force_publish` (boolean), and `deactivate_source` (`none` | `greenhouse`). Effective sources computed as `inputs.sources` if set, else `ashby,greenhouse` when `vars.GREENHOUSE_ENABLED == 'true'`, else `ashby`. Passed `--sources=<effective>` to `scrape:parallel` and `enrich:companies`.
   - Emergency Source Rollback (`backend/src/database/SourceDeactivate.ts`, `backend/package.json`): Added `npm run source:deactivate -- <source> [--dry-run] [--i-know]` setting `active = false` on target source's jobs while leaving `Company.status` unchanged (keeping empty Greenhouse boards hidden via G5 rule). Guarded primary source `ashby` with mandatory `--i-know`. Wired into `scrape-daily.yml` via `deactivate_source` input running after `db push` and skipping scraping. Added to `DANGEROUS` script list in `settings-allowlist.test.mjs`.
