@@ -44,6 +44,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
   onJobLoaded,
 }) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Fetch job details if jobId provided and not already matched in initialJob
   const shouldFetch = Boolean(jobId && (!initialJob || initialJob.id !== jobId));
@@ -59,12 +60,23 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
     }
   }, [job, onJobLoaded]);
 
-  // Focus detail heading when switching selected jobs in two-pane mode
+  // Focus the detail heading when the selected job changes so screen readers announce it.
+  // Two-pane (sticky) mode: preventScroll is essential. A plain focus() scrolls the whole page to the top, so picking
+  // a job far down the list threw the reader back to the top and left the chosen card far out of view.
+  // Full-page mode (phones, /jobs/:id): keep the default scroll. The page keeps the list's scroll position after
+  // navigating, so focusing the heading is what brings the job's title into view at the top.
   useEffect(() => {
     if (jobId && headingRef.current) {
-      headingRef.current.focus();
+      headingRef.current.focus({ preventScroll: isSticky });
     }
-  }, [jobId]);
+  }, [jobId, isSticky]);
+
+  // The sticky panel scrolls on its own and keeps its scroll position between jobs, so each job must open at the top
+  // of its description (the page scroll that focus() used to cause did this by accident).
+  const shownJobId = job?.id;
+  useEffect(() => {
+    if (panelRef.current) panelRef.current.scrollTop = 0;
+  }, [shownJobId]);
 
   const descriptionHtml = job?.descriptionHtml;
   const sanitizedDescription = useMemo(() => {
@@ -125,6 +137,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
 
   return (
     <Paper
+      ref={panelRef}
       sx={{
         p: { xs: 2.5, sm: 3.5 },
         borderRadius: 2,

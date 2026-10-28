@@ -349,9 +349,10 @@ export const DepartmentGroups: React.FC<DepartmentGroupsProps> = ({
             )}
           </Box>
 
-          {/* Right Column: Sticky Detail Panel (Desktop only) */}
+          {/* Right Column: Sticky Detail Panel (Desktop only). The cell stretches to the full height of the list so
+              the sticky panel has room to stay in view while the list scrolls. */}
           {isDesktop && (
-            <Box>
+            <Box sx={{ alignSelf: 'stretch' }}>
               <JobDetailPanel
                 jobId={activeSelectedId}
                 isSticky

@@ -137,9 +137,11 @@ export const BrowsePage: React.FC = () => {
               />
             </Box>
 
-            {/* Right: Sticky Detail Panel (Desktop only) */}
+            {/* Right: Sticky Detail Panel (Desktop only). The cell must stretch to the full height of the list
+                (the grid uses alignItems: start): a sticky panel can only move inside its own cell, so a cell as
+                short as the panel let it scroll away with the page. */}
             {isDesktop && (
-              <Box>
+              <Box sx={{ alignSelf: 'stretch' }}>
                 <JobDetailPanel
                   jobId={selectedJobId || jobs[0]?.id}
                   isSticky
