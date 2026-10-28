@@ -49,17 +49,33 @@ The matrix below documents where every secret is configured and consumed:
 
 ### 3.2 Daily Scheduled Scraper (`.github/workflows/scrape-daily.yml`)
 - **Triggers:** Cron schedule `17 6 * * *` (06:17 UTC daily) and manual `workflow_dispatch`.
-- **Inputs:** `workers` (default 4), `skip_publish`, `publish_only`, `recheck_not_found`, `skip_fixer`, `fixture_report`.
+- **Inputs:** `workers` (default 4), `skip_publish`, `publish_only`, `recheck_not_found`, `skip_fixer`, `fixture_report`, `sources` (comma-separated, e.g. `ashby,greenhouse`), `force_publish` (boolean), `deactivate_source` (`none` / `greenhouse`).
+- **Source Configuration (`GREENHOUSE_ENABLED`):**
+  - Effective sources: `inputs.sources` if set, else `ashby,greenhouse` when `vars.GREENHOUSE_ENABLED == 'true'`, else `ashby`.
+  - Passed as `--sources=<effective>` to `scrape:parallel` and `enrich:companies`.
 - **Steps:**
   1. Syncs database schema (`npx prisma db push --skip-generate`).
   2. Backfills multi-source columns and validates uniqueness (`npm run db:backfill-source`, `continue-on-error: true`).
-  3. Restores historical scrape run cache (`output/run-history.json`).
-  4. Runs `npm run enrich:companies` to update display names and logos.
-  5. Executes `npm run scrape:parallel -- --workers=4` with automatic cache publishing.
-  6. Classifies error telemetry via `npm run report:classify`.
-  7. Uploads `scrape-report-<runId>` artifact (30-day retention).
-  8. On failure (`exitCode = 1` or infra alert), runs `scripts/ci/alert-issue.sh` to create or update a `scrape-alert` issue.
-  9. Chains to the automated Claude fixer job when actionable issues are detected.
+  3. Emergency source rollback if requested (`npm run source:deactivate -- <source>` when `inputs.deactivate_source != 'none'`).
+  4. Restores historical scrape run cache (`output/run-history.json`).
+  5. Runs `npm run enrich:companies -- --sources=<effective>` to update display names and logos.
+  6. Executes `npm run scrape:parallel -- --workers=4 --sources=<effective>` with automatic cache publishing.
+  7. Classifies error telemetry via `npm run report:classify` and writes metrics (including `summary.bySource`) to GitHub Actions step summary.
+  8. Uploads `scrape-report-<runId>` artifact (30-day retention).
+  9. On failure (`exitCode = 1` or infra alert), runs `scripts/ci/alert-issue.sh` to create or update a `scrape-alert` issue.
+  10. Chains to the automated Claude fixer job when actionable issues are detected.
+
+#### How to Enable, Measure, and Roll Back Greenhouse
+
+- **How to Enable Greenhouse:**
+  1. Measure with dry run: Actions → **Daily scrape** → Run workflow with `sources=ashby,greenhouse`, `skip_publish=true`. This writes Greenhouse jobs to the database without publishing to Redis cache. Verify job counts, duration, and telemetry.
+  2. If healthy, set GitHub repository variable `GREENHOUSE_ENABLED=true`. Subsequent daily cron runs will automatically scrape and publish both Ashby and Greenhouse boards.
+- **Per-Source Sanity Gate:**
+  `Publisher.ts` tracks active jobs `bySource`. If any source with a baseline ≥ 100 jobs drops > 30%, the sanity gate trips and exits with code 2. A new source with no previous baseline never gates.
+- **How to Roll Back:**
+  1. Set repo variable `GREENHOUSE_ENABLED=false` (or run workflow with `sources=ashby`).
+  2. Run **Daily scrape** with `deactivate_source=greenhouse`. This runs `npm run source:deactivate -- greenhouse` to set `active=false` on all Greenhouse jobs and skips scraping and the telemetry classify step (a rollback run has no scrape report, so classify would exit 1 and turn the run red). The result is printed in the run's step summary ("Deactivated N active jobs"). Empty Greenhouse companies remain hidden from public API listings.
+  3. If Redis cache needs immediate updating, run **Daily scrape** with `publish_only=true` and `force_publish=true` (`--force` bypasses the per-source drop sanity gate to reset the baseline to Ashby-only).
 
 ---
 

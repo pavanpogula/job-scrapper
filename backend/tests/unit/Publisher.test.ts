@@ -273,6 +273,100 @@ describe('Publisher - publishCacheGeneration (P2-T03)', () => {
       expect(res.status).toBe('published');
       expect(await fakeRedis.get(KEY_CURRENT)).toBe(res.gen);
     });
+
+    it('trips per-source sanity gate when a source with baseline >= 100 drops > 30%', async () => {
+      // Baseline: Ashby 200 jobs, Greenhouse 150 jobs (total 350)
+      await fakeRedis.set(
+        KEY_LAST_PUBLISH,
+        JSON.stringify({
+          gen: 'old-gen',
+          jobCount: 350,
+          companiesWithJobs: 20,
+          bySource: {
+            ashby: 200,
+            greenhouse: 150,
+          },
+        })
+      );
+      await fakeRedis.set(KEY_CURRENT, 'old-gen');
+
+      // Now Ashby has 200 jobs (100%), but Greenhouse drops to 90 jobs (40% drop > 30% limit)
+      // Total jobs: 290 (82.8% of 350, so global gate does not trip)
+      for (let i = 0; i < 200; i++) {
+        mockPrisma.seed('job', {
+          ...sampleJobs[0],
+          id: `10000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
+          ashbyId: `ashby-${i}`,
+          source: 'ASHBY',
+          contentHash: `hash-a-${i}`,
+        });
+      }
+      for (let i = 0; i < 90; i++) {
+        mockPrisma.seed('job', {
+          ...sampleJobs[0],
+          id: `20000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
+          ashbyId: `greenhouse:${i}`,
+          source: 'GREENHOUSE',
+          contentHash: `hash-g-${i}`,
+        });
+      }
+
+      const res = await publishCacheGeneration({
+        runId: 'per-source-gated-run',
+        scrapeFinishedAt: '2026-01-01T12:00:00Z',
+        prisma: mockPrisma,
+        redis: fakeRedis,
+      });
+
+      expect(res.status).toBe('gated');
+      expect(await fakeRedis.get(KEY_CURRENT)).toBe('old-gen');
+    });
+
+    it('does not gate for a new source with no previous baseline or baseline < 100', async () => {
+      // Previous publish had only Ashby (no Greenhouse baseline)
+      await fakeRedis.set(
+        KEY_LAST_PUBLISH,
+        JSON.stringify({
+          gen: 'old-gen',
+          jobCount: 200,
+          companiesWithJobs: 1,
+          bySource: {
+            ashby: 200,
+          },
+        })
+      );
+      await fakeRedis.set(KEY_CURRENT, 'old-gen');
+
+      // Now Ashby has 190 jobs (stable), and Greenhouse has 10 jobs (newly introduced)
+      for (let i = 0; i < 190; i++) {
+        mockPrisma.seed('job', {
+          ...sampleJobs[0],
+          id: `10000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
+          ashbyId: `ashby-${i}`,
+          source: 'ASHBY',
+          contentHash: `hash-a-${i}`,
+        });
+      }
+      for (let i = 0; i < 10; i++) {
+        mockPrisma.seed('job', {
+          ...sampleJobs[0],
+          id: `20000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
+          ashbyId: `greenhouse:${i}`,
+          source: 'GREENHOUSE',
+          contentHash: `hash-g-${i}`,
+        });
+      }
+
+      const res = await publishCacheGeneration({
+        runId: 'new-source-run',
+        scrapeFinishedAt: '2026-01-01T12:00:00Z',
+        prisma: mockPrisma,
+        redis: fakeRedis,
+      });
+
+      expect(res.status).toBe('published');
+      expect(res.bySource).toEqual({ ashby: 190, greenhouse: 10 });
+    });
   });
 
   describe('Detail Diffing and Purging', () => {

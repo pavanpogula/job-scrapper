@@ -41,6 +41,71 @@ test('scrape-daily.yml has SCRAPE_ENABLED and FIXER_ENABLED toggles', () => {
     String(enrichStep.if).includes('inputs.fixture_report'),
     `enrich step must guard against fixture_report, found: ${enrichStep.if}`
   );
+  assert.ok(
+    String(enrichStep.run).includes('--sources=$EFFECTIVE_SOURCES'),
+    `enrich step must pass --sources=$EFFECTIVE_SOURCES, found: ${enrichStep.run}`
+  );
+
+  // G6: Check inputs in workflow_dispatch
+  const dispatchInputs = parsed.on?.workflow_dispatch?.inputs;
+  assert.ok(dispatchInputs, 'workflow_dispatch inputs must exist in scrape-daily.yml');
+  assert.ok(dispatchInputs.sources, 'inputs.sources must exist in scrape-daily.yml');
+  assert.ok(dispatchInputs.force_publish, 'inputs.force_publish must exist in scrape-daily.yml');
+  assert.ok(dispatchInputs.deactivate_source, 'inputs.deactivate_source must exist in scrape-daily.yml');
+
+  // G6: Check effective sources expression in env
+  const env = scrapeJob.env || {};
+  assert.ok(
+    String(env.EFFECTIVE_SOURCES).includes("vars.GREENHOUSE_ENABLED == 'true'"),
+    `scrape job env must define EFFECTIVE_SOURCES checking GREENHOUSE_ENABLED, found: ${env.EFFECTIVE_SOURCES}`
+  );
+
+  // G6: Check deactivate_source step
+  const deactivateStep = scrapeJob.steps?.find(
+    (/** @type {any} */ s) => s.run?.includes('source:deactivate')
+  );
+  assert.ok(deactivateStep, 'source:deactivate step must exist in scrape-daily.yml');
+
+  // A rollback run skips the scrape, so classify (which needs a report and exits 1 without one) must be skipped too
+  const classifyStep = scrapeJob.steps?.find((/** @type {any} */ s) => s.id === 'classify');
+  assert.ok(classifyStep, 'classify step must exist in scrape-daily.yml');
+  assert.ok(
+    String(classifyStep.if).includes('inputs.deactivate_source'),
+    `classify step must be skipped for deactivate_source runs, found: ${classifyStep.if}`
+  );
+  assert.ok(
+    String(deactivateStep.if).includes('inputs.deactivate_source'),
+    `deactivate step must check inputs.deactivate_source, found: ${deactivateStep.if}`
+  );
+
+  // G6: Check scrape step passes --sources=$EFFECTIVE_SOURCES
+  const scrapeStep = scrapeJob.steps?.find(
+    (/** @type {any} */ s) => s.id === 'scrape' || s.name === 'Run scrape or fixture'
+  );
+  assert.ok(scrapeStep, 'scrape step must exist');
+  assert.ok(
+    String(scrapeStep.run).includes('--sources=$EFFECTIVE_SOURCES'),
+    `scrape step must pass --sources=$EFFECTIVE_SOURCES, found: ${scrapeStep.run}`
+  );
+
+  // G6: force_publish only affects publish_only, never --accept-data-loss
+  assert.ok(
+    String(scrapeStep.run).includes('force_publish') && String(scrapeStep.run).includes('publish_only'),
+    'force_publish must only be checked in the publish_only branch'
+  );
+});
+
+test('workflows invariant: no workflow ever includes --accept-data-loss', () => {
+  const root = getRepoRoot();
+  const workflowsDir = path.join(root, '.github/workflows');
+  const files = fs.readdirSync(workflowsDir).filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'));
+  for (const file of files) {
+    const content = fs.readFileSync(path.join(workflowsDir, file), 'utf-8');
+    assert.ok(
+      !content.includes('--accept-data-loss'),
+      `Workflow ${file} must NEVER include --accept-data-loss`
+    );
+  }
 });
 
 test('discover-weekly.yml has DISCOVERY_ENABLED toggle', () => {

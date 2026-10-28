@@ -192,7 +192,8 @@ export class AshbyScraper {
     public getLimiter(source: AtsSource, concurrency: number): AdaptiveLimiter {
         let limiter = this.limiters.get(source);
         if (!limiter) {
-            limiter = createLimiter(concurrency);
+            const initialConcurrency = source === 'greenhouse' ? Math.min(concurrency, 5) : concurrency;
+            limiter = createLimiter(initialConcurrency);
             this.limiters.set(source, limiter);
         }
         return limiter;

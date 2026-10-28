@@ -27,7 +27,7 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-27 (ADR-
 - **REST Endpoints:** `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/companies/:slug`, `/v1/facets`, `/v1/meta`, `/health` (shallow, 0 DB/Redis warm). Unknown `/v1/*` returns JSON 404 (O14).
 - **Backpressure & Concurrency:** `DbGuard` limits active database queries to 3 with queue size 10 (returns 503 + Retry-After on backpressure). Coalesces concurrent identical DB queries via `singleFlight`.
 - **Telemetry:** Each run writes `output/reports/<YYYY-MM>/<runId>.json` (ErrorTracker v2) and `output/latest-<mode>.json`.
-- **Multi-source (ADR-0021):** `Job.source`/`externalId`, `Company.source`/`atsToken`; `ashbyId` = legacy global key.
+- **Multi-source (ADR-0021):** `Job.source`/`externalId`, `Company.source`/`atsToken`; `ashbyId` = legacy key; Greenhouse enabled via `GREENHOUSE_ENABLED` (per-source gate: drop > 30% from baseline >= 100).
 
 ## Regression Invariants (doc 10)
 - **BF-001…BF-010:** BF-001 GraphQL fallback (`AshbyClient.test.ts`), BF-002 strip null/HTML (`Sanitizer.test.ts`), BF-003 URL canonical (`Sanitizer.test.ts`), BF-004 validation pre-filter (`ScraperRunAll.test.ts`), BF-005 salary intervals (`AshbyClient.test.ts`, `ScraperRunAll.test.ts`), BF-006 dedupe/quarantine (`CompanyHealth.test.ts`), BF-007 batch duplicate IDs (`Sanitizer.test.ts`), BF-008 coordinator allSettled (`ClusterScraper.test.ts`), BF-009 CSV naming (`ScraperCSV.test.ts`), BF-010 createMany fast-path (`ScraperRunAll.test.ts`).

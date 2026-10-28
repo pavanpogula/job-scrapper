@@ -27,6 +27,7 @@ const DANGEROUS = [
   'enrich:companies',
   'cache:publish',
   'cache:purge-legacy',
+  'source:deactivate',
   'process:cdx',
 ];
 

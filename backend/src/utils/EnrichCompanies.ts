@@ -119,8 +119,8 @@ export async function enrichActiveCompanies(options: {
                         AND: [
                             {
                                 OR: [
-                                    { lastCheckedAt: null },
-                                    { lastCheckedAt: { lt: sevenDaysAgo } }
+                                    { lastEnrichedAt: null },
+                                    { lastEnrichedAt: { lt: sevenDaysAgo } }
                                 ]
                             }
                         ]
@@ -189,7 +189,7 @@ export async function enrichActiveCompanies(options: {
                     await prisma.company.update({
                         where: { slug: company.slug },
                         data: {
-                            ...(atsSource === 'greenhouse' ? { lastCheckedAt: new Date() } : {}),
+                            ...(atsSource === 'greenhouse' ? { lastEnrichedAt: new Date() } : {}),
                             ...(meta.name ? { name: meta.name } : {}),
                             ...(meta.logoUrl ? { logoUrl: meta.logoUrl } : {})
                         }
@@ -201,7 +201,7 @@ export async function enrichActiveCompanies(options: {
                     if (atsSource === 'greenhouse') {
                         await prisma.company.update({
                             where: { slug: company.slug },
-                            data: { lastCheckedAt: new Date() }
+                            data: { lastEnrichedAt: new Date() }
                         });
                     }
                 }

@@ -16,6 +16,7 @@ async function main() {
     const args = process.argv.slice(2);
     let reportPath: string | undefined;
     let githubOutput: string | undefined;
+    let stepSummary: string | undefined;
     let runHistoryPath: string | undefined;
 
     for (let i = 0; i < args.length; i++) {
@@ -24,6 +25,9 @@ async function main() {
             i++;
         } else if (args[i] === '--github-output' && args[i + 1]) {
             githubOutput = args[i + 1];
+            i++;
+        } else if (args[i] === '--step-summary' && args[i + 1]) {
+            stepSummary = args[i + 1];
             i++;
         } else if (args[i] === '--run-history' && args[i + 1]) {
             runHistoryPath = args[i + 1];
@@ -46,6 +50,7 @@ async function main() {
     console.log(`🔍 Classifying report: ${report.run?.runId || 'unknown'}`);
     const result = classifyReport(report, {
         githubOutput,
+        stepSummary,
         runHistoryPath
     });
 

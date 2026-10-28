@@ -1,9 +1,15 @@
 # ADR-0021: Multi-Source ATS Architecture (Greenhouse Onboarding)
 
-- Status: Accepted (Phase G1, G2, G3 & G4 Implemented)
+- Status: Implemented (Phases G1–G6 Implemented)
 - Date: 2026-10-27
 - Deciders: owner, scraper-architect
 - Related: ADR-0001, ADR-0004, ADR-0009, ADR-0010, ADR-0018, ADR-0019, ADR-0020
+
+> **Implementation Note (Phase G6 - 2026-10-27)**:
+> Phase G6 implemented: Greenhouse enabled in daily scrape behind `GREENHOUSE_ENABLED` repo variable with `sources` dispatch override; per-source sanity gate in `Publisher.ts` (drops > 30% for sources with baseline ≥ 100 exit 2); emergency rollback CLI `npm run source:deactivate -- greenhouse` exposed in `scrape-daily.yml` as `deactivate_source` input; `force_publish` input added for post-rollback baseline resets; fixer scope restored for `schema.prisma`; additive nullable `Company.lastEnrichedAt` introduced to decouple 7-day logo retry from scraper `lastCheckedAt` updates; initial Greenhouse worker concurrency capped at ≤ 5 with `Accept-Encoding: gzip`.
+
+> **Implementation Note (Phase G5 - 2026-10-27)**:
+> Phase G5 implemented: Greenhouse board discovery at scale via paged Common Crawl CDX targeting boards/job-boards hosts; candidate token validation against `GET /v1/boards/{token}` at ≤ 5 concurrent; best-effort logo enrichment from hosted board pages; empty Greenhouse boards hidden from public API listings and profiles until scraped; gated `discover-greenhouse` job added to `discover-weekly.yml`.
 
 > **Implementation Note (Phase G4 - 2026-10-27)**:
 > Phase G4 implemented: additive `source` and `externalId` exposed on Job DTOs with `ashbyId` marked deprecated; `source` and `boardUrl` exposed on Company DTOs; `source` facet count group added; `source=ashby|greenhouse` query filter supported in API and synced to UI `JobFiltersBar`; `SourceBadge` added to JobCard, JobDetailPanel, and CompanyHeader; all user-facing copy neutralized for multi-source ATS.

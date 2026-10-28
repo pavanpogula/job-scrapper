@@ -35,6 +35,15 @@ class FakeAtsClient implements AtsClient {
 }
 
 describe('Per-Source Adaptive Limiter (ADR-0021)', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
   it('creates isolated limiters per source so 429 on one source does not throttle another', () => {
     const clients = new Map<AtsSource, AtsClient>([
       ['ashby', new FakeAtsClient('ashby')],
@@ -47,7 +56,7 @@ describe('Per-Source Adaptive Limiter (ADR-0021)', () => {
     const greenhouseLimiter = scraper.getLimiter('greenhouse', 15);
 
     expect(ashbyLimiter.getConcurrency()).toBe(15);
-    expect(greenhouseLimiter.getConcurrency()).toBe(15);
+    expect(greenhouseLimiter.getConcurrency()).toBe(5); // Greenhouse starts at <= 5 per worker (G6)
 
     // Ashby encounters 429 rate limit
     ashbyLimiter.onRateLimit();
@@ -55,7 +64,7 @@ describe('Per-Source Adaptive Limiter (ADR-0021)', () => {
     // Ashby throttles down
     expect(ashbyLimiter.getConcurrency()).toBeLessThan(15);
 
-    // Greenhouse limiter remains untouched at full concurrency
-    expect(greenhouseLimiter.getConcurrency()).toBe(15);
+    // Greenhouse limiter remains untouched at full initial concurrency
+    expect(greenhouseLimiter.getConcurrency()).toBe(5);
   });
 });

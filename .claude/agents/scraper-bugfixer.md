@@ -36,7 +36,7 @@ skills: [fix-from-error-report, record-decision, release-notes, verify-change]
 - `backend/src/discovery/**`
 - `backend/src/utils/**`
 - `backend/tests/**`
-- `backend/prisma/schema.prisma` (additive columns/indexes only; locked / excluded during multi-source ATS migration G1-G5)
+- `backend/prisma/schema.prisma` (additive columns/indexes only; restored in G6)
 - `docs/**`
 - `CHANGELOG.md`
 - **Forbidden:** Never edits `.github/**`, `.claude/settings.json`, `.agents/hooks.json`, `vercel.json`, `frontend/**`, or dependency files.

@@ -149,11 +149,18 @@ describeIfDb('ADR-0021: Multi-source schema expansion, dual-write backfill, and 
     expect(uniquesPush.stdout.toLowerCase()).toContain('already in sync');
   });
 
-  it('Step 4b: pushes live schema.prisma reporting already in sync (G2 live schema confirmation)', async () => {
+  it('Step 4b: pushes the live schema.prisma without data-loss flags, then reports already in sync', async () => {
     const liveSchemaPath = path.resolve(__dirname, '../../prisma/schema.prisma');
+    // The first push may apply additive columns added after G2 (e.g. Company.lastEnrichedAt): it must exit 0
+    // without --accept-data-loss. A second push must then be a no-op.
     const livePush = pushSchema(liveSchemaPath);
     expect(livePush.status).toBe(0);
-    expect(livePush.stdout.toLowerCase()).toContain('already in sync');
+    expect(livePush.stdout.toLowerCase()).not.toContain('data loss');
+    expect(livePush.stdout.toLowerCase()).toContain('in sync');
+
+    const secondPush = pushSchema(liveSchemaPath);
+    expect(secondPush.status).toBe(0);
+    expect(secondPush.stdout.toLowerCase()).toContain('already in sync');
   });
 
   it('Step 5: backfill refuses and exits 1 without creating indexes when an ASHBY company has slug with --', async () => {

@@ -147,7 +147,7 @@ describe('Greenhouse Company Enrichment', () => {
       expect(res.totalTargeted).toBe(1);
       expect(res.enrichedCount).toBe(1);
 
-      // Verify Prisma findMany was called with 7-day filter and take capped at 200
+      // Verify Prisma findMany was called with 7-day filter on lastEnrichedAt and take capped at 200
       expect(mockCompany.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
@@ -156,8 +156,8 @@ describe('Greenhouse Company Enrichment', () => {
             AND: expect.arrayContaining([
               expect.objectContaining({
                 OR: expect.arrayContaining([
-                  { lastCheckedAt: null },
-                  expect.objectContaining({ lastCheckedAt: expect.any(Object) }),
+                  { lastEnrichedAt: null },
+                  expect.objectContaining({ lastEnrichedAt: expect.any(Object) }),
                 ]),
               }),
             ]),
@@ -166,13 +166,72 @@ describe('Greenhouse Company Enrichment', () => {
         })
       );
 
-      // Verify update set lastCheckedAt
+      // Verify update set lastEnrichedAt
       expect(mockCompany.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { slug: 'gh--stripe' },
           data: expect.objectContaining({
-            lastCheckedAt: expect.any(Date),
+            lastEnrichedAt: expect.any(Date),
             logoUrl: 'https://s2-recruiting.cdn.greenhouse.io/external_greenhouse_job_boards/logos/400/025/200/original/stripe.png',
+          }),
+        })
+      );
+    });
+
+    it('ensures a scraper run touching lastCheckedAt does not hide a logo-less company from enrichment', async () => {
+      // Simulate a company that was scraped 5 minutes ago (lastCheckedAt is fresh)
+      // but has lastEnrichedAt = null (never enriched)
+      const freshScrapedCompany = {
+        slug: 'gh--recent-scrape',
+        source: 'GREENHOUSE',
+        atsToken: 'recent-scrape',
+        name: 'Recent Scrape Inc',
+        logoUrl: null,
+        lastCheckedAt: new Date(Date.now() - 5 * 60 * 1000), // 5 min ago
+        lastEnrichedAt: null,
+      };
+
+      mockCompany.findMany.mockImplementation(async (args: { where: Record<string, unknown> }) => {
+        // Evaluate the Prisma query filter against our company
+        const where = args.where;
+        if (where.source === 'GREENHOUSE' && where.status === 'ACTIVE') {
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          const andArr = where.AND as Array<{ OR: Array<{ lastEnrichedAt?: unknown | { lt?: Date } }> }> | undefined;
+          const enrichedFilter = andArr?.[0]?.OR;
+          const matchesEnriched = enrichedFilter?.some((cond) => {
+            if (cond.lastEnrichedAt === null && freshScrapedCompany.lastEnrichedAt === null) return true;
+            const ltObj = cond.lastEnrichedAt as { lt?: Date } | undefined;
+            if (ltObj?.lt && freshScrapedCompany.lastEnrichedAt && (freshScrapedCompany.lastEnrichedAt as Date) < sevenDaysAgo) return true;
+            return false;
+          });
+          if (matchesEnriched) {
+            return [freshScrapedCompany];
+          }
+        }
+        return [];
+      });
+      mockCompany.update.mockResolvedValue({});
+
+      mockedAxios.get
+        .mockResolvedValueOnce({ status: 200, data: { name: 'Recent Scrape Inc' } } as never)
+        .mockResolvedValueOnce({
+          status: 200,
+          data: '<meta property="og:image" content="https://s2-recruiting.cdn.greenhouse.io/external_greenhouse_job_boards/logos/400/025/200/original/recent.png">',
+        } as never);
+
+      const res = await enrichActiveCompanies({
+        sources: ['greenhouse'],
+      });
+
+      // The company MUST be targeted and enriched despite lastCheckedAt being fresh
+      expect(res.totalTargeted).toBe(1);
+      expect(res.enrichedCount).toBe(1);
+      expect(mockCompany.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { slug: 'gh--recent-scrape' },
+          data: expect.objectContaining({
+            lastEnrichedAt: expect.any(Date),
+            logoUrl: 'https://s2-recruiting.cdn.greenhouse.io/external_greenhouse_job_boards/logos/400/025/200/original/recent.png',
           }),
         })
       );

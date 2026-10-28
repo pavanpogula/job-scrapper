@@ -202,7 +202,7 @@ test('fixer-scope: frontend/docs modification fails', () => {
   }
 });
 
-test('fixer-scope: backend/prisma/schema.prisma modification fails (G1-G5 migration lock)', () => {
+test('fixer-scope: backend/prisma/schema.prisma modification passes (restored in G6)', () => {
   const repo = createTempGitRepo();
   try {
     fs.mkdirSync(path.join(repo.dir, 'backend/prisma'), { recursive: true });
@@ -211,8 +211,8 @@ test('fixer-scope: backend/prisma/schema.prisma modification fails (G1-G5 migrat
     execFileSync('git', ['commit', '-m', 'edit schema.prisma'], { cwd: repo.dir });
 
     const res = repo.runCheck('HEAD~1');
-    assert.notEqual(res.status, 0, 'Expected failure for backend/prisma/schema.prisma modification during migration');
-    assert.ok(res.output.includes('outside allowed scope'));
+    assert.equal(res.status, 0, `Expected backend/prisma/schema.prisma modification to pass in G6: ${res.output}`);
+    assert.ok(res.output.includes('All modified files are within allowed fixer scope'));
   } finally {
     repo.cleanup();
   }
