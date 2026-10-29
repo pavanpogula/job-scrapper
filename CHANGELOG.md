@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+- **feat(ops)**: custom domain `www.boolean.page` for the web app.
+  - Why: the site only had the Vercel address `job-scrapper-ui.vercel.app`. The owner bought `boolean.page` on Vercel and attached it to the `job-scrapper-ui` project: `boolean.page` 308-redirects to `www.boolean.page` (production). The frontend already proxies `/v1/*` and `/health` to the backend, so the new domain worked with no code change (smoke 11/11 green on `https://www.boolean.page`).
+  - Changes: `https://www.boolean.page` added to the default CORS allow-list in `backend/src/api/Server.ts` (the old Vercel address and `localhost:3000` stay); the production frontend smoke step in `deploy.yml` now checks `https://www.boolean.page`; `robots.txt` no longer lists a `sitemap.xml` that never existed (it returned the app's HTML). The API domain is unchanged.
+  - Tests: `Hardening.test.ts` pins the CORS header for `https://www.boolean.page`. Docs: `README.md`, `backend/README.md`, `backend/docs/configuration.md`, `docs/deployment-and-operations.md`.
 - **feat(ops)**: enable Greenhouse in the daily scrape behind GREENHOUSE_ENABLED (ADR-0021).
   - Workflow & Schedule Integration (`.github/workflows/scrape-daily.yml`): Added `workflow_dispatch` inputs `sources` (override, default empty), `force_publish` (boolean), and `deactivate_source` (`none` | `greenhouse`). Effective sources computed as `inputs.sources` if set, else `ashby,greenhouse` when `vars.GREENHOUSE_ENABLED == 'true'`, else `ashby`. Passed `--sources=<effective>` to `scrape:parallel` and `enrich:companies`.
   - Emergency Source Rollback (`backend/src/database/SourceDeactivate.ts`, `backend/package.json`): Added `npm run source:deactivate -- <source> [--dry-run] [--i-know]` setting `active = false` on target source's jobs while leaving `Company.status` unchanged (keeping empty Greenhouse boards hidden via G5 rule). Guarded primary source `ashby` with mandatory `--i-know`. Wired into `scrape-daily.yml` via `deactivate_source` input running after `db push` and skipping scraping. Added to `DANGEROUS` script list in `settings-allowlist.test.mjs`.
