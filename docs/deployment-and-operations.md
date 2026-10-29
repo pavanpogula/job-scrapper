@@ -28,7 +28,7 @@ The matrix below documents where every secret is configured and consumed:
 | `ANTHROPIC_API_KEY` | — | ✅ | — | — | API key for automated Claude fixer agent workflow (`P4`). |
 | `FIXER_APP_CLIENT_ID` | — | ✅ | — | — | GitHub App client ID for opening automated pull requests. |
 | `FIXER_APP_PRIVATE_KEY` | — | ✅ | — | — | GitHub App private key for authenticating fix PR pushes. |
-| `CORS_ORIGINS` | — | — | ✅ | Optional | Comma-separated list of allowed origins (e.g. `https://job-scrapper-ui.vercel.app,http://localhost:3000`). |
+| `CORS_ORIGINS` | — | — | ✅ | Optional | Comma-separated list of allowed origins (default `https://www.boolean.page,https://job-scrapper-ui.vercel.app,http://localhost:3000`). |
 | `HEALTH_TOKEN` | — | — | ✅ | Optional | Bearer secret enabling deep database ping via `/health?deep=1`. |
 | `VERCEL_TOKEN` | — | — | — | — | Vercel access token used **only** by `deploy.yml`; stored in the GitHub `vercel-production` environment (never in the scraper env). |
 | `VERCEL_ORG_ID` | — | — | — | — | Vercel team ID (`boolean6`) for `deploy.yml`; `vercel-production` environment. |
@@ -91,7 +91,7 @@ the owner runs this workflow (ADR-0016).
   with the pinned Vercel CLI, from the repo root (each project's Root Directory is a Vercel setting). The backend
   goes first because the frontend proxies `/v1/*` and `/health` to it.
 - **After a production deploy** each job runs `scripts/smoke/smoke.mjs` against
-  `https://job-scrapper-api-eight.vercel.app` (backend) and `https://job-scrapper-ui.vercel.app` (frontend).
+  `https://job-scrapper-api-eight.vercel.app` (backend) and `https://www.boolean.page` (frontend).
   Preview URLs sit behind Vercel login, so preview runs only print the URL (open it in your browser). A frontend
   preview still proxies to the **production** backend domain.
 - **Secrets:** GitHub environment `vercel-production` (see §2). Optionally add the owner as a required reviewer
@@ -126,7 +126,8 @@ Two Vercel projects (ADR-0014), both with git deploys disabled (deploys run via 
   `buildCommand` = `npm run build` (Prisma generate), serverless function `api/index.ts` (`maxDuration` 15),
   rewrites `/v1/(.*)` and `/health` → `/api/index`, headers `X-Frame-Options`, `Referrer-Policy`,
   `X-Content-Type-Options`.
-- **`job-scrapper-ui`** (Root Directory `frontend`, `https://job-scrapper-ui.vercel.app`): Vite build to `dist`,
+- **`job-scrapper-ui`** (Root Directory `frontend`, `https://www.boolean.page`; `boolean.page` 308-redirects to `www`,
+  and `https://job-scrapper-ui.vercel.app` still works): Vite build to `dist`,
   rewrites `/v1/*` and `/health` to the backend domain and everything else to `/index.html`, headers
   `Content-Security-Policy`, `X-Frame-Options`, `Referrer-Policy`, `X-Content-Type-Options`, `Permissions-Policy`.
 
