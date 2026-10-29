@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(ui)**: B.O.O.L.E.A.N logo from the owner's original Instagram logo.
+  - Why: the header, footer and browser tab used a placeholder blue "B" square. The owner's original logo was only a 364×364 JPEG, too small to stay sharp and unreadable at 16-28 px.
+  - Changes: vector redraw in `frontend/public/brand/` — `boolean-logo.svg` (full logo with the `{B·O·O·L·E·A·N}` wordmark, on the About page) and `boolean-mark.svg` (simplified square mark: favicon plus the image in `BrandMark`); `apple-touch-icon.png` (180 px) and `boolean-logo-512.jpg` (`og:image` for link previews) rendered from them. `index.html` gains the apple-touch-icon and Open Graph / Twitter card tags; the old `public/favicon.svg` is removed. Logo URLs live in `BRAND` in `frontend/src/lib/site.ts`.
+  - Tests: `brandMark.test.tsx` (files exist, BrandMark image is decorative next to the wordmark, About page logo has a text alternative, favicon and `og:image` tags). Checked in Chrome at desktop and 390 px, light and dark. Docs: `frontend/docs/frontend-ui.md`.
+
 - **feat(ops)**: custom domain `www.boolean.page` for the web app.
   - Why: the site only had the Vercel address `job-scrapper-ui.vercel.app`. The owner bought `boolean.page` on Vercel and attached it to the `job-scrapper-ui` project: `boolean.page` 308-redirects to `www.boolean.page` (production). The frontend already proxies `/v1/*` and `/health` to the backend, so the new domain worked with no code change (smoke 11/11 green on `https://www.boolean.page`).
   - Changes: `https://www.boolean.page` added to the default CORS allow-list in `backend/src/api/Server.ts` (the old Vercel address and `localhost:3000` stay); the production frontend smoke step in `deploy.yml` now checks `https://www.boolean.page`; `robots.txt` no longer lists a `sitemap.xml` that never existed (it returned the app's HTML). The API domain is unchanged.

@@ -100,6 +100,13 @@ This executes:
 2. `npm --prefix frontend run lint` (ESLint 9 with react-hooks and jsx-a11y)
 3. `npm --prefix frontend run test` (Vitest suites covering facet formatting, default query parameters, DOMPurify sanitization, and API contract parity)
 
+### Brand logo
+- The logo is a vector redraw of the original B.O.O.L.E.A.N Instagram logo (black monitor with green binary, keyboard, speckled navy background, `{B·O·O·L·E·A·N}` wordmark). Files live in `frontend/public/brand/`; their URLs are in `BRAND` in `frontend/src/lib/site.ts`.
+- `boolean-mark.svg` (64×64, no wordmark, one row `0101` so it still reads at 16-28 px) is the browser-tab icon and the image in `components/brand/BrandMark.tsx` (header and footer; decorative `alt=""`, the wordmark text sits next to it).
+- `boolean-logo.svg` (full logo) is shown on the About page with a text description.
+- `apple-touch-icon.png` (180×180) and `boolean-logo-512.jpg` (link previews, `og:image` in `index.html`) are rendered from the SVGs. After editing an SVG, re-render them (any headless browser screenshot at that size).
+- Guarded by `src/test/brandMark.test.tsx`.
+
 ### Founder credit
 - Founder details live in one place: `frontend/src/lib/site.ts` (`FOUNDER`). Edit there, not in components.
 - `components/brand/FounderCredit.tsx` renders the footer line "Founded by <name>" with a small LinkedIn icon (every page) and the About page `FounderCard` (photo avatar, name, "Founder · B.O.O.L.E.A.N", profile URL, "View on LinkedIn").
