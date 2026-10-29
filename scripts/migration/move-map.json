@@ -209,6 +209,14 @@
     {
       "path": "job-scrapper-ui/src/test/fixtures/sample-company.json",
       "reason": "Replaced by synced API contract fixtures in P8a"
+    },
+    {
+      "path": "job-scrapper-ui/public/favicon.svg",
+      "reason": "Replaced by frontend/public/brand/boolean-mark.svg (B.O.O.L.E.A.N logo)"
+    },
+    {
+      "path": "frontend/public/favicon.svg",
+      "reason": "Replaced by frontend/public/brand/boolean-mark.svg (B.O.O.L.E.A.N logo)"
     }
   ]
 }

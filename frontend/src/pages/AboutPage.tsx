@@ -5,6 +5,7 @@ import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
 import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import { FounderCard } from '../components/brand/FounderCredit';
+import { BRAND } from '../lib/site';
 
 export const AboutPage: React.FC = () => {
   return (
@@ -15,6 +16,14 @@ export const AboutPage: React.FC = () => {
         content="About B.O.O.L.E.A.N — the open public directory of direct company career postings."
       />
       <Box sx={{ mb: 5 }}>
+        <Box
+          component="img"
+          src={BRAND.logoUrl}
+          alt="B.O.O.L.E.A.N logo: a computer showing binary code above the word {B·O·O·L·E·A·N}"
+          width={160}
+          height={160}
+          sx={{ display: 'block', borderRadius: 3, mb: 3 }}
+        />
         <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '1.75rem', sm: '2.25rem' }, fontWeight: 700, mb: 1.5 }}>
           About B.O.O.L.E.A.N
         </Typography>

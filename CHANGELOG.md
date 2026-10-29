@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+- **feat(ui)**: B.O.O.L.E.A.N logo from the owner's original Instagram logo.
+  - Why: the header, footer and browser tab used a placeholder blue "B" square. The owner's original logo was only a 364×364 JPEG, too small to stay sharp and unreadable at 16-28 px.
+  - Changes: vector redraw in `frontend/public/brand/` — `boolean-logo.svg` (full logo with the `{B·O·O·L·E·A·N}` wordmark, on the About page) and `boolean-mark.svg` (simplified square mark: favicon plus the image in `BrandMark`); `apple-touch-icon.png` (180 px) and `boolean-logo-512.jpg` (`og:image` for link previews) rendered from them. `index.html` gains the apple-touch-icon and Open Graph / Twitter card tags; the old `public/favicon.svg` is removed. Logo URLs live in `BRAND` in `frontend/src/lib/site.ts`.
+  - Tests: `brandMark.test.tsx` (files exist, BrandMark image is decorative next to the wordmark, About page logo has a text alternative, favicon and `og:image` tags). Checked in Chrome at desktop and 390 px, light and dark. Docs: `frontend/docs/frontend-ui.md`.
 - **feat(ops)**: enable Greenhouse in the daily scrape behind GREENHOUSE_ENABLED (ADR-0021).
   - Workflow & Schedule Integration (`.github/workflows/scrape-daily.yml`): Added `workflow_dispatch` inputs `sources` (override, default empty), `force_publish` (boolean), and `deactivate_source` (`none` | `greenhouse`). Effective sources computed as `inputs.sources` if set, else `ashby,greenhouse` when `vars.GREENHOUSE_ENABLED == 'true'`, else `ashby`. Passed `--sources=<effective>` to `scrape:parallel` and `enrich:companies`.
   - Emergency Source Rollback (`backend/src/database/SourceDeactivate.ts`, `backend/package.json`): Added `npm run source:deactivate -- <source> [--dry-run] [--i-know]` setting `active = false` on target source's jobs while leaving `Company.status` unchanged (keeping empty Greenhouse boards hidden via G5 rule). Guarded primary source `ashby` with mandatory `--i-know`. Wired into `scrape-daily.yml` via `deactivate_source` input running after `db push` and skipping scraping. Added to `DANGEROUS` script list in `settings-allowlist.test.mjs`.
