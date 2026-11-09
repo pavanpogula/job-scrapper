@@ -64,3 +64,11 @@ Run all mandatory checks across backend, frontend, and repository tests with:
 ```bash
 scripts/check-all.sh --no-install
 ```
+
+---
+
+## License
+
+The code is released under the [MIT License](LICENSE). Job postings shown by the app belong to the companies that
+published them and are not covered by this license. To report a security issue, see
+[`.github/SECURITY.md`](.github/SECURITY.md); to contribute, see [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md).

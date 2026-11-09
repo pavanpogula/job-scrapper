@@ -67,7 +67,7 @@ job-scrapper/
 | Testing pyramid, mocks, and repo tests | [`docs/testing.md`](./testing.md), [`backend/docs/testing.md`](../backend/docs/testing.md), [`frontend/docs/testing.md`](../frontend/docs/testing.md) |
 | Express REST API contract & endpoints | [`backend/docs/api.md`](../backend/docs/api.md) |
 | Frontend UI routes, Redux store, and components | [`frontend/docs/frontend-ui.md`](../frontend/docs/frontend-ui.md) |
-| Vercel deployment, branch protection, and operations | [`docs/deployment-and-operations.md`](./deployment-and-operations.md) |
+| Vercel deployment, branch protection, public-repo governance (license, rulesets, Actions settings), and operations | [`docs/deployment-and-operations.md`](./deployment-and-operations.md) |
 | Self-healing loop and bugfix protocol | [`docs/self-healing-loop.md`](./self-healing-loop.md) |
 | Canonical agent roles and permissions | [`docs/agents/roster.md`](./agents/roster.md), [`docs/agents/context.md`](./agents/context.md) |
 
