@@ -386,16 +386,19 @@ app.get('/v1/meta', async (_req: Request, res: Response) => {
       true,
       res,
       async (): Promise<MetaResponseDTO> => {
-        const [activeJobs, hiringCompanies, facets] = await Promise.all([
+        const [activeJobs, hiringCompanies, facets, lastSeen] = await Promise.all([
           prisma.job.count({ where: { active: true, isListed: true } }),
           prisma.company.count({ where: { status: 'ACTIVE', jobs: { some: { active: true, isListed: true } } } }),
           computeFacets(prisma),
+          // The scraper touches lastSeenAt on every job it sees, so the newest value is when the last scrape ran.
+          // (The time of this request would only show when the edge cache was last filled.)
+          prisma.job.aggregate({ where: { active: true }, _max: { lastSeenAt: true } }),
         ]);
         return {
           activeJobs,
           hiringCompanies,
           withSalary: facets.hasSalary.yes,
-          lastScrapeAt: new Date().toISOString(),
+          lastScrapeAt: lastSeen._max.lastSeenAt ? lastSeen._max.lastSeenAt.toISOString() : null,
           generation: 'live_db',
         };
       }

@@ -5,12 +5,16 @@
  */
 
 import axios from 'axios';
+import * as Concurrency from '../../src/lib/Concurrency';
 import {
   extractCompanySlug,
   extractGreenhouseToken,
   fetchLatestCrawlId,
   isValidGreenhouseToken,
   isValidSlug,
+  parseRetryAfterMs,
+  parseTimeBudgetMs,
+  parseTokenBudget,
   runDiscovery,
   validateAndSeedGreenhouseTokens,
 } from '../../src/discovery/CdxWorker';
@@ -100,6 +104,19 @@ describe('Greenhouse Discovery', () => {
     });
   });
 
+  describe('parseRetryAfterMs', () => {
+    it('reads seconds, an HTTP date, and falls back to 5 s for missing or unreadable values', () => {
+      const now = Date.parse('2026-10-21T07:00:00Z');
+      expect(parseRetryAfterMs('3', now)).toBe(3000);
+      expect(parseRetryAfterMs('0', now)).toBe(0);
+      expect(parseRetryAfterMs('Wed, 21 Oct 2026 07:00:10 GMT', now)).toBe(10000);
+      expect(parseRetryAfterMs('Wed, 21 Oct 2026 06:00:00 GMT', now)).toBe(0); // date in the past
+      expect(parseRetryAfterMs(undefined, now)).toBe(5000);
+      expect(parseRetryAfterMs('soon', now)).toBe(5000);
+      expect(parseRetryAfterMs('99999', now)).toBe(60000); // capped
+    });
+  });
+
   describe('Token Validation & Seeding', () => {
     it('validates tokens with GET /v1/boards/{token}: 200 keeps with name, 404 drops, 429 backs off', async () => {
       const mockDb = {
@@ -111,16 +128,18 @@ describe('Greenhouse Discovery', () => {
 
       // Mock 3 tokens:
       // 1. 'airbnb': 200 OK -> upserted
-      // 2. 'throttled': 429 Rate limited with Retry-After: 1 -> backed off
+      // 2. 'throttled': 429 Rate limited with Retry-After: 0 -> waits, then the retry succeeds -> upserted
       // 3. 'nonexistent': 404 Not Found -> dropped
-      mockedAxios.get
-        .mockResolvedValueOnce({ status: 200, data: { name: 'Airbnb Inc' } } as never)
-        .mockRejectedValueOnce({
-          response: { status: 429, headers: { 'retry-after': '1' } },
-        })
-        .mockRejectedValueOnce({
-          response: { status: 404 },
-        });
+      mockedAxios.get.mockImplementation(((url: string) => {
+        if (url.endsWith('/airbnb')) return Promise.resolve({ status: 200, data: { name: 'Airbnb Inc' } });
+        if (url.endsWith('/throttled')) {
+          const first = !mockedAxios.get.mock.calls.slice(0, -1).some(([u]) => String(u).endsWith('/throttled'));
+          return first
+            ? Promise.reject({ response: { status: 429, headers: { 'retry-after': '0' } } })
+            : Promise.resolve({ status: 200, data: { name: 'Throttled Co' } });
+        }
+        return Promise.reject({ response: { status: 404 } });
+      }) as never);
 
       const result = await validateAndSeedGreenhouseTokens(
         ['airbnb', 'throttled', 'nonexistent'],
@@ -131,8 +150,9 @@ describe('Greenhouse Discovery', () => {
       );
 
       expect(result.validated).toBe(3);
-      expect(result.inserted).toBe(1);
-      expect(mockDb.company.upsert).toHaveBeenCalledTimes(1);
+      expect(result.inserted).toBe(2);
+      expect(result.timedOutCount).toBe(0);
+      expect(mockDb.company.upsert).toHaveBeenCalledTimes(2);
       expect(mockDb.company.upsert).toHaveBeenCalledWith({
         where: {
           source_atsToken: {
@@ -152,6 +172,59 @@ describe('Greenhouse Discovery', () => {
           status: 'ACTIVE',
         },
       });
+    });
+
+    it('a token still throttled after 3 attempts is not lost silently: it counts as not checked', async () => {
+      const mockDb = {
+        company: { upsert: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}) },
+      } as unknown as import('@prisma/client').PrismaClient;
+      mockedAxios.get.mockRejectedValue({ response: { status: 429, headers: { 'retry-after': '0' } } });
+
+      const result = await validateAndSeedGreenhouseTokens(['a', 'b'], { deadline: Date.now() + 10000, prismaClient: mockDb });
+
+      expect(result.validated).toBe(0);
+      expect(result.inserted).toBe(0);
+      expect(result.timedOutCount).toBe(2);
+      expect(mockedAxios.get).toHaveBeenCalledTimes(6); // 2 tokens x 3 attempts
+      expect(mockDb.company.upsert).not.toHaveBeenCalled();
+    });
+
+    it('a burst of 429s slows the limiter once, not once per in-flight request', async () => {
+      const mockDb = {
+        company: { upsert: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}) },
+      } as unknown as import('@prisma/client').PrismaClient;
+      const slowdowns: number[] = [];
+      const realCreate = Concurrency.createLimiter;
+      const spy = jest.spyOn(Concurrency, 'createLimiter').mockImplementation(((...args: Parameters<typeof realCreate>) => {
+        const limiter = realCreate(...args);
+        const realOnRateLimit = limiter.onRateLimit;
+        limiter.onRateLimit = (ms?: number) => {
+          slowdowns.push(ms ?? -1);
+          realOnRateLimit(ms);
+        };
+        return limiter;
+      }) as typeof realCreate);
+
+      try {
+        const seen = new Set<string>();
+        mockedAxios.get.mockImplementation(((url: string) => {
+          if (!seen.has(url)) {
+            seen.add(url);
+            return Promise.reject({ response: { status: 429, headers: { 'retry-after': '1' } } });
+          }
+          return Promise.resolve({ status: 200, data: { name: 'X' } });
+        }) as never);
+
+        const result = await validateAndSeedGreenhouseTokens(['t1', 't2', 't3', 't4', 't5'], {
+          deadline: Date.now() + 20000,
+          prismaClient: mockDb,
+        });
+
+        expect(result.inserted).toBe(5); // all five were retried and saved
+        expect(slowdowns).toEqual([1000]); // five simultaneous 429s, one slowdown
+      } finally {
+        spy.mockRestore();
+      }
     });
 
     it('halts cleanly when deadline is reached and records timedOutCount', async () => {
@@ -225,5 +298,64 @@ describe('Greenhouse Discovery', () => {
         })
       );
     });
+  });
+});
+
+describe('Greenhouse discovery budget and concurrency', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('validates up to 5 tokens at once (never more) and still handles every token', async () => {
+    const mockDb = {
+      company: { upsert: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}) },
+    } as unknown as import('@prisma/client').PrismaClient;
+
+    let inFlight = 0;
+    let peak = 0;
+    mockedAxios.get.mockImplementation((async () => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      await new Promise((r) => setTimeout(r, 15));
+      inFlight--;
+      return { status: 200, data: { name: 'Board' } };
+    }) as never);
+
+    const tokens = Array.from({ length: 30 }, (_, i) => `board${i}`);
+    const result = await validateAndSeedGreenhouseTokens(tokens, { deadline: Date.now() + 10000, prismaClient: mockDb });
+
+    expect(result.validated).toBe(30);
+    expect(result.inserted).toBe(30);
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(5);
+  });
+
+  it('stops starting new validations once the deadline passes and counts the rest as timed out', async () => {
+    const mockDb = {
+      company: { upsert: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}) },
+    } as unknown as import('@prisma/client').PrismaClient;
+    mockedAxios.get.mockImplementation((async () => {
+      await new Promise((r) => setTimeout(r, 20));
+      return { status: 200, data: { name: 'Board' } };
+    }) as never);
+
+    const tokens = Array.from({ length: 40 }, (_, i) => `slow${i}`);
+    const result = await validateAndSeedGreenhouseTokens(tokens, { deadline: Date.now() + 60, prismaClient: mockDb });
+
+    expect(result.validated + result.timedOutCount).toBe(40);
+    expect(result.timedOutCount).toBeGreaterThan(0);
+    expect(result.validated).toBeGreaterThan(0);
+  });
+
+  it('parses --budget (number or "all") and --time-budget-min, rejecting bad values', () => {
+    expect(parseTokenBudget('2000')).toBe(2000);
+    expect(parseTokenBudget(' ALL ')).toBe(Number.MAX_SAFE_INTEGER);
+    for (const bad of ['0', '-5', '1.5', 'abc', '', '10x']) {
+      expect(() => parseTokenBudget(bad)).toThrow(/Invalid --budget/);
+    }
+    expect(parseTimeBudgetMs('20')).toBe(20 * 60 * 1000);
+    for (const bad of ['0', '121', 'x', '', '2.5']) {
+      expect(() => parseTimeBudgetMs(bad)).toThrow(/Invalid --time-budget-min/);
+    }
   });
 });

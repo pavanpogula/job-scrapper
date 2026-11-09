@@ -105,6 +105,15 @@ export class ReadThroughService {
   }
 
   /**
+   * @summary Why no Redis client is ready: "not_configured" when no client exists at all (the normal state without
+   * REDIS_URL), "connect_failed" when a client exists but could not connect (a real outage, so cache headers stay short).
+   * @tags Cache, Redis, ReadThrough
+   */
+  private unavailableReason(): 'not_configured' | 'connect_failed' {
+    return this.getClient() ? 'connect_failed' : 'not_configured';
+  }
+
+  /**
    * Resolves the API Redis client and connects it first when it is idle. The API client is lazyConnect with
    * enableOfflineQueue:false, so a command on an unconnected client is rejected. Returns null if connecting fails.
    */
@@ -215,7 +224,7 @@ export class ReadThroughService {
     const redis = await this.getReadyClient();
     if (!redis) {
       res.setHeader('X-Cache', 'BYPASS');
-      res.setHeader('X-Cache-Reason', 'not_configured');
+      res.setHeader('X-Cache-Reason', this.unavailableReason());
       const startDb = Date.now();
       const result = await dbGuard.run(() => singleFlight(key, fetchDb));
       const dbDur = Date.now() - startDb;
@@ -456,7 +465,7 @@ export class ReadThroughService {
     const redis = await this.getReadyClient();
     if (!redis) {
       res.setHeader('X-Cache', 'BYPASS');
-      res.setHeader('X-Cache-Reason', 'not_configured');
+      res.setHeader('X-Cache-Reason', this.unavailableReason());
       const startDb = Date.now();
       const result = await dbGuard.run(() => singleFlight(`detail:${id}`, fetchDb));
       res.setHeader('Server-Timing', `db;dur=${Date.now() - startDb}`);

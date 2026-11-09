@@ -11,7 +11,7 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 |---|---|:-:|:-:|---|---|---|
 | `npm run seed [-- --all]` | `src/utils/Seed.ts` | ✅ | — | — | `Company` rows | 0 (`.catch(console.error)`) |
 | `npm run seed:greenhouse [-- token1,token2]` | `src/utils/SeedGreenhouse.ts` | ✅ | — | Greenhouse Board API | `Company` rows (`gh--<token>`, `source=GREENHOUSE`) | 1 |
-| `npm run discover [-- --source=greenhouse] [-- --common-crawl] [-- --enrich]` | `src/discovery/CdxWorker.ts` | ✅ | — | CommonCrawl / Wayback CDX | `Company` rows (`name`/`logoUrl` with `--enrich`) | 1 |
+| `npm run discover [-- --source=greenhouse] [-- --common-crawl] [-- --enrich] [-- --budget=N|all] [-- --time-budget-min=M]` | `src/discovery/CdxWorker.ts` | ✅ | — | CommonCrawl / Wayback CDX | `Company` rows (`name`/`logoUrl` with `--enrich`) | 1 |
 | `npm run process:cdx -- <file.json>` | `src/utils/ProcessCdxData.ts` | — | — | — | `./extracted-slugs.json` (CWD) | non-zero only on thrown read/parse error |
 | `npm run scrape [-- --sources=s1,s2] [-- --slugs=a,b]` | `src/core/Scraper.ts` | ✅ | optional | Ashby REST (+ GraphQL fallback) | `Job`, `Department`, `Location`, `Company.status`, Redis `job:*:hash`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 1 |
 | `npm run scrape:parallel [-- --workers=N] [-- --sources=s1,s2] [-- --slugs=a,b]` | `src/core/ClusterScraper.ts` (forks `Scraper.ts --ipc-worker`) | ✅ | optional | Ashby REST (+ GraphQL fallback) | same as `scrape`, report merged across workers | 1 |
@@ -72,7 +72,8 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
   * Discovers latest Common Crawl crawl id from `https://index.commoncrawl.org/collinfo.json` (fallback `CC-MAIN-2024-51`).
   * Queries Common Crawl paged CDX index across 4 hosts (`job-boards.greenhouse.io`, `boards.greenhouse.io`, `job-boards.eu.greenhouse.io`, `boards.eu.greenhouse.io`) with `showNumPages=true` and `page=0..N-1` with 504 retry and prefix fallbacks.
   * Extracts tokens via `extractGreenhouseToken()` (including `embed/job_board?for=<token>`), enforces regex `^[a-z0-9][a-z0-9_-]{1,59}$`.
-  * Filters out tokens already in DB (`source: 'GREENHOUSE'`). Validates at most 500 new tokens per run. Stops cleanly at the 20-minute time budget.
+  * Filters out tokens already in DB (`source: 'GREENHOUSE'`). Validates at most 500 new tokens per run by default, 5 at a time (a 429 slows all of them down). Stops cleanly at the 20-minute time budget.
+  * `--budget=N|all`: how many new tokens to validate this run (a positive whole number, or `all` for no cap). `--time-budget-min=M`: the time budget in minutes (1-120, default 20). Example for a full local pass: `npm run discover -- --source=greenhouse --enrich --budget=all --time-budget-min=40`. Invalid values exit 1 with a clear message.
   * Validates with `GET https://boards-api.greenhouse.io/v1/boards/{token}` at ≤ 5 concurrent (200 → upsert `gh--<token>`, 404 → drop, 429 → back off).
   * With `--enrich`, fetches the board's own uploaded logo from the hosted board HTML (`og:image` or header `<img>`), accepted only when it is on the Greenhouse logo path; banners on other CDNs are ignored (initials shown).
   * Prints discovery summary to console and appends to `$GITHUB_STEP_SUMMARY` when running in GitHub Actions.

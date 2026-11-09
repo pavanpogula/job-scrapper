@@ -40,6 +40,7 @@ function createSampleJob(n: number) {
     contentHash: `hash-${n}`,
     active: true,
     isListed: true,
+    lastSeenAt: FIXED_DATE,
     publishedAt: published,
     createdAt: published,
     updatedAt: published,

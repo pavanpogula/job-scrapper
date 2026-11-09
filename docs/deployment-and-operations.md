@@ -134,9 +134,9 @@ Two Vercel projects (ADR-0014), both with git deploys disabled (deploys run via 
 The two `vercel.json` files are the source of truth; `scripts/repo-tests/vercel-config.test.mjs` guards them.
 
 ### Edge Caching & Purging
-- **Lists / Facets / Meta:** `s-maxage=300, stale-while-revalidate=3600` with `Vercel-Cache-Tag: jobs-v1`.
+- **Lists / Facets / Companies / Meta:** `max-age=60, s-maxage=3600` with `Vercel-Cache-Tag: jobs-v1` (data changes only when a scrape finishes, a few times a day). No `stale-while-revalidate` and no `stale-if-error`: after one hour the edge must refetch, so a visitor never sees data older than **1 hour**, and a `source:deactivate` rollback shows within that hour without any purge.
 - **Job Detail:** `s-maxage=3600, stale-while-revalidate=86400` with `Vercel-Cache-Tag: jobs-v1`.
-- **Bypass / Uncacheable:** `s-maxage=60, stale-while-revalidate=600`.
+- **Bypass with a degraded cache** (`circuit_open`, `budget_exhausted`, `no_generation`, `missing_generation`, `redis_error`, `timeout`, `connect_failed`): `s-maxage=60, stale-while-revalidate=600`. Only when Redis is not configured at all (`X-Cache-Reason: not_configured`, today's production state) the long list policy applies, because the edge cache is then the only cache. A configured Redis that cannot connect answers `connect_failed` and keeps the short rule.
 - **Cache Invalidation:** Atomic generation pointer swap in Upstash Redis (`jc:v1:*`) invalidates cache atomically on every publish run; external Vercel Edge API purging via `VERCEL_TOKEN` was retired in P3a.
 
 ---
@@ -177,7 +177,7 @@ server-side backstop for the destructive cases.
 **Symptom:** `/health` reports `cache.state: budget_exhausted`, API serves from PostgreSQL with `X-Cache: BYPASS`.
 **Remediation:**
 1. Check Upstash console for daily command count.
-2. Verify CDN cache headers (`s-maxage=300` on `/v1/jobs` and `s-maxage=3600` on `/v1/jobs/:id`). Ensure requests are hitting edge CDN rather than penetrating to serverless origins.
+2. Verify CDN cache headers (`s-maxage=3600` on `/v1/jobs` and on `/v1/jobs/:id`). Ensure requests are hitting edge CDN rather than penetrating to serverless origins.
 3. If legitimate traffic increased, upgrade Upstash database tier or adjust in-process LRU cache TTLs in `src/api/cache/ReadThrough.ts`.
 
 ### Runbook 3: Upstash Instance Archived Due to Inactivity

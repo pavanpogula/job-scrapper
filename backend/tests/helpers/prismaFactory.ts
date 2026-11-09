@@ -208,6 +208,17 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
             return list.length;
         }),
 
+        aggregate: jest.fn(async (args?: { where?: { active?: boolean } }) => {
+            const where = args?.where ?? {};
+            let latest: Date | null = null;
+            for (const j of jobs.values()) {
+                if (where.active !== undefined && j.active !== where.active) continue;
+                const seen = j.lastSeenAt ? new Date(j.lastSeenAt) : null;
+                if (seen && (!latest || seen > latest)) latest = seen;
+            }
+            return { _max: { lastSeenAt: latest } };
+        }),
+
         groupBy: jest.fn(async (args: any) => {
             jobCalls.groupBy.push(args);
             const field = args.by[0];
