@@ -91,7 +91,7 @@
     <header class="header">
         <h1><span class="material-icons-round">folder_special</span> Job Scraper Project Explorer</h1>
         <p>Click any file to see details and functions</p>
-        <div class="generated">Auto-generated on 2026-10-29</div>
+        <div class="generated">Auto-generated on 2026-11-09</div>
     </header>
     <div class="main">
         <aside class="sidebar">
@@ -1311,7 +1311,7 @@
       },
       {
         "label": "Functions",
-        "value": "10"
+        "value": "11"
       }
     ],
     "functions": [
@@ -1330,6 +1330,10 @@
       {
         "name": "getClient()",
         "desc": "Resolves the active Redis client."
+      },
+      {
+        "name": "unavailableReason()",
+        "desc": "Why no Redis client is ready: \"not_configured\" when no client exists at all (the normal state without"
       },
       {
         "name": "getReadyClient()",
@@ -2132,7 +2136,7 @@
       },
       {
         "label": "Functions",
-        "value": "15"
+        "value": "16"
       }
     ],
     "functions": [
@@ -2181,8 +2185,12 @@
         "desc": "Fetches a single page of JSONL lines from Common Crawl index"
       },
       {
+        "name": "parseRetryAfterMs()",
+        "desc": "Turns a Retry-After header (seconds or an HTTP date) into a wait in ms; falls back to 5 s when missing or"
+      },
+      {
         "name": "validateAndSeedGreenhouseTokens()",
-        "desc": "Validates candidate Greenhouse tokens with GET /v1/boards/{token} at <= 5 concurrent and upserts Company records"
+        "desc": "Validates candidate Greenhouse tokens with GET /v1/boards/{token} at <= 5 concurrent and upserts Company records;"
       },
       {
         "name": "parseTokenBudget()",

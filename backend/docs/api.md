@@ -215,7 +215,7 @@ The API communicates cache lifecycle, debugging telemetry, and edge behavior thr
 | Header | Description / Values |
 |---|---|
 | `X-Cache` | `HIT` (served from LRU or Redis), `MISS` (served from PostgreSQL), `BYPASS` (cache disabled or degraded), `STALE` (scraped data newer than generation). |
-| `X-Cache-Reason` | Sub-reason for cache outcome: `lru_hit`, `redis_hit`, `view_not_cached`, `page_not_cached`, `field_missing`, `not_configured`, `no_generation`, `circuit_open`, `budget_exhausted`. |
+| `X-Cache-Reason` | Sub-reason for cache outcome: `lru_hit`, `redis_hit`, `view_not_cached`, `page_not_cached`, `field_missing`, `not_configured`, `no_generation`, `circuit_open`, `budget_exhausted`, `connect_failed` (Redis is configured but could not connect). |
 | `X-Cache-Generation` | ID of the active Redis generation (`jc:v1:current`). |
 | `X-Data-Updated-At` | Timestamp when the underlying scrape run finished. |
 | `Server-Timing` | Granular performance metrics (e.g. `redis;dur=4`, `db;dur=18`). |
@@ -227,8 +227,8 @@ The API communicates cache lifecycle, debugging telemetry, and edge behavior thr
 
 | Response | `Cache-Control` Header | `Vercel-Cache-Tag` |
 |---|---|---|
-| **200 Lists, Facets, Companies, Meta** | `public, max-age=60, s-maxage=3600, stale-while-revalidate=3600, stale-if-error=86400` | `jobs-v1` |
-| **200 with `X-Cache: BYPASS` and a degraded cache** (`X-Cache-Reason`: `circuit_open`, `budget_exhausted`, `no_generation`) | `public, max-age=30, s-maxage=60, stale-while-revalidate=600` | *(none)* |
+| **200 Lists, Facets, Companies, Meta** | `public, max-age=60, s-maxage=3600` (no stale serving: data is never older than 1 h) | `jobs-v1` |
+| **200 with `X-Cache: BYPASS` and a degraded cache** (`X-Cache-Reason`: `circuit_open`, `budget_exhausted`, `no_generation`, `missing_generation`, `redis_error`, `timeout`, `connect_failed`) | `public, max-age=30, s-maxage=60, stale-while-revalidate=600` | *(none)* |
 | **200 with `X-Cache: BYPASS` / `not_configured`** (no Redis at all: the normal state in production today) | same as Lists above (1 h edge cache) | `jobs-v1` |
 | **200 Job Detail** | `public, max-age=300, s-maxage=3600, stale-while-revalidate=86400` | `jobs-v1` |
 | **404 Job Detail** | `public, s-maxage=300` | *(none)* |

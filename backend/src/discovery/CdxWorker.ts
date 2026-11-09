@@ -408,8 +408,28 @@ export interface DiscoveryOptions {
     prismaClient?: PrismaClient;
 }
 
+const MAX_RATE_LIMIT_ATTEMPTS = 3;
+const DEFAULT_RETRY_AFTER_MS = 5000;
+const MAX_RETRY_AFTER_MS = 60000;
+
 /**
- * @summary Validates candidate Greenhouse tokens with GET /v1/boards/{token} at <= 5 concurrent and upserts Company records
+ * @summary Turns a Retry-After header (seconds or an HTTP date) into a wait in ms; falls back to 5 s when missing or
+ * unreadable and never waits longer than 60 s
+ * @tags Discovery, Greenhouse, RateLimit
+ */
+export function parseRetryAfterMs(header: string | undefined, now: number = Date.now()): number {
+    if (!header) return DEFAULT_RETRY_AFTER_MS;
+    const seconds = Number(header);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, MAX_RETRY_AFTER_MS);
+    const date = Date.parse(header);
+    if (Number.isFinite(date)) return Math.min(Math.max(0, date - now), MAX_RETRY_AFTER_MS);
+    return DEFAULT_RETRY_AFTER_MS;
+}
+
+/**
+ * @summary Validates candidate Greenhouse tokens with GET /v1/boards/{token} at <= 5 concurrent and upserts Company records;
+ * a 429 waits out Retry-After and retries (3 attempts), and a token still throttled counts as timedOutCount (not checked)
+ * @tags Discovery, Greenhouse, Validation, RateLimit
  */
 export async function validateAndSeedGreenhouseTokens(
     tokens: string[],
@@ -426,6 +446,31 @@ export async function validateAndSeedGreenhouseTokens(
     let validated = 0;
     let inserted = 0;
     let timedOutCount = 0;
+    // When the current 429 pause ends. Requests that fail inside the same pause do not slow the limiter again.
+    let pausedUntil = 0;
+
+    /** GET the board; on 429 waits the pause and retries. Returns 'rate_limited' when every attempt was throttled. */
+    const fetchBoard = async (apiUrl: string) => {
+        for (let attempt = 1; ; attempt++) {
+            try {
+                return await axios.get<{ name?: string | null }>(apiUrl, {
+                    timeout: 10000,
+                    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; JobScraperBot/1.0)' },
+                });
+            } catch (err: unknown) {
+                const res = (err as { response?: { status?: number; headers?: Record<string, string> } })?.response;
+                if (res?.status !== 429) throw err;
+                const waitMs = parseRetryAfterMs(res.headers?.['retry-after']);
+                if (Date.now() >= pausedUntil) {
+                    limiter.onRateLimit(waitMs);
+                    pausedUntil = Date.now() + waitMs;
+                }
+                if (attempt >= MAX_RATE_LIMIT_ATTEMPTS) return 'rate_limited' as const;
+                await new Promise((resolve) => setTimeout(resolve, Math.max(0, pausedUntil - Date.now())));
+                if (Date.now() >= options.deadline) return 'rate_limited' as const;
+            }
+        }
+    };
 
     // Queue every token on the limiter so up to 5 are validated at once (a 429 slows all of them down)
     const work = tokens.map((token) =>
@@ -438,10 +483,13 @@ export async function validateAndSeedGreenhouseTokens(
             validated++;
             const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(token)}`;
             try {
-                const response = await axios.get<{ name?: string | null }>(apiUrl, {
-                    timeout: 10000,
-                    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; JobScraperBot/1.0)' },
-                });
+                const response = await fetchBoard(apiUrl);
+                if (response === 'rate_limited') {
+                    // Still throttled after the retries: not checked this run (a later run picks it up again)
+                    validated--;
+                    timedOutCount++;
+                    return;
+                }
 
                 if (response.status === 200) {
                     const companyName = response.data?.name?.trim() || token;
@@ -490,13 +538,9 @@ export async function validateAndSeedGreenhouseTokens(
                     limiter.onSuccess();
                 }
             } catch (err: unknown) {
-                const status = (err as { response?: { status?: number; headers?: Record<string, string> } })?.response?.status;
-                if (status === 429) {
-                    const retryHeader = (err as { response?: { headers?: Record<string, string> } })?.response?.headers?.['retry-after'];
-                    const retrySec = retryHeader ? parseInt(retryHeader, 10) : 5;
-                    limiter.onRateLimit(retrySec * 1000);
-                }
-                // 404 is dropped (valid = false)
+                const status = (err as { response?: { status?: number } })?.response?.status;
+                // 404 is dropped (valid = false) but it is a normal answer, so it counts toward speeding back up
+                if (status === 404) limiter.onSuccess();
             }
         })
     );
@@ -507,6 +551,7 @@ export async function validateAndSeedGreenhouseTokens(
 
 /**
  * @summary Parses --budget=N (a positive whole number) or --budget=all (no cap) into a token budget
+ * @tags Discovery, Greenhouse, CLI
  */
 export function parseTokenBudget(raw: string): number {
     const value = raw.trim().toLowerCase();
@@ -519,6 +564,7 @@ export function parseTokenBudget(raw: string): number {
 
 /**
  * @summary Parses --time-budget-min=N (1 to 120 whole minutes) into milliseconds
+ * @tags Discovery, Greenhouse, CLI
  */
 export function parseTimeBudgetMs(raw: string): number {
     const value = raw.trim();
@@ -542,7 +588,7 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
         const deadline = startTime + timeBudgetMs;
         const tokenBudget = options.tokenBudget ?? 500;
 
-        console.log(`🚀 Starting Greenhouse Discovery (token budget: ${tokenBudget}, time budget: ${timeBudgetMs / 1000}s)...`);
+        console.log(`🚀 Starting Greenhouse Discovery (token budget: ${tokenBudget === Number.MAX_SAFE_INTEGER ? 'all' : tokenBudget}, time budget: ${timeBudgetMs / 1000}s)...`);
 
         const discoveredTokensSet = await crawlGreenhouseCommonCrawl({
             crawlId: options.crawlId,
@@ -677,6 +723,10 @@ if (require.main === module) {
     } catch (e: unknown) {
         console.error(`❌ ${(e as Error).message}`);
         process.exit(1);
+    }
+
+    if (source !== 'greenhouse' && (tokenBudget !== undefined || timeBudgetMs !== undefined)) {
+        console.warn('⚠️  --budget and --time-budget-min only apply with --source=greenhouse; ignored for Ashby discovery.');
     }
 
     runDiscovery({ source, includeCommonCrawl, enrichMetadata, tokenBudget, timeBudgetMs })

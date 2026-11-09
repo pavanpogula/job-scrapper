@@ -115,7 +115,7 @@ describe('API Hardening and CDN Caching (P2-T08)', () => {
       expect(res.status).toBe(200);
       expect(res.headers['x-cache']).toBe('HIT');
       expect(res.headers['cache-control']).toBe(
-        'public, max-age=60, s-maxage=3600, stale-while-revalidate=3600, stale-if-error=86400'
+        'public, max-age=60, s-maxage=3600'
       );
       expect(res.headers['vercel-cache-tag']).toBe('jobs-v1');
     });
@@ -130,7 +130,7 @@ describe('API Hardening and CDN Caching (P2-T08)', () => {
       expect(res.headers['x-cache']).toBe('BYPASS');
       expect(res.headers['x-cache-reason']).toBe('not_configured');
       expect(res.headers['cache-control']).toBe(
-        'public, max-age=60, s-maxage=3600, stale-while-revalidate=3600, stale-if-error=86400'
+        'public, max-age=60, s-maxage=3600'
       );
       expect(res.headers['vercel-cache-tag']).toBe('jobs-v1');
     });
@@ -144,6 +144,24 @@ describe('API Hardening and CDN Caching (P2-T08)', () => {
       expect(res.status).toBe(200);
       expect(res.headers['x-cache']).toBe('BYPASS');
       expect(res.headers['x-cache-reason']).toBe('no_generation');
+      expect(res.headers['cache-control']).toBe('public, max-age=30, s-maxage=60, stale-while-revalidate=600');
+      expect(res.headers['vercel-cache-tag']).toBeUndefined();
+    });
+
+    it('keeps the short rule when a configured Redis cannot connect (BYPASS / connect_failed, not "not_configured")', async () => {
+      // A real outage must not be cached at the edge for an hour as if Redis had never been set up
+      const down = new FakeRedis();
+      (down as unknown as { status: string }).status = 'wait';
+      (down as unknown as { connect: () => Promise<void> }).connect = () => Promise.reject(new Error('ECONNREFUSED'));
+      readThroughService.setRedisClient(down as never);
+
+      const res = await request(app)
+        .get('/v1/jobs?page=1')
+        .set('X-Forwarded-For', '10.250.1.9');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['x-cache']).toBe('BYPASS');
+      expect(res.headers['x-cache-reason']).toBe('connect_failed');
       expect(res.headers['cache-control']).toBe('public, max-age=30, s-maxage=60, stale-while-revalidate=600');
       expect(res.headers['vercel-cache-tag']).toBeUndefined();
     });
