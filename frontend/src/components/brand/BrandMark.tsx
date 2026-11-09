@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import { BRAND } from '../../lib/site';
 
 export interface BrandMarkProps {
   size?: 'small' | 'medium' | 'large';
@@ -18,29 +19,22 @@ export const BrandMark: React.FC<BrandMarkProps> = ({ size = 'medium', showTagli
   return (
     <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.25, userSelect: 'none' }}>
       <Box
+        component="img"
+        src={BRAND.markUrl}
+        alt=""
+        width={iconSize}
+        height={iconSize}
         sx={{
-          width: iconSize,
-          height: iconSize,
+          display: 'block',
           borderRadius: size === 'large' ? 2 : 1.25,
-          bgcolor: 'primary.main',
-          color: 'primary.contrastText',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 900,
-          fontSize: size === 'small' ? '0.8rem' : size === 'large' ? '1.15rem' : '0.95rem',
-          fontFamily: "'Geist Mono', monospace",
-          letterSpacing: '-0.04em',
           boxShadow: (th) =>
             th.palette.mode === 'dark'
               ? '0 2px 8px rgba(0, 0, 0, 0.4)'
-              : '0 2px 8px rgba(29, 95, 191, 0.25)',
+              : '0 2px 8px rgba(14, 26, 54, 0.25)',
           flexShrink: 0,
         }}
         aria-hidden="true"
-      >
-        B
-      </Box>
+      />
 
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         <Typography

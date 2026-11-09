@@ -170,4 +170,4 @@ jobs:
 
       - name: Smoke test production site
         if: inputs.target == 'production'
-        run: node scripts/smoke/smoke.mjs https://job-scrapper-ui.vercel.app
+        run: node scripts/smoke/smoke.mjs https://www.boolean.page

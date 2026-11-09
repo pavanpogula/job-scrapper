@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 364 364" role="img" aria-label="B.O.O.L.E.A.N logo">
+  <defs>
+    <filter id="speckle" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="7"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.6  0 0 0 0 0.95  5 0 0 0 -2.45"/>
+    </filter>
+  </defs>
+  <rect width="364" height="364" fill="#0e1a36"/>
+  <rect width="364" height="364" filter="url(#speckle)" opacity="0.62"/>
+  <!-- monitor -->
+  <rect x="66" y="36" width="232" height="132" rx="16" fill="#050608"/>
+  <rect x="82" y="50" width="200" height="104" rx="4" fill="#0b120e"/>
+  <g fill="#36e872" font-family="'Courier New', Courier, monospace" font-weight="700" font-size="27">
+    <text x="94" y="82" textLength="178" lengthAdjust="spacingAndGlyphs" transform="skewX(-14) translate(20 0)">010101010101</text>
+    <text x="94" y="111" textLength="178" lengthAdjust="spacingAndGlyphs" transform="skewX(-14) translate(28 0)">010101010101</text>
+    <text x="94" y="140" textLength="178" lengthAdjust="spacingAndGlyphs" transform="skewX(-14) translate(35 0)">010101010101</text>
+  </g>
+  <!-- stand -->
+  <path d="M150 168h64l4 10h-72z" fill="#050608"/>
+  <rect x="140" y="176" width="84" height="16" rx="3" fill="#050608"/>
+  <!-- keyboard -->
+  <path d="M86 198h192l20 34H66z" fill="#050608"/>
+  <g fill="#f4f6fb">
+    <rect x="98" y="206" width="10" height="6" rx="1"/><rect x="110" y="206" width="10" height="6" rx="1"/><rect x="122" y="206" width="10" height="6" rx="1"/>
+    <rect x="95" y="214" width="10" height="6" rx="1"/><rect x="107" y="214" width="10" height="6" rx="1"/><rect x="119" y="214" width="10" height="6" rx="1"/>
+    <rect x="92" y="222" width="10" height="6" rx="1"/><rect x="104" y="222" width="10" height="6" rx="1"/><rect x="116" y="222" width="10" height="6" rx="1"/>
+  </g>
+  <!-- right key block: 4 rows x 12 keys -->
+  <g fill="#f4f6fb">
+    <g transform="translate(151 204)"><rect x="0" width="8" height="5" rx="1"/><rect x="10" width="8" height="5" rx="1"/><rect x="20" width="8" height="5" rx="1"/><rect x="30" width="8" height="5" rx="1"/><rect x="40" width="8" height="5" rx="1"/><rect x="50" width="8" height="5" rx="1"/><rect x="60" width="8" height="5" rx="1"/><rect x="70" width="8" height="5" rx="1"/><rect x="80" width="8" height="5" rx="1"/><rect x="90" width="8" height="5" rx="1"/><rect x="100" width="8" height="5" rx="1"/><rect x="110" width="8" height="5" rx="1"/></g>
+    <g transform="translate(149 211)"><rect x="0" width="8" height="5" rx="1"/><rect x="10" width="8" height="5" rx="1"/><rect x="20" width="8" height="5" rx="1"/><rect x="30" width="8" height="5" rx="1"/><rect x="40" width="8" height="5" rx="1"/><rect x="50" width="8" height="5" rx="1"/><rect x="60" width="8" height="5" rx="1"/><rect x="70" width="8" height="5" rx="1"/><rect x="80" width="8" height="5" rx="1"/><rect x="90" width="8" height="5" rx="1"/><rect x="100" width="8" height="5" rx="1"/><rect x="110" width="8" height="5" rx="1"/><rect x="120" width="8" height="5" rx="1"/></g>
+    <g transform="translate(147 218)"><rect x="0" width="8" height="5" rx="1"/><rect x="10" width="8" height="5" rx="1"/><rect x="20" width="8" height="5" rx="1"/><rect x="30" width="8" height="5" rx="1"/><rect x="40" width="8" height="5" rx="1"/><rect x="50" width="8" height="5" rx="1"/><rect x="60" width="8" height="5" rx="1"/><rect x="70" width="8" height="5" rx="1"/><rect x="80" width="8" height="5" rx="1"/><rect x="90" width="8" height="5" rx="1"/><rect x="100" width="8" height="5" rx="1"/><rect x="110" width="8" height="5" rx="1"/><rect x="120" width="8" height="5" rx="1"/></g>
+    <g transform="translate(145 225)"><rect x="0" width="8" height="5" rx="1"/><rect x="10" width="8" height="5" rx="1"/><rect x="20" width="8" height="5" rx="1"/><rect x="30" width="8" height="5" rx="1"/><rect x="40" width="8" height="5" rx="1"/><rect x="50" width="8" height="5" rx="1"/><rect x="60" width="8" height="5" rx="1"/><rect x="70" width="8" height="5" rx="1"/><rect x="80" width="8" height="5" rx="1"/><rect x="90" width="8" height="5" rx="1"/><rect x="100" width="8" height="5" rx="1"/><rect x="110" width="8" height="5" rx="1"/><rect x="120" width="8" height="5" rx="1"/><rect x="130" width="8" height="5" rx="1"/></g>
+  </g>
+  <!-- wordmark -->
+  <text x="182" y="274" fill="#f4f6fb" font-family="'Courier New', Courier, monospace" font-weight="700" font-size="28" text-anchor="middle" textLength="236" lengthAdjust="spacingAndGlyphs" transform="skewX(-12) translate(58 0)">{B·O·O·L·E·A·N}</text>
+</svg>

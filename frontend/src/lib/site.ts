@@ -12,6 +12,14 @@ export const FOUNDER = {
   photoUrl: '/founder.jpg',
 } as const;
 
+/** B.O.O.L.E.A.N logo files in frontend/public/brand (vector redraw of the original Instagram logo). */
+export const BRAND = {
+  /** Small square mark (monitor + keyboard) for the header, footer and browser tab. */
+  markUrl: '/brand/boolean-mark.svg',
+  /** Full logo with the {B·O·O·L·E·A·N} wordmark, for the About page. */
+  logoUrl: '/brand/boolean-logo.svg',
+} as const;
+
 /**
  * @summary Short display form of a LinkedIn profile URL, e.g. "linkedin.com/in/pavan-reddy-pogula"
  */

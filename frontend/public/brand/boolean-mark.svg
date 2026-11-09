@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="B.O.O.L.E.A.N">
+  <rect width="64" height="64" rx="14" fill="#0e1a36"/>
+  <rect x="9" y="9" width="46" height="30" rx="4.5" fill="#050608"/>
+  <rect x="12.5" y="12.5" width="39" height="23" rx="1.5" fill="#0b120e"/>
+  <g fill="#36e872" font-family="'Courier New', Courier, monospace" font-weight="700" font-size="17">
+    <text x="15" y="30.5" textLength="34" lengthAdjust="spacingAndGlyphs" transform="skewX(-10) translate(4 0)">0101</text>
+  </g>
+  <path d="M27 39h10l1.2 3h-12.4z" fill="#050608"/>
+  <path d="M15 46h34l4 8H11z" fill="#050608"/>
+  <g fill="#f4f6fb">
+    <rect x="16" y="48" width="4" height="2" rx=".5"/><rect x="22" y="48" width="4" height="2" rx=".5"/><rect x="28" y="48" width="4" height="2" rx=".5"/><rect x="34" y="48" width="4" height="2" rx=".5"/><rect x="40" y="48" width="4" height="2" rx=".5"/><rect x="46" y="48" width="2.5" height="2" rx=".5"/>
+    <rect x="14" y="51.2" width="4" height="2" rx=".5"/><rect x="20" y="51.2" width="4" height="2" rx=".5"/><rect x="26" y="51.2" width="12" height="2" rx=".5"/><rect x="40" y="51.2" width="4" height="2" rx=".5"/><rect x="46" y="51.2" width="4" height="2" rx=".5"/>
+  </g>
+</svg>

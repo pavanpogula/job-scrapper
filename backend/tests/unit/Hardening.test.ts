@@ -36,6 +36,15 @@ describe('API Hardening and CDN Caching (P2-T08)', () => {
       expect(res.headers['access-control-allow-origin']).toBe('https://job-scrapper-ui.vercel.app');
     });
 
+    it('sets Access-Control-Allow-Origin for the custom domain www.boolean.page', async () => {
+      const res = await request(app)
+        .get('/health')
+        .set('Origin', 'https://www.boolean.page');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['access-control-allow-origin']).toBe('https://www.boolean.page');
+    });
+
     it('sets Access-Control-Allow-Origin for localhost:3000', async () => {
       const res = await request(app)
         .get('/health')

@@ -57,7 +57,7 @@ npx prisma db push
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string (Prisma). Required for DB operations and API. |
 | `REDIS_URL` | Upstash Redis connection string (`rediss://...`). Optional. |
-| `CORS_ORIGINS` | Comma-separated allowed origins (defaults to `https://job-scrapper-ui.vercel.app,http://localhost:3000`). |
+| `CORS_ORIGINS` | Comma-separated allowed origins (defaults to `https://www.boolean.page,https://job-scrapper-ui.vercel.app,http://localhost:3000`). |
 | `HEALTH_TOKEN` | Secret bearer token required for deep database diagnostics on `/health?deep=1`. |
 | `GOOGLE_DRIVE_FOLDER_ID` | Optional folder ID for Google Drive cloud CSV uploads. |
 

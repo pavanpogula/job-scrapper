@@ -41,7 +41,11 @@ const PORT = process.env.PORT || 3001;
 
 app.set('trust proxy', 1);
 
-const DEFAULT_CORS_ORIGINS = ['https://job-scrapper-ui.vercel.app', 'http://localhost:3000'];
+const DEFAULT_CORS_ORIGINS = [
+  'https://www.boolean.page',
+  'https://job-scrapper-ui.vercel.app',
+  'http://localhost:3000',
+];
 const configuredOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
   : DEFAULT_CORS_ORIGINS;
