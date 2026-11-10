@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * @file workflows.test.mjs
- * @summary Validates GitHub Actions workflow structures (toggles, working-directories, script paths, fixer defaults, manual-only deploys).
+ * @summary Validates GitHub Actions workflow structures (toggles, working-directories, script paths, fixer defaults, manual-only deploys) and public-repo governance (least-privilege permissions, ruleset gate names, MIT license).
  * @tags repo-tests, workflows, ci, validation
  */
 
@@ -142,4 +142,55 @@ test('deploy.yml is manual-only, verifies before deploying, and keeps Vercel sec
   assert.match(String(jobs['deploy-backend'].env?.VERCEL_PROJECT_ID), /VERCEL_PROJECT_ID_BACKEND/);
   assert.match(String(jobs['deploy-frontend'].env?.VERCEL_PROJECT_ID), /VERCEL_PROJECT_ID_FRONTEND/);
   assert.match(JSON.stringify(jobs.verify.steps), /scripts\/check-all\.sh/, 'verify must run scripts/check-all.sh');
+});
+
+test('public repo: every workflow is least-privilege and never runs fork code with secrets', () => {
+  const root = getRepoRoot();
+  const workflowsDir = path.join(root, '.github/workflows');
+  const files = fs.readdirSync(workflowsDir).filter((f) => /\.ya?ml$/.test(f));
+  assert.ok(files.length > 0, 'expected at least one workflow');
+
+  for (const file of files) {
+    const raw = fs.readFileSync(path.join(workflowsDir, file), 'utf-8');
+    const wf = parseYaml(raw);
+    assert.ok(wf.permissions, `${file} must declare a top-level permissions: block`);
+    assert.notEqual(wf.permissions, 'write-all', `${file} must not grant write-all`);
+    const triggers = Object.keys(wf.on || {});
+    assert.ok(!triggers.includes('pull_request_target'), `${file} must not use pull_request_target`);
+    assert.ok(!triggers.includes('issue_comment'), `${file} must not run on issue_comment`);
+  }
+});
+
+test('public repo: main ruleset requires exactly the CI gate jobs', () => {
+  const root = getRepoRoot();
+  const ruleset = JSON.parse(fs.readFileSync(path.join(root, '.github/rulesets/main-protection.json'), 'utf-8'));
+  const checks = ruleset.rules.find((r) => r.type === 'required_status_checks');
+  assert.ok(checks, 'main ruleset must require status checks');
+  const required = checks.parameters.required_status_checks.map((c) => c.context).sort();
+
+  const gates = [];
+  for (const file of ['backend-ci.yml', 'frontend-ci.yml', 'repo-ci.yml']) {
+    const wf = parseYaml(fs.readFileSync(path.join(root, '.github/workflows', file), 'utf-8'));
+    for (const job of Object.values(wf.jobs || {})) {
+      if (/-gate$/.test(String(job.name))) gates.push(String(job.name));
+    }
+  }
+  assert.deepEqual(required, gates.sort(), 'ruleset checks must match the *-gate job names');
+
+  for (const type of ['deletion', 'non_fast_forward', 'pull_request']) {
+    assert.ok(ruleset.rules.some((r) => r.type === type), `main ruleset must include ${type}`);
+  }
+});
+
+test('public repo: MIT license is present and package licenses agree', () => {
+  const root = getRepoRoot();
+  const license = fs.readFileSync(path.join(root, 'LICENSE'), 'utf-8');
+  assert.match(license, /^MIT License/);
+  for (const pkg of ['backend/package.json', 'frontend/package.json']) {
+    const json = JSON.parse(fs.readFileSync(path.join(root, pkg), 'utf-8'));
+    assert.equal(json.license, 'MIT', `${pkg} license must be MIT`);
+  }
+  for (const file of ['.github/CODEOWNERS', '.github/SECURITY.md', '.github/CONTRIBUTING.md', '.github/dependabot.yml']) {
+    assert.ok(fs.existsSync(path.join(root, file)), `${file} must exist`);
+  }
 });
