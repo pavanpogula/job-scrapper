@@ -13,7 +13,7 @@ This document details account quotas, secrets management, CI/CD workflows, edge 
 | **Vercel** | Hobby (Free tier) | • 1M edge/serverless invocations/month<br>• 4 CPU-hours execution time/month<br>• 1 custom WAF rate limit rule (per region) | Functions region set to `iad1` (US East) matching Neon & Upstash to minimize round-trip latency. Max function duration: 15s. |
 | **Neon** | Serverless PostgreSQL (Free tier) | • Neon compute-hours: 100 Compute Unit (CU) hours/month<br>• 1 GB storage<br>• 5 GB data egress/month | All serverless API connections **must** route through the pgBouncer pooled URL (`*-pooler.*.neon.tech`) with `?sslmode=require&pgbouncer=true`. |
 | **Upstash** | Serverless Redis (Free tier) | • Budget cap: 10,000 commands/day<br>• 256 MB data storage<br>• 1 concurrent connection pool | Uses double-buffered generation swap (`jc:v1:*`) and in-process API LRU caching to keep commands well within the 10,000/day quota. Automatically enters Circuit breaker cooldown on `budget_exhausted`. |
-| **GitHub** | Actions (Free tier) | • 2,000 runner minutes/month<br>• Standard 2-core runners (`ubuntu-24.04`) | Daily scheduled scrape runs at 06:17 UTC with 4 worker processes (~76s execution time, consuming < 2 min/day). |
+| **GitHub** | Actions (Free tier) | • 2,000 runner minutes/month<br>• Standard 2-core runners (`ubuntu-24.04`) | Scheduled scrape runs 7 times a day (every 3 hours, 5:17 AM to 11:17 PM PST) with 4 worker processes. Recent runs take 2-4 minutes, so about 15-30 runner minutes a day. The repository is public, so standard runners do not count against the 2,000-minute quota. |
 
 ---
 
@@ -48,7 +48,8 @@ The matrix below documents where every secret is configured and consumed:
   3. `repo-ci.yml`: Always runs root repo-tests, pinned actionlint, and fixer scope checks -> `repo-gate`.
 
 ### 3.2 Daily Scheduled Scraper (`.github/workflows/scrape-daily.yml`)
-- **Triggers:** Cron schedule `17 6 * * *` (06:17 UTC daily) and manual `workflow_dispatch`.
+- **Triggers:** Cron schedule `17 1,4,7,13,16,19,22 * * *` and manual `workflow_dispatch`. GitHub cron is UTC only: the hours are 5, 8 and 11 AM and 2, 5, 8 and 11 PM Pacific Standard Time (7 runs a day, none between 11:17 PM and 5:17 AM). During daylight time (PDT) every run is 1 hour later.
+- **Per-run counters now move faster:** the scraper counts consecutive runs, not days. A company is quarantined after 3 consecutive 404 runs (about 6 hours of daytime runs, was 3 days) and reported after 7 consecutive failed runs (about 1 day, was 1 week). The thresholds themselves are unchanged.
 - **Inputs:** `workers` (default 4), `skip_publish`, `publish_only`, `recheck_not_found`, `skip_fixer`, `fixture_report`, `sources` (comma-separated, e.g. `ashby,greenhouse`), `force_publish` (boolean), `deactivate_source` (`none` / `greenhouse`).
 - **Source Configuration (`GREENHOUSE_ENABLED`):**
   - Effective sources: `inputs.sources` if set, else `ashby,greenhouse` when `vars.GREENHOUSE_ENABLED == 'true'`, else `ashby`.

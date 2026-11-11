@@ -2,7 +2,9 @@ name: Daily scrape
 
 on:
   schedule:
-    - cron: '17 6 * * *'
+    # Every 3 hours from 5:17 AM to 11:17 PM Pacific Standard Time (7 runs a day). GitHub cron is UTC only:
+    # 13,16,19,22,01,04,07 UTC = 5,8,11 AM and 2,5,8,11 PM PST. During daylight time (PDT) the runs are 1 hour later.
+    - cron: '17 1,4,7,13,16,19,22 * * *'
   workflow_dispatch:
     inputs:
       workers:

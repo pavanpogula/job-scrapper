@@ -12,7 +12,7 @@ A TypeScript monorepo providing a high-performance batch scraper feeding Neon Po
 
 | Workflow | Trigger | Description | Workflow File | Documentation |
 |---|---|---|---|---|
-| **Daily Scrape & Publish** | Cron `17 6 * * *` / dispatch | Scrapes active boards with adaptive concurrency, writes PostgreSQL, publishes generation cache to Upstash Redis | [`.github/workflows/scrape-daily.yml`](.github/workflows/scrape-daily.yml) | [`docs/deployment-and-operations.md`](docs/deployment-and-operations.md) |
+| **Daily Scrape & Publish** | Cron `17 1,4,7,13,16,19,22 * * *` (every 3 hours, 5 AM to 11 PM PST) / dispatch | Scrapes active boards with adaptive concurrency, writes PostgreSQL, publishes generation cache to Upstash Redis | [`.github/workflows/scrape-daily.yml`](.github/workflows/scrape-daily.yml) | [`docs/deployment-and-operations.md`](docs/deployment-and-operations.md) |
 | **Weekly Slug Discovery** | Cron `0 4 * * 0` / dispatch | Discovers new Ashby ATS company slugs via Wayback Machine CDX API | [`.github/workflows/discover-weekly.yml`](.github/workflows/discover-weekly.yml) | [`backend/docs/cli-commands.md`](backend/docs/cli-commands.md) |
 | **Backend CI** | PRs / pushes (`backend/**`) | Verifies backend Prisma, types, lint, Jest test suite, and docs generation | [`.github/workflows/backend-ci.yml`](.github/workflows/backend-ci.yml) | [`backend/docs/testing.md`](backend/docs/testing.md) |
 | **Frontend CI** | PRs / pushes (`frontend/**`) | Verifies frontend TypeScript, ESLint, Vitest component suite, and Vite build | [`.github/workflows/frontend-ci.yml`](.github/workflows/frontend-ci.yml) | [`frontend/docs/testing.md`](frontend/docs/testing.md) |

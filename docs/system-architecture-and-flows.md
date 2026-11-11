@@ -47,7 +47,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   autonumber
-  participant Cron as GH Actions cron (06:17 UTC)
+  participant Cron as GH Actions cron (every 3 h, 5 AM-11 PM PST)
   participant Co as ClusterScraper (coordinator)
   participant W as Workers ×4 (--ipc-worker)
   participant A as Ashby
