@@ -36,8 +36,10 @@ export const Footer: React.FC = () => {
           <Stack
             direction="row"
             spacing={1.5}
+            useFlexGap
             sx={{
               alignItems: 'center',
+              flexWrap: 'wrap',
               fontFamily: "'Geist Mono', monospace",
               fontSize: '0.75rem',
             }}
@@ -62,6 +64,17 @@ export const Footer: React.FC = () => {
               sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
             >
               Greenhouse job board API <OpenInNewIcon sx={{ fontSize: 12 }} />
+            </Link>
+            <Typography variant="caption" color="text.secondary">·</Typography>
+            <Link
+              href="https://github.com/lever/postings-api"
+              target="_blank"
+              rel="noopener noreferrer"
+              color="text.secondary"
+              underline="hover"
+              sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+            >
+              Lever postings API <OpenInNewIcon sx={{ fontSize: 12 }} />
             </Link>
             <Typography variant="caption" color="text.secondary">·</Typography>
             <Typography variant="caption" color="text.secondary">

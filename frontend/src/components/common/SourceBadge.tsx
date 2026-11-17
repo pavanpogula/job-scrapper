@@ -1,12 +1,13 @@
 /**
  * @file SourceBadge.tsx
- * @summary Small, quiet indicator displaying the source ATS ("via Ashby" / "via Greenhouse") without brand logos
- * @tags UI, ATS, Badge, ADR-0021
+ * @summary Small, quiet indicator displaying the source ATS ("via Ashby" / "via Greenhouse" / "via Lever") without brand logos
+ * @tags UI, ATS, Badge, ADR-0021, ADR-0022
  */
 
 import React from 'react';
 import { Box, type SxProps, type Theme } from '@mui/material';
 import type { JobSource } from '../../types/api';
+import { SOURCE_LABELS, resolveJobSource } from '../../lib/labels';
 
 export interface SourceBadgeProps {
   source?: JobSource | string | null;
@@ -14,16 +15,9 @@ export interface SourceBadgeProps {
   sx?: SxProps<Theme>;
 }
 
-const SOURCE_LABELS: Record<string, string> = {
-  ashby: 'via Ashby',
-  greenhouse: 'via Greenhouse',
-  lever: 'via Lever',
-};
-
 export const SourceBadge: React.FC<SourceBadgeProps> = ({ source, size = 'small', sx }) => {
-  const raw = (source || '').toLowerCase();
-  const resolvedKey = Object.prototype.hasOwnProperty.call(SOURCE_LABELS, raw) ? raw : 'ashby';
-  const label = SOURCE_LABELS[resolvedKey];
+  const resolvedKey = resolveJobSource(source) ?? 'ashby';
+  const label = `via ${SOURCE_LABELS[resolvedKey]}`;
 
   return (
     <Box

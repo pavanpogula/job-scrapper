@@ -9,7 +9,7 @@ export type SalaryInterval = '1 YEAR' | '1 HOUR' | '1 MONTH' | '1 WEEK' | '1 DAY
 export type LastUpdatedSource = 'ashby' | 'detected' | 'published' | 'firstSeen';
 export const JOB_SOURCES = ['ashby', 'greenhouse', 'lever'] as const;
 export type JobSource = (typeof JOB_SOURCES)[number];
-export const FILTER_SOURCES: readonly JobSource[] = ['ashby', 'greenhouse'];
+export const FILTER_SOURCES: readonly JobSource[] = ['ashby', 'greenhouse', 'lever'];
 
 export interface CompanySummary {
   slug: string;

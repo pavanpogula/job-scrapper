@@ -218,6 +218,20 @@ describe('canonicalJobsKey and isCacheableView (20-case test table)', () => {
       expectedKey: 'jobs?page=1',
       isCacheable: true,
     },
+    // 24. source=lever is kept in canonical key and never pre-rendered (DB path)
+    {
+      name: 'source=lever is normalized and never pre-rendered',
+      query: { source: '  LEVER  ', page: 1 },
+      expectedKey: 'jobs?page=1&source=lever',
+      isCacheable: false,
+    },
+    // 25. Unknown source values are ignored/dropped
+    {
+      name: 'Unknown source=workday value is dropped',
+      query: { source: 'workday', page: 1 },
+      expectedKey: 'jobs?page=1',
+      isCacheable: true,
+    },
   ];
 
   cases.forEach(({ name, query, expectedKey, isCacheable }, idx) => {

@@ -11,3 +11,4 @@ description: "API and caching invariants"
 3. List queries never select `metadata`.
 4. `salaryInterval` is ignored unless `salaryMin` or `salaryMax` is set.
 5. All database access in serverless routes must pass through `DbGuard` middleware.
+6. `?source=` accepts only `API_SOURCES`; `source=` views are never pre-rendered (DB path); company DTOs always carry `boardUrl`.

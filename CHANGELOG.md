@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(api,ui)**: Lever source in API filter, facets and UI [contract] (ADR-0022).
+  - Why: Expose Lever (`lever`) alongside Ashby and Greenhouse across the public REST API filter, contract fixtures, and frontend filter/badges/links while keeping all changes additive (zero removed/renamed DTO fields).
+  - Changes:
+    - Added `'lever'` to `API_SOURCES` in `backend/src/lib/ats/source.ts`, enabling `GET /v1/jobs?source=lever` via the DB path (`X-Cache: MISS`, `view_not_cached`), facet source breakdowns, and `boardUrl` generation on `/v1/companies/:slug`; updated deprecated `JobListItemDTO.ashbyId` and `JobDetailDTO.ashbyId` JSDoc in `backend/src/api/types.ts`.
+    - Updated `ContractFixtures` seed (`lv--acme`, `Principal Systems Engineer`, `Hybrid` so `jobs.filtered.json` stays unchanged) and added `jobs.source-lever.json`; synced updated totals/counts across `meta.default.json`, `facets.default.json`, `companies.default.json`, `companies.sorted-by-jobs.json`, and `jobs.default.json` to `frontend/src/test/fixtures/contract/`.
+    - Enabled `'lever'` in `FILTER_SOURCES` (`frontend/src/types/api.ts`), centralized `SOURCE_LABELS` in `frontend/src/lib/labels.ts`, and refactored `JobFiltersBar.tsx` (desktop menu + mobile drawer `Select`) and `SourceBadge.tsx` to build labels/options from `FILTER_SOURCES` and `SOURCE_LABELS`.
+    - Updated source copy across `frontend/src/pages/AboutPage.tsx`, `frontend/src/components/Footer.tsx` (`Lever postings API` link), `frontend/index.html`, `PRODUCT.md`, `README.md`, and `.github/SECURITY.md`; added Lever sample job/detail/company and facet to `frontend/src/mocks/mockData.ts`.
+    - Added canonical rules to `docs/agents/rules/api-cache.md` and `docs/agents/rules/frontend-invariants.md` and synced `.agents/` and `.claude/` shells.
+  - Tests:
+    - Updated `AtsSource.test.ts`, `ApiTypes.test.ts`, `ApiServer.test.ts`, `CacheKeys.test.ts`, `CacheParity.test.ts`, `ContractFixtures.test.ts`, and real-Postgres 3-source integration tests in `backend/tests/integration/MixedSources.test.ts`.
+    - Updated `frontend/src/test/contract.test.ts` (`jobs.source-lever.json` key-set & `satisfies`) and `frontend/src/test/sourceBadge.test.tsx` (desktop/mobile Source filter at `390px`, `via Lever` badge on card/detail/company header, Footer/About copy).
+  - Docs:
+    - Updated `backend/docs/api.md`, `frontend/docs/frontend-ui.md`, `frontend/docs/testing.md`, `docs/decisions/ADR-0022-lever-source.md`, and regenerated `backend/docs/project-explorer.html`.
+
 - **feat(scraper)**: Lever client and normalizer, disabled by default (`BF-024`, ADR-0022).
   - Why: Implement Lever Postings API (`v0`) board fetching, hosted-board metadata validation, and normalized job mapping behind `AtsClient` while honoring Lever's `robots.txt` `Crawl-delay: 1` and cluster time budgets without disturbing Ashby or Greenhouse behavior.
   - Changes:

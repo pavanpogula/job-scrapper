@@ -9,7 +9,7 @@ import { FakeRedis } from '../helpers/fakeRedis';
 import { createStatefulPrisma } from '../helpers/prismaFactory';
 import { publishCacheGeneration } from '../../src/cache/Publisher';
 import { KEY_CURRENT, genKey } from '../../src/lib/cache/keys';
-import { queryJobs, computeFacets, queryCompanies } from '../../src/api/db/queries';
+import { queryJobs, computeFacets, queryCompanies, queryCompanyProfile } from '../../src/api/db/queries';
 import { ReadThroughService } from '../../src/api/cache/ReadThrough';
 
 const jobBase = {
@@ -183,5 +183,82 @@ describe('Cache and DB response parity (BF-019)', () => {
     expect(a).toEqual(db);
     expect(b).toEqual(db);
     expect(res.setHeader).toHaveBeenCalledWith('X-Cache', 'HIT');
+  });
+
+  it('serves /v1/companies/lv--acme profile via DB path with Lever boardUrl and includes lv--acme in cached companies and facets', async () => {
+    prisma.seed('company', {
+      id: 'c-lv-acme',
+      slug: 'lv--acme',
+      name: 'Acme (Lever)',
+      source: 'LEVER',
+      atsToken: 'acme',
+      logoUrl: null,
+      status: 'ACTIVE',
+      _count: { jobs: 1 },
+    });
+    const leverPublished = new Date(Date.UTC(2026, 0, 2, 0, 0));
+    prisma.seed('job', {
+      ...jobBase,
+      id: '00000000-0000-4000-8000-000000000901',
+      ashbyId: 'lever:77777777-7777-4777-8777-777777777777',
+      externalId: '77777777-7777-4777-8777-777777777777',
+      source: 'LEVER',
+      title: 'Principal Systems Engineer',
+      companySlug: 'lv--acme',
+      workplaceType: 'Hybrid',
+      employmentType: 'FullTime',
+      country: 'US',
+      contentHash: 'hash-lv-901',
+      publishedAt: leverPublished,
+      createdAt: leverPublished,
+      updatedAt: leverPublished,
+      company: {
+        name: 'Acme (Lever)',
+        logoUrl: null,
+        slug: 'lv--acme',
+        source: 'LEVER',
+        atsToken: 'acme',
+      },
+    });
+
+    const gen = await publish();
+    const cachedCompanies = await readBody(redis, gen, 'companies?page=1');
+    const dbCompanies = asWire(await queryCompanies(prisma, { page: 1, pageSize: 30 }));
+    expect(cachedCompanies).toEqual(dbCompanies);
+
+    const lvEntry = cachedCompanies.data.find((c: { slug?: string }) => c.slug === 'lv--acme');
+    expect(lvEntry).toMatchObject({
+      slug: 'lv--acme',
+      source: 'lever',
+      boardUrl: 'https://jobs.lever.co/acme',
+      jobCount: 1,
+    });
+
+    const cachedFacets = await readBody(redis, gen, 'facets');
+    expect(cachedFacets).toEqual(asWire(await computeFacets(prisma)));
+    expect(cachedFacets.sources).toEqual(
+      expect.arrayContaining([{ value: 'lever', count: 1 }])
+    );
+
+    const service = new ReadThroughService();
+    service.setRedisClient(redis);
+    const resMiss = { setHeader: jest.fn() };
+    const expectedProfile = asWire(await queryCompanyProfile(prisma, 'lv--acme'));
+    expect(expectedProfile).toMatchObject({
+      slug: 'lv--acme',
+      source: 'lever',
+      boardUrl: 'https://jobs.lever.co/acme',
+      jobCount: 1,
+    });
+
+    const servedProfile = await service.serveView(
+      'company_profile:lv--acme',
+      false,
+      resMiss as unknown as Parameters<ReadThroughService['serveView']>[2],
+      () => queryCompanyProfile(prisma, 'lv--acme')
+    );
+    expect(resMiss.setHeader).toHaveBeenCalledWith('X-Cache', 'MISS');
+    expect(resMiss.setHeader).toHaveBeenCalledWith('X-Cache-Reason', 'view_not_cached');
+    expect(asWire(servedProfile)).toEqual(expectedProfile);
   });
 });

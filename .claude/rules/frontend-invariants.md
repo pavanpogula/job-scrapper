@@ -8,3 +8,4 @@ paths: ["frontend/**"]
 2. **Mandatory Verification:** All changes must pass `npm --prefix frontend run check` (typecheck, lint, Vitest unit tests, build).
 3. **Security (XSS):** All raw HTML rendering of job descriptions must be sanitized with DOMPurify.
 4. **Accessibility & Localization:** Maintain accessible keyboard navigation and WCAG AA contrast standards. Country facets must use `Intl.DisplayNames` for localized display.
+5. Source labels, the Source filter (desktop menu and mobile `Select`) and badges are built from `JOB_SOURCES`/`FILTER_SOURCES` and one label map; never build ATS URLs in the browser — use `boardUrl`.

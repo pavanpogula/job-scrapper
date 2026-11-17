@@ -16,7 +16,7 @@ Returns a paginated list of active and listed jobs matching filter criteria. Inc
 - **Parameters:**
   - `page` (number, default: 1): Page number (1-based, max: 5000).
   - `pageSize` (number, default: 25): Results per page (1..100).
-  - `source` (string, optional): ATS source filter (`ashby` or `greenhouse`). Unknown values are ignored. Bypasses pre-rendered cache (`isCacheableView: false`).
+  - `source` (string, optional): ATS source filter (`ashby`, `greenhouse`, or `lever`). Unknown values are ignored. Bypasses pre-rendered cache (`isCacheableView: false`).
   - `search` (string, optional): All-words search (BF-020). The text is split into lowercase words (max 8, edge punctuation removed; `c++`, `c#`, `node.js`, `r&d` kept). A job matches when **every** word starts a word in its title, company name, department or location, in any order (`senior engineer` finds "Staff Senior Software Engineer"; `sf` finds "Remote - SF" but not "Transfer"). `%` and `_` match literally. Searches are never served from the pre-rendered cache.
   - `company` (string, optional): Exact company slug filter (case-insensitive, trimmed). Combines with search (BF-020) and other filters. Bypasses pre-rendered cache (`isCacheableView: false`).
   - `postedWithin` (string, optional): One of `1d`, `7d`, `30d`. Filters jobs where `COALESCE(lastUpdatedAt, publishedAt) >= now - window` (ADR-0018 / ADR-0019). Unknown values are ignored. Bypasses pre-rendered cache.
@@ -67,9 +67,9 @@ Returns a paginated list of active and listed jobs matching filter criteria. Inc
 Retrieves detailed information for a single job posting by UUID or fallback `ashbyId`.
 
 - **Parameters:**
-  - `id` (string, path): UUID or Ashby alphanumeric ID (also accepts `greenhouse:<id>` fallback). Non-UUID strings that cannot match format return 404 immediately with 0 I/O.
+  - `id` (string, path): UUID or Ashby alphanumeric ID (also accepts `greenhouse:<id>` or `lever:<uuid>` fallback). Non-UUID strings that cannot match format return 404 immediately with 0 I/O.
 - **Response (200):**
-  Full job object including `source` (`'ashby'` | `'greenhouse'`), `externalId`, `jobUrl`, `descriptionHtml`, `compensation`, and `company` with `source` and `boardUrl`. `ashbyId` is deprecated; clients should use `source` + `externalId`.
+  Full job object including `source` (`'ashby'` | `'greenhouse'` | `'lever'`), `externalId`, `jobUrl`, `descriptionHtml`, `compensation`, and `company` with `source` and `boardUrl`. `ashbyId` is deprecated; clients should use `source` + `externalId`.
 - **Response (404):**
   `{ "error": "Job not found" }` (cached in-process for 10 minutes).
 
@@ -81,7 +81,8 @@ Retrieves aggregated facet counts for filter controls across active jobs.
   {
     "sources": [
       { "value": "ashby", "count": 28400 },
-      { "value": "greenhouse", "count": 5623 }
+      { "value": "greenhouse", "count": 5623 },
+      { "value": "lever", "count": 1200 }
     ],
     "departments": [{ "value": "Engineering", "count": 1420 }],
     "workplaceTypes": [{ "value": "Remote", "count": 2840 }],

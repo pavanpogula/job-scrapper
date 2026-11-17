@@ -1,6 +1,14 @@
 {
   "data": [
     {
+      "slug": "lv--acme",
+      "name": "Acme (Lever)",
+      "logoUrl": null,
+      "source": "lever",
+      "boardUrl": "https://jobs.lever.co/acme",
+      "jobCount": 1
+    },
+    {
       "slug": "acme-corp",
       "name": "Acme Corp",
       "logoUrl": "https://example.com/acme-logo.png",
@@ -25,7 +33,7 @@
       "jobCount": 1
     }
   ],
-  "total": 3,
+  "total": 4,
   "page": 1,
   "pageSize": 30,
   "totalPages": 1

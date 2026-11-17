@@ -1,4 +1,4 @@
-import { JobListItem, JobDetail, FacetsData } from '../types/api';
+import { JobListItem, JobDetail, FacetsData, CompanyProfile } from '../types/api';
 
 export const MOCK_JOBS: JobListItem[] = [
   {
@@ -175,6 +175,35 @@ export const MOCK_JOBS: JobListItem[] = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
   },
+  {
+    id: 'job-lv-1',
+    ashbyId: 'lever:77777777-7777-4777-8777-777777777777',
+    source: 'lever',
+    externalId: '77777777-7777-4777-8777-777777777777',
+    title: 'Principal Systems Engineer',
+    applyUrl: 'https://jobs.lever.co/acme/77777777-7777-4777-8777-777777777777/apply',
+    companySlug: 'lv--acme',
+    companyName: 'Acme',
+    companyLogoUrl: null,
+    department: 'Engineering',
+    location: 'New York, NY',
+    country: 'US',
+    region: 'NY',
+    city: 'New York',
+    isRemote: false,
+    workplaceType: 'Hybrid',
+    employmentType: 'FullTime',
+    publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
+    lastUpdatedAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
+    lastUpdatedSource: 'published',
+    salaryMin: 190000,
+    salaryMax: 250000,
+    salaryCurrency: 'USD',
+    salaryInterval: '1 YEAR',
+    isListed: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
+  },
 ];
 
 export const MOCK_JOB_DETAIL: JobDetail = {
@@ -251,10 +280,53 @@ We are looking for a Staff Platform Engineer to lead developer velocity and plat
   },
 };
 
+export const MOCK_LEVER_JOB_DETAIL: JobDetail = {
+  ...MOCK_JOBS[6],
+  active: true,
+  jobUrl: 'https://jobs.lever.co/acme/77777777-7777-4777-8777-777777777777',
+  team: 'Core Systems',
+  descriptionPlain: `About Acme:
+Acme builds resilient cloud infrastructure for distributed teams.
+
+What You'll Do:
+- Architect low-latency storage and orchestration pipelines.`,
+  descriptionHtml: `<h3>About Acme</h3>
+<p>Acme builds resilient cloud infrastructure for distributed teams.</p>
+<h3>What You&#39;ll Do</h3>
+<ul>
+  <li>Architect low-latency storage and orchestration pipelines.</li>
+</ul>`,
+  secondaryLocations: ['San Francisco, CA'],
+  companyJobCount: 12,
+  company: {
+    slug: 'lv--acme',
+    name: 'Acme',
+    logoUrl: null,
+    source: 'lever',
+    boardUrl: 'https://jobs.lever.co/acme',
+  },
+};
+
+export const MOCK_LEVER_COMPANY_PROFILE: CompanyProfile = {
+  slug: 'lv--acme',
+  name: 'Acme',
+  logoUrl: null,
+  jobCount: 12,
+  source: 'lever',
+  boardUrl: 'https://jobs.lever.co/acme',
+  withSalary: 9,
+  latestPublishedAt: '2026-03-01T12:00:00.000Z',
+  workplaceTypes: [{ value: 'Hybrid', count: 12 }],
+  employmentTypes: [{ value: 'FullTime', count: 12 }],
+  departments: [{ value: 'Engineering', count: 12 }],
+  locations: [{ value: 'New York, NY', count: 12 }],
+};
+
 export const MOCK_FACETS: FacetsData = {
   sources: [
     { value: 'ashby', count: 5 },
     { value: 'greenhouse', count: 1 },
+    { value: 'lever', count: 1 },
   ],
   workplaceTypes: [
     { value: 'Remote', count: 10633 },

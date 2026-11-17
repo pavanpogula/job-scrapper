@@ -172,6 +172,9 @@ describe('ApiTypes Runtime Validations (P7)', () => {
     it('parses source parameter and ignores unknown sources', () => {
       expect(parseJobQueryParams({ source: 'ashby' }).source).toBe('ashby');
       expect(parseJobQueryParams({ source: 'GREENHOUSE' }).source).toBe('greenhouse');
+      expect(parseJobQueryParams({ source: 'lever' }).source).toBe('lever');
+      expect(parseJobQueryParams({ source: 'LEVER' }).source).toBe('lever');
+      expect(parseJobQueryParams({ source: 'workday' }).source).toBeUndefined();
       expect(parseJobQueryParams({ source: 'unknown' }).source).toBeUndefined();
     });
   });

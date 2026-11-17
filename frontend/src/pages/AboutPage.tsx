@@ -112,7 +112,7 @@ export const AboutPage: React.FC = () => {
             3. Data Sources & Integrity
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-            Listings are collected via company career board APIs (Ashby & Greenhouse). Closed positions are detected through change detection hashes and deactivated automatically.
+            Listings are collected via company career board APIs (Ashby, Greenhouse & Lever). Closed positions are detected through change detection hashes and deactivated automatically.
           </Typography>
         </Box>
 

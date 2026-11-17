@@ -7,6 +7,10 @@
     {
       "value": "greenhouse",
       "count": 1
+    },
+    {
+      "value": "lever",
+      "count": 1
     }
   ],
   "workplaceTypes": [
@@ -17,18 +21,22 @@
     {
       "value": "OnSite",
       "count": 2
+    },
+    {
+      "value": "Hybrid",
+      "count": 1
     }
   ],
   "employmentTypes": [
     {
       "value": "FullTime",
-      "count": 6
+      "count": 7
     }
   ],
   "countries": [
     {
       "value": "US",
-      "count": 4
+      "count": 5
     },
     {
       "value": "CA",
@@ -46,7 +54,7 @@
     }
   ],
   "hasSalary": {
-    "yes": 6,
+    "yes": 7,
     "no": 0
   }
 }

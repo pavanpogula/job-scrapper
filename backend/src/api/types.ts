@@ -13,7 +13,7 @@ export interface JobListItemDTO {
   /** Internal UUID identifier (e.g. '00000000-0000-4000-8000-000000000001') */
   id: string;
   /**
-   * @deprecated legacy global key (`greenhouse:<id>` for Greenhouse); use source + externalId
+   * @deprecated legacy global key (`greenhouse:<id>` / `lever:<uuid>`); use source + externalId
    */
   ashbyId: string;
   /** ATS source origin */
@@ -91,7 +91,7 @@ export interface JobDetailDTO {
   /** Internal UUID identifier */
   id: string;
   /**
-   * @deprecated legacy global key (`greenhouse:<id>` for Greenhouse); use source + externalId
+   * @deprecated legacy global key (`greenhouse:<id>` / `lever:<uuid>`); use source + externalId
    */
   ashbyId: string;
   /** ATS source origin */
