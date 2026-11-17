@@ -95,8 +95,18 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `fetchCommonCrawlUrls()` | L79 | CommonCrawl JSONL index call (15 s timeout); returns URL strings, `[]` on error |
 | `extractCompanySlug(url)` | L112 | First path segment → decode, lowercase, strip quotes → `isValidSlug` or `null` |
 | `enrichCompanyMetadata(slug)` | L139 | `fetchOrganizationMetadata` → `company.update({ name?, logoUrl? })`; returns success boolean |
-| `runDiscovery({ includeCommonCrawl?, enrichMetadata? })` | L162 | Fetch URLs → unique slugs → sequential `company.upsert` (+ optional enrich) |
-| `require.main` guard | L203 | Reads `--common-crawl`, `--enrich` |
+| `fetchWithRetry(fn, retries, delayOrOpts)` | — | Shared HTTP retry helper with exponential backoff, optional 429 `Retry-After` honoring, and custom 5xx backoff delays |
+| `runDiscovery(options)` | — | Dispatches to Ashby, Greenhouse, or Lever (`runLeverDiscovery`) discovery based on `--source` |
+| `require.main` guard | — | Reads `--source`, `--common-crawl`, `--enrich`, `--budget`, `--time-budget-min` |
+
+### [LeverDiscovery.ts](../src/discovery/LeverDiscovery.ts) — Lever Wayback CDX Discovery (`--source=lever`)
+| Symbol | Description |
+|---|---|
+| `extractLeverToken(rawUrl)` | Pure token extractor for `jobs.lever.co` URLs preserving case, `.`, `&`; rejects EU host, reserved segments, bad encodings |
+| `loadLeverDiscoveryState(filePath?)` / `saveLeverDiscoveryState(state, filePath?)` | Reads/writes `backend/output/lever-discovery-state.json` safely without printing contents; missing/corrupt files start fresh |
+| `harvestLeverWayback(state, options)` | Iterates `a…z`, `0…9` Wayback CDX prefixes with `showResumeKey`, `>= 1 s` pacing, 503/429 retry, two-char split fallback, and 50 % deadline |
+| `selectLeverValidationCandidates(tokens, knownTokens, nowMs?)` | Orders unseeded candidates: never-checked first, then rejections (`empty`, `not_found`, `dead_board`, `error`) older than 30 days oldest-first |
+| `runLeverDiscovery(options)` | Orchestrates Wayback harvest + `LeverClient.validateSite` (`<= 1 req/s`), `allocateCompanySlug` upsert, optional enrichment, and `$GITHUB_STEP_SUMMARY` output |
 
 ## `../src/lib/`
 

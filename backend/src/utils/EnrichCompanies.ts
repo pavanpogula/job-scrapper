@@ -1,6 +1,6 @@
 /**
  * @file Company Organization Metadata Enricher
- * @summary Concurrently enriches active hiring companies with real display names and logo URLs from Ashby hosted boards
+ * @summary Concurrently enriches active hiring companies with real display names and logo URLs across Ashby, Greenhouse, and Lever boards
  * @tags Company, Enrichment, Logo, Organization, Metadata, Concurrency
  */
 
@@ -55,7 +55,7 @@ export async function enrichActiveCompanies(options: {
             DEFAULT_CLIENT_SOURCES.map(source => [source, createAtsClient(source)])
         );
 
-    if (enabledSources.includes('lever') && !clients.has('lever')) {
+    if (!options.clients && enabledSources.includes('lever') && !clients.has('lever')) {
         clients.set('lever', createAtsClient('lever'));
     }
 
@@ -104,12 +104,13 @@ export async function enrichActiveCompanies(options: {
         candidateList.push(...filteredAshby);
     }
 
-    // 2. Greenhouse candidates: active boards without a logo (or name), retried at most once per 7 days, capped at 200
-    if (enabledDbSources.includes('GREENHOUSE')) {
-        const greenhouseLimit = Math.min(options.limit ?? 200, 200);
-        const greenhouseCompanies = await prisma.company.findMany({
+    // 2. Non-Ashby candidates (Greenhouse, Lever): active boards without a logo (or with name = slug or null), retried at most once per 7 days, capped at 200 per source
+    for (const dbSource of ['GREENHOUSE', 'LEVER'] as const) {
+        if (!enabledDbSources.includes(dbSource)) continue;
+        const sourceLimit = Math.min(options.limit ?? 200, 200);
+        const rows = await prisma.company.findMany({
             where: {
-                source: 'GREENHOUSE',
+                source: dbSource,
                 status: 'ACTIVE',
                 ...(options.forceAll
                     ? {}
@@ -135,12 +136,12 @@ export async function enrichActiveCompanies(options: {
                 name: true,
                 logoUrl: true
             },
-            take: greenhouseLimit
+            take: sourceLimit
         });
-        const filteredGh = options.forceAll
-            ? greenhouseCompanies
-            : greenhouseCompanies.filter(c => !c.name || c.name === c.slug || !c.logoUrl);
-        candidateList.push(...filteredGh);
+        const filteredRows = options.forceAll
+            ? rows
+            : rows.filter(c => !c.name || c.name === c.slug || !c.logoUrl);
+        candidateList.push(...filteredRows);
     }
 
     const candidates = candidateList;
@@ -191,7 +192,7 @@ export async function enrichActiveCompanies(options: {
                     await prisma.company.update({
                         where: { slug: company.slug },
                         data: {
-                            ...(atsSource === 'greenhouse' ? { lastEnrichedAt: new Date() } : {}),
+                            ...(atsSource !== 'ashby' ? { lastEnrichedAt: new Date() } : {}),
                             ...(meta.name ? { name: meta.name } : {}),
                             ...(meta.logoUrl ? { logoUrl: meta.logoUrl } : {})
                         }
@@ -200,7 +201,7 @@ export async function enrichActiveCompanies(options: {
                     limiter.onSuccess();
                 } else {
                     failedCount++;
-                    if (atsSource === 'greenhouse') {
+                    if (atsSource !== 'ashby') {
                         await prisma.company.update({
                             where: { slug: company.slug },
                             data: { lastEnrichedAt: new Date() }

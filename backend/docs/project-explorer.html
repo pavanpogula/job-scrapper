@@ -386,6 +386,12 @@
                         <span>CdxWorker.ts</span>
                         
                     </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_discovery_LeverDiscovery_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>LeverDiscovery.ts</span>
+                        
+                    </div>
                 </li></ul>
                 </li><li class="">
                     <div class="tree-item folder" onclick="toggleFolder(this)">
@@ -990,6 +996,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_LeverClient_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>LeverClient.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_LeverDiscovery_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>LeverDiscovery.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -2262,7 +2274,7 @@
     "path": "src/discovery/CdxWorker.ts",
     "icon": "🔍",
     "iconClass": "yellow",
-    "summary": "Auto-discovers companies from Wayback Machine CDX and CommonCrawl APIs, validates slugs/tokens, and enriches organization metadata for Ashby and Greenhouse",
+    "summary": "Auto-discovers companies from Wayback Machine CDX and CommonCrawl APIs, validates slugs/tokens, and enriches organization metadata for Ashby, Greenhouse, and Lever",
     "tags": [
       "Discovery",
       "Wayback Machine",
@@ -2270,6 +2282,7 @@
       "Validation",
       "Greenhouse",
       "Ashby",
+      "Lever",
       "Regex",
       "Blocklist"
     ],
@@ -2318,7 +2331,7 @@
       },
       {
         "name": "fetchWithRetry()",
-        "desc": "Helper to retry an axios GET request with exponential backoff on 504 / 502 / 503 / 429"
+        "desc": "Retries an async HTTP request with exponential backoff on 504/502/503/429 or network errors, optionally honoring 429 Retry-After and custom 5xx delays"
       },
       {
         "name": "crawlGreenhouseCommonCrawl()",
@@ -2346,7 +2359,88 @@
       },
       {
         "name": "runDiscovery()",
-        "desc": "Main discovery function. Discovers company tokens for Ashby or Greenhouse and upserts to DB."
+        "desc": "Main discovery function. Discovers company tokens for Ashby, Greenhouse, or Lever and upserts to DB."
+      }
+    ]
+  },
+  "src_discovery_LeverDiscovery_ts": {
+    "name": "LeverDiscovery.ts",
+    "path": "src/discovery/LeverDiscovery.ts",
+    "icon": "🔍",
+    "iconClass": "yellow",
+    "summary": "Harvests Lever job board tokens from Wayback Machine CDX by prefix with resume support, validates live boards at <= 1 req/s, and upserts Company rows",
+    "tags": [
+      "Discovery",
+      "Lever",
+      "Wayback Machine",
+      "CDX",
+      "Validation",
+      "State",
+      "Enrichment",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "13"
+      }
+    ],
+    "functions": [
+      {
+        "name": "getDefaultPrisma()",
+        "desc": "Lazily instantiates a fallback PrismaClient only when callers omit prismaClient"
+      },
+      {
+        "name": "setTokenEntry()",
+        "desc": "Safely assigns a token state entry without invoking Object prototype setters"
+      },
+      {
+        "name": "extractLeverToken()",
+        "desc": "Extracts and validates a case-preserving Lever board token from a jobs.lever.co URL (EU and invalid hosts return null)"
+      },
+      {
+        "name": "createFreshLeverState()",
+        "desc": "Creates an empty v1 Lever discovery state starting at prefix \"a\""
+      },
+      {
+        "name": "loadLeverDiscoveryState()",
+        "desc": "Loads Lever discovery state from disk, falling back cleanly to a fresh state if missing or corrupt"
+      },
+      {
+        "name": "saveLeverDiscoveryState()",
+        "desc": "Persists Lever discovery state JSON to disk without logging sensitive contents"
+      },
+      {
+        "name": "buildWaybackCdxUrl()",
+        "desc": "Builds the Wayback CDX query URL for a Lever prefix without double-encoding %26"
+      },
+      {
+        "name": "looksLikeWaybackUrl()",
+        "desc": "Checks whether a trailing non-URL row/line looks like a Wayback resumeKey rather than a URL"
+      },
+      {
+        "name": "parseWaybackCdxResponse()",
+        "desc": "Parses plain-text or JSON-array Wayback CDX response into URL rows and optional trailing resumeKey"
+      },
+      {
+        "name": "harvestPrefixPages()",
+        "desc": "Queries one paged prefix (following resumeKey until done or harvestDeadline) using paced Wayback CDX requests"
+      },
+      {
+        "name": "harvestLeverWayback()",
+        "desc": "Harvests Lever board tokens from Wayback Machine CDX with 50% time budget, state resume, 503/429 retries, and two-char prefix split fallback"
+      },
+      {
+        "name": "selectLeverValidationCandidates()",
+        "desc": "Selects eligible Lever validation candidates in order: never-checked first, then rejections older than 30 days (oldest first)"
+      },
+      {
+        "name": "runLeverDiscovery()",
+        "desc": "Orchestrates Wayback CDX harvest (up to 50% time budget), paced validation of candidate tokens, and DB upsert for live Lever boards"
       }
     ]
   },
@@ -3363,7 +3457,7 @@
     "path": "src/utils/EnrichCompanies.ts",
     "icon": "📋",
     "iconClass": "green",
-    "summary": "Concurrently enriches active hiring companies with real display names and logo URLs from Ashby hosted boards",
+    "summary": "Concurrently enriches active hiring companies with real display names and logo URLs across Ashby, Greenhouse, and Lever boards",
     "tags": [
       "Company",
       "Enrichment",
@@ -4733,15 +4827,17 @@
     "path": "tests/unit/EmptyGreenhouseHiding.test.ts",
     "icon": "📝",
     "iconClass": "blue",
-    "summary": "Guards G5 invariant: queryCompanies and queryCompanyProfile exclude source = GREENHOUSE companies with no active listed jobs",
+    "summary": "Guards G5 / L1 / L4 invariant: queryCompanies and queryCompanyProfile exclude GREENHOUSE and LEVER companies with no active listed jobs",
     "tags": [
       "Unit Test",
       "Greenhouse",
+      "Lever",
       "Hiding",
       "Empty Companies",
       "queryCompanies",
       "queryCompanyProfile",
-      "G5"
+      "G5",
+      "ADR-0022"
     ],
     "info": [
       {
@@ -5141,6 +5237,34 @@
       "Normalizer",
       "Pacer",
       "BF-024",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_LeverDiscovery_test_ts": {
+    "name": "LeverDiscovery.test.ts",
+    "path": "tests/unit/LeverDiscovery.test.ts",
+    "icon": "🔍",
+    "iconClass": "yellow",
+    "summary": "Tests extractLeverToken, Wayback CDX harvest (36 prefixes, resumeKey, 503/429 retry, 2-char split, 50% deadline), state persistence, 30-day cooldown, validation counts, and Lever logo enrichment",
+    "tags": [
+      "Unit Test",
+      "Discovery",
+      "Lever",
+      "Wayback",
+      "Enrichment",
+      "Validation",
+      "Fixtures",
       "ADR-0022"
     ],
     "info": [

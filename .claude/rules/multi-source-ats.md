@@ -15,3 +15,4 @@ paths: ["backend/src/**", "backend/prisma/**", "frontend/src/**", ".github/workf
 9. Lever: <= 1 request/s for the whole run (robots `Crawl-delay: 1`; pacer = 1000 ms x worker count, staggered start). Greenhouse <= 5 concurrent per worker. 404 is decided by HTTP status, never body text.
 10. Lever site names are case-sensitive and may contain `.` and `&`: keep them exactly, URL-encode them; slugs come from `allocateCompanySlug`.
 11. The Lever board cap is applied where companies are selected (`selectCompanies`, coordinator for `scrape:parallel`); each scraper stops starting Lever boards at `leverDeadlineMs` so the worker watchdog never blocks the publish.
+12. Lever discovery uses Wayback CDX (Common Crawl is blocked by `jobs.lever.co`), keeps token case, seeds a site only when `validateSite` is `live` (API >= 1 posting **and** board page 200), and persists progress in `output/lever-discovery-state.json` (never printed). EU (`jobs.eu.lever.co`) is not supported yet.

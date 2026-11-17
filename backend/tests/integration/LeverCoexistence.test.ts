@@ -4,11 +4,15 @@
  * @tags Integration, Postgres, Lever, Ashby, Coexistence, Slug, BF-024, ADR-0022
  */
 
+import axios from 'axios';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
+import { queryCompanies, queryCompanyProfile } from '../../src/api/db/queries';
 import { AshbyScraper } from '../../src/core/Scraper';
+import { runLeverDiscovery, saveLeverDiscoveryState } from '../../src/discovery/LeverDiscovery';
 import {
   AtsClient,
   BoardFetchResult,
@@ -18,7 +22,7 @@ import {
 } from '../../src/lib/ats/AtsClient';
 import { AtsSource } from '../../src/lib/ats/source';
 import { normalizeAshbyJob } from '../../src/lib/ats/AshbyAtsClient';
-import { LeverPosting, normalizeLeverJob } from '../../src/lib/ats/LeverClient';
+import { LeverClient, LeverPosting, LeverSiteValidationStatus, normalizeLeverJob } from '../../src/lib/ats/LeverClient';
 import { allocateCompanySlug } from '../../src/lib/ats/slug';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -293,5 +297,112 @@ describeIfDb('BF-024 / ADR-0022: Ashby spotify and Lever lv--spotify coexistence
     // Third distinct token sanitizing to the same base slug gets -3
     const slug3 = await allocateCompanySlug(prisma, 'lever', 'arcteryx&com');
     expect(slug3).toBe('lv--arcteryx-com-3');
+  });
+
+  it('Lever discovery upserts collision-safe slugs idempotently, keeps assembly & Assembly distinct, preserves Ashby/GH rows, and hides empty Lever boards from /v1/companies', async () => {
+    await prisma.company.createMany({
+      data: [
+        { slug: 'ashby-keep', name: 'Ashby Keep', source: 'ASHBY', atsToken: 'ashby-keep', status: 'ACTIVE' },
+        { slug: 'gh--keep', name: 'Greenhouse Keep', source: 'GREENHOUSE', atsToken: 'keep', status: 'ACTIVE' },
+      ],
+    });
+
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lever-integ-'));
+    const stateFilePath = path.join(tmpDir, 'state.json');
+
+    const axiosSpy = jest.spyOn(axios, 'get').mockImplementation((async (url: string) => {
+      if (url.includes('url=jobs.lever.co/a&')) {
+        return {
+          data: [
+            ['original'],
+            ['https://jobs.lever.co/assembly/1'],
+            ['https://jobs.lever.co/Assembly/2'],
+            ['https://jobs.lever.co/arcteryx.net/3'],
+            ['https://jobs.lever.co/arcteryx_net/4'],
+          ],
+        };
+      }
+      return { data: [['original']] };
+    }) as never);
+
+    const fakeLeverClient = {
+      validateSite: jest.fn().mockImplementation(async (): Promise<LeverSiteValidationStatus> => 'live'),
+      fetchCompanyMetadata: jest.fn().mockImplementation(async (ref: BoardRef): Promise<CompanyMetadataResult> => ({
+        status: 'ok',
+        name: `Name ${ref.atsToken}`,
+      })),
+    } as unknown as LeverClient;
+
+    try {
+      const firstRun = await runLeverDiscovery({
+        prismaClient: prisma,
+        stateFilePath,
+        leverClient: fakeLeverClient,
+        prefixes: ['a'],
+        waybackMinIntervalMs: 0,
+        enrichMetadata: true,
+        timeBudgetMs: 60_000,
+      });
+
+      expect(firstRun.live).toBe(4);
+      expect(firstRun.inserted).toBe(4);
+
+      const assemblyLower = await prisma.company.findUnique({
+        where: { source_atsToken: { source: 'LEVER', atsToken: 'assembly' } },
+      });
+      const assemblyUpper = await prisma.company.findUnique({
+        where: { source_atsToken: { source: 'LEVER', atsToken: 'Assembly' } },
+      });
+      const dotRow = await prisma.company.findUnique({
+        where: { source_atsToken: { source: 'LEVER', atsToken: 'arcteryx.net' } },
+      });
+      const underRow = await prisma.company.findUnique({
+        where: { source_atsToken: { source: 'LEVER', atsToken: 'arcteryx_net' } },
+      });
+
+      expect(assemblyLower?.slug).toBe('lv--assembly');
+      expect(assemblyUpper?.slug).toBe('lv--assembly-2');
+      expect(dotRow?.slug).toBe('lv--arcteryx-net');
+      expect(underRow?.slug).toBe('lv--arcteryx-net-2');
+
+      // Re-run with fresh state file to prove DB upsert is idempotent and preserves allocated slugs
+      saveLeverDiscoveryState(
+        {
+          version: 1,
+          harvest: { nextPrefix: 'a', resumeKey: null, completedAt: null },
+          tokens: {},
+        },
+        stateFilePath
+      );
+      const secondRun = await runLeverDiscovery({
+        prismaClient: prisma,
+        stateFilePath,
+        leverClient: fakeLeverClient,
+        prefixes: ['a'],
+        waybackMinIntervalMs: 0,
+        timeBudgetMs: 60_000,
+      });
+      expect(secondRun.alreadyKnown).toBe(4);
+      expect(secondRun.validated).toBe(0);
+      expect(secondRun.inserted).toBe(0);
+
+      // Direct allocateCompanySlug + upsert re-run keeps existing slug lv--assembly-2
+      expect(await allocateCompanySlug(prisma, 'lever', 'Assembly')).toBe('lv--assembly-2');
+
+      // Ashby and Greenhouse rows untouched
+      const ashbyKeep = await prisma.company.findUnique({ where: { slug: 'ashby-keep' } });
+      const ghKeep = await prisma.company.findUnique({ where: { slug: 'gh--keep' } });
+      expect(ashbyKeep).toMatchObject({ source: 'ASHBY', name: 'Ashby Keep', status: 'ACTIVE' });
+      expect(ghKeep).toMatchObject({ source: 'GREENHOUSE', name: 'Greenhouse Keep', status: 'ACTIVE' });
+
+      // Empty Lever company (0 active jobs) is hidden from /v1/companies and /v1/companies/:slug
+      const directory = await queryCompanies(prisma, { pageSize: 50 });
+      expect(directory.data.some((c) => c.slug === 'lv--assembly')).toBe(false);
+      expect(directory.data.some((c) => c.slug === 'lv--assembly-2')).toBe(false);
+      expect(await queryCompanyProfile(prisma, 'lv--assembly')).toBeNull();
+    } finally {
+      axiosSpy.mockRestore();
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });

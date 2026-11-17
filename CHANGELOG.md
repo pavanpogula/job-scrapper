@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(discovery)**: Lever site discovery via Wayback CDX and enrichment (ADR-0022).
+  - Why: Discover US Lever boards at scale via Wayback Machine CDX (Common Crawl is blocked by `jobs.lever.co/robots.txt`) and keep company display names/logos fresh without enabling Lever scraping yet (L5).
+  - Changes:
+    - Implemented `backend/src/discovery/LeverDiscovery.ts` (`extractLeverToken`, Wayback 36-prefix harvest with `showResumeKey`, `>= 1 s` pacing, 3× 30–60 s retries and two-character split fallback `a0…a9`, `aa…az`, `a-`, `a.`, `a_`, `a%26`, 50 % time budget deadline, 100-min default time budget / 500-token budget, never-checked-first + 30-day rejection cooldown, and persistent state in `backend/output/lever-discovery-state.json`).
+    - Exported and extended `fetchWithRetry` in `backend/src/discovery/CdxWorker.ts` (`honorRetryAfter`, `maxRetryAfterMs`, `retryOn5xxDelayMs`), dispatched `--source=lever` to `runLeverDiscovery`, removed the L1 not-implemented exits, and updated `--budget` / `--time-budget-min` warnings for both `greenhouse` and `lever`.
+    - Generalized non-Ashby enrichment (`GREENHOUSE`, `LEVER`) in `backend/src/utils/EnrichCompanies.ts` (`lastEnrichedAt` 7-day retry, 200 cap per source, updating `lastEnrichedAt` for `atsSource !== 'ashby'`).
+    - Added `discover-lever` job in `.github/workflows/discover-weekly.yml` (`needs: discover-greenhouse`, `vars.DISCOVERY_LEVER_ENABLED == 'true'`, `timeout-minutes: 120`, no job-level concurrency, `actions/cache/restore@v6` and `save@v6` on `backend/output/lever-discovery-state.json`, `prisma db push --skip-generate` before `npm run discover -- --source=lever --enrich`, and `$GITHUB_STEP_SUMMARY` breakdown).
+    - Appended rule 12 to `docs/agents/rules/multi-source-ats.md`, added `DISCOVERY_GREENHOUSE_ENABLED` & `DISCOVERY_LEVER_ENABLED` to rule 5 of `docs/agents/rules/ci-and-workflows.md`, and synced `.agents/` / `.claude/` shells.
+  - Tests:
+    - Added recorded fixtures (`backend/tests/fixtures/lever/discovery/*`) and unit suite `backend/tests/unit/LeverDiscovery.test.ts` covering `extractLeverToken`, 36-prefix Wayback harvest, `resumeKey`, 503/429 retry + split fallback, fake-timer 50 % deadline stop, corrupt/resume state, 30-day cooldown, validation counts, 1 req/s pacer, and regional/region-less Lever logo enrichment vs `og:image` banner rejection.
+    - Extended `EmptyGreenhouseHiding.test.ts`, real-Postgres `LeverCoexistence.test.ts`, and `scripts/repo-tests/toggles.test.mjs` (`discover-lever` workflow guards).
+  - Docs:
+    - Updated `backend/docs/external-apis.md`, `backend/docs/cli-commands.md`, `backend/docs/module-reference.md`, `backend/docs/outputs-and-artifacts.md`, `backend/docs/known-issues.md`, `docs/deployment-and-operations.md`, `docs/decisions/ADR-0022-lever-source.md`, and regenerated `backend/docs/project-explorer.html`.
+
 - **feat(api,ui)**: Lever source in API filter, facets and UI [contract] (ADR-0022).
   - Why: Expose Lever (`lever`) alongside Ashby and Greenhouse across the public REST API filter, contract fixtures, and frontend filter/badges/links while keeping all changes additive (zero removed/renamed DTO fields).
   - Changes:

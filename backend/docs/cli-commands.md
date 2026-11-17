@@ -12,7 +12,7 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run seed [-- --all]` | `src/utils/Seed.ts` | ✅ | — | — | `Company` rows | 0 (`.catch(console.error)`) |
 | `npm run seed:greenhouse [-- token1,token2]` | `src/utils/SeedGreenhouse.ts` | ✅ | — | Greenhouse Board API | `Company` rows (`gh--<token>`, `source=GREENHOUSE`) | 1 |
 | `npm run seed:lever [-- token1,token2]` | `src/utils/SeedLever.ts` | ✅ | — | Lever Postings API + Hosted HTML | `Company` rows (`lv--<sanitized>`, `source=LEVER`) | 1 |
-| `npm run discover [-- --source=greenhouse] [-- --common-crawl] [-- --enrich] [-- --budget=N\|all] [-- --time-budget-min=M]` | `src/discovery/CdxWorker.ts` | ✅ | — | CommonCrawl / Wayback CDX | `Company` rows (`name`/`logoUrl` with `--enrich`) | 1 |
+| `npm run discover [-- --source=ashby\|greenhouse\|lever] [-- --common-crawl] [-- --enrich] [-- --budget=N\|all] [-- --time-budget-min=M]` | `src/discovery/CdxWorker.ts` (`LeverDiscovery.ts`) | ✅ | — | CommonCrawl / Wayback CDX / Lever API | `Company` rows + `output/lever-discovery-state.json` | 1 |
 | `npm run process:cdx -- <file.json>` | `src/utils/ProcessCdxData.ts` | — | — | — | `./extracted-slugs.json` (CWD) | non-zero only on thrown read/parse error |
 | `npm run scrape [-- --sources=s1,s2] [-- --slugs=a,b] [-- --lever-max-boards=N]` | `src/core/Scraper.ts` | ✅ | optional | Ashby / Greenhouse / Lever APIs | `Job`, `Department`, `Location`, `Company.status`, Redis `job:*:hash`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 1 |
 | `npm run scrape:parallel [-- --workers=N] [-- --sources=s1,s2] [-- --slugs=a,b] [-- --lever-max-boards=N]` | `src/core/ClusterScraper.ts` (forks `Scraper.ts --ipc-worker`) | ✅ | optional | Ashby / Greenhouse / Lever APIs | same as `scrape`, report merged across workers | 1 |
@@ -24,7 +24,7 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run db:clean -- --execute` | same | ✅ | — | — | **deletes** `Job` + `Company` rows with invalid slugs | 0 |
 | `npm run db:backfill-source` | `src/database/BackfillSource.ts` | ✅ | — | — | backfills `externalId` & `atsToken`, creates unique indexes | 1 |
 | `npm run source:deactivate -- <source> [--dry-run] [--i-know]` | `src/database/SourceDeactivate.ts` | ✅ | — | — | deactivates all active jobs for source (`active=false`) | 1 |
-| `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force] [-- --sources=s1,s2]` | `../src/utils/EnrichCompanies.ts` | ✅ | — | Ashby hosted boards | updates `Company.name` & `Company.logoUrl` | 1 |
+| `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force] [-- --sources=s1,s2]` | `../src/utils/EnrichCompanies.ts` | ✅ | — | Ashby / Greenhouse / Lever boards | updates `Company.name`, `Company.logoUrl` & `lastEnrichedAt` | 1 |
 | `npm run verify` | `../src/utils/Verify.ts` | ✅ | — | — | read-only (console report) | 1 |
 | `npm run api:start` | `../src/api/Server.ts` | ✅ | — | — | HTTP server on port 3001 with rate limiting and static UI serving | 1 |
 | `npm run prisma:studio` | Prisma CLI (`npx prisma studio`) | ✅ | — | — | GUI (can edit rows) | — |
@@ -66,11 +66,13 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
 - Allocates a permanent collision-free slug via `allocateCompanySlug(db, 'lever', token)` (`lv--<sanitized>`, preserving exact `atsToken`), fetches metadata (name + header logo URL), and upserts `Company` by `source_atsToken`.
 - Not run in CI; for local throwaway DB testing before L5 production enablement.
 
-### `npm run discover [-- --source=greenhouse] [-- --common-crawl] [-- --enrich]` — `src/discovery/CdxWorker.ts`
+### `npm run discover [-- --source=ashby|greenhouse|lever] [-- --common-crawl] [-- --enrich] [-- --budget=N|all] [-- --time-budget-min=M]` — `src/discovery/CdxWorker.ts` (`LeverDiscovery.ts`)
 - Flags:
-  * `--source=greenhouse` (default `ashby`): select ATS discovery mode.
+  * `--source=ashby|greenhouse|lever` (default `ashby`): select ATS discovery mode.
   * `--common-crawl`: in Ashby mode, also queries CommonCrawl index (`CC-MAIN-2024-51`).
-  * `--enrich`: fetches and updates display name and company logo.
+  * `--enrich`: fetches and updates display name and company logo (for Lever, fetched on insert only while time remains; otherwise `enrich:companies` fills it later).
+  * `--budget=N|all`: how many candidate tokens to validate this run (positive integer or `all`; applies to `greenhouse` and `lever`, default `500`).
+  * `--time-budget-min=M`: total time budget in minutes (`1–120`; applies to `greenhouse` default `20` and `lever` default `100`). Invalid `--budget` or `--time-budget-min` exits `1`.
 - **Ashby Mode (`--source=ashby`, default):**
   * Queries Wayback CDX (`http://web.archive.org/cdx/search/cdx`, `url=jobs.ashbyhq.com/*`, `collapse=urlkey`, `limit=1000`).
   * Slugs go through `extractCompanySlug()` → `isValidSlug()`; upserted sequentially (`source: 'ASHBY'`).
@@ -79,12 +81,19 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
   * Discovers latest Common Crawl crawl id from `https://index.commoncrawl.org/collinfo.json` (fallback `CC-MAIN-2024-51`).
   * Queries Common Crawl paged CDX index across 4 hosts (`job-boards.greenhouse.io`, `boards.greenhouse.io`, `job-boards.eu.greenhouse.io`, `boards.eu.greenhouse.io`) with `showNumPages=true` and `page=0..N-1` with 504 retry and prefix fallbacks.
   * Extracts tokens via `extractGreenhouseToken()` (including `embed/job_board?for=<token>`), enforces regex `^[a-z0-9][a-z0-9_-]{1,59}$`.
-  * Filters out tokens already in DB (`source: 'GREENHOUSE'`). Validates at most 500 new tokens per run by default, 5 at a time (a 429 slows all of them down). Stops cleanly at the 20-minute time budget.
-  * `--budget=N|all`: how many new tokens to validate this run (a positive whole number, or `all` for no cap). `--time-budget-min=M`: the time budget in minutes (1-120, default 20). Example for a full local pass: `npm run discover -- --source=greenhouse --enrich --budget=all --time-budget-min=40`. Invalid values exit 1 with a clear message.
+  * Filters out tokens already in DB (`source: 'GREENHOUSE'`). Validates at most 500 new tokens per run by default, 5 at a time (a 429 slows all of them down). Stops cleanly at the 20-minute time budget. Example for a full local pass: `npm run discover -- --source=greenhouse --enrich --budget=all --time-budget-min=40`.
   * Validates with `GET https://boards-api.greenhouse.io/v1/boards/{token}` at ≤ 5 concurrent (200 → upsert `gh--<token>`, 404 → drop, 429 → back off).
   * With `--enrich`, fetches the board's own uploaded logo from the hosted board HTML (`og:image` or header `<img>`), accepted only when it is on the Greenhouse logo path; banners on other CDNs are ignored (initials shown).
   * Prints discovery summary to console and appends to `$GITHUB_STEP_SUMMARY` when running in GitHub Actions.
   * Discovered Greenhouse boards stay hidden from public company APIs and Redis cache until jobs are scraped.
+- **Lever Mode (`--source=lever`, `src/discovery/LeverDiscovery.ts`):**
+  * Defaults: `--time-budget-min=100` (100 min: harvest gets at most 50 %, validation gets the rest), `--budget=500`.
+  * Harvests Wayback CDX across prefixes `a…z`, `0…9` (`url=jobs.lever.co/{p}&matchType=prefix&fl=original&collapse=urlkey&from=<currentYear-2>&limit=20000&showResumeKey=true`), continuing via `&resumeKey=<key>` at `>= 1 s` pacing with 3× 30–60 s retries (`503`/`504`/timeout), `429 Retry-After`, and one-level split into two-character prefixes (`a0…a9`, `aa…az`, `a-`, `a.`, `a_`, `a%26`) on persistent failure.
+  * Extracts case-preserving tokens via `extractLeverToken()` (rejects `jobs.eu.lever.co`, reserved segments, and malformed encodings).
+  * Resumes harvest progress (`nextPrefix`, `resumeKey`) and validation history (`outcome`, `checkedAt`) from `backend/output/lever-discovery-state.json` (missing/corrupt starts fresh at `a`; never printed). When all prefixes complete, sets `completedAt` and starts the next cycle from `a` on the following run.
+  * Excludes tokens already in DB (`source = 'LEVER'`, exact `atsToken`), then validates never-checked tokens first followed by rejections (`empty`/`not_found`/`dead_board`/`error`) older than 30 days (oldest first) via `LeverClient.validateSite()` (`<= 1 req/s`, concurrency `1`).
+  * Seeds **only** `'live'` sites (API `>= 1` posting **and** board page HTTP `200`) with permanent collision-safe `lv--<sanitized>` slugs via `allocateCompanySlug()`, upserted by `(source, atsToken)` (`status = 'ACTIVE'`). Discovered empty Lever boards stay hidden from public endpoints until L5 scraping fills them.
+  * Prints console summary and appends Markdown summary (`Harvest complete: yes/no`, prefixes queried/failed, Wayback rows read, unique tokens found, already known, validated, live, empty, not_found, dead_board, errors, left by budget/time) to `$GITHUB_STEP_SUMMARY`.
 
 ### `npm run process:cdx -- <path>` — `src/utils/ProcessCdxData.ts`
 - Positional arg: `process.argv[2]` = path to a raw CDX JSON file (array-of-arrays, `[["original"],["url"],...]`).
@@ -179,10 +188,10 @@ Interactive `readline` loop (`Select an option [1-8]`). Runs on import (no `requ
 ### `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force] [-- --sources=s1,s2]` — `src/utils/EnrichCompanies.ts`
 - Flags:
   * `--concurrency=N`: HTTP request concurrency (default 15).
-  * `--limit=N`: Maximum number of companies to enrich.
+  * `--limit=N`: Maximum number of companies to enrich (non-Ashby sources `GREENHOUSE` and `LEVER` are capped at `200` per source per run).
   * `--force`: Force enrichment for all companies, not just those missing name or logo.
   * `--sources=ashby[,greenhouse,lever]`: comma-separated ATS sources to enrich (default: `ashby`). Unknown source exits 1.
-- Queries active hiring companies matching enabled sources, dispatches to the source's registered `AtsClient.fetchCompanyMetadata`. Companies with an unregistered source are skipped and counted (never dispatched to Ashby).
+- For `ASHBY`, queries active hiring companies lacking `name`/`logoUrl`. For `GREENHOUSE` and `LEVER`, queries `ACTIVE` boards missing `logoUrl` or `name` (or `name = slug`), throttled to at most once every 7 days via `Company.lastEnrichedAt`. Dispatches each company to its source's registered `AtsClient.fetchCompanyMetadata` (for `lever`, lazily constructed at `<= 1 req/s`). Unregistered sources are skipped and counted.
 
 ### `npm run source:deactivate -- <source> [--dry-run] [--i-know]` — `src/database/SourceDeactivate.ts`
 - Emergency rollback CLI to deactivate all jobs for an ATS source (e.g. `greenhouse`) by setting `active = false`.
