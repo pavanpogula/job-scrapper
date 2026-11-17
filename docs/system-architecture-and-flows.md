@@ -26,7 +26,7 @@ flowchart LR
     FIXER["fixer job<br/>anthropics/claude-code-action (Claude Code)"]
     PRSTEP["push branch + open PR<br/>(GitHub App token, deterministic step)"]
   end
-  ATS["ATS APIs: Ashby (REST/GraphQL) & Greenhouse (Job Board REST)"]
+  ATS["ATS APIs: Ashby (REST/GraphQL), Greenhouse (Job Board REST) & Lever (Postings REST)"]
   OWNER(("Owner reviews + merges PR"))
 
   UI -->|GET /v1/*| CDN --> FN

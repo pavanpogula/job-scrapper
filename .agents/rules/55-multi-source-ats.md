@@ -14,3 +14,6 @@ description: "Multi-source ATS Invariants (ADR-0021, ADR-0022)"
 6. A new source ships disabled: `--sources` defaults to `ashby`; turned on only by a repo variable.
 7. Schema: adding an enum value is safe; never add `@@unique` in the same `db push` as its new columns; never `--accept-data-loss`.
 8. Clients are built eagerly only for `DEFAULT_CLIENT_SOURCES`; never construct clients by iterating `SUPPORTED_ATS_SOURCES`.
+9. Lever: <= 1 request/s for the whole run (robots `Crawl-delay: 1`; pacer = 1000 ms x worker count, staggered start). Greenhouse <= 5 concurrent per worker. 404 is decided by HTTP status, never body text.
+10. Lever site names are case-sensitive and may contain `.` and `&`: keep them exactly, URL-encode them; slugs come from `allocateCompanySlug`.
+11. The Lever board cap is applied where companies are selected (`selectCompanies`, coordinator for `scrape:parallel`); each scraper stops starting Lever boards at `leverDeadlineMs` so the worker watchdog never blocks the publish.

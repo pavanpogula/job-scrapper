@@ -1,0 +1,33 @@
+[
+  {
+    "id": "33333333-3333-4333-8333-333333333331",
+    "text": "Senior Product Designer",
+    "categories": {
+      "department": "Design",
+      "team": "Core Experience",
+      "location": "Seattle, WA",
+      "allLocations": ["Seattle, WA"],
+      "commitment": "Full-Time"
+    },
+    "country": "US",
+    "workplaceType": "hybrid",
+    "createdAt": 1786300000000,
+    "description": "<p>Design workflows for enterprise sales teams.</p>",
+    "lists": [
+      {
+        "text": "Qualifications",
+        "content": "<li>5+ years product design</li>"
+      }
+    ],
+    "salaryRange": {
+      "min": 150000,
+      "max": 190000,
+      "currency": "USD",
+      "interval": "per-year-salary"
+    },
+    "salaryDescription": "<p>Base salary range is $150,000 - $190,000 plus equity.</p>",
+    "additional": "<p>Outreach EEO statement: all qualified applicants welcome.</p>",
+    "hostedUrl": "https://jobs.lever.co/outreach/33333333-3333-4333-8333-333333333331",
+    "applyUrl": "https://jobs.lever.co/outreach/33333333-3333-4333-8333-333333333331/apply"
+  }
+]

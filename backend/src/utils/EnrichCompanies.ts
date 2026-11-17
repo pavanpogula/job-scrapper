@@ -55,6 +55,10 @@ export async function enrichActiveCompanies(options: {
             DEFAULT_CLIENT_SOURCES.map(source => [source, createAtsClient(source)])
         );
 
+    if (enabledSources.includes('lever') && !clients.has('lever')) {
+        clients.set('lever', createAtsClient('lever'));
+    }
+
     const enabledDbSources = enabledSources.map(toDbAts);
 
     console.log('🔍 Identifying active hiring companies needing enrichment...');

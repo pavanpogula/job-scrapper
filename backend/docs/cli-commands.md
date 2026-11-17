@@ -11,10 +11,11 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 |---|---|:-:|:-:|---|---|---|
 | `npm run seed [-- --all]` | `src/utils/Seed.ts` | ✅ | — | — | `Company` rows | 0 (`.catch(console.error)`) |
 | `npm run seed:greenhouse [-- token1,token2]` | `src/utils/SeedGreenhouse.ts` | ✅ | — | Greenhouse Board API | `Company` rows (`gh--<token>`, `source=GREENHOUSE`) | 1 |
-| `npm run discover [-- --source=greenhouse] [-- --common-crawl] [-- --enrich] [-- --budget=N|all] [-- --time-budget-min=M]` | `src/discovery/CdxWorker.ts` | ✅ | — | CommonCrawl / Wayback CDX | `Company` rows (`name`/`logoUrl` with `--enrich`) | 1 |
+| `npm run seed:lever [-- token1,token2]` | `src/utils/SeedLever.ts` | ✅ | — | Lever Postings API + Hosted HTML | `Company` rows (`lv--<sanitized>`, `source=LEVER`) | 1 |
+| `npm run discover [-- --source=greenhouse] [-- --common-crawl] [-- --enrich] [-- --budget=N\|all] [-- --time-budget-min=M]` | `src/discovery/CdxWorker.ts` | ✅ | — | CommonCrawl / Wayback CDX | `Company` rows (`name`/`logoUrl` with `--enrich`) | 1 |
 | `npm run process:cdx -- <file.json>` | `src/utils/ProcessCdxData.ts` | — | — | — | `./extracted-slugs.json` (CWD) | non-zero only on thrown read/parse error |
-| `npm run scrape [-- --sources=s1,s2] [-- --slugs=a,b]` | `src/core/Scraper.ts` | ✅ | optional | Ashby REST (+ GraphQL fallback) | `Job`, `Department`, `Location`, `Company.status`, Redis `job:*:hash`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 1 |
-| `npm run scrape:parallel [-- --workers=N] [-- --sources=s1,s2] [-- --slugs=a,b]` | `src/core/ClusterScraper.ts` (forks `Scraper.ts --ipc-worker`) | ✅ | optional | Ashby REST (+ GraphQL fallback) | same as `scrape`, report merged across workers | 1 |
+| `npm run scrape [-- --sources=s1,s2] [-- --slugs=a,b] [-- --lever-max-boards=N]` | `src/core/Scraper.ts` | ✅ | optional | Ashby / Greenhouse / Lever APIs | `Job`, `Department`, `Location`, `Company.status`, Redis `job:*:hash`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 1 |
+| `npm run scrape:parallel [-- --workers=N] [-- --sources=s1,s2] [-- --slugs=a,b] [-- --lever-max-boards=N]` | `src/core/ClusterScraper.ts` (forks `Scraper.ts --ipc-worker`) | ✅ | optional | Ashby / Greenhouse / Lever APIs | same as `scrape`, report merged across workers | 1 |
 | `npm run scrape:csv` | `src/core/ScraperCSV.ts` | ✅ (read) | — | Ashby REST (+ GraphQL fallback) | `output/jobs_YYYY-MM-DD.csv`, `output/latest-error-report.json`, `output/error-report_YYYY-MM-DD.json` | 0 (`.catch(console.error)`) |
 | `npm run scrape:csv -- --upload-cloud` | same | ✅ (read) | — | Ashby + Google Drive | CSV + Drive file (service account) | 0 |
 | `npm run db:menu` | `src/database/DbMenu.ts` | ✅ | — | — | read-only (unless raw SQL in option 7 mutates!) | 0 |
@@ -59,6 +60,12 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
 - When `status === 'ok'`, upserts `Company { slug: 'gh--' + token, source: 'GREENHOUSE', atsToken: token, name, status: 'ACTIVE' }` by `source_atsToken`. Skips `not_found` or `error` boards.
 - Not run in CI; for local throwaway DB testing before G6 production enablement.
 
+### `npm run seed:lever [-- spotify,palantir,zoox,matchgroup,outreach]` — `src/utils/SeedLever.ts`
+- Positional or `--tokens=` argument: comma-separated list of case-sensitive Lever site tokens (`/^[A-Za-z0-9][A-Za-z0-9._&-]{0,79}$/`). Defaults to `CURATED_LEVER_BOARDS` in `src/config/LeverBoards.ts` (`spotify`, `palantir`, `zoox`, `matchgroup`, `outreach`).
+- Validates each token via `LeverClient.validateSite(token)` (both Postings API and hosted HTML board must succeed and have jobs — skips `'empty'`, `'not_found'`, `'dead_board'`, and `'error'`).
+- Allocates a permanent collision-free slug via `allocateCompanySlug(db, 'lever', token)` (`lv--<sanitized>`, preserving exact `atsToken`), fetches metadata (name + header logo URL), and upserts `Company` by `source_atsToken`.
+- Not run in CI; for local throwaway DB testing before L5 production enablement.
+
 ### `npm run discover [-- --source=greenhouse] [-- --common-crawl] [-- --enrich]` — `src/discovery/CdxWorker.ts`
 - Flags:
   * `--source=greenhouse` (default `ashby`): select ATS discovery mode.
@@ -91,10 +98,11 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
 
 ### `npm run scrape` — `src/core/Scraper.ts`
 - Flags:
-  * `--sources=ashby[,greenhouse]`: comma-separated ATS sources to scrape (default: `ashby`). Unknown source exits 1.
-  * `--slugs=slug1,slug2`: explicit list of company slugs to scrape. Unknown or disabled-source slugs are skipped with error tracker events.
-  * `--ipc-worker`: internal (used by `scrape:parallel`): waits for IPC message `{ workerId, slugs, concurrency, sources }`, scrapes assigned shard, replies `worker_done` / `worker_error`.
-- Scrapes every `Company` with `status = 'ACTIVE'` matching enabled sources. Concurrency 15 (adaptive per-source limiter, see `createLimiter()`), DB batch 100.
+  * `--sources=ashby[,greenhouse,lever]`: comma-separated ATS sources to scrape (default: `ashby`). Unknown source exits 1. Enabling `lever` instantiates `LeverClient` lazily.
+  * `--slugs=slug1,slug2`: explicit list of company slugs to scrape. Unknown or disabled-source slugs are skipped with error tracker events. Bypasses `--lever-max-boards`.
+  * `--lever-max-boards=N`: positive integer cap on Lever boards scraped per run (default `600`), selected oldest `lastCheckedAt` first (`nulls: 'first'`).
+  * `--ipc-worker`: internal (used by `scrape:parallel`): waits for IPC message `{ workerId, workerCount, slugs, concurrency, sources }`, scrapes assigned shard with `leverMinIntervalMs = 1000 * workerCount` and staggered `leverInitialDelayMs = (workerId - 1) * 1000`, replies `worker_done` / `worker_error`.
+- Scrapes every `Company` with `status = 'ACTIVE'` matching enabled sources. Concurrency 15 (adaptive per-source limiter; `lever` forced to concurrency 1 + serialized pacer + `leverDeadlineMs` default 11m), DB batch 100.
 - Startup pre-warm: loads all `Department`/`Location` rows into memory and the distinct `companySlug`s that have
   `active = true` jobs (used to skip the stale-job `updateMany` for companies that never had jobs).
 - Per company: dispatches to registered `AtsClient` (`fetchBoard(boardRef)`). For Ashby: `GET https://api.ashbyhq.com/posting-api/job-board/{atsToken}?includeCompensation=true` with retry, GraphQL fallback on `404/403/400`; 404 after fallback counts as a NOT_FOUND strike (threshold 3, in-memory per run); successful fetch → `deactivateStaleJobs()`.
@@ -108,9 +116,10 @@ Verification gate used by `AGENTS.md`: `npx tsc --noEmit -p . && npm run lint &&
 ### `npm run scrape:parallel [-- --workers=N]` — `src/core/ClusterScraper.ts`
 - Flags:
   * `--workers=N` (integer ≥ 1; invalid values ignored). Default = `min(4, max(2, os.cpus().length))`. The result is capped at the number of active companies (`resolveWorkerCount()`).
-  * `--sources=ashby[,greenhouse]`: comma-separated ATS sources (default: `ashby`). Unknown source exits 1.
-  * `--slugs=slug1,slug2`: explicit list of company slugs to scrape across workers.
-- Loads `ACTIVE` companies filtered by enabled sources once, disconnects Prisma, splits them with source interleaving round-robin (`partitionSlugs()`), and forks one child per
+  * `--sources=ashby[,greenhouse,lever]`: comma-separated ATS sources (default: `ashby`). Unknown source exits 1.
+  * `--slugs=slug1,slug2`: explicit list of company slugs to scrape across workers (bypasses `--lever-max-boards`).
+  * `--lever-max-boards=N`: positive integer cap on Lever boards selected by the coordinator per run (default `600`, oldest `lastCheckedAt` first).
+- Loads `ACTIVE` companies filtered by enabled sources once via `selectCompanies()`, disconnects Prisma, splits them with source interleaving round-robin (`partitionSlugs()`), passes `workerCount` so Lever workers stay ≤ 1 req/s aggregate, and forks one child per
   shard: `fork(path.join(__dirname, 'Scraper.ts'), ['--ipc-worker'], { execArgv, stdio: [..., 'ipc'] })`, where `execArgv`
   reuses `process.execArgv` if it already contains `ts-node`, otherwise appends `-r ts-node/register`.
 - Per-worker HTTP concurrency: **12** when > 100 active companies, otherwise `max(5, ceil(20 / shards))`.
@@ -172,7 +181,7 @@ Interactive `readline` loop (`Select an option [1-8]`). Runs on import (no `requ
   * `--concurrency=N`: HTTP request concurrency (default 15).
   * `--limit=N`: Maximum number of companies to enrich.
   * `--force`: Force enrichment for all companies, not just those missing name or logo.
-  * `--sources=ashby[,greenhouse]`: comma-separated ATS sources to enrich (default: `ashby`). Unknown source exits 1.
+  * `--sources=ashby[,greenhouse,lever]`: comma-separated ATS sources to enrich (default: `ashby`). Unknown source exits 1.
 - Queries active hiring companies matching enabled sources, dispatches to the source's registered `AtsClient.fetchCompanyMetadata`. Companies with an unregistered source are skipped and counted (never dispatched to Ashby).
 
 ### `npm run source:deactivate -- <source> [--dry-run] [--i-know]` — `src/database/SourceDeactivate.ts`

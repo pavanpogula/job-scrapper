@@ -1,0 +1,24 @@
+[
+  {
+    "id": "66666666-6666-4666-8666-666666666661",
+    "text": "Search Relevance Rater",
+    "categories": {
+      "team": "Crowd Operations",
+      "location": "Remote",
+      "allLocations": ["Remote"],
+      "commitment": "Freelance"
+    },
+    "country": "US",
+    "workplaceType": "remote",
+    "createdAt": 1786000000000,
+    "description": "<p>Evaluate search queries.</p>",
+    "salaryRange": {
+      "min": 0.01,
+      "max": 50,
+      "currency": "USD",
+      "interval": "one-time"
+    },
+    "hostedUrl": "https://jobs.lever.co/appen/66666666-6666-4666-8666-666666666661",
+    "applyUrl": "https://jobs.lever.co/appen/66666666-6666-4666-8666-666666666661/apply"
+  }
+]

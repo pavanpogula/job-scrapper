@@ -125,6 +125,17 @@ export function resolveRelatedBF(category: string, source?: string): string[] {
             return ['BF-002', 'BF-003', 'BF-004', 'BF-023'];
         }
     }
+    if (source === 'lever') {
+        if (category === 'api_error' || category === 'not_found') {
+            return ['BF-024'];
+        }
+        if (category === 'rate_limited') {
+            return ['BF-014', 'BF-015', 'BF-024'];
+        }
+        if (category === 'validation_filtered' || category === 'validation_sanitized') {
+            return ['BF-002', 'BF-003', 'BF-004', 'BF-024'];
+        }
+    }
     return CATEGORY_BF_MAP[category] || [];
 }
 

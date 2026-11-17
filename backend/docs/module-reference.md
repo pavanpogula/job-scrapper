@@ -52,16 +52,23 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `filterChangedJobs(jobs)` *(private)* | L245 | Per-job Redis `GET job:<id>:hash` compare; keeps all jobs when Redis is down |
 | `batchUpsertJobs(jobs, tracker?)` *(private)* | L266 | Per 100: `findMany` + `createMany(skipDuplicates)` for new, `$transaction(upsert)` for changed/inactive; per-job fallback on error; Redis pipeline `SET … EX 604800` |
 | `processCompanyJobs(slug, jobs)` *(private)* | L395 | Change filter → sanitize text/URL/metadata, resolve dept/location ids, `extractSalary` → `ProcessedJob[]` |
-| `runAll({ slugs?, workerId?, concurrency?, saveTelemetry? })` | L440 | Orchestrator: pre-warm caches, adaptive limiter, streaming flush chain, telemetry; returns `ErrorReportDocument` |
-| `require.main` guard | L594 | `--ipc-worker`: wait for one IPC message, run shard, reply `worker_done` / `worker_error`; otherwise `runAll()` |
+| `runAll({ slugs?, workerId?, concurrency?, saveTelemetry? })` | L440 | Orchestrator: pre-warm caches, adaptive limiter (`lever` capped at 1), lazy `lever` client init, `selectCompanies` (`--lever-max-boards`), `leverDeadlineMs`, streaming flush chain, telemetry; returns `ErrorReportDocument` |
+| `require.main` guard | L594 | `--ipc-worker`: wait for one IPC message (incl. `workerCount`), derive Lever pacer interval/delay, run shard, reply `worker_done` / `worker_error`; otherwise `runAll()` |
+
+### [selectCompanies.ts](../src/core/selectCompanies.ts) — Shared Active Company Selection & Lever Cap
+| Symbol | Description |
+|---|---|
+| `DEFAULT_LEVER_MAX_BOARDS = 600` | Default per-run cap on Lever boards (`--lever-max-boards=N`) |
+| `parseLeverMaxBoards(argv?)` | Parses `--lever-max-boards=N` (`>= 1`), falling back to `600` |
+| `selectCompanies(db, options)` | Queries non-Lever sources uncapped + Lever ordered by oldest `lastCheckedAt` (`nulls: 'first'`) up to `leverCap` (bypassed when `explicitSlugs` is set) |
 
 ### [ClusterScraper.ts](../src/core/ClusterScraper.ts) — Multi-process coordinator (`npm run scrape:parallel`)
 | Symbol | Line | Description |
 |---|---|---|
 | `resolveWorkerCount(argv, totalItems, cpuCount = os.cpus().length)` | L18 | `--workers=N` (N ≥ 1) or default `min(4, max(2, cpuCount))`; capped at `totalItems` (min 1) |
 | `partitionSlugs(slugs, workerCount)` | L35 | Round-robin shards; empty shards removed |
-| `runWorkerShard(workerId, slugs, perWorkerConcurrency)` *(private)* | L49 | `fork(Scraper.ts, ['--ipc-worker'])` (adds `-r ts-node/register` if needed), sends `{ workerId, slugs, concurrency }`, resolves on `worker_done`; rejects on `worker_error`, child `error`, or `exit` before a message |
-| `runClusterScrape(argv = process.argv)` | L101 | Loads ACTIVE slugs, per-worker concurrency `12` (>100 companies) else `max(5, ceil(20/shards))`, runs shards in parallel, `mergeReports` + `saveMergedReport`; returns merged report or `null` |
+| `runWorkerShard(workerId, slugs, perWorkerConcurrency, sources?, workerCount?)` *(private)* | L49 | `fork(Scraper.ts, ['--ipc-worker'])` (adds `-r ts-node/register` if needed), sends `{ workerId, workerCount, slugs, concurrency, sources }`, resolves on `worker_done`; rejects on `worker_error`, child `error`, or `exit` before a message |
+| `runClusterScrape(argv = process.argv)` | L101 | Selects ACTIVE companies via `selectCompanies()` (`--lever-max-boards`), computes per-worker concurrency, runs shards in parallel, `mergeReports` + `saveMergedReport`; returns merged report or `null` |
 | `require.main` guard | L148 | Exit 1 on failure |
 
 ### [ScraperCSV.ts](../src/core/ScraperCSV.ts) — CSV scraper (`npm run scrape:csv`)
@@ -108,7 +115,26 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | Symbol | Description |
 |---|---|
 | `DEFAULT_CLIENT_SOURCES` | Sources with eager client initialization (`['ashby', 'greenhouse']`) |
-| `createAtsClient(source)` | Factory instantiating `AtsClient` for supported sources (throws for `lever` in L1) |
+| `createAtsClient(source, leverOpts?)` | Factory instantiating `AshbyAtsClient`, `GreenhouseClient`, or `LeverClient` (accepting `LeverClientOptions` when `source === 'lever'`) |
+
+### [ats/LeverClient.ts](../src/lib/ats/LeverClient.ts) — Lever ATS Adapter & Normalizer (BF-024)
+| Symbol | Description |
+|---|---|
+| `normalizeLeverJob(raw, ref, issues?)` | Pure field mapping & validation converting a raw Lever posting to `NormalizedJob` (`legacyKey = lever:<uuid>`, `department -> team` fallback, commitment map, raw HTML body + `lists[]` + `salaryDescription` + `additional`, plain-unit salary excluding `one-time`, shared `parsePlace`) |
+| `extractLeverLogo(html)` | Extracts header logo `<img alt="... logo">` URL hosted on `lever-client-logos.s3.*.amazonaws.com` (never `og:image`) |
+| `class LeverClient implements AtsClient` | Serialized pacer (`minIntervalMs`, `initialDelayMs`, `timeoutMs`), `fetchBoard` (HTTP status 404/429 handling, `unexpected_body`, retry pacing), `validateSite` (`live \| empty \| not_found \| dead_board \| error`), `fetchCompanyMetadata`, `canonicalUrls` |
+
+### [ats/place.ts](../src/lib/ats/place.ts) — Shared ATS Place & Employment Type Heuristics
+| Symbol | Description |
+|---|---|
+| `US_TEXT_REGEX` | Case-sensitive regex matching `United States`, `USA`, `US`, `U.S.` |
+| `parsePlace(text)` | Parses `"City, Region, Country"` right-to-left into `postal`, `country`, `region`, `city` (US states/ZIPs, CA provinces, slash/hyphen cleanup) |
+| `inferEmploymentTypeFromTitle(title)` | Infers `Intern` / `PartTime` / `Contract` / `Temporary` from job titles |
+
+### [ats/slug.ts](../src/lib/ats/slug.ts) — Collision-Safe Company Slug Allocator
+| Symbol | Description |
+|---|---|
+| `allocateCompanySlug(db, source, token)` | Reuses existing `(source, atsToken)` slug or allocates unique `companySlug(source, token)` with `-2`, `-3`... suffix on collision |
 
 ### [ats/AshbyAtsClient.ts](../src/lib/ats/AshbyAtsClient.ts) — Ashby ATS Adapter
 | Symbol | Description |
@@ -256,6 +282,8 @@ No exports; **runs on import** (L66). *(private)* `inspectDatabase()` (L14) — 
 | | `require.main` guard | L70 | Reads `--all` |
 | [SeedGreenhouse.ts](../src/utils/SeedGreenhouse.ts) | `parseSeedGreenhouseTokens(argv)` | L26 | Parses comma-separated token list from CLI args or falls back to `CURATED_GREENHOUSE_BOARDS` |
 | | `seedGreenhouse(options?)` | L53 | Validates each token via `GreenhouseClient.fetchCompanyMetadata` and upserts `Company` (`slug = gh--<token>`, `source = GREENHOUSE`) by `source_atsToken` |
+| [SeedLever.ts](../src/utils/SeedLever.ts) | `LEVER_TOKEN_REGEX`, `parseLeverSeedTokens(args)` | L15-28 | Case-preserving Lever token validator and CLI parser (falls back to `CURATED_LEVER_BOARDS`) |
+| | `seedLever(options?)` | L64 | Validates `'live'` status via `LeverClient.validateSite`, allocates `lv--<sanitized>` slug with `allocateCompanySlug()`, and upserts `Company` (`source = LEVER`) by `source_atsToken` |
 | [ProcessCdxData.ts](../src/utils/ProcessCdxData.ts) | `processRawCDXData(rows)` (exported at L131) | L17 | Filters raw CDX rows to valid slugs, prints `TARGET_COMPANIES` block, writes `extracted-slugs.json`, returns sorted slugs |
 | | `inputFile` *(private)* | L11 | `process.argv[2]`, read at module load |
 | | `require.main` guard | L119 | Reads/parses the input file, or prints usage |
@@ -267,6 +295,7 @@ No exports; **runs on import** (L66). *(private)* `inspectDatabase()` (L14) — 
 
 - [Companies.ts](../src/config/Companies.ts) — `TARGET_COMPANIES: string[]` (L10): `deel`, `remote`, `reddit`, `multiverse`, `1password`, `abridge`, `go-augment` (`go-augment` exercises the GraphQL fallback). Note: at time of analysis `remote` returned 404 and `deel`/`reddit` returned 0 jobs from Ashby.
 - [GreenhouseBoards.ts](../src/config/GreenhouseBoards.ts) — `CURATED_GREENHOUSE_BOARDS: readonly string[]`: `discord`, `figma`, `gitlab`, `airbnb`, `stripe`.
+- [LeverBoards.ts](../src/config/LeverBoards.ts) — `CURATED_LEVER_BOARDS: readonly string[]`: `spotify`, `palantir`, `zoox`, `matchgroup`, `outreach`.
 
 ## `../scripts/`
 

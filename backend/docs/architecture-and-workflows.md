@@ -192,11 +192,14 @@ sequenceDiagram
 **Important behaviours**
 - **ATS Adapter Boundary (ADR-0021, BF-023):** ATS ingestion is abstracted behind `AtsClient` (`src/lib/ats/AtsClient.ts`).
   `AshbyAtsClient` wraps `fetchAshbyBoardWithFallback()` and `normalizeAshbyJob()`; `GreenhouseClient` (`src/lib/ats/GreenhouseClient.ts`)
-  implements Greenhouse Job Board API fetching and `normalizeGreenhouseJob()` (registered in the default client registry, disabled by default until `--sources` includes `greenhouse`).
-  Both clients share retry/backoff and failure classification via `src/lib/ats/http.ts`.
-  Scraper core maintains isolated `AdaptiveLimiter` instances per ATS source so 429 throttling on one ATS does not affect another,
-  dispatches by company `source`, filters DB queries by enabled sources, and keys all job deactivation, empty-board checks,
-  and DB lookups by `NormalizedJob.legacyKey` (`ashbyId`, e.g. `greenhouse:<id>` for Greenhouse).
+  implements Greenhouse Job Board API fetching and `normalizeGreenhouseJob()` (registered in `DEFAULT_CLIENT_SOURCES`, disabled by default unless `--sources` includes `greenhouse`);
+  `LeverClient` (`src/lib/ats/LeverClient.ts`) implements Lever Postings API (`v0`) fetching and `normalizeLeverJob()` and is instantiated lazily by `Scraper.ts` / `EnrichCompanies.ts` only when `lever` is enabled in `--sources`.
+  All clients share retry/backoff and failure classification via `src/lib/ats/http.ts`, while `GreenhouseClient` and `LeverClient` share location/title heuristics via `src/lib/ats/place.ts`.
+  Scraper core maintains isolated `AdaptiveLimiter` instances per ATS source (Lever capped at concurrency `1` plus a serialized per-instance pacer spaced at `1000 * workerCount` ms with staggered `initialDelayMs` to honor `robots.txt` `Crawl-delay: 1`),
+  selects active companies through `selectCompanies()` (`src/core/selectCompanies.ts`) — applying `--lever-max-boards` (default `600`, oldest `lastCheckedAt` nulls-first) unless `--slugs` is passed —
+  and stops starting new Lever boards after `leverDeadlineMs` (default 11 minutes, recording `bySource.lever.skippedByDeadline`) so workers finish before CI/cluster watchdogs.
+  `Scraper.ts` dispatches by company `source`, filters DB queries by enabled sources, and keys all job deactivation, empty-board checks,
+  and DB lookups by `NormalizedJob.legacyKey` (`ashbyId`, e.g. `greenhouse:<id>`, `lever:<uuid>`).
   `resolveLastUpdated` includes the `_normVersion` rule so bumping `metadata._normVersion` in a normalizer updates stored rows without marking every job's `lastUpdatedAt` as newly `'detected'`.
   `ErrorTracker` records optional `source` on events and `summary.bySource[source]` counters (merged across workers by `mergeReports`), while keeping Ashby telemetry message strings byte-identical.
 - **Concurrency:** `CONCURRENCY_LIMIT = 15` (`src/core/Scraper.ts`), overridable via `runAll({ concurrency })`. Uses the
@@ -251,18 +254,17 @@ sequenceDiagram
 
 File: [ClusterScraper.ts](../src/core/ClusterScraper.ts), entry `runClusterScrape(argv)`.
 
-1. Query `ACTIVE` companies, then `prisma.$disconnect()` (the coordinator never touches the DB again). If none → prints
-   "Run: npm run seed" and returns `null`.
+1. Select `ACTIVE` companies for enabled sources via `selectCompanies()` (applying `--lever-max-boards`, default `600`, oldest `lastCheckedAt` first), then `prisma.$disconnect()` (the coordinator never touches the DB again). If none → prints "Run: npm run seed" and returns `null`.
 2. `resolveWorkerCount(argv, slugs.length)`: default `min(4, max(2, os.cpus().length))` (i.e. 2–4); `--workers=N` (N ≥ 1)
    overrides it; result is capped at the number of companies. The documented 34k-job / 141.3 s run used `--workers=8`.
 3. `partitionSlugs(slugs, workerCount)`: round-robin (`slug[i] → shard[i % count]`), empty shards dropped.
 4. Per-worker HTTP concurrency: `12` if more than 100 companies, else `max(5, ceil(20 / shards))`.
-5. `runWorkerShard(workerId, slugs, concurrency)` for every shard in parallel:
+5. `runWorkerShard(workerId, slugs, concurrency, sources, workerCount)` for every shard in parallel:
    `child_process.fork('../src/core/Scraper.ts', ['--ipc-worker'], { execArgv, stdio: ['inherit','inherit','inherit','ipc'] })`.
    `execArgv` reuses the parent's when it already contains `ts-node`, otherwise appends `-r ts-node/register`.
 6. **IPC protocol:**
-   - parent → child (once): `{ workerId, slugs, concurrency }`.
-   - child (`Scraper.ts --ipc-worker`, `process.once('message')`) runs `runAll({ slugs, workerId, concurrency, saveTelemetry: false })`, then sends
+   - parent → child (once): `{ workerId, workerCount, slugs, concurrency, sources }`.
+   - child (`Scraper.ts --ipc-worker`, `process.once('message')`) derives Lever pacing (`leverMinIntervalMs = 1000 * workerCount`, `leverInitialDelayMs = (workerId - 1) * 1000`) and runs `runAll({ slugs, workerId, concurrency, saveTelemetry: false, sources, leverMinIntervalMs, leverInitialDelayMs })`, then sends
      `{ type: 'worker_done', workerId, report: ErrorReportDocument }` and exits `0`, or on error
      `{ type: 'worker_error', workerId, error: string }` and exits `1`.
    - parent rejects on `worker_error`, a child `error` event, or an `exit` before any message
