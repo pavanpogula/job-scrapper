@@ -32,6 +32,7 @@ Every ADR follows the template defined in [ADR-0000-template.md](./ADR-0000-temp
 | [ADR-0019](./ADR-0019-company-profile-and-filters.md) | Company profile endpoint and company / posted-within job filters | Accepted | 2026-10-27 | ADR-0018, BF-020, BF-021, BF-022 |
 | [ADR-0020](./ADR-0020-boolean-ui-and-company-pages.md) | B.O.O.L.E.A.N rebrand, LinkedIn-style job browsing, and company directory pages | Accepted | 2026-10-27 | ADR-0018, ADR-0019 |
 | [ADR-0021](./ADR-0021-multi-source-ats.md) | Multi-source ATS architecture (Greenhouse onboarding) | Accepted | 2026-10-27 | ADR-0001, ADR-0004, ADR-0018 |
+| [ADR-0022](./ADR-0022-lever-source.md) | Multi-source ATS architecture extension (Lever onboarding) | Accepted | 2026-11-16 | ADR-0021, ADR-0001, ADR-0003, ADR-0018 |
 
 ---
 

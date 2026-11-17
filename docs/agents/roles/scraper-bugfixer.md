@@ -23,13 +23,15 @@ skills:
 ## Read-First List
 1. `AGENTS.md`
 2. `docs/agents/context.md`
-3. `CHANGELOG.md`
-4. `docs/decisions/README.md`
-5. `docs/self-healing-loop.md`
-6. `docs/bug-fix-log.md`
-7. `docs/testing.md` §6
-8. `backend/docs/known-issues.md`
-9. Target error report (`output/reports/<YYYY-MM>/<runId>.issues.json`)
+3. `docs/agents/rules/multi-source-ats.md`
+4. `docs/decisions/ADR-0022-lever-source.md`
+5. `CHANGELOG.md`
+6. `docs/decisions/README.md`
+7. `docs/self-healing-loop.md`
+8. `docs/bug-fix-log.md`
+9. `docs/testing.md` §6
+10. `backend/docs/known-issues.md`
+11. Target error report (`output/reports/<YYYY-MM>/<runId>.issues.json`)
 
 ## Allowed Scope
 - `backend/src/lib/**`
@@ -38,7 +40,7 @@ skills:
 - `backend/src/discovery/**`
 - `backend/src/utils/**`
 - `backend/tests/**`
-- `backend/prisma/schema.prisma` (additive columns/indexes only; restored in G6)
+- `backend/prisma/schema.prisma` (additive only; removed from fixer scope during L1, restored in L2)
 - `docs/**`
 - `CHANGELOG.md`
 - **Forbidden:** Never edits `.github/**`, `.claude/settings.json`, `.agents/hooks.json`, `vercel.json`, `frontend/**`, or dependency files.

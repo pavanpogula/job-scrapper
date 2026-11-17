@@ -69,6 +69,7 @@ erDiagram
 |---|---|---|
 | `ASHBY` | `@default`, `Seed.ts`, `CdxWorker.ts` | Ashby ATS job board postings and company profiles |
 | `GREENHOUSE` | Future Greenhouse client / seed | Greenhouse ATS job board postings (`gh--` company slug prefix) |
+| `LEVER` | Lever client / seed (ADR-0022) | Lever ATS job board postings (`lv--` company slug prefix) |
 
 ### `enum CompanyStatus`
 | Value | Set by | Meaning |
@@ -87,11 +88,11 @@ erDiagram
 | Field | Type | Attributes |
 |---|---|---|
 | `id` | `String` | `@id @default(uuid())` |
-| `slug` | `String` | `@unique` — natural key; FK target of `Job.companySlug`; Ashby slug or `gh--<token>` for Greenhouse |
+| `slug` | `String` | `@unique` — natural key; FK target of `Job.companySlug`; Ashby slug, `gh--<token>` for Greenhouse, or `lv--<token>` for Lever |
 | `name` | `String?` | `= slug` on seed / discover; real name via `npm run discover -- --enrich` |
 | `logoUrl` | `String?` | set only by `--enrich` (`theme.logoWordmarkImageUrl` → `theme.logoSquareImageUrl`) |
-| `source` | `Ats` | `@default(ASHBY)` — ATS provider provenance (`ASHBY` or `GREENHOUSE`) |
-| `atsToken` | `String?` | native board token (lowercase); unique with source |
+| `source` | `Ats` | `@default(ASHBY)` — ATS provider provenance (`ASHBY`, `GREENHOUSE`, or `LEVER`) |
+| `atsToken` | `String?` | native board token (lower-case for Ashby/Greenhouse, exact case for Lever); unique with source |
 | `status` | `CompanyStatus` | `@default(ACTIVE)` |
 | `jobs` | `Job[]` | back-relation |
 | `createdAt` | `DateTime` | `@default(now())` |
@@ -116,8 +117,8 @@ Empty names (`""`) are not stored → `departmentId`/`locationId = null`.
 | Field | Type | Attributes / notes |
 |---|---|---|
 | `id` | `String` | `@id @default(uuid())` |
-| `ashbyId` | `String` | `@unique` — legacy global unique key (Ashby UUID, or `greenhouse:<id>`) |
-| `source` | `Ats` | `@default(ASHBY)` — ATS provider provenance (`ASHBY` or `GREENHOUSE`) |
+| `ashbyId` | `String` | `@unique` — legacy global unique key (Ashby UUID, `greenhouse:<id>`, or `lever:<uuid>`) |
+| `source` | `Ats` | `@default(ASHBY)` — ATS provider provenance (`ASHBY`, `GREENHOUSE`, or `LEVER`) |
 | `externalId` | `String?` | native ATS job identifier (unique with source) |
 | `title` | `String` | `sanitizeText(job.title)`; jobs with empty title or id are skipped |
 | `applyUrl` | `String` | `sanitizeJobUrl(job.applyUrl, slug, id, true)` → fallback `https://jobs.ashbyhq.com/{slug}/{id}/application` |

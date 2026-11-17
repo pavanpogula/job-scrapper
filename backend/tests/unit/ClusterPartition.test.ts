@@ -17,7 +17,7 @@ describe('Cluster Partition & Source Flags (ADR-0021)', () => {
     });
 
     it('throws with clear error message when unknown source is passed', () => {
-      expect(() => parseAtsSources('ashby,lever')).toThrow(/Unknown ATS source "lever"/);
+      expect(() => parseAtsSources('ashby,workday')).toThrow(/Unknown ATS source "workday"/);
     });
   });
 

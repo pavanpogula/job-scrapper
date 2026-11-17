@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { JobsQueryParams, WorkplaceType, EmploymentType, SalaryInterval } from '../../types/api';
+import { JobsQueryParams, WorkplaceType, EmploymentType, SalaryInterval, FILTER_SOURCES } from '../../types/api';
 
 const initialState: JobsQueryParams = {
   source: '',
@@ -23,7 +23,7 @@ export const filterSlice = createSlice({
   name: 'filters',
   initialState,
   reducers: {
-    setSource: (state, action: PayloadAction<'ashby' | 'greenhouse' | ''>) => {
+    setSource: (state, action: PayloadAction<(typeof FILTER_SOURCES)[number] | ''>) => {
       state.source = action.payload;
       state.page = 1;
     },

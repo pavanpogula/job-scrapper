@@ -20,10 +20,12 @@ skills:
 ## Read-First List
 1. `AGENTS.md`
 2. `docs/agents/context.md`
-3. `docs/self-healing-loop.md`
-4. `backend/docs/outputs-and-artifacts.md`
-5. `backend/docs/known-issues.md`
-6. `CHANGELOG.md`
+3. `docs/agents/rules/multi-source-ats.md`
+4. `docs/decisions/ADR-0022-lever-source.md`
+5. `docs/self-healing-loop.md`
+6. `backend/docs/outputs-and-artifacts.md`
+7. `backend/docs/known-issues.md`
+8. `CHANGELOG.md`
 
 ## Allowed Scope
 - Read-only access to all codebase files.

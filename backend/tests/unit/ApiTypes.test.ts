@@ -31,6 +31,7 @@ import type {
   ErrorResponseDTO,
   HttpError,
 } from '../../src/api/types';
+import type { AtsSource } from '../../src/lib/ats/source';
 
 // ============================================================================
 // Type-Level Testing Utilities (Equal & Expect)
@@ -54,7 +55,7 @@ type _TestQueryCompanies = Expect<Equal<ReturnType<typeof queryCompanies>, Promi
 
 // 3. Field nullability & typing checks on JobListItemDTO
 type _TestJobId = Expect<Equal<JobListItemDTO['id'], string>>;
-type _TestJobSource = Expect<Equal<JobListItemDTO['source'], 'ashby' | 'greenhouse'>>;
+type _TestJobSource = Expect<Equal<JobListItemDTO['source'], AtsSource>>;
 type _TestJobExternalId = Expect<Equal<JobListItemDTO['externalId'], string>>;
 type _TestJobTitle = Expect<Equal<JobListItemDTO['title'], string>>;
 type _TestJobIsRemote = Expect<Equal<JobListItemDTO['isRemote'], boolean>>;
@@ -64,13 +65,13 @@ type _TestJobLastUpdatedAt = Expect<Equal<JobListItemDTO['lastUpdatedAt'], strin
 type _TestJobLastUpdatedSource = Expect<Equal<JobListItemDTO['lastUpdatedSource'], 'ashby' | 'detected' | 'published' | 'firstSeen' | null>>;
 
 // 4. JobDetailDTO fields
-type _TestDetailSource = Expect<Equal<JobDetailDTO['source'], 'ashby' | 'greenhouse'>>;
+type _TestDetailSource = Expect<Equal<JobDetailDTO['source'], AtsSource>>;
 type _TestDetailExternalId = Expect<Equal<JobDetailDTO['externalId'], string>>;
 type _TestDetailSecondaryLocs = Expect<Equal<JobDetailDTO['secondaryLocations'], string[]>>;
 type _TestDetailCompany = Expect<Equal<JobDetailDTO['company'], CompanyDetailDTO | null>>;
 type _TestDetailLastUpdatedAt = Expect<Equal<JobDetailDTO['lastUpdatedAt'], string | null>>;
 type _TestDetailLastUpdatedSource = Expect<Equal<JobDetailDTO['lastUpdatedSource'], 'ashby' | 'detected' | 'published' | 'firstSeen' | null>>;
-type _TestCompanyDetailSource = Expect<Equal<CompanyDetailDTO['source'], 'ashby' | 'greenhouse'>>;
+type _TestCompanyDetailSource = Expect<Equal<CompanyDetailDTO['source'], AtsSource>>;
 type _TestCompanyDetailBoardUrl = Expect<Equal<CompanyDetailDTO['boardUrl'], string>>;
 
 // 5. Facet types
@@ -87,7 +88,7 @@ type _TestErrorMsg = Expect<Equal<ErrorResponseDTO['error'], string>>;
 
 // 8. CompanySummary and PaginationMeta DTOs
 type _TestCompanySummary = Expect<Equal<CompanySummaryDTO['name'], string | null>>;
-type _TestCompanySummarySource = Expect<Equal<CompanySummaryDTO['source'], 'ashby' | 'greenhouse'>>;
+type _TestCompanySummarySource = Expect<Equal<CompanySummaryDTO['source'], AtsSource>>;
 type _TestCompanySummaryBoardUrl = Expect<Equal<CompanySummaryDTO['boardUrl'], string>>;
 type _TestPaginationTotal = Expect<Equal<PaginationMetaDTO['total'], number>>;
 type _TestHttpError = Expect<Equal<HttpError['status'], number>>;

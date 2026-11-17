@@ -91,7 +91,7 @@
     <header class="header">
         <h1><span class="material-icons-round">folder_special</span> Job Scraper Project Explorer</h1>
         <p>Click any file to see details and functions</p>
-        <div class="generated">Auto-generated on 2026-11-11</div>
+        <div class="generated">Auto-generated on 2026-11-17</div>
     </header>
     <div class="main">
         <aside class="sidebar">
@@ -412,6 +412,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ats_registry_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>registry.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_lib_ats_source_ts')">
                         <span class="material-icons-round">description</span>
                         <span>source.ts</span>
@@ -654,6 +660,12 @@
                         <span>schema.pre-g1.prisma</span>
                         
                     </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_fixtures_schema_pre-l1_prisma')">
+                        <span class="material-icons-round">description</span>
+                        <span>schema.pre-l1.prisma</span>
+                        
+                    </div>
                 </li></ul>
                 </li><li>
                     <div class="tree-item file" onclick="showFile('tests_integration_Companies_test_ts')">
@@ -665,6 +677,12 @@
                     <div class="tree-item file" onclick="showFile('tests_integration_GreenhouseCoexistence_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GreenhouseCoexistence.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_LeverL1Schema_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>LeverL1Schema.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -726,6 +744,24 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_AshbyClient_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>AshbyClient.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_AtsRegistry_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>AtsRegistry.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_AtsSource_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>AtsSource.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_AtsUrls_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>AtsUrls.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -2805,19 +2841,18 @@
       }
     ]
   },
-  "src_lib_ats_source_ts": {
-    "name": "source.ts",
-    "path": "src/lib/ats/source.ts",
+  "src_lib_ats_registry_ts": {
+    "name": "registry.ts",
+    "path": "src/lib/ats/registry.ts",
     "icon": "📦",
     "iconClass": "blue",
-    "summary": "Single source of truth for converting between DB Ats enums ('ASHBY', 'GREENHOUSE') and normalized lowercase source tokens ('ashby', 'greenhouse')",
+    "summary": "Central factory for constructing AtsClient instances and defining eager default client sources",
     "tags": [
       "ATS",
-      "Multi-source",
-      "Enum",
-      "Mapping",
-      "Validation",
-      "ADR-0021"
+      "Registry",
+      "Factory",
+      "ADR-0021",
+      "ADR-0022"
     ],
     "info": [
       {
@@ -2826,7 +2861,40 @@
       },
       {
         "label": "Functions",
-        "value": "4"
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "createAtsClient()",
+        "desc": "Creates an AtsClient instance for the specified ATS source"
+      }
+    ]
+  },
+  "src_lib_ats_source_ts": {
+    "name": "source.ts",
+    "path": "src/lib/ats/source.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Single source of truth for supported ATS sources, database enum mappings, slug prefixes, and URL/token derivation",
+    "tags": [
+      "ATS",
+      "Multi-source",
+      "Enum",
+      "Mapping",
+      "Validation",
+      "Registry",
+      "ADR-0021",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "7"
       }
     ],
     "functions": [
@@ -2845,6 +2913,18 @@
       {
         "name": "parseAtsSources()",
         "desc": "Parses a comma-delimited string of sources (e.g. \"ashby,greenhouse\") into an array of AtsSource. Throws on unknown sources."
+      },
+      {
+        "name": "companySlug()",
+        "desc": "Computes the canonical company slug for a source and token"
+      },
+      {
+        "name": "tokenFromSlug()",
+        "desc": "Strips any non-empty registered prefix from a slug to extract the board token"
+      },
+      {
+        "name": "sourceFromSlug()",
+        "desc": "Matches non-empty registered prefixes to determine ATS source from a company slug"
       }
     ]
   },
@@ -2859,7 +2939,8 @@
       "URLs",
       "Builders",
       "Routing",
-      "ADR-0021"
+      "ADR-0021",
+      "ADR-0022"
     ],
     "info": [
       {
@@ -2868,10 +2949,14 @@
       },
       {
         "label": "Functions",
-        "value": "3"
+        "value": "4"
       }
     ],
     "functions": [
+      {
+        "name": "cleanBoardToken()",
+        "desc": "Formats and URI-encodes the ATS board token according to source case sensitivity rules"
+      },
       {
         "name": "jobUrl()",
         "desc": "Builds the canonical public job posting URL for an ATS source and board token"
@@ -3448,6 +3533,33 @@
     ],
     "functions": []
   },
+  "tests_integration_LeverL1Schema_test_ts": {
+    "name": "LeverL1Schema.test.ts",
+    "path": "tests/integration/LeverL1Schema.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Proves additive Ats enum expansion with LEVER on real Postgres in isolated schema",
+    "tags": [
+      "Integration",
+      "Postgres",
+      "Schema",
+      "Lever",
+      "ATS",
+      "Migration",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_integration_MixedSources_test_ts": {
     "name": "MixedSources.test.ts",
     "path": "tests/integration/MixedSources.test.ts",
@@ -3664,6 +3776,47 @@
       }
     ]
   },
+  "tests_integration_fixtures_schema_pre-l1_prisma": {
+    "name": "schema.pre-l1.prisma",
+    "path": "tests/integration/fixtures/schema.pre-l1.prisma",
+    "icon": "🗄️",
+    "iconClass": "purple",
+    "summary": "Database schema with Prisma ORM models for Company, Job, Department, Location",
+    "tags": [
+      "Prisma",
+      "PostgreSQL",
+      "Schema",
+      "ORM"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "Schema"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "Company",
+        "desc": "• id: String\\n• slug: String\\n• name: String\\n• logoUrl: String\\n• source: Ats\\n• atsToken: String\\n• status: CompanyStatus\\n• consecutiveNotFound: Int\\n• consecutiveFailures: Int\\n• lastSuccessAt: DateTime\\n• lastCheckedAt: DateTime\\n• lastEnrichedAt: DateTime\\n• pendingEmptySince: DateTime\\n• jobs: Job[]\\n• createdAt: DateTime"
+      },
+      {
+        "name": "Department",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
+      },
+      {
+        "name": "Location",
+        "desc": "• id: String\\n• name: String\\n• jobs: Job[]"
+      },
+      {
+        "name": "Job",
+        "desc": "• id: String\\n• ashbyId: String\\n• source: Ats\\n• externalId: String\\n• title: String\\n• applyUrl: String\\n• companySlug: String\\n• company: Company\\n• departmentId: String\\n• department: Department\\n• locationId: String\\n• location: Location\\n• salaryMin: Float\\n• salaryMax: Float\\n• salaryCurrency: String\\n• salaryInterval: String\\n• isRemote: Boolean\\n• workplaceType: String\\n• employmentType: String\\n• publishedAt: DateTime\\n• isListed: Boolean\\n• country: String\\n• region: String\\n• city: String\\n• postalAddress: Json\\n• metadata: Json\\n• contentHash: String\\n• active: Boolean\\n• lastSeenAt: DateTime\\n• lastUpdatedAt: DateTime\\n• lastUpdatedSource: String\\n• createdAt: DateTime\\n• updatedAt: DateTime"
+      }
+    ]
+  },
   "tests_integration_searchReference_ts": {
     "name": "searchReference.ts",
     "path": "tests/integration/searchReference.ts",
@@ -3819,6 +3972,87 @@
       "Fallback",
       "Retry",
       "Compensation"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_AtsRegistry_test_ts": {
+    "name": "AtsRegistry.test.ts",
+    "path": "tests/unit/AtsRegistry.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates eager default client map initialization in AshbyScraper/EnrichCompanies and verifies Lever client stub throws L2 message",
+    "tags": [
+      "ATS",
+      "Registry",
+      "Factory",
+      "Clients",
+      "Unit Tests",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_AtsSource_test_ts": {
+    "name": "AtsSource.test.ts",
+    "path": "tests/unit/AtsSource.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates source registry entries, enum round-trips, slug derivation, token extraction, and slug guards",
+    "tags": [
+      "ATS",
+      "Registry",
+      "Source",
+      "Slug",
+      "Token",
+      "Validation",
+      "ADR-0021",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_AtsUrls_test_ts": {
+    "name": "AtsUrls.test.ts",
+    "path": "tests/unit/AtsUrls.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Validates canonical job, board, and application URLs for Ashby, Greenhouse, and Lever",
+    "tags": [
+      "ATS",
+      "URLs",
+      "Builders",
+      "Routing",
+      "Unit Tests",
+      "ADR-0021",
+      "ADR-0022"
     ],
     "info": [
       {

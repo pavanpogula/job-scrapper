@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { ErrorReportDocument } from './ErrorTracker';
+import { ATS_SOURCES, sourceFromSlug } from './ats/source';
 
 export type Severity = 'S1' | 'S2' | 'S3';
 export type IssueStatus = 'new' | 'recurring' | 'regressed';
@@ -192,11 +193,19 @@ export function classifyReport(
 
     for (const ev of allEvents) {
         const fp = computeIssueFingerprint(ev.category, ev.subkind, ev.field, ev.message);
-        const evSource =
-            ev.source ||
-            (ev.message?.includes('Greenhouse Board API') || ev.companySlug?.startsWith('gh--')
-                ? 'greenhouse'
-                : undefined);
+        let matchedSource: string | undefined = ev.source;
+        if (!matchedSource && ev.companySlug) {
+            matchedSource = sourceFromSlug(ev.companySlug);
+        }
+        if (!matchedSource && ev.message) {
+            for (const info of Object.values(ATS_SOURCES)) {
+                if (info.source !== 'ashby' && info.apiName && ev.message.includes(info.apiName)) {
+                    matchedSource = info.source;
+                    break;
+                }
+            }
+        }
+        const evSource = matchedSource;
         if (!issueMap.has(fp)) {
             issueMap.set(fp, {
                 fingerprint: fp,

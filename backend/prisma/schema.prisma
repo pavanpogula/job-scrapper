@@ -14,6 +14,7 @@ datasource db {
 enum Ats {
   ASHBY
   GREENHOUSE
+  LEVER
 }
 
 enum CompanyStatus {
@@ -28,7 +29,7 @@ model Company {
   name                String?
   logoUrl             String?
   source              Ats           @default(ASHBY)
-  atsToken            String?       // native board token (lowercase)
+  atsToken            String?       // native board token (lower-case for Ashby/Greenhouse; exact case for Lever)
   status              CompanyStatus @default(ACTIVE)
   consecutiveNotFound Int           @default(0)
   consecutiveFailures Int           @default(0)
@@ -57,7 +58,7 @@ model Location {
 
 model Job {
   id         String  @id @default(uuid())
-  ashbyId    String  @unique // legacy global key: Ashby UUID, or `greenhouse:<id>` for Greenhouse
+  ashbyId    String  @unique // legacy global key: Ashby UUID, `greenhouse:<id>` or `lever:<uuid>`
   source     Ats     @default(ASHBY)
   externalId String? // native ATS id
   title      String

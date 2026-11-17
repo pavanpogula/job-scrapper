@@ -1,5 +1,7 @@
 # ADR-0021: Multi-Source ATS Architecture (Greenhouse Onboarding)
 
+> Extended by ADR-0022 (Lever)
+
 - Status: Implemented (Phases G1–G6 Implemented)
 - Date: 2026-10-27
 - Deciders: owner, scraper-architect

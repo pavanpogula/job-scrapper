@@ -96,13 +96,19 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 ### [ats/AtsClient.ts](../src/lib/ats/AtsClient.ts) — ATS Client Interface & Normalized Models
 | Symbol | Description |
 |---|---|
-| `type AtsSource` | `'ashby' \| 'greenhouse'` |
+| `type AtsSource` | `'ashby' \| 'greenhouse' \| 'lever'` |
 | `interface BoardRef` | `{ slug: string, source: AtsSource, atsToken: string }` |
 | `interface NormalizedJob` | Neutral normalized job model with `externalId`, `legacyKey`, `title`, `salary`, `applyUrl`, etc. |
 | `interface BoardFetchResult` | Result of board fetch with `fetchMode: 'primary' \| 'fallback' \| 'none'`, `jobs: NormalizedJob[]`, `notFound`, `rateLimited` |
 | `interface CompanyMetadataResult` | Result of company metadata fetch with `status`, `name`, `logoUrl`, `retryAfterSeconds` |
 | `interface CanonicalUrls` | Canonical `jobUrl`, `applyUrl`, `boardUrl` |
 | `interface AtsClient` | Neutral client interface: `fetchBoard`, `fetchCompanyMetadata`, `canonicalUrls` |
+
+### [ats/registry.ts](../src/lib/ats/registry.ts) — ATS Client Factory & Registry
+| Symbol | Description |
+|---|---|
+| `DEFAULT_CLIENT_SOURCES` | Sources with eager client initialization (`['ashby', 'greenhouse']`) |
+| `createAtsClient(source)` | Factory instantiating `AtsClient` for supported sources (throws for `lever` in L1) |
 
 ### [ats/AshbyAtsClient.ts](../src/lib/ats/AshbyAtsClient.ts) — Ashby ATS Adapter
 | Symbol | Description |
@@ -128,11 +134,16 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 ### [ats/source.ts](../src/lib/ats/source.ts) — ATS Source Mappings & Validation
 | Symbol | Description |
 |---|---|
-| `SUPPORTED_ATS_SOURCES` | `['ashby', 'greenhouse'] as const` |
-| `toDbAts(source)` | Converts lowercase `AtsSource` to uppercase Prisma `DbAts` enum (`'ASHBY'`, `'GREENHOUSE'`) |
+| `SUPPORTED_ATS_SOURCES` | `['ashby', 'greenhouse', 'lever'] as const` |
+| `API_SOURCES` | `['ashby', 'greenhouse'] as const` (gating public API and frontend filter) |
+| `ATS_SOURCES` | Single source of truth registry table mapping sources to descriptors (db enum, label, slugPrefix, legacyKeyPrefix, apiName) |
+| `toDbAts(source)` | Converts lowercase `AtsSource` to uppercase Prisma `DbAts` enum (`'ASHBY'`, `'GREENHOUSE'`, `'LEVER'`) |
 | `toAtsSource(dbAts)` | Converts DB enum/string to `AtsSource`, defaulting to `'ashby'` |
 | `isAtsSource(value)` | Type-guard checking whether string is a valid `AtsSource` |
 | `parseAtsSources(raw)` | Parses comma-separated sources string, deduplicating and validating each against supported sources |
+| `companySlug(source, token)` | Generates canonical company slug with prefix and source-specific character sanitization |
+| `tokenFromSlug(slug)` | Extracts ATS board token by stripping non-empty registered prefix |
+| `sourceFromSlug(slug)` | Resolves ATS source by matching non-empty registered prefix |
 
 ### [ats/urls.ts](../src/lib/ats/urls.ts) — Pure ATS URL Builders (No HTTP Imports)
 | Symbol | Description |

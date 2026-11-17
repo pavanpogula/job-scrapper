@@ -22,12 +22,14 @@ skills: [verify-change, record-decision, release-notes]
 ## Read-First List
 1. `AGENTS.md`
 2. `docs/agents/context.md`
-3. `backend/docs/api.md`
-4. `backend/docs/database-and-cache.md`
-5. `docs/archive/2026-10-initial-plan/03-cache-design.md`
-6. `docs/archive/2026-10-initial-plan/04-backend-api-plan.md`
-7. `docs/deployment-and-operations.md` (§3.3 manual deploys)
-8. `docs/decisions/ADR-0016-manual-vercel-deploys.md`
+3. `docs/agents/rules/multi-source-ats.md`
+4. `docs/decisions/ADR-0022-lever-source.md`
+5. `backend/docs/api.md`
+6. `backend/docs/database-and-cache.md`
+7. `docs/archive/2026-10-initial-plan/03-cache-design.md`
+8. `docs/archive/2026-10-initial-plan/04-backend-api-plan.md`
+9. `docs/deployment-and-operations.md` (§3.3 manual deploys)
+10. `docs/decisions/ADR-0016-manual-vercel-deploys.md`
 
 ## Allowed Scope
 - `backend/src/api/**`

@@ -18,11 +18,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
   const navigate = useNavigate();
   const companyName = company.name || company.slug;
   const rolesLabel = company.jobCount === 1 ? '1 open job' : `${company.jobCount} open jobs`;
-  const careersUrl =
-    company.boardUrl ||
-    (company.source === 'greenhouse'
-      ? `https://job-boards.greenhouse.io/${company.slug.startsWith('gh--') ? company.slug.slice(4) : company.slug}`
-      : `https://jobs.ashbyhq.com/${company.slug}`);
+  const careersUrl = company.boardUrl;
 
   const handleCardClick = () => {
     navigate(`/companies/${company.slug}`);
@@ -104,22 +100,24 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
         </Box>
       </Stack>
 
-      <Tooltip title="View original career board">
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            window.open(careersUrl, '_blank', 'noopener,noreferrer');
-          }}
-          aria-label={`Open ${companyName} careers board`}
-          sx={{
-            color: 'text.secondary',
-            '&:hover': { color: 'primary.main' },
-          }}
-        >
-          <OpenInNewIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+      {careersUrl && (
+        <Tooltip title="View original career board">
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(careersUrl, '_blank', 'noopener,noreferrer');
+            }}
+            aria-label={`Open ${companyName} careers board`}
+            sx={{
+              color: 'text.secondary',
+              '&:hover': { color: 'primary.main' },
+            }}
+          >
+            <OpenInNewIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
     </Paper>
   );
 };

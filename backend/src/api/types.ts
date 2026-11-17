@@ -4,6 +4,8 @@
  * @tags API, DTO, Contract, Types
  */
 
+import { AtsSource, API_SOURCES } from '../lib/ats/source';
+
 /**
  * Single job item in paginated job listings (/v1/jobs)
  */
@@ -14,8 +16,8 @@ export interface JobListItemDTO {
    * @deprecated legacy global key (`greenhouse:<id>` for Greenhouse); use source + externalId
    */
   ashbyId: string;
-  /** ATS source origin ('ashby' | 'greenhouse') */
-  source: 'ashby' | 'greenhouse';
+  /** ATS source origin */
+  source: AtsSource;
   /** Native external ATS job identifier */
   externalId: string;
   /** Public job title */
@@ -76,8 +78,8 @@ export interface CompanyDetailDTO {
   slug: string;
   /** Company logo URL, or null */
   logoUrl: string | null;
-  /** ATS source origin ('ashby' | 'greenhouse') */
-  source: 'ashby' | 'greenhouse';
+  /** ATS source origin */
+  source: AtsSource;
   /** Canonical career board URL */
   boardUrl: string;
 }
@@ -92,8 +94,8 @@ export interface JobDetailDTO {
    * @deprecated legacy global key (`greenhouse:<id>` for Greenhouse); use source + externalId
    */
   ashbyId: string;
-  /** ATS source origin ('ashby' | 'greenhouse') */
-  source: 'ashby' | 'greenhouse';
+  /** ATS source origin */
+  source: AtsSource;
   /** Native external ATS job identifier */
   externalId: string;
   /** Public job title */
@@ -166,8 +168,8 @@ export interface CompanySummaryDTO {
   name: string | null;
   /** Company logo URL, or null */
   logoUrl: string | null;
-  /** ATS source origin ('ashby' | 'greenhouse') */
-  source: 'ashby' | 'greenhouse';
+  /** ATS source origin */
+  source: AtsSource;
   /** Canonical career board URL */
   boardUrl: string;
   /** Total count of active, listed jobs currently open at this company */
@@ -200,8 +202,8 @@ export interface CompanyProfileDTO {
   name: string | null;
   /** Company logo URL, or null */
   logoUrl: string | null;
-  /** ATS source origin ('ashby' | 'greenhouse') */
-  source: 'ashby' | 'greenhouse';
+  /** ATS source origin */
+  source: AtsSource;
   /** Canonical career board URL */
   boardUrl: string;
   /** Total count of active, listed jobs open at this company */
@@ -262,7 +264,7 @@ export interface FacetCountDTO {
  * Aggregated facets response (/v1/facets)
  */
 export interface FacetsResponseDTO {
-  /** Breakdown by ATS source origin ('ashby', 'greenhouse') */
+  /** Breakdown by ATS source origin */
   sources: FacetCountDTO[];
   /** Breakdown by workplace type ('Remote', 'Hybrid', 'OnSite') */
   workplaceTypes: FacetCountDTO[];
@@ -363,7 +365,7 @@ export interface ErrorResponseDTO {
  */
 export interface JobQueryParams {
   search?: string;
-  source?: 'ashby' | 'greenhouse' | string;
+  source?: AtsSource | string;
   workplaceType?: string;
   employmentType?: string;
   country?: string;
@@ -430,8 +432,8 @@ export function parseJobQueryParams(query: Record<string, unknown>): JobQueryPar
   const source = extractQueryString(query.source);
   if (source !== undefined) {
     const s = source.trim().toLowerCase();
-    if (s === 'ashby' || s === 'greenhouse') {
-      params.source = s as 'ashby' | 'greenhouse';
+    if ((API_SOURCES as readonly string[]).includes(s)) {
+      params.source = s as AtsSource;
     }
   }
 

@@ -49,6 +49,27 @@ describe('SourceBadge Component', () => {
   it('renders "via Greenhouse" for greenhouse source', () => {
     render(<SourceBadge source="greenhouse" />);
     expect(screen.getByTestId('source-badge')).toHaveTextContent('via Greenhouse');
+    expect(screen.getByTestId('source-badge')).toHaveAttribute('data-source', 'greenhouse');
+  });
+
+  it('renders "via Lever" for lever source', () => {
+    render(<SourceBadge source="lever" />);
+    expect(screen.getByTestId('source-badge')).toHaveTextContent('via Lever');
+    expect(screen.getByTestId('source-badge')).toHaveAttribute('data-source', 'lever');
+  });
+
+  it('renders "via Ashby" with data-source="ashby" for unknown or null source', () => {
+    const { rerender } = render(<SourceBadge source="unknown_ats" />);
+    expect(screen.getByTestId('source-badge')).toHaveTextContent('via Ashby');
+    expect(screen.getByTestId('source-badge')).toHaveAttribute('data-source', 'ashby');
+
+    rerender(<SourceBadge source={null} />);
+    expect(screen.getByTestId('source-badge')).toHaveTextContent('via Ashby');
+    expect(screen.getByTestId('source-badge')).toHaveAttribute('data-source', 'ashby');
+
+    rerender(<SourceBadge source="constructor" />);
+    expect(screen.getByTestId('source-badge')).toHaveTextContent('via Ashby');
+    expect(screen.getByTestId('source-badge')).toHaveAttribute('data-source', 'ashby');
   });
 });
 
@@ -135,6 +156,46 @@ describe('Source Badge in Job Components & Company Header', () => {
 
     const iconButton = screen.getByLabelText(/Open Figma careers board/i);
     expect(iconButton).toBeInTheDocument();
+  });
+
+  it('omits careers board button in CompanyHeader when boardUrl is absent', () => {
+    const profileNoBoard: CompanyProfile = {
+      slug: 'acme-corp',
+      name: 'Acme',
+      logoUrl: null,
+      jobCount: 5,
+      withSalary: 2,
+      source: 'ashby',
+      boardUrl: undefined,
+      latestPublishedAt: null,
+      workplaceTypes: [],
+      employmentTypes: [],
+      departments: [],
+      locations: [],
+    };
+    render(
+      <MemoryRouter>
+        <CompanyHeader profile={profileNoBoard} />
+      </MemoryRouter>
+    );
+    expect(screen.queryByRole('link', { name: /View careers board/i })).toBeNull();
+  });
+
+  it('omits careers board button on CompanyCard when boardUrl is absent', () => {
+    const companyNoBoard: CompanySummary = {
+      slug: 'acme-corp',
+      name: 'Acme',
+      logoUrl: null,
+      jobCount: 5,
+      source: 'ashby',
+      boardUrl: undefined,
+    };
+    render(
+      <MemoryRouter>
+        <CompanyCard company={companyNoBoard} />
+      </MemoryRouter>
+    );
+    expect(screen.queryByLabelText(/Open Acme careers board/i)).toBeNull();
   });
 });
 

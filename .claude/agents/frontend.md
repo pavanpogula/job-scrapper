@@ -20,9 +20,11 @@ skills: [verify-change, record-decision, release-notes]
 ## Read-First List
 1. `AGENTS.md`
 2. `docs/agents/context.md`
-3. `frontend/docs/frontend-ui.md`
-4. `backend/docs/api.md`
-5. `frontend/src/types/api.ts`
+3. `docs/agents/rules/multi-source-ats.md`
+4. `docs/decisions/ADR-0022-lever-source.md`
+5. `frontend/docs/frontend-ui.md`
+6. `backend/docs/api.md`
+7. `frontend/src/types/api.ts`
 
 ## Allowed Scope
 - `frontend/**`

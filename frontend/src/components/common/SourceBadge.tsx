@@ -14,15 +14,22 @@ export interface SourceBadgeProps {
   sx?: SxProps<Theme>;
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+  ashby: 'via Ashby',
+  greenhouse: 'via Greenhouse',
+  lever: 'via Lever',
+};
+
 export const SourceBadge: React.FC<SourceBadgeProps> = ({ source, size = 'small', sx }) => {
-  const isGreenhouse = (source || '').toLowerCase() === 'greenhouse';
-  const label = isGreenhouse ? 'via Greenhouse' : 'via Ashby';
+  const raw = (source || '').toLowerCase();
+  const resolvedKey = Object.prototype.hasOwnProperty.call(SOURCE_LABELS, raw) ? raw : 'ashby';
+  const label = SOURCE_LABELS[resolvedKey];
 
   return (
     <Box
       component="span"
       data-testid="source-badge"
-      data-source={isGreenhouse ? 'greenhouse' : 'ashby'}
+      data-source={resolvedKey}
       sx={{
         display: 'inline-flex',
         alignItems: 'center',

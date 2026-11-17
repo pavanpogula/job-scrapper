@@ -36,7 +36,7 @@ job-scrapper/
 │   ├── README.md             # Frontend setup and local developer guide
 │   └── docs/                 # Frontend-specific UI and component guides
 ├── docs/                     # Central repository documentation
-│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0021)
+│   ├── decisions/            # Architecture Decision Records (ADR-0001 through ADR-0022)
 │   ├── agents/               # Canonical agent context, roster, and role definitions
 │   ├── archive/              # Preserved historical planning documentation
 │   ├── monorepo-migration/   # Monorepo migration plan, progress, and backlog
@@ -118,6 +118,7 @@ job-scrapper/
   - [`api-contract-sync.md`](./agents/rules/api-contract-sync.md)
   - [`ci-and-workflows.md`](./agents/rules/ci-and-workflows.md)
   - [`scraper-invariants.md`](./agents/rules/scraper-invariants.md)
+  - [`multi-source-ats.md`](./agents/rules/multi-source-ats.md)
   - [`api-cache.md`](./agents/rules/api-cache.md)
   - [`prisma-schema.md`](./agents/rules/prisma-schema.md)
   - [`frontend-invariants.md`](./agents/rules/frontend-invariants.md)
@@ -151,6 +152,7 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
 - [ADR-0019: Company Profile Endpoint and Company / Posted-Within Job Filters](./decisions/ADR-0019-company-profile-and-filters.md)
 - [ADR-0020: B.O.O.L.E.A.N Rebrand, LinkedIn-Style Job Browsing, and Company Directory Pages](./decisions/ADR-0020-boolean-ui-and-company-pages.md)
 - [ADR-0021: Multi-Source ATS Architecture (Greenhouse Onboarding)](./decisions/ADR-0021-multi-source-ats.md)
+- [ADR-0022: Multi-Source ATS Architecture Extension (Lever Onboarding)](./decisions/ADR-0022-lever-source.md)
 
 ---
 
@@ -173,6 +175,14 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
   - G4 API & UI: [`docs/plans/greenhouse/G4-api-and-ui.md`](./plans/greenhouse/G4-api-and-ui.md)
   - G5 Greenhouse Discovery: [`docs/plans/greenhouse/G5-greenhouse-discovery.md`](./plans/greenhouse/G5-greenhouse-discovery.md)
   - G6 Enable Greenhouse: [`docs/plans/greenhouse/G6-enable-greenhouse.md`](./plans/greenhouse/G6-enable-greenhouse.md)
+- **Lever Multi-Source Implementation Plans (`docs/plans/lever/`):**
+  - Overview Plan: [`docs/plans/lever/00-PLAN.md`](./plans/lever/00-PLAN.md)
+  - L1 Source Registry & Enum: [`docs/plans/lever/L1-source-registry-and-enum.md`](./plans/lever/L1-source-registry-and-enum.md)
+  - L2 Lever Client: [`docs/plans/lever/L2-lever-client.md`](./plans/lever/L2-lever-client.md)
+  - L3 API & UI: [`docs/plans/lever/L3-api-and-ui.md`](./plans/lever/L3-api-and-ui.md)
+  - L4 Lever Discovery: [`docs/plans/lever/L4-lever-discovery.md`](./plans/lever/L4-lever-discovery.md)
+  - L5 Enable Lever: [`docs/plans/lever/L5-enable-lever.md`](./plans/lever/L5-enable-lever.md)
+  - Review Guide: [`docs/plans/lever/REVIEW.md`](./plans/lever/REVIEW.md)
 
 ---
 

@@ -7,7 +7,7 @@ import { useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store';
 import { syncFromUrl, resetFilters } from '../store/slices/filterSlice';
-import { JobsQueryParams, WorkplaceType, EmploymentType } from '../types/api';
+import { JobsQueryParams, WorkplaceType, EmploymentType, FILTER_SOURCES } from '../types/api';
 
 type SortBy = NonNullable<JobsQueryParams['sortBy']>;
 type SortOrder = NonNullable<JobsQueryParams['sortOrder']>;
@@ -36,7 +36,9 @@ export function useJobFilters() {
   // Sync from URL params into Redux store on mount or URL change
   useEffect(() => {
     const rawSource = searchParams.get('source') || '';
-    const source = rawSource === 'ashby' || rawSource === 'greenhouse' ? rawSource : '';
+    const source = (FILTER_SOURCES as readonly string[]).includes(rawSource)
+      ? (rawSource as (typeof FILTER_SOURCES)[number])
+      : '';
     const q = searchParams.get('q') || '';
     const workplace = (searchParams.get('workplace') || '') as WorkplaceType | '';
     const employment = (searchParams.get('employment') || '') as EmploymentType | '';

@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **refactor(ats)**: single source registry and LEVER enum value, no behaviour change (ADR-0022).
+  - Why: Preparing to onboard Lever (`jobs.lever.co/<site>`) as a third ATS source without ad-hoc `'ashby' | 'greenhouse'` unions, while ensuring schema migrations are rehearsed safe and additive.
+  - Changes:
+    - Added `LEVER` to `enum Ats` in `backend/prisma/schema.prisma` with updated JSDoc comments on `Job.ashbyId` and `Company.atsToken`.
+    - Created single source registry in `backend/src/lib/ats/source.ts` (`SUPPORTED_ATS_SOURCES`, `ATS_SOURCES`, `API_SOURCES`) and client factory in `backend/src/lib/ats/registry.ts` (`DEFAULT_CLIENT_SOURCES`, `createAtsClient`).
+    - Generalized hard-coded spots across `backend/src/api/types.ts`, `backend/src/api/db/queries.ts`, `backend/src/api/contract.ts`, `backend/src/lib/cache/keys.ts`, `backend/src/lib/ReportClassifier.ts`, `backend/src/database/SourceDeactivate.ts`, `backend/src/discovery/CdxWorker.ts`, `backend/src/core/Scraper.ts`, and `backend/src/utils/EnrichCompanies.ts`.
+    - Updated frontend contracts in `frontend/src/types/api.ts` (`JOB_SOURCES`, `FILTER_SOURCES`), `useJobFilters.ts`, and `filterSlice.ts`.
+    - Neutralized `SourceBadge` label resolution to map `{ ashby: 'via Ashby', greenhouse: 'via Greenhouse', lever: 'via Lever' }` falling back to `ashby`.
+    - Removed browser-side URL synthesis in `CompanyHeader.tsx` and `CompanyCard.tsx`, reading `boardUrl` from the API.
+    - Temporarily locked `schema.prisma` in `scripts/ci/check-fixer-scope.sh` and flipped test in `scripts/repo-tests/fixer-scope.test.mjs` (restored in L2).
+    - Added rule `docs/agents/rules/multi-source-ats.md` and updated canonical agent shells, roles, roster, and ADR index.
+  - Tests:
+    - Added `AtsSource.test.ts`, `AtsUrls.test.ts`, and `AtsRegistry.test.ts`.
+    - Added API test verifying `GET /v1/jobs?source=lever` ignores unknown filter in L1.
+    - Added isolated-schema integration test `LeverL1Schema.test.ts` with `schema.pre-l1.prisma` fixture.
+    - Added frontend tests in `sourceBadge.test.tsx` verifying Lever badges and missing `boardUrl` behavior.
+    - Review fixes (PR #47): `SourceBadge` uses an own-property check so inherited keys like `constructor` fall back to Ashby (test added); `JobFiltersBar` mobile source cast derives from `FILTER_SOURCES`.
+    - All unit, integration, frontend, and repo tests passing.
+  - Docs:
+    - Authored `docs/decisions/ADR-0022-lever-source.md` and indexed in `docs/decisions/README.md` and `docs/README.md`.
+    - Updated `docs/decisions/ADR-0021-multi-source-ats.md`, `backend/docs/database-and-cache.md`, `backend/docs/module-reference.md`, `docs/agents/context.md`, and regenerated `backend/docs/project-explorer.html`.
+
+
 - **chore(ops)**: scheduled scrape runs every 3 hours from 5 AM to 11 PM PST instead of once a day.
   - Why: with one run a day at 06:17 UTC (10:17 PM PST), a job posted in the morning did not appear on the site until that night.
   - Changes: the `schedule` cron in `.github/workflows/scrape-daily.yml` is now `17 1,4,7,13,16,19,22 * * *` (UTC), which is 5:17, 8:17 and 11:17 AM and 2:17, 5:17, 8:17 and 11:17 PM Pacific Standard Time: 7 runs a day, none overnight. GitHub cron has no time zone, so during daylight time (PDT) each run is 1 hour later. The workflow name, inputs, concurrency group and `--workers=4` are unchanged.

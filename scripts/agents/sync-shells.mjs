@@ -23,6 +23,7 @@ export const RULES_CONFIG = [
   { prefix: '30', id: 'api-contract-sync' },
   { prefix: '40', id: 'ci-and-workflows' },
   { prefix: '50', id: 'scraper-invariants' },
+  { prefix: '55', id: 'multi-source-ats' },
   { prefix: '60', id: 'api-cache' },
   { prefix: '70', id: 'prisma-schema' },
   { prefix: '80', id: 'frontend-invariants' },

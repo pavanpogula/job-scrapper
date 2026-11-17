@@ -7,7 +7,7 @@
 import type { Prisma } from '@prisma/client';
 import type { JobListItemDTO, JobDetailDTO } from './types';
 import { jobUrl as buildJobUrl, boardUrl } from '../lib/ats/urls';
-import { toAtsSource } from '../lib/ats/source';
+import { toAtsSource, tokenFromSlug } from '../lib/ats/source';
 
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -206,7 +206,7 @@ export function toJobDetail(job: JobWithDetailRelations): JobDetailDTO {
   const rawCompanySlug = (job.companySlug as string | undefined) || (job.company?.slug as string | undefined) || '';
   const token =
     (job.company?.atsToken as string | undefined) ??
-    (rawCompanySlug.startsWith('gh--') ? rawCompanySlug.slice(4) : rawCompanySlug);
+    tokenFromSlug(rawCompanySlug);
   const companyBoardUrl = boardUrl(companySource, token);
 
   const jobUrl =

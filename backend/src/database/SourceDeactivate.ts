@@ -6,7 +6,7 @@
 
 import * as fs from 'fs';
 import { PrismaClient } from '@prisma/client';
-import { parseAtsSources, toDbAts, AtsSource } from '../lib/ats/source';
+import { parseAtsSources, toDbAts, AtsSource, SUPPORTED_ATS_SOURCES } from '../lib/ats/source';
 
 export interface DeactivateSourceResult {
   source: AtsSource;
@@ -33,7 +33,7 @@ export async function deactivateSource(options: {
     try {
       parsedSources = parseAtsSources(options.source);
     } catch {
-      throw new Error(`Invalid ATS source "${options.source}". Supported sources: ashby, greenhouse`);
+      throw new Error(`Invalid ATS source "${options.source}". Supported sources: ${SUPPORTED_ATS_SOURCES.join(', ')}`);
     }
 
     if (parsedSources.length !== 1) {
