@@ -33,11 +33,7 @@ export const CompanyHeader: React.FC<CompanyHeaderProps> = ({ profile }) => {
 
   const jobsLabel = profile.jobCount === 1 ? '1 open job' : `${profile.jobCount} open jobs`;
   const locationsLabel = formatLocationCount(profile.locations?.length ?? 0);
-  const careersUrl =
-    profile.boardUrl ||
-    (profile.source === 'greenhouse'
-      ? `https://job-boards.greenhouse.io/${profile.slug.startsWith('gh--') ? profile.slug.slice(4) : profile.slug}`
-      : `https://jobs.ashbyhq.com/${profile.slug}`);
+  const careersUrl = profile.boardUrl;
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -102,18 +98,20 @@ export const CompanyHeader: React.FC<CompanyHeaderProps> = ({ profile }) => {
             </Box>
           </Stack>
 
-          <Button
-            variant="outlined"
-            size="small"
-            color="secondary"
-            href={careersUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            endIcon={<OpenInNewIcon fontSize="small" />}
-            sx={{ fontWeight: 600, mb: { xs: 0, sm: 0.5 } }}
-          >
-            View careers board ↗
-          </Button>
+          {careersUrl && (
+            <Button
+              variant="outlined"
+              size="small"
+              color="secondary"
+              href={careersUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              endIcon={<OpenInNewIcon fontSize="small" />}
+              sx={{ fontWeight: 600, mb: { xs: 0, sm: 0.5 } }}
+            >
+              View careers board ↗
+            </Button>
+          )}
         </Stack>
       </Box>
 

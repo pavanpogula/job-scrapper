@@ -362,6 +362,22 @@ describe('API Server Contract & Snapshot Tests', () => {
       );
     });
 
+    it('ignores source=lever in L1 returning all jobs without source filter (same as GET /v1/jobs)', async () => {
+      mockJob.findMany.mockResolvedValueOnce([testJob]);
+      mockJob.count.mockResolvedValueOnce(1);
+
+      const res = await request(app)
+        .get('/v1/jobs?source=lever')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(200);
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({ source: expect.anything() }),
+        })
+      );
+    });
+
     it('returns valid meta pagination when results are empty', async () => {
       mockJob.findMany.mockResolvedValueOnce([]);
       mockJob.count.mockResolvedValueOnce(0);

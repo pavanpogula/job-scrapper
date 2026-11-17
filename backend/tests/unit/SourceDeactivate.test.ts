@@ -158,9 +158,9 @@ describe('G6: Source Deactivation CLI', () => {
   it('throws for unknown or invalid source names', async () => {
     await expect(
       deactivateSource({
-        source: 'lever',
+        source: 'workday',
         prismaClient: prisma as unknown as PrismaClient,
       })
-    ).rejects.toThrow(/Invalid ATS source "lever"/);
+    ).rejects.toThrow(/Invalid ATS source "workday"/);
   });
 });

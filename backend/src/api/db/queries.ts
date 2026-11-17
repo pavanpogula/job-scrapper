@@ -14,7 +14,7 @@ import {
 } from '../contract';
 import { buildSearchWhere, tokenizeSearch } from '../../lib/search';
 import { boardUrl } from '../../lib/ats/urls';
-import { toAtsSource, toDbAts } from '../../lib/ats/source';
+import { AtsSource, toAtsSource, toDbAts, tokenFromSlug, API_SOURCES } from '../../lib/ats/source';
 import type {
   JobQueryParams,
   CompanyQueryParams,
@@ -57,8 +57,8 @@ export async function queryJobs(
     where.workplaceType = params.workplaceType;
   }
 
-  if (params.source === 'ashby' || params.source === 'greenhouse') {
-    where.source = toDbAts(params.source);
+  if (params.source && (API_SOURCES as readonly string[]).includes(params.source)) {
+    where.source = toDbAts(params.source as AtsSource);
   }
 
   if (params.employmentType) {
@@ -271,7 +271,7 @@ export async function queryCompanies(
   const where: Prisma.CompanyWhereInput = {
     status: 'ACTIVE',
     NOT: {
-      source: 'GREENHOUSE',
+      source: { not: 'ASHBY' },
       jobs: { none: { active: true, isListed: true } },
     },
   };
@@ -310,7 +310,7 @@ export async function queryCompanies(
   return {
     data: companies.map((c) => {
       const src = toAtsSource(c.source);
-      const token = c.atsToken ?? (c.slug.startsWith('gh--') ? c.slug.slice(4) : c.slug);
+      const token = c.atsToken ?? tokenFromSlug(c.slug);
       return {
         slug: c.slug,
         name: c.name,
@@ -351,7 +351,7 @@ async function queryCompaniesByOpenJobs(
   const ranked = companies
     .map((c) => {
       const src = toAtsSource(c.source);
-      const token = c.atsToken ?? (c.slug.startsWith('gh--') ? c.slug.slice(4) : c.slug);
+      const token = c.atsToken ?? tokenFromSlug(c.slug);
       return {
         slug: c.slug,
         name: c.name,
@@ -419,7 +419,7 @@ export async function queryCompanyProfile(
       slug: normalizedSlug,
       status: 'ACTIVE',
       NOT: {
-        source: 'GREENHOUSE',
+        source: { not: 'ASHBY' },
         jobs: { none: { active: true, isListed: true } },
       },
     },
@@ -478,7 +478,7 @@ export async function queryCompanyProfile(
     }),
   ]);
 
-  if (company.source === 'GREENHOUSE' && jobCount === 0) {
+  if (company.source !== 'ASHBY' && jobCount === 0) {
     return null;
   }
 
@@ -509,7 +509,7 @@ export async function queryCompanyProfile(
   );
 
   const src = toAtsSource(company.source);
-  const token = company.atsToken ?? (company.slug.startsWith('gh--') ? company.slug.slice(4) : company.slug);
+  const token = company.atsToken ?? tokenFromSlug(company.slug);
 
   return {
     slug: company.slug,

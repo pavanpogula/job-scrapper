@@ -5,6 +5,7 @@
  */
 
 import { canonicalSearch } from '../search';
+import { API_SOURCES } from '../ats/source';
 
 export const KEY_PREFIX = 'jc:v1:';
 export const KEY_CURRENT = 'jc:v1:current';
@@ -184,10 +185,10 @@ export function parseJobsQuery(query: Record<string, any>) {
     }
   }
 
-  // 13. source (only ashby, greenhouse supported; others dropped)
+  // 13. source (only API_SOURCES supported; others dropped)
   if (query.source && typeof query.source === 'string') {
     const src = query.source.trim().toLowerCase();
-    if (src === 'ashby' || src === 'greenhouse') {
+    if ((API_SOURCES as readonly string[]).includes(src)) {
       normalized.source = src;
     }
   }

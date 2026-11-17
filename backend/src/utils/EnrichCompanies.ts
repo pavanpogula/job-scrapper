@@ -7,9 +7,8 @@
 import { PrismaClient } from '@prisma/client';
 import { createLimiter } from '../lib/Concurrency';
 import { AtsClient, BoardRef } from '../lib/ats/AtsClient';
-import { AshbyAtsClient } from '../lib/ats/AshbyAtsClient';
-import { GreenhouseClient } from '../lib/ats/GreenhouseClient';
 import { AtsSource, parseAtsSources, toAtsSource, toDbAts } from '../lib/ats/source';
+import { DEFAULT_CLIENT_SOURCES, createAtsClient } from '../lib/ats/registry';
 
 const prisma = new PrismaClient();
 
@@ -52,10 +51,9 @@ export async function enrichActiveCompanies(options: {
 
     const clients = options.clients
         ? new Map(options.clients)
-        : new Map<AtsSource, AtsClient>([
-            ['ashby', new AshbyAtsClient()],
-            ['greenhouse', new GreenhouseClient()]
-        ]);
+        : new Map<AtsSource, AtsClient>(
+            DEFAULT_CLIENT_SOURCES.map(source => [source, createAtsClient(source)])
+        );
 
     const enabledDbSources = enabledSources.map(toDbAts);
 

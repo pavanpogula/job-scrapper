@@ -7,7 +7,9 @@ export type WorkplaceType = 'Remote' | 'OnSite' | 'Hybrid';
 export type EmploymentType = 'FullTime' | 'PartTime' | 'Contract' | 'Intern' | 'Temporary';
 export type SalaryInterval = '1 YEAR' | '1 HOUR' | '1 MONTH' | '1 WEEK' | '1 DAY';
 export type LastUpdatedSource = 'ashby' | 'detected' | 'published' | 'firstSeen';
-export type JobSource = 'ashby' | 'greenhouse';
+export const JOB_SOURCES = ['ashby', 'greenhouse', 'lever'] as const;
+export type JobSource = (typeof JOB_SOURCES)[number];
+export const FILTER_SOURCES: readonly JobSource[] = ['ashby', 'greenhouse'];
 
 export interface CompanySummary {
   slug: string;
@@ -155,7 +157,7 @@ export interface CompanyProfile {
 }
 
 export interface JobsQueryParams {
-  source?: 'ashby' | 'greenhouse' | '';
+  source?: (typeof FILTER_SOURCES)[number] | '';
   search?: string;
   country?: string;
   company?: string;

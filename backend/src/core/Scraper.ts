@@ -20,9 +20,8 @@ import { ErrorTracker, ErrorReportDocument } from '../lib/ErrorTracker';
 import { publishCacheGeneration, recordScrapeFinished } from '../cache/Publisher';
 import { resolveLastUpdated, PrevJobState } from './ResolveLastUpdated';
 import { AtsClient, BoardRef, NormalizedJob } from '../lib/ats/AtsClient';
-import { AshbyAtsClient } from '../lib/ats/AshbyAtsClient';
-import { GreenhouseClient } from '../lib/ats/GreenhouseClient';
-import { AtsSource, DbAts, parseAtsSources, toDbAts, toAtsSource } from '../lib/ats/source';
+import { AtsSource, DbAts, parseAtsSources, toDbAts, toAtsSource, ATS_SOURCES } from '../lib/ats/source';
+import { DEFAULT_CLIENT_SOURCES, createAtsClient } from '../lib/ats/registry';
 
 const prisma = new PrismaClient();
 
@@ -179,10 +178,9 @@ export class AshbyScraper {
         if (options.clients) {
             this.clients = new Map(options.clients);
         } else {
-            this.clients = new Map<AtsSource, AtsClient>([
-                ['ashby', new AshbyAtsClient()],
-                ['greenhouse', new GreenhouseClient()]
-            ]);
+            this.clients = new Map<AtsSource, AtsClient>(
+                DEFAULT_CLIENT_SOURCES.map(source => [source, createAtsClient(source)])
+            );
         }
     }
 
@@ -881,7 +879,7 @@ export class AshbyScraper {
                             // Ashby text stays byte-identical: ReportClassifier fingerprints hash the message
                             message: atsSource === 'ashby'
                                 ? 'HTTP 429 Too Many Requests received from Posting API'
-                                : 'HTTP 429 Too Many Requests received from Greenhouse Board API',
+                                : `HTTP 429 Too Many Requests received from ${ATS_SOURCES[atsSource].apiName}`,
                             actionTaken: 'throttled_concurrency'
                         });
                     } else {
@@ -1022,7 +1020,7 @@ export class AshbyScraper {
                                 companySlug: company.slug,
                                 message: atsSource === 'ashby'
                                     ? `Posting API failed (${boardResult.failure.code || boardResult.failure.kind}) after ${boardResult.failure.attempts} attempts`
-                                    : `Greenhouse Board API failed (${boardResult.failure.code || boardResult.failure.kind}) after ${boardResult.failure.attempts} attempts`,
+                                    : `${ATS_SOURCES[atsSource].apiName} failed (${boardResult.failure.code || boardResult.failure.kind}) after ${boardResult.failure.attempts} attempts`,
                                 actionTaken: 'retry_exhausted',
                                 httpStatus: boardResult.failure.status,
                                 attempts: boardResult.failure.attempts

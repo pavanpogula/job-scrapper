@@ -11,6 +11,7 @@ import { fetchOrganizationMetadata } from '../lib/AshbyClient';
 import { createLimiter } from '../lib/Concurrency';
 import { GreenhouseClient } from '../lib/ats/GreenhouseClient';
 import { BoardRef } from '../lib/ats/AtsClient';
+import { AtsSource } from '../lib/ats/source';
 
 const prisma = new PrismaClient();
 
@@ -389,7 +390,7 @@ async function fetchCommonCrawlPage(
 }
 
 export interface DiscoverySummary {
-    source: 'ashby' | 'greenhouse';
+    source: AtsSource;
     tokensFound: number;
     alreadyKnown: number;
     validated: number;
@@ -398,7 +399,7 @@ export interface DiscoverySummary {
 }
 
 export interface DiscoveryOptions {
-    source?: 'ashby' | 'greenhouse';
+    source?: AtsSource;
     includeCommonCrawl?: boolean;
     enrichMetadata?: boolean;
     tokenBudget?: number;
@@ -579,8 +580,12 @@ export function parseTimeBudgetMs(raw: string): number {
  */
 export async function runDiscovery(options: DiscoveryOptions = {}): Promise<DiscoverySummary | void> {
     const sourceArg = process.argv.find(a => a.startsWith('--source='));
-    const source = options.source ?? (sourceArg ? sourceArg.split('=')[1].toLowerCase() as 'ashby' | 'greenhouse' : 'ashby');
+    const source = options.source ?? (sourceArg ? sourceArg.split('=')[1].toLowerCase() as AtsSource : 'ashby');
     const db = options.prismaClient ?? prisma;
+
+    if (source === 'lever') {
+        throw new Error('Lever discovery not implemented yet (L4)');
+    }
 
     if (source === 'greenhouse') {
         const startTime = Date.now();
@@ -711,7 +716,12 @@ if (require.main === module) {
     const includeCommonCrawl = process.argv.includes('--common-crawl');
     const enrichMetadata = process.argv.includes('--enrich');
     const sourceArg = process.argv.find(a => a.startsWith('--source='));
-    const source = sourceArg ? (sourceArg.split('=')[1].toLowerCase() as 'ashby' | 'greenhouse') : undefined;
+    const rawSource = sourceArg ? sourceArg.split('=')[1].toLowerCase() : undefined;
+    if (rawSource === 'lever') {
+        console.error('❌ Lever discovery not implemented yet (L4)');
+        process.exit(1);
+    }
+    const source = rawSource as AtsSource | undefined;
 
     let tokenBudget: number | undefined;
     let timeBudgetMs: number | undefined;

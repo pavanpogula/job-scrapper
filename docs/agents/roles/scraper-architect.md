@@ -17,10 +17,12 @@ max_turns: 40
 ## Read-First List
 1. `AGENTS.md`
 2. `docs/agents/context.md`
-3. `docs/system-architecture-and-flows.md`
-4. `backend/docs/architecture-and-workflows.md`
-5. `backend/docs/database-and-cache.md`
-6. `docs/bug-fix-log.md`
+3. `docs/agents/rules/multi-source-ats.md`
+4. `docs/decisions/ADR-0022-lever-source.md`
+5. `docs/system-architecture-and-flows.md`
+6. `backend/docs/architecture-and-workflows.md`
+7. `backend/docs/database-and-cache.md`
+8. `docs/bug-fix-log.md`
 
 ## Allowed Scope
 - Read-only access to all codebase files.
