@@ -50,6 +50,7 @@ export interface SourceTelemetrySummary {
     jobsCollected: number;
     notFound: number;
     apiErrors: number;
+    skippedByDeadline?: number;
 }
 
 export interface RunMetadata {
@@ -258,6 +259,14 @@ export class ErrorTracker {
      */
     public recordSourceNotFound(source: AtsSource): void {
         this.ensureSourceStats(source).notFound++;
+    }
+
+    /**
+     * @summary Increments skippedByDeadline counter for a given ATS source when a board is not started due to deadline
+     */
+    public recordSourceSkippedByDeadline(source: AtsSource): void {
+        const stats = this.ensureSourceStats(source);
+        stats.skippedByDeadline = (stats.skippedByDeadline ?? 0) + 1;
     }
 
     /**
@@ -597,6 +606,9 @@ export class ErrorTracker {
                     dest.jobsCollected += srcStats.jobsCollected || 0;
                     dest.notFound += srcStats.notFound || 0;
                     dest.apiErrors += srcStats.apiErrors || 0;
+                    if (srcStats.skippedByDeadline) {
+                        dest.skippedByDeadline = (dest.skippedByDeadline || 0) + srcStats.skippedByDeadline;
+                    }
                 }
             }
 

@@ -334,4 +334,23 @@ describe('ReportClassifier Unit Tests (P1-T10 / LOOP-05)', () => {
             fs.rmSync(ashbyDir, { recursive: true, force: true });
         }
     });
+
+    test('source-aware BF mapping: Lever api_error and lv-- slug map to BF-024 (not BF-001)', () => {
+        const leverReport = createBaseReport();
+        for (let i = 1; i <= 6; i++) {
+            leverReport.events.push({
+                id: `ev-lv-${i}`,
+                timestamp: new Date().toISOString(),
+                category: 'api_error',
+                source: 'lever',
+                companySlug: `lv--co-${i}`,
+                message: 'Lever Postings API failed (http/503/3) after 3 attempts',
+                actionTaken: 'retry_exhausted'
+            });
+        }
+        const leverRes = classifyReport(leverReport, { outputDir: tmpDir });
+        expect(leverRes.actionable).toBe(true);
+        expect(leverRes.issues[0].relatedBF).toEqual(['BF-024']);
+        expect(leverRes.issues[0].relatedBF).not.toContain('BF-001');
+    });
 });

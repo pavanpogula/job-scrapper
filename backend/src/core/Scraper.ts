@@ -20,8 +20,9 @@ import { ErrorTracker, ErrorReportDocument } from '../lib/ErrorTracker';
 import { publishCacheGeneration, recordScrapeFinished } from '../cache/Publisher';
 import { resolveLastUpdated, PrevJobState } from './ResolveLastUpdated';
 import { AtsClient, BoardRef, NormalizedJob } from '../lib/ats/AtsClient';
-import { AtsSource, DbAts, parseAtsSources, toDbAts, toAtsSource, ATS_SOURCES } from '../lib/ats/source';
+import { AtsSource, DbAts, parseAtsSources, toAtsSource, ATS_SOURCES } from '../lib/ats/source';
 import { DEFAULT_CLIENT_SOURCES, createAtsClient } from '../lib/ats/registry';
+import { parseLeverMaxBoards, selectCompanies } from './selectCompanies';
 
 const prisma = new PrismaClient();
 
@@ -157,7 +158,12 @@ export interface ProcessedJob {
 export interface AshbyScraperOptions {
     clients?: Map<AtsSource, AtsClient>;
     prisma?: PrismaClient;
+    leverMinIntervalMs?: number;
+    leverInitialDelayMs?: number;
+    leverDeadlineMs?: number;
 }
+
+const DEFAULT_LEVER_DEADLINE_MS = 11 * 60_000;
 
 /**
  * @summary High-performance scraper class with adaptive concurrency, 3-strike quarantine, stale job deactivation, and streaming batch DB writes
@@ -165,6 +171,9 @@ export interface AshbyScraperOptions {
 export class AshbyScraper {
     private db: PrismaClient;
     private clients: Map<AtsSource, AtsClient>;
+    private readonly leverMinIntervalMs?: number;
+    private readonly leverInitialDelayMs?: number;
+    private readonly leverDeadlineMs: number;
     private limiters = new Map<AtsSource, AdaptiveLimiter>();
     private departmentCache = new Map<string, string>();
     private departmentInFlight = new Map<string, Promise<string>>();
@@ -175,6 +184,9 @@ export class AshbyScraper {
 
     constructor(options: AshbyScraperOptions = {}) {
         this.db = options.prisma ?? prisma;
+        this.leverMinIntervalMs = options.leverMinIntervalMs;
+        this.leverInitialDelayMs = options.leverInitialDelayMs;
+        this.leverDeadlineMs = options.leverDeadlineMs ?? DEFAULT_LEVER_DEADLINE_MS;
         if (options.clients) {
             this.clients = new Map(options.clients);
         } else {
@@ -190,7 +202,12 @@ export class AshbyScraper {
     public getLimiter(source: AtsSource, concurrency: number): AdaptiveLimiter {
         let limiter = this.limiters.get(source);
         if (!limiter) {
-            const initialConcurrency = source === 'greenhouse' ? Math.min(concurrency, 5) : concurrency;
+            const initialConcurrency =
+                source === 'lever'
+                    ? 1
+                    : source === 'greenhouse'
+                    ? Math.min(concurrency, 5)
+                    : concurrency;
             limiter = createLimiter(initialConcurrency);
             this.limiters.set(source, limiter);
         }
@@ -671,6 +688,7 @@ export class AshbyScraper {
         sources?: AtsSource[];
         workerId?: number;
         concurrency?: number;
+        leverMaxBoards?: number;
         saveTelemetry?: boolean;
         recheckNotFound?: boolean;
         publish?: boolean;
@@ -701,12 +719,20 @@ export class AshbyScraper {
             enabledSources = ['ashby'];
         }
 
+        if (enabledSources.includes('lever') && !this.clients.has('lever')) {
+            this.clients.set(
+                'lever',
+                createAtsClient('lever', {
+                    minIntervalMs: this.leverMinIntervalMs ?? 1000,
+                    initialDelayMs: this.leverInitialDelayMs ?? 0
+                })
+            );
+        }
+
         let explicitSlugs = options.slugs;
         if (!explicitSlugs && slugsFlag) {
             explicitSlugs = slugsFlag.split('=')[1].split(',').map(s => s.trim()).filter(Boolean);
         }
-
-        const enabledDbSources = enabledSources.map(toDbAts);
 
         // Pre-warm department and location caches in 2 queries to avoid per-company round trips
         if (typeof (this.db.department as any)?.findMany === 'function') {
@@ -791,11 +817,10 @@ export class AshbyScraper {
                 companies.push(row);
             }
         } else {
-            const rows = await this.db.company.findMany({
-                where: {
-                    status: statusFilter,
-                    source: { in: enabledDbSources }
-                },
+            const { companies: rows } = await selectCompanies(this.db, {
+                sources: enabledSources,
+                statusFilter,
+                leverMaxBoards: options.leverMaxBoards ?? parseLeverMaxBoards(process.argv),
                 select: {
                     slug: true,
                     source: true,
@@ -804,7 +829,16 @@ export class AshbyScraper {
                     consecutiveFailures: true,
                     pendingEmptySince: true
                 }
-            }).catch(() => [] as any[]);
+            }).catch(() => ({
+                companies: [] as Array<{
+                    slug: string;
+                    source: DbAts;
+                    atsToken: string | null;
+                    consecutiveNotFound?: number;
+                    consecutiveFailures?: number;
+                    pendingEmptySince?: Date | null;
+                }>
+            }));
 
             companies = rows.filter(row => {
                 const atsSource = toAtsSource(row.source);
@@ -862,6 +896,11 @@ export class AshbyScraper {
             };
 
             return limit(async () => {
+                if (atsSource === 'lever' && Date.now() - startTime >= this.leverDeadlineMs) {
+                    tracker.companiesAttempted = Math.max(0, tracker.companiesAttempted - 1);
+                    tracker.recordSourceSkippedByDeadline('lever');
+                    return;
+                }
                 tracker.recordSourceAttempt(atsSource);
                 try {
                     const boardResult = await client.fetchBoard(boardRef, {
@@ -1172,8 +1211,12 @@ export class AshbyScraper {
 
 if (require.main === module) {
     if (process.argv.includes('--ipc-worker')) {
-        process.once('message', async (msg: { workerId: number; slugs: string[]; concurrency?: number; sources?: AtsSource[] }) => {
-            const scraper = new AshbyScraper();
+        process.once('message', async (msg: { workerId: number; workerCount?: number; slugs: string[]; concurrency?: number; sources?: AtsSource[] }) => {
+            const workerCount = Math.max(1, msg.workerCount ?? 1);
+            const scraper = new AshbyScraper({
+                leverMinIntervalMs: 1000 * workerCount,
+                leverInitialDelayMs: Math.max(0, msg.workerId - 1) * 1000
+            });
             try {
                 const report = await scraper.runAll({
                     slugs: msg.slugs,

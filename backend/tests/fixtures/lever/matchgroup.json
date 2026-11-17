@@ -1,0 +1,39 @@
+[
+  {
+    "id": "44444444-4444-4444-8444-444444444441",
+    "text": "Customer Support Specialist",
+    "categories": {
+      "department": "Operations",
+      "team": "Trust & Safety",
+      "location": "Dallas, TX",
+      "allLocations": ["Dallas, TX"],
+      "commitment": "Part-time"
+    },
+    "country": "US",
+    "workplaceType": "on-site",
+    "createdAt": 1786200000000,
+    "description": "<p>Support community safety operations.</p>",
+    "salaryRange": {
+      "min": 25,
+      "max": 32,
+      "currency": "USD",
+      "interval": "per-hour-wage"
+    },
+    "hostedUrl": "https://jobs.lever.co/matchgroup/44444444-4444-4444-8444-444444444441",
+    "applyUrl": "https://jobs.lever.co/matchgroup/44444444-4444-4444-8444-444444444441/apply"
+  },
+  {
+    "id": "44444444-4444-4444-8444-444444444442",
+    "text": "Generalist Engineer",
+    "categories": {
+      "allLocations": [],
+      "commitment": "Full-time: Remote"
+    },
+    "country": null,
+    "workplaceType": "unspecified",
+    "createdAt": 1786200001000,
+    "description": "<p>Work across product surfaces.</p>",
+    "hostedUrl": "https://jobs.lever.co/matchgroup/44444444-4444-4444-8444-444444444442",
+    "applyUrl": "https://jobs.lever.co/matchgroup/44444444-4444-4444-8444-444444444442/apply"
+  }
+]

@@ -27,6 +27,7 @@ FORBIDDEN_PATTERNS=(
 ALLOWED_PATTERNS=(
   "^backend/src/"
   "^backend/tests/"
+  "^backend/prisma/schema\.prisma"
   "^backend/docs/project-explorer\.html"
   "^backend/docs/known-issues\.md"
   "^backend/docs/testing\.md"

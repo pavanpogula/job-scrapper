@@ -10,7 +10,8 @@ import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
 import { ErrorReportDocument, ErrorTracker } from '../lib/ErrorTracker';
 import { publishCacheGeneration, recordScrapeFinished } from '../cache/Publisher';
-import { AtsSource, parseAtsSources, toDbAts } from '../lib/ats/source';
+import { AtsSource, parseAtsSources } from '../lib/ats/source';
+import { parseLeverMaxBoards, selectCompanies } from './selectCompanies';
 
 const prisma = new PrismaClient();
 
@@ -27,6 +28,7 @@ export interface WorkerResult {
 export interface ClusterScrapeOptions {
     sources?: AtsSource[];
     slugs?: string[];
+    leverMaxBoards?: number;
     workerTimeoutMs?: number;
     killGracePeriodMs?: number;
     saveTelemetry?: boolean;
@@ -118,6 +120,7 @@ export function runWorkerShard(
         workerTimeoutMs?: number;
         killGracePeriodMs?: number;
         sources?: AtsSource[];
+        workerCount?: number;
         onSpawn?: (child: ChildProcess) => void;
     } = {}
 ): Promise<WorkerResult> {
@@ -242,6 +245,7 @@ export function runWorkerShard(
         try {
             child.send({
                 workerId,
+                workerCount: options.workerCount ?? 1,
                 slugs,
                 concurrency: perWorkerConcurrency,
                 sources: options.sources
@@ -294,18 +298,15 @@ export async function runClusterScrape(
         explicitSlugs = slugsFlag.split('=')[1].split(',').map(s => s.trim()).filter(Boolean);
     }
 
-    const enabledDbSources = enabledSources.map(toDbAts);
-
     const isSundayUtc = new Date().getUTCDay() === 0;
     const recheckNotFound = argv.includes('--recheck-not-found') || isSundayUtc;
     const statusFilter = recheckNotFound ? { in: ['ACTIVE', 'NOT_FOUND'] as any } : 'ACTIVE';
 
-    const companies = await prisma.company.findMany({
-        where: {
-            status: statusFilter,
-            source: { in: enabledDbSources },
-            ...(explicitSlugs ? { slug: { in: explicitSlugs } } : {})
-        },
+    const { companies } = await selectCompanies(prisma, {
+        sources: enabledSources,
+        statusFilter,
+        explicitSlugs,
+        leverMaxBoards: options.leverMaxBoards ?? parseLeverMaxBoards(argv),
         select: { slug: true, source: true }
     });
     await prisma.$disconnect();
@@ -350,6 +351,7 @@ export async function runClusterScrape(
             workerTimeoutMs: options.workerTimeoutMs,
             killGracePeriodMs: options.killGracePeriodMs,
             sources: enabledSources,
+            workerCount: shards.length,
             onSpawn: child => activeChildren.add(child)
         })
     );

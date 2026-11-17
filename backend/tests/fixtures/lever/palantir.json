@@ -1,0 +1,58 @@
+[
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "text": "Software Engineer Intern",
+    "categories": {
+      "team": "Foundry Platform",
+      "location": "New York, NY",
+      "allLocations": ["New York, NY", "Palo Alto, CA"],
+      "commitment": "Internship"
+    },
+    "country": "US",
+    "workplaceType": "onsite",
+    "createdAt": 1786469891368,
+    "description": "<p>Build core infrastructure at Palantir.</p>",
+    "descriptionPlain": "Build core infrastructure at Palantir.",
+    "opening": "<p>Build core infrastructure at Palantir.</p>",
+    "openingPlain": "Build core infrastructure at Palantir.",
+    "descriptionBody": "",
+    "descriptionBodyPlain": "",
+    "lists": [
+      {
+        "text": "What You'll Do & Build",
+        "content": "<li>Design distributed pipelines</li><li>Collaborate with engineers</li>"
+      },
+      {
+        "text": "Requirements",
+        "content": "<li>CS degree in progress</li>"
+      }
+    ],
+    "additional": "<p>Palantir is an equal opportunity employer.</p>",
+    "additionalPlain": "Palantir is an equal opportunity employer.",
+    "hostedUrl": "https://jobs.lever.co/palantir/11111111-1111-4111-8111-111111111111",
+    "applyUrl": "https://jobs.lever.co/palantir/11111111-1111-4111-8111-111111111111/apply"
+  },
+  {
+    "id": "11111111-1111-4111-8111-111111111112",
+    "text": "Forward Deployed Software Engineer",
+    "categories": {
+      "team": "Deployment",
+      "location": "London",
+      "allLocations": ["London"],
+      "commitment": "Full-time"
+    },
+    "country": "GB",
+    "workplaceType": "hybrid",
+    "createdAt": 1786400000000,
+    "description": "<p>Work directly with customers.</p>",
+    "lists": [
+      {
+        "text": "Responsibilities",
+        "content": "<li>Solve complex data integration problems</li>"
+      }
+    ],
+    "additional": "<p>UK benefits apply.</p>",
+    "hostedUrl": "https://jobs.lever.co/palantir/11111111-1111-4111-8111-111111111112",
+    "applyUrl": "https://jobs.lever.co/palantir/11111111-1111-4111-8111-111111111112/apply"
+  }
+]

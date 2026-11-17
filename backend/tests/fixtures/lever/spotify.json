@@ -1,0 +1,26 @@
+[
+  {
+    "id": "22222222-2222-4222-8222-222222222221",
+    "text": "Staff Backend Engineer",
+    "categories": {
+      "department": "Engineering",
+      "team": "Audio Streaming",
+      "location": "Stockholm, Sweden",
+      "allLocations": ["Stockholm, Sweden", "New York, NY", "London, United Kingdom"],
+      "commitment": "Permanent"
+    },
+    "country": "SE",
+    "workplaceType": "remote",
+    "createdAt": 1786500000000,
+    "description": "<p>Scale audio streaming globally &amp; reliably.</p>",
+    "lists": [
+      {
+        "text": "What You'll Do",
+        "content": "<div>Architect low-latency services</div><div>Mentor senior engineers</div>"
+      }
+    ],
+    "additional": "<p>Spotify is proud to be an equal opportunity workplace.</p>",
+    "hostedUrl": "https://jobs.lever.co/spotify/22222222-2222-4222-8222-222222222221",
+    "applyUrl": "https://jobs.lever.co/spotify/22222222-2222-4222-8222-222222222221/apply"
+  }
+]

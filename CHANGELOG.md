@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(scraper)**: Lever client and normalizer, disabled by default (`BF-024`, ADR-0022).
+  - Why: Implement Lever Postings API (`v0`) board fetching, hosted-board metadata validation, and normalized job mapping behind `AtsClient` while honoring Lever's `robots.txt` `Crawl-delay: 1` and cluster time budgets without disturbing Ashby or Greenhouse behavior.
+  - Changes:
+    - Implemented `LeverClient` (`pace()`, `fetchBoard()`, `validateSite()`, `fetchCompanyMetadata()`, `canonicalUrls()`) and `normalizeLeverJob()` in `backend/src/lib/ats/LeverClient.ts` (`lever:<uuid>` `legacyKey`, dedupe by `id`, commitment→`employmentType`, raw HTML assembly without entity-unescaping, plain-unit salary excluding `one-time`, header-img logo extraction excluding `og:image`).
+    - Extracted shared place/employment heuristics from `GreenhouseClient.ts` into `backend/src/lib/ats/place.ts` (`parsePlace`, `inferEmploymentTypeFromTitle`, `US_TEXT_REGEX`).
+    - Added collision-safe `allocateCompanySlug()` in `backend/src/lib/ats/slug.ts` (`lv--<sanitized>` with `-2`/`-3` collision suffixes) and registered `'lever'` in `createAtsClient(source, opts?)` (still omitted from `DEFAULT_CLIENT_SOURCES` so Lever stays disabled unless explicitly passed in `--sources`).
+    - Added shared `selectCompanies()` helper (`backend/src/core/selectCompanies.ts`) enforcing `--lever-max-boards` (default `600`, oldest `lastCheckedAt` first, bypassed on `--slugs`), `leverDeadlineMs` (default 11m with `bySource.lever.skippedByDeadline` telemetry in `ErrorTracker.ts`), per-source limiter concurrency `1`, and `workerCount` IPC propagation in `Scraper.ts` and `ClusterScraper.ts`.
+    - Added curated seed CLI `npm run seed:lever` (`backend/src/config/LeverBoards.ts`, `backend/src/utils/SeedLever.ts`) and mapped `source === 'lever'` telemetry to `BF-024` in `ReportClassifier.ts`.
+    - Restored `backend/prisma/schema.prisma` in `scripts/ci/check-fixer-scope.sh` and updated repo test `scripts/repo-tests/fixer-scope.test.mjs` and `scripts/repo-tests/settings-allowlist.test.mjs`.
+    - Updated canonical agent rules/roles/context (`docs/agents/rules/multi-source-ats.md`, `scraper-invariants.md`, `roles/scraper-bugfixer.md`, `roster.md`, `roles/run-reviewer.md`, `context.md`) and synced shells.
+  - Tests:
+    - Added recorded fixtures (`backend/tests/fixtures/lever/*`) and unit suites (`LeverClient.test.ts`, `AtsRegistry.test.ts`, `ReportClassifier.test.ts`, `ErrorTrackerV2.test.ts`) covering normalization, commitments, fake-timer pacer & `leverDeadlineMs`, deactivation safety, `selectCompanies`, `ClusterScraper` IPC, and `seedLever`.
+    - Added real-Postgres integration suite `backend/tests/integration/LeverCoexistence.test.ts` testing Ashby/Lever coexistence, shared UUID `(source, externalId)`, and `allocateCompanySlug` collision resolution.
+  - Docs:
+    - Updated `backend/docs/external-apis.md`, `backend/docs/architecture-and-workflows.md`, `backend/docs/module-reference.md`, `backend/docs/cli-commands.md`, `docs/system-architecture-and-flows.md`, `docs/self-healing-loop.md`, `docs/bug-fix-log.md`, `docs/testing.md`, and regenerated `backend/docs/project-explorer.html`.
+
 - **refactor(ats)**: single source registry and LEVER enum value, no behaviour change (ADR-0022).
   - Why: Preparing to onboard Lever (`jobs.lever.co/<site>`) as a third ATS source without ad-hoc `'ashby' | 'greenhouse'` unions, while ensuring schema migrations are rehearsed safe and additive.
   - Changes:

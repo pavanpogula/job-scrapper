@@ -40,7 +40,7 @@ skills:
 - `backend/src/discovery/**`
 - `backend/src/utils/**`
 - `backend/tests/**`
-- `backend/prisma/schema.prisma` (additive only; removed from fixer scope during L1, restored in L2)
+- `backend/prisma/schema.prisma` (additive only)
 - `docs/**`
 - `CHANGELOG.md`
 - **Forbidden:** Never edits `.github/**`, `.claude/settings.json`, `.agents/hooks.json`, `vercel.json`, `frontend/**`, or dependency files.

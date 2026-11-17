@@ -287,6 +287,12 @@
                         <span>GreenhouseBoards.ts</span>
                         
                     </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_config_LeverBoards_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>LeverBoards.ts</span>
+                        
+                    </div>
                 </li></ul>
                 </li><li class="">
                     <div class="tree-item folder" onclick="toggleFolder(this)">
@@ -316,6 +322,12 @@
                     <div class="tree-item file" onclick="showFile('src_core_ScraperCSV_ts')">
                         <span class="material-icons-round">description</span>
                         <span>ScraperCSV.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_core_selectCompanies_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>selectCompanies.ts</span>
                         
                     </div>
                 </li></ul>
@@ -412,9 +424,27 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ats_LeverClient_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>LeverClient.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ats_place_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>place.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_lib_ats_registry_ts')">
                         <span class="material-icons-round">description</span>
                         <span>registry.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_lib_ats_slug_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>slug.ts</span>
                         
                     </div>
                 </li><li>
@@ -553,6 +583,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('src_utils_SeedLever_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>SeedLever.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_utils_Verify_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Verify.ts</span>
@@ -677,6 +713,12 @@
                     <div class="tree-item file" onclick="showFile('tests_integration_GreenhouseCoexistence_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GreenhouseCoexistence.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_LeverCoexistence_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>LeverCoexistence.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -942,6 +984,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_LastUpdated_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>LastUpdated.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_LeverClient_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>LeverClient.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -1744,6 +1792,31 @@
     ],
     "functions": []
   },
+  "src_config_LeverBoards_ts": {
+    "name": "LeverBoards.ts",
+    "path": "src/config/LeverBoards.ts",
+    "icon": "📋",
+    "iconClass": "green",
+    "summary": "Initial curated list of Lever board tokens used by seed:lever before broad discovery",
+    "tags": [
+      "Config",
+      "Lever",
+      "Seed",
+      "Boards",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "src_core_ClusterScraper_ts": {
     "name": "ClusterScraper.ts",
     "path": "src/core/ClusterScraper.ts",
@@ -1934,6 +2007,41 @@
       {
         "name": "scrapeToCSV()",
         "desc": "Main function - scrapes jobs concurrently and streams to CSV"
+      }
+    ]
+  },
+  "src_core_selectCompanies_ts": {
+    "name": "selectCompanies.ts",
+    "path": "src/core/selectCompanies.ts",
+    "icon": "📋",
+    "iconClass": "green",
+    "summary": "Selects active companies per ATS source for both ClusterScraper coordinator and Scraper.runAll, applying the --lever-max-boards cap (oldest lastCheckedAt first)",
+    "tags": [
+      "Core",
+      "Selection",
+      "Lever",
+      "Cap",
+      "Prisma",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "2"
+      }
+    ],
+    "functions": [
+      {
+        "name": "parseLeverMaxBoards()",
+        "desc": "Parses --lever-max-boards=N from CLI arguments, defaulting to 600"
+      },
+      {
+        "name": "selectCompanies()",
+        "desc": "Selects companies to scrape for enabled ATS sources, capping Lever boards by oldest lastCheckedAt unless explicitSlugs are provided"
       }
     ]
   },
@@ -2373,7 +2481,7 @@
       },
       {
         "label": "Functions",
-        "value": "13"
+        "value": "14"
       }
     ],
     "functions": [
@@ -2400,6 +2508,10 @@
       {
         "name": "recordSourceNotFound()",
         "desc": "Increments notFound counter for a given ATS source"
+      },
+      {
+        "name": "recordSourceSkippedByDeadline()",
+        "desc": "Increments skippedByDeadline counter for a given ATS source when a board is not started due to deadline"
       },
       {
         "name": "recordEvent()",
@@ -2727,7 +2839,7 @@
       },
       {
         "label": "Functions",
-        "value": "13"
+        "value": "10"
       }
     ],
     "functions": [
@@ -2740,24 +2852,12 @@
         "desc": "Splits a Greenhouse location.name string into primary location and deduplicated secondary locations"
       },
       {
-        "name": "isUsState()",
-        "desc": "True when a place part is a US state: an upper-case 2-letter code (\"CA\", \"IL\") or a full state name"
-      },
-      {
-        "name": "parseGreenhousePlace()",
-        "desc": "Parses a \"City, Region, Country\" style place string from the right into country, region and city."
-      },
-      {
         "name": "parseGreenhouseOfficePostal()",
         "desc": "Resolves country/region/city for a job. The job's own location text wins when it names a country"
       },
       {
         "name": "extractMetadataWorkplaceType()",
         "desc": "Extracts Workplace Type from Greenhouse custom metadata[] entries if present"
-      },
-      {
-        "name": "inferEmploymentTypeFromTitle()",
-        "desc": "Infers employmentType from job title when explicit ATS field is absent"
       },
       {
         "name": "extractGreenhouseSalary()",
@@ -2782,6 +2882,86 @@
       {
         "name": "canonicalUrls()",
         "desc": "Builds canonical URL set for a Greenhouse job and board from atsToken (never from gh-- slug)"
+      }
+    ]
+  },
+  "src_lib_ats_LeverClient_ts": {
+    "name": "LeverClient.ts",
+    "path": "src/lib/ats/LeverClient.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Implements AtsClient for public Lever Postings API (v0) with global pacing, retry/backoff, status-based 404/429 handling, and pure job normalization",
+    "tags": [
+      "ATS",
+      "Lever",
+      "Normalizer",
+      "Client",
+      "Pacer",
+      "BF-024",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "13"
+      }
+    ],
+    "functions": [
+      {
+        "name": "escapeHtml()",
+        "desc": "Escapes HTML special characters for plain-text headings injected into Lever job descriptions"
+      },
+      {
+        "name": "mapLeverCommitment()",
+        "desc": "Maps Lever commitment strings (or falls back to title heuristics) to normalized employmentType values"
+      },
+      {
+        "name": "extractLeverSalary()",
+        "desc": "Maps Lever salaryRange into NormalizedSalary without dividing amounts by 100"
+      },
+      {
+        "name": "buildLeverDescriptionHtml()",
+        "desc": "Combines Lever description, lists[], salaryDescription, and additional into sanitized HTML without entity-unescaping"
+      },
+      {
+        "name": "resolveLeverWorkplace()",
+        "desc": "Resolves Lever workplaceType ('Remote' | 'Hybrid' | 'OnSite' | null) and isRemote flag"
+      },
+      {
+        "name": "normalizeLeverJob()",
+        "desc": "Pure normalizer converting a raw Lever posting into a source-agnostic NormalizedJob"
+      },
+      {
+        "name": "extractLeverLogo()",
+        "desc": "Extracts the header company logo from Lever hosted board HTML, ignoring og:image banners"
+      },
+      {
+        "name": "extractLeverTitle()",
+        "desc": "Extracts and sanitizes the HTML <title> text from a Lever hosted board page"
+      },
+      {
+        "name": "pace()",
+        "desc": "Serializes every Lever request start so starts are spaced by at least minIntervalMs after an initialDelayMs delay"
+      },
+      {
+        "name": "fetchBoard()",
+        "desc": "Fetches all active jobs from a Lever board with pacing, retry/backoff, status-based 404/429 handling, and normalization"
+      },
+      {
+        "name": "validateSite()",
+        "desc": "Validates whether a Lever token has at least one posting and a live hosted board page (rejecting dead boards)"
+      },
+      {
+        "name": "fetchCompanyMetadata()",
+        "desc": "Fetches company name and logo from the Lever hosted board page HTML"
+      },
+      {
+        "name": "canonicalUrls()",
+        "desc": "Builds canonical URL set for a Lever job and board from atsToken (never from lv-- slug)"
       }
     ]
   },
@@ -2841,6 +3021,46 @@
       }
     ]
   },
+  "src_lib_ats_place_ts": {
+    "name": "place.ts",
+    "path": "src/lib/ats/place.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Parses free-text job locations into structured country/region/city and infers employment type from job titles",
+    "tags": [
+      "ATS",
+      "Location",
+      "Place",
+      "EmploymentType",
+      "Shared",
+      "ADR-0021",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "isUsState()",
+        "desc": "True when a place part is a US state: an upper-case 2-letter code (\"CA\", \"IL\") or a full state name"
+      },
+      {
+        "name": "parsePlace()",
+        "desc": "Parses a \"City, Region, Country\" style place string from the right into country, region and city."
+      },
+      {
+        "name": "inferEmploymentTypeFromTitle()",
+        "desc": "Infers employmentType from job title when explicit ATS field is absent"
+      }
+    ]
+  },
   "src_lib_ats_registry_ts": {
     "name": "registry.ts",
     "path": "src/lib/ats/registry.ts",
@@ -2868,6 +3088,37 @@
       {
         "name": "createAtsClient()",
         "desc": "Creates an AtsClient instance for the specified ATS source"
+      }
+    ]
+  },
+  "src_lib_ats_slug_ts": {
+    "name": "slug.ts",
+    "path": "src/lib/ats/slug.ts",
+    "icon": "📦",
+    "iconClass": "blue",
+    "summary": "Allocates collision-free unique company slugs while preserving existing (source, atsToken) slugs",
+    "tags": [
+      "ATS",
+      "Slug",
+      "Allocation",
+      "Collision",
+      "Database",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "allocateCompanySlug()",
+        "desc": "Allocates a globally unique Company.slug for a (source, atsToken) pair, reusing any existing slug or appending -2, -3... on collision"
       }
     ]
   },
@@ -3289,6 +3540,41 @@
       }
     ]
   },
+  "src_utils_SeedLever_ts": {
+    "name": "SeedLever.ts",
+    "path": "src/utils/SeedLever.ts",
+    "icon": "🌱",
+    "iconClass": "green",
+    "summary": "Validates Lever board tokens via Postings API and hosted board page, allocates unique lv--<sanitized> slugs, and upserts Company rows with source LEVER",
+    "tags": [
+      "Seed",
+      "Lever",
+      "Setup",
+      "Company",
+      "BF-024",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "2"
+      }
+    ],
+    "functions": [
+      {
+        "name": "parseLeverSeedTokens()",
+        "desc": "Parses CLI arguments into a deduplicated list of case-preserving Lever board tokens"
+      },
+      {
+        "name": "seedLever()",
+        "desc": "Validates each Lever token via validateSite ('live' only) and upserts Company { slug, source: LEVER, atsToken: token, name } by (source, atsToken)"
+      }
+    ]
+  },
   "src_utils_Verify_ts": {
     "name": "Verify.ts",
     "path": "src/utils/Verify.ts",
@@ -3520,6 +3806,34 @@
       "Coexistence",
       "BF-023",
       "ADR-0021"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_integration_LeverCoexistence_test_ts": {
+    "name": "LeverCoexistence.test.ts",
+    "path": "tests/integration/LeverCoexistence.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Proves on real Postgres that Ashby `spotify` and Lever `lv--spotify` coexist without cross-source deactivation or quarantine, shared UUID (source, externalId) uniqueness holds, and allocateCompanySlug handles collisions",
+    "tags": [
+      "Integration",
+      "Postgres",
+      "Lever",
+      "Ashby",
+      "Coexistence",
+      "Slug",
+      "BF-024",
+      "ADR-0022"
     ],
     "info": [
       {
@@ -3990,7 +4304,7 @@
     "path": "tests/unit/AtsRegistry.test.ts",
     "icon": "📝",
     "iconClass": "blue",
-    "summary": "Validates eager default client map initialization in AshbyScraper/EnrichCompanies and verifies Lever client stub throws L2 message",
+    "summary": "Validates eager default client map initialization in AshbyScraper/EnrichCompanies and createAtsClient for all sources including Lever",
     "tags": [
       "ATS",
       "Registry",
@@ -4795,6 +5109,33 @@
       "Freshness",
       "LastUpdated",
       "Scraper"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_LeverClient_test_ts": {
+    "name": "LeverClient.test.ts",
+    "path": "tests/unit/LeverClient.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Tests Lever Postings API fetching, global pacer, retry/404/429/unexpected_body handling, job normalization, commitment/salary mapping, HTML/logo extraction, selectCompanies, leverDeadlineMs, deactivation safety, and seedLever",
+    "tags": [
+      "Unit Test",
+      "Lever",
+      "AtsClient",
+      "Normalizer",
+      "Pacer",
+      "BF-024",
+      "ADR-0022"
     ],
     "info": [
       {

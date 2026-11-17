@@ -14,6 +14,7 @@ skills:
 - Distinguishes expected operational noise (single 404s, brief network hiccups) from actionable regressions (`S1` or `S2`).
 - Evaluates reports against classification rules (`R-CACHE-1`, `R-STALE-1`, `R-API-1`, `R-RATE-1`, `R-CO-1`, `R-STOP-1`, `R-REGRESS-1`).
 - Identifies recurring error fingerprints and checks for existing open pull requests or issues.
+- Read `summary.bySource`; Lever `api_error` → `BF-024`, Greenhouse → `BF-023`, Ashby → `BF-001`.
 - Gates autonomous bugfix execution: only triggers `scraper-bugfixer` when actionable issues exist without open PRs.
 - **Strict Rule:** Never edits production or test implementation code.
 

@@ -1,15 +1,18 @@
 /**
  * @file ATS Client Registry and Factory Unit Tests
- * @summary Validates eager default client map initialization in AshbyScraper/EnrichCompanies and verifies Lever client stub throws L2 message
+ * @summary Validates eager default client map initialization in AshbyScraper/EnrichCompanies and createAtsClient for all sources including Lever
  * @tags ATS, Registry, Factory, Clients, Unit Tests, ADR-0022
  */
 
 import { AshbyScraper } from '../../src/core/Scraper';
 import { createAtsClient, DEFAULT_CLIENT_SOURCES } from '../../src/lib/ats/registry';
+import { LeverClient } from '../../src/lib/ats/LeverClient';
 
 describe('ATS Client Registry (ADR-0022)', () => {
-  it('throws expected L2 message when creating Lever client', () => {
-    expect(() => createAtsClient('lever')).toThrow('Lever client not implemented yet (L2)');
+  it('constructs LeverClient when creating lever client', () => {
+    const leverClient = createAtsClient('lever', { minIntervalMs: 1500, initialDelayMs: 500 });
+    expect(leverClient).toBeInstanceOf(LeverClient);
+    expect(leverClient.source).toBe('lever');
   });
 
   it('constructs Ashby and Greenhouse clients for DEFAULT_CLIENT_SOURCES without throwing', () => {

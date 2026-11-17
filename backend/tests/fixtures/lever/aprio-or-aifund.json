@@ -1,0 +1,25 @@
+[
+  {
+    "id": "55555555-5555-4555-8555-555555555551",
+    "text": "Tax Associate",
+    "categories": {
+      "department": "Advisory",
+      "team": "International Tax",
+      "location": "Manila, Philippines",
+      "allLocations": ["Manila, Philippines"],
+      "commitment": "Full-time"
+    },
+    "country": "PH",
+    "workplaceType": "onsite",
+    "createdAt": 1786100000000,
+    "description": "<p>Assist global tax advisory engagements.</p>",
+    "salaryRange": {
+      "min": 45000,
+      "max": 60000,
+      "currency": "PHP",
+      "interval": "per-month-salary"
+    },
+    "hostedUrl": "https://jobs.lever.co/AIFund/55555555-5555-4555-8555-555555555551",
+    "applyUrl": "https://jobs.lever.co/AIFund/55555555-5555-4555-8555-555555555551/apply"
+  }
+]

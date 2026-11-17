@@ -310,6 +310,18 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
                             const diff = order.slug === 'desc' ? slugB.localeCompare(slugA) : slugA.localeCompare(slugB);
                             if (diff !== 0) return diff;
                         }
+                        if (order.lastCheckedAt) {
+                            const dir = typeof order.lastCheckedAt === 'string' ? order.lastCheckedAt : order.lastCheckedAt.sort;
+                            const nulls = typeof order.lastCheckedAt === 'object' ? order.lastCheckedAt.nulls : undefined;
+                            const aTime = a.lastCheckedAt ? new Date(a.lastCheckedAt).getTime() : null;
+                            const bTime = b.lastCheckedAt ? new Date(b.lastCheckedAt).getTime() : null;
+                            if (aTime === null && bTime !== null) return nulls === 'last' ? 1 : -1;
+                            if (aTime !== null && bTime === null) return nulls === 'last' ? -1 : 1;
+                            if (aTime !== null && bTime !== null) {
+                                const diff = dir === 'desc' ? bTime - aTime : aTime - bTime;
+                                if (diff !== 0) return diff;
+                            }
+                        }
                     }
                     return 0;
                 });
@@ -340,7 +352,16 @@ export function createStatefulPrisma(initialData: StatefulPrismaData = {}) {
 
         findUnique: jest.fn(async (args: any) => {
             const slug = args?.where?.slug;
-            return companies.get(slug) || null;
+            if (slug !== undefined) {
+                return companies.get(slug) || null;
+            }
+            const srcToken = args?.where?.source_atsToken;
+            if (srcToken) {
+                return Array.from(companies.values()).find(
+                    c => (c.source || 'ASHBY') === srcToken.source && c.atsToken === srcToken.atsToken
+                ) || null;
+            }
+            return null;
         }),
 
         findFirst: jest.fn(async (args?: any) => {

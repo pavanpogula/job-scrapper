@@ -193,4 +193,25 @@ describe('ErrorTracker v2 Suite (P1-T10 / TEST-07)', () => {
             }
         });
     });
+
+    test('merges skippedByDeadline counters across worker reports for Lever', () => {
+        const w1 = new ErrorTracker('db_scrape');
+        w1.recordSourceAttempt('lever');
+        w1.recordSourceSkippedByDeadline('lever');
+        w1.recordSourceSkippedByDeadline('lever');
+
+        const w2 = new ErrorTracker('db_scrape');
+        w2.recordSourceAttempt('lever');
+        w2.recordSourceSkippedByDeadline('lever');
+
+        const merged = ErrorTracker.mergeReports([w1.buildReport(), w2.buildReport()], Date.now() - 1000, 'cluster');
+        expect(merged.summary.bySource?.lever).toEqual({
+            companiesAttempted: 2,
+            companiesWithJobs: 0,
+            jobsCollected: 0,
+            notFound: 0,
+            apiErrors: 0,
+            skippedByDeadline: 3
+        });
+    });
 });

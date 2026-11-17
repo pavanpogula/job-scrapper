@@ -12,6 +12,8 @@
 | 2c | Ashby Hosted Board page | `GET https://jobs.ashbyhq.com/{slug}` (HTML) | none | `src/lib/AshbyClient.ts` `fetchOrganizationMetadata()` (`npm run discover -- --enrich`) |
 | 2d | Greenhouse Job Board API (Jobs) | `GET https://boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true&pay_transparency=true` | none | `src/lib/ats/GreenhouseClient.ts` `fetchBoard()` (`Scraper.ts`, `ClusterScraper.ts`) |
 | 2e | Greenhouse Job Board API (Board Info) | `GET https://boards-api.greenhouse.io/v1/boards/{token}` | none | `src/lib/ats/GreenhouseClient.ts` `fetchCompanyMetadata()` (`SeedGreenhouse.ts`, `EnrichCompanies.ts`) |
+| 2f | Lever Postings API (Board Jobs) | `GET https://api.lever.co/v0/postings/{site}?mode=json` | none | `src/lib/ats/LeverClient.ts` `fetchBoard()`, `validateSite()` (`Scraper.ts`, `ClusterScraper.ts`, `SeedLever.ts`) |
+| 2g | Lever Hosted Board page (HTML) | `GET https://jobs.lever.co/{site}` | none | `src/lib/ats/LeverClient.ts` `validateSite()`, `fetchCompanyMetadata()` (`SeedLever.ts`, `EnrichCompanies.ts`) |
 | 3 | Wayback CDX | `GET http://web.archive.org/cdx/search/cdx` | none | `src/discovery/CdxWorker.ts` (+ manual download for `process:cdx`) |
 | 3b | CommonCrawl Index | `GET https://index.commoncrawl.org/CC-MAIN-2024-51-index` | none | `src/discovery/CdxWorker.ts` `fetchCommonCrawlUrls()` (`npm run discover -- --common-crawl`) |
 | 4 | Google Drive v3 | `files.create` (multipart upload), `files.list` | Service-account JWT | `src/lib/GoogleDriveOAuth.ts` |
@@ -171,6 +173,35 @@ or `null` on any failure. Used only by `enrichCompanyMetadata()` in `src/discove
 - `content`: **HTML-entity-escaped** (`&lt;`, `&gt;`, `&quot;`, `&amp;`, `&#39;`, numeric entities) — unescaped **exactly once** via single-pass `decodeHtmlEntities` before `sanitizeJobDescriptionHtml` and `sanitizeJobDescriptionPlain`. The raw escaped `content` is dropped from `raw` metadata so descriptions are never stored twice.
 - `pay_input_ranges[]` (returned only when `pay_transparency=true`): integer **cents** (`min_cents` / `max_cents` ÷ 100), `currency_type`, and interval `'1 HOUR'` when `title` (or fallback `blurb`) matches `/\bhourly\b|per hour/i`, else `'1 YEAR'`.
 - `raw` (`Job.metadata`) carries `descriptionHtml`, `descriptionPlain`, `jobUrl`, `team: null`, `secondaryLocations`, `_source: 'rest'`, `_ats: 'greenhouse'`, `_normVersion: 1`, `updated_at`, `departments`, `offices`, and `metadata`.
+
+---
+
+## 2f–2g. Lever Public Postings API & Hosted Board (`src/lib/ats/LeverClient.ts`)
+
+**Endpoints (verified live on 2026-11-16 across palantir, spotify, zoox, matchgroup, veeva, outreach, binance, AIFund, arcteryx.com, 1840&Company):**
+- **Postings List:** `GET https://api.lever.co/v0/postings/{site}?mode=json`
+  - Returns a JSON array of every published posting in one call (no auth; paging via `&limit=N&skip=M` exists but is unused in v1). No `gzip`/`br` compression support.
+  - Unknown site → `404 {"ok":false,"error":"Document not found"}`.
+  - Live site with 0 open jobs → `200 []` (seen on `lever`, `wealthsimple`, `whoop`, `shieldai`).
+  - **Non-array `200` body** fails loudly (`failure.code = 'unexpected_body'`, `fetchMode = 'none'`).
+- **Hosted Board HTML:** `GET https://jobs.lever.co/{site}` (with `Accept: text/html,application/xhtml+xml,*/*;q=0.8`).
+  - Used by `validateSite(token)` and `fetchCompanyMetadata(ref)`.
+  - **Dead boards:** some sites (e.g. `AIFund`, `1840&Company`) return `200` on `/v0/postings/{site}` while `jobs.lever.co/{site}` returns `404` (`validateSite` returns `'dead_board'`).
+  - **Logo vs banner trap:** `og:image` is the `1200x630` banner (even on the same S3 host); `extractLeverLogo()` extracts only the header `<img>` with `alt` ending in `logo` on `lever-client-logos.s3.<region>.amazonaws.com` or `lever-client-logos.s3.amazonaws.com` (`og:image` is never used). Company name is read from `<title>`.
+
+**Site Naming, Rate Pacing & Scope:**
+- Site names are **case-sensitive** (`spotify` → `200`, `Spotify` → `404`) and may contain `.` and `&` (`arcteryx.com`, `1840&Company`): tokens are preserved verbatim in `Company.atsToken`, URL-encoded via `encodeURIComponent(token)` in API/board URLs, and allocated a permanent slug via `allocateCompanySlug()` (`lv--<sanitized>`, appending `-2`, `-3`, … only on collision).
+- `api.lever.co/robots.txt` declares `Crawl-delay: 1`: `LeverClient` serializes all HTTP starts through a per-instance pacer (`minIntervalMs` default `1000`, `initialDelayMs` default `0`, `timeout` `60000` ms) and `Scraper.getLimiter('lever')` forces concurrency `1`. In `scrape:parallel`, workers receive `leverMinIntervalMs = 1000 * workerCount` and staggered `leverInitialDelayMs = (workerId - 1) * 1000` so aggregate traffic stays ≤ 1 req/s.
+- Retryable errors (`429`, `500`, `502`, `503`, `504`, `ECONNABORTED`, `ETIMEDOUT`, `ECONNRESET`) wait on the pacer on every retry (`maxRetries = 2`, `baseDelayMs = 300`, `Retry-After` capped at 10 s); only HTTP `429` sets `rateLimited: true`.
+- EU boards (`api.eu.lever.co`, `jobs.eu.lever.co`) return `404` on `api.lever.co` and are out of scope in v1.
+
+**Job Fields & Normalization (`normalizeLeverJob`):**
+- `id` (UUID) → `externalId`, `legacyKey: "lever:" + id` (stored in `Job.ashbyId`), deduped by `id` per board. Missing/invalid `id` or empty/placeholder `text` → filtered with a `ValidationIssue`.
+- `categories.department` → `department`, falling back to `categories.team` when `department` is absent; `categories.location` / `categories.allLocations[0]` → primary `location` (`postal`/`country` parsed via shared `parsePlace()`, preferring explicit `raw.country`); `allLocations.slice(1)` → `secondaryLocations` in `raw`.
+- `categories.commitment` maps case-insensitively (`Scholarship` → `Intern`, `Seasonal`/`Fixed-Term`/`Short Term`/`Temp` → `Temporary`, `Freelance`/`Contract` → `Contract`, `Full-Time`/`Permanent`/`Full Time/Part Time` → `FullTime`, `Part-Time`/`PT` → `PartTime`; `"International"` does not match `Intern`), falling back to `inferEmploymentTypeFromTitle(title)`.
+- `createdAt` (epoch milliseconds) → ISO UTC `publishedAt`; `sourceUpdatedAt: null` (Lever exposes no updated-at timestamp).
+- `description`, `lists[]` (`<ul>` wrapper when bare `<li>`), `salaryDescription`, and `additional` (already raw HTML, **never** HTML-entity-unescaped) are joined, sanitized via `sanitizeJobDescriptionHtml` / `sanitizeJobDescriptionPlain`, and dropped from extra `raw` metadata (`lists`, `opening`, `openingPlain`, `descriptionBody`, `descriptionBodyPlain`, `additional`, `additionalPlain`, `salaryDescription`, `salaryDescriptionPlain` are omitted from `raw`).
+- `salaryRange` uses plain currency units (no `/ 100`): `per-year-salary` → `'1 YEAR'`, `per-month-salary` → `'1 MONTH'`, `per-hour-wage` → `'1 HOUR'`, `one-time` → `null` salary.
 
 ---
 
