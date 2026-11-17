@@ -66,6 +66,10 @@ describe('SourceBadge Component', () => {
     rerender(<SourceBadge source={null} />);
     expect(screen.getByTestId('source-badge')).toHaveTextContent('via Ashby');
     expect(screen.getByTestId('source-badge')).toHaveAttribute('data-source', 'ashby');
+
+    rerender(<SourceBadge source="constructor" />);
+    expect(screen.getByTestId('source-badge')).toHaveTextContent('via Ashby');
+    expect(screen.getByTestId('source-badge')).toHaveAttribute('data-source', 'ashby');
   });
 });
 

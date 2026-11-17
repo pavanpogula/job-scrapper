@@ -22,7 +22,7 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export const SourceBadge: React.FC<SourceBadgeProps> = ({ source, size = 'small', sx }) => {
   const raw = (source || '').toLowerCase();
-  const resolvedKey = raw in SOURCE_LABELS ? raw : 'ashby';
+  const resolvedKey = Object.prototype.hasOwnProperty.call(SOURCE_LABELS, raw) ? raw : 'ashby';
   const label = SOURCE_LABELS[resolvedKey];
 
   return (

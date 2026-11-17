@@ -29,7 +29,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import TuneIcon from '@mui/icons-material/Tune';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import CheckIcon from '@mui/icons-material/Check';
-import { JobsQueryParams, WorkplaceType, EmploymentType, FacetsData } from '../../types/api';
+import { JobsQueryParams, WorkplaceType, EmploymentType, FacetsData, FILTER_SOURCES } from '../../types/api';
 import { formatCountryOption, formatWorkplace, formatEmployment } from '../../lib/labels';
 
 export interface JobFiltersBarProps {
@@ -573,7 +573,7 @@ export const JobFiltersBar: React.FC<JobFiltersBarProps> = ({
               label="Source"
               onChange={(e) =>
                 onUpdateFilters({
-                  source: (e.target.value as 'ashby' | 'greenhouse' | '') || '',
+                  source: (e.target.value as (typeof FILTER_SOURCES)[number] | '') || '',
                   page: 1,
                 })
               }

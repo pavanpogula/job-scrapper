@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Added API test verifying `GET /v1/jobs?source=lever` ignores unknown filter in L1.
     - Added isolated-schema integration test `LeverL1Schema.test.ts` with `schema.pre-l1.prisma` fixture.
     - Added frontend tests in `sourceBadge.test.tsx` verifying Lever badges and missing `boardUrl` behavior.
+    - Review fixes (PR #47): `SourceBadge` uses an own-property check so inherited keys like `constructor` fall back to Ashby (test added); `JobFiltersBar` mobile source cast derives from `FILTER_SOURCES`.
     - All unit, integration, frontend, and repo tests passing.
   - Docs:
     - Authored `docs/decisions/ADR-0022-lever-source.md` and indexed in `docs/decisions/README.md` and `docs/README.md`.
