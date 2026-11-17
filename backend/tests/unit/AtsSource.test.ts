@@ -21,7 +21,7 @@ import { isValidSlug } from '../../src/discovery/CdxWorker';
 describe('ATS Source Registry & Helpers (ADR-0022)', () => {
   it('defines the single source of truth registry correctly', () => {
     expect(SUPPORTED_ATS_SOURCES).toEqual(['ashby', 'greenhouse', 'lever']);
-    expect(API_SOURCES).toEqual(['ashby', 'greenhouse']);
+    expect(API_SOURCES).toEqual(['ashby', 'greenhouse', 'lever']);
 
     expect(ATS_SOURCES.ashby).toEqual({
       source: 'ashby',

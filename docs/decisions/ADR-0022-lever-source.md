@@ -1,6 +1,6 @@
 # ADR-0022: Multi-Source ATS Architecture Extension (Lever Onboarding)
 
-- Status: Accepted
+- Status: Accepted (L1–L3 implemented; L4–L5 pending)
 - Date: 2026-11-16
 - Deciders: owner, scraper-architect
 - Related: [ADR-0021](./ADR-0021-multi-source-ats.md), [ADR-0001](./ADR-0001-postgres-source-of-truth.md), [ADR-0003](./ADR-0003-immutable-cache-generations.md), [ADR-0018](./ADR-0018-job-last-updated-detection.md)
@@ -29,7 +29,7 @@ Extend the multi-source architecture established in ADR-0021 across a 5-phase pl
    - `Job.ashbyId`: Legacy global key formatted as `lever:<uuid>`.
    - `Job.externalId`: Lever posting UUID.
 3. **Single Source Registry:**
-   Centralize ATS source descriptors in `backend/src/lib/ats/source.ts` (`SUPPORTED_ATS_SOURCES`, `ATS_SOURCES`). `API_SOURCES` and `FILTER_SOURCES` explicitly gate API and UI exposure until L3.
+   Centralize ATS source descriptors in `backend/src/lib/ats/source.ts` (`SUPPORTED_ATS_SOURCES`, `ATS_SOURCES`). L1 gated API and UI exposure via `API_SOURCES` and `FILTER_SOURCES`; L3 enabled `'lever'` in both `API_SOURCES` and `FILTER_SOURCES`.
 4. **Politeness and Concurrency:**
    Lever scraping concurrency capped at 1 per worker with a per-process pacer ensuring `>= 1000 ms * workerCount` between requests.
 5. **Run-Time Budget:**

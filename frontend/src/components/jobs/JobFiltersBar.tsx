@@ -30,7 +30,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import CheckIcon from '@mui/icons-material/Check';
 import { JobsQueryParams, WorkplaceType, EmploymentType, FacetsData, FILTER_SOURCES } from '../../types/api';
-import { formatCountryOption, formatWorkplace, formatEmployment } from '../../lib/labels';
+import { formatCountryOption, formatWorkplace, formatEmployment, SOURCE_LABELS, resolveJobSource } from '../../lib/labels';
 
 export interface JobFiltersBarProps {
   filters: JobsQueryParams;
@@ -378,13 +378,10 @@ export const JobFiltersBar: React.FC<JobFiltersBarProps> = ({
 
           {/* Source Pill */}
           <Chip
-            label={
-              filters.source === 'greenhouse'
-                ? 'Source: Greenhouse'
-                : filters.source === 'ashby'
-                ? 'Source: Ashby'
-                : 'Source'
-            }
+            label={(() => {
+              const key = resolveJobSource(filters.source);
+              return key ? `Source: ${SOURCE_LABELS[key]}` : 'Source';
+            })()}
             onClick={(e) => setSourceAnchor(e.currentTarget)}
             onDelete={filters.source ? () => onUpdateFilters({ source: '', page: 1 }) : undefined}
             deleteIcon={<ClearIcon fontSize="small" />}
@@ -407,24 +404,18 @@ export const JobFiltersBar: React.FC<JobFiltersBarProps> = ({
             >
               All Sources
             </MenuItem>
-            <MenuItem
-              selected={filters.source === 'ashby'}
-              onClick={() => {
-                onUpdateFilters({ source: 'ashby', page: 1 });
-                setSourceAnchor(null);
-              }}
-            >
-              Ashby
-            </MenuItem>
-            <MenuItem
-              selected={filters.source === 'greenhouse'}
-              onClick={() => {
-                onUpdateFilters({ source: 'greenhouse', page: 1 });
-                setSourceAnchor(null);
-              }}
-            >
-              Greenhouse
-            </MenuItem>
+            {FILTER_SOURCES.map((src) => (
+              <MenuItem
+                key={src}
+                selected={filters.source === src}
+                onClick={() => {
+                  onUpdateFilters({ source: src, page: 1 });
+                  setSourceAnchor(null);
+                }}
+              >
+                {SOURCE_LABELS[src]}
+              </MenuItem>
+            ))}
           </Menu>
 
           {/* Salary Pill */}
@@ -579,8 +570,11 @@ export const JobFiltersBar: React.FC<JobFiltersBarProps> = ({
               }
             >
               <MenuItem value="">All Sources</MenuItem>
-              <MenuItem value="ashby">Ashby</MenuItem>
-              <MenuItem value="greenhouse">Greenhouse</MenuItem>
+              {FILTER_SOURCES.map((src) => (
+                <MenuItem key={src} value={src}>
+                  {SOURCE_LABELS[src]}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 

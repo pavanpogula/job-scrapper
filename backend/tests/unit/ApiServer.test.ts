@@ -319,7 +319,7 @@ describe('API Server Contract & Snapshot Tests', () => {
       );
     });
 
-    it('filters jobs by source=ashby and source=greenhouse', async () => {
+    it('filters jobs by source=ashby, source=greenhouse, and source=lever (DB path)', async () => {
       mockJob.findMany.mockResolvedValueOnce([]);
       mockJob.count.mockResolvedValueOnce(0);
 
@@ -345,9 +345,25 @@ describe('API Server Contract & Snapshot Tests', () => {
           where: expect.objectContaining({ source: 'GREENHOUSE' }),
         })
       );
+
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
+
+      const leverRes = await request(app)
+        .get('/v1/jobs?source=lever')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(leverRes.status).toBe(200);
+      expect(leverRes.headers['x-cache']).toBe('MISS');
+      expect(leverRes.headers['x-cache-reason']).toBe('view_not_cached');
+      expect(mockJob.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ source: 'LEVER' }),
+        })
+      );
     });
 
-    it('ignores unknown source values', async () => {
+    it('ignores unknown source values including workday', async () => {
       mockJob.findMany.mockResolvedValueOnce([]);
       mockJob.count.mockResolvedValueOnce(0);
 
@@ -360,17 +376,15 @@ describe('API Server Contract & Snapshot Tests', () => {
           where: expect.not.objectContaining({ source: expect.anything() }),
         })
       );
-    });
 
-    it('ignores source=lever in L1 returning all jobs without source filter (same as GET /v1/jobs)', async () => {
-      mockJob.findMany.mockResolvedValueOnce([testJob]);
-      mockJob.count.mockResolvedValueOnce(1);
+      mockJob.findMany.mockResolvedValueOnce([]);
+      mockJob.count.mockResolvedValueOnce(0);
 
-      const res = await request(app)
-        .get('/v1/jobs?source=lever')
+      const workdayRes = await request(app)
+        .get('/v1/jobs?source=workday')
         .set('X-Forwarded-For', getNextIp());
 
-      expect(res.status).toBe(200);
+      expect(workdayRes.status).toBe(200);
       expect(mockJob.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.not.objectContaining({ source: expect.anything() }),
@@ -714,6 +728,34 @@ describe('API Server Contract & Snapshot Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body.source).toBe('greenhouse');
       expect(res.body.boardUrl).toBe('https://job-boards.greenhouse.io/foo_bar');
+    });
+
+    it('returns Lever company profile with Lever boardUrl built from atsToken and source', async () => {
+      mockCompany.findFirst.mockResolvedValueOnce({
+        slug: 'lv--1840-company',
+        name: '1840 & Company',
+        logoUrl: null,
+        status: 'ACTIVE',
+        source: 'LEVER',
+        atsToken: '1840&Company',
+      });
+      mockJob.count
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(2);
+      mockJob.findFirst.mockResolvedValueOnce(null);
+      mockJob.groupBy
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      const res = await request(app)
+        .get('/v1/companies/lv--1840-company')
+        .set('X-Forwarded-For', getNextIp());
+
+      expect(res.status).toBe(200);
+      expect(res.body.source).toBe('lever');
+      expect(res.body.boardUrl).toBe('https://jobs.lever.co/1840%26Company');
     });
 
     it('returns 404 when company does not exist in database', async () => {

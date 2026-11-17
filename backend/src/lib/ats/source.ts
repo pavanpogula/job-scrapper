@@ -10,9 +10,8 @@ export type DbAts = 'ASHBY' | 'GREENHOUSE' | 'LEVER';
 
 /**
  * Sources accepted by the public HTTP API and frontend filter.
- * Lever is added in L3.
  */
-export const API_SOURCES: readonly AtsSource[] = ['ashby', 'greenhouse'];
+export const API_SOURCES: readonly AtsSource[] = ['ashby', 'greenhouse', 'lever'];
 
 export interface AtsSourceInfo {
   source: AtsSource;

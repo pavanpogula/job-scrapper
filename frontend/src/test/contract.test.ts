@@ -18,6 +18,7 @@ import companyProfileFound from './fixtures/contract/company-profile.found.json'
 import companyProfileNotFound from './fixtures/contract/company-profile.not-found.json';
 import jobsCompany from './fixtures/contract/jobs.company.json';
 import jobsSourceGreenhouse from './fixtures/contract/jobs.source-greenhouse.json';
+import jobsSourceLever from './fixtures/contract/jobs.source-lever.json';
 import companiesSortedByJobs from './fixtures/contract/companies.sorted-by-jobs.json';
 
 import type {
@@ -43,6 +44,7 @@ jobsFiltered satisfies JobsResponse;
 jobsEmpty satisfies JobsResponse;
 jobsCompany satisfies JobsResponse;
 jobsSourceGreenhouse satisfies JobsResponse;
+jobsSourceLever satisfies JobsResponse;
 jobDetailFound satisfies JobDetail;
 facetsDefault satisfies FacetsData;
 companiesDefault satisfies CompaniesResponse;
@@ -262,6 +264,17 @@ describe('P8a: Frontend API Contract Parity & Fixture Validation', () => {
         expect(typeof job.externalId).toBe('string');
       }
       expect(Object.keys(jobsSourceGreenhouse.meta).sort()).toEqual([...PAGINATION_META_KEYS].sort());
+    });
+
+    it('validates jobs.source-lever.json matches exact response and Lever item shape', () => {
+      expect(Object.keys(jobsSourceLever).sort()).toEqual([...JOBS_RESPONSE_KEYS].sort());
+      expect(jobsSourceLever.data.length).toBeGreaterThan(0);
+      for (const job of jobsSourceLever.data) {
+        expect(Object.keys(job).sort()).toEqual([...JOB_LIST_ITEM_KEYS].sort());
+        expect(job.source).toBe('lever');
+        expect(typeof job.externalId).toBe('string');
+      }
+      expect(Object.keys(jobsSourceLever.meta).sort()).toEqual([...PAGINATION_META_KEYS].sort());
     });
 
     it('validates jobs.empty.json matches exact response and empty data shape', () => {

@@ -135,6 +135,67 @@ function createGreenhouseJob() {
 }
 
 /**
+ * @summary Creates a deterministic sample Lever job for contract fixture testing (non-Remote so jobs.filtered stays unchanged)
+ */
+function createLeverJob() {
+  const published = new Date(Date.UTC(2026, 1, 15, 11, 30));
+  return {
+    id: '00000000-0000-4000-8000-000000000077',
+    ashbyId: 'lever:77777777-7777-4777-8777-777777777777',
+    externalId: '77777777-7777-4777-8777-777777777777',
+    source: 'LEVER',
+    title: 'Principal Systems Engineer',
+    companySlug: 'lv--acme',
+    departmentId: 'dept-eng',
+    locationId: 'loc-ny',
+    employmentType: 'FullTime',
+    workplaceType: 'Hybrid',
+    isRemote: false,
+    country: 'US',
+    region: 'NY',
+    city: 'New York',
+    postalAddress: null,
+    salaryMin: 190000,
+    salaryMax: 250000,
+    salaryCurrency: 'USD',
+    salaryInterval: '1 YEAR',
+    compensationTierSummary: '$190k - $250k',
+    descriptionHtml: '<p>Job description for Principal Systems Engineer at Acme</p>',
+    applyUrl: 'https://jobs.lever.co/acme/77777777-7777-4777-8777-777777777777/apply',
+    contentHash: 'hash-lv-77',
+    active: true,
+    isListed: true,
+    lastSeenAt: FIXED_DATE,
+    publishedAt: published,
+    lastUpdatedAt: published,
+    lastUpdatedSource: 'published',
+    createdAt: published,
+    updatedAt: published,
+    metadata: {
+      _source: 'rest',
+      _ats: 'lever',
+      _normVersion: 1,
+      jobUrl: 'https://jobs.lever.co/acme/77777777-7777-4777-8777-777777777777',
+      descriptionHtml: '<p>Job description for Principal Systems Engineer at Acme</p>',
+      descriptionPlain: 'Job description for Principal Systems Engineer at Acme',
+      team: 'Core Systems',
+      secondaryLocations: [{ location: 'San Francisco, US' }],
+    },
+    department: { id: 'dept-eng', name: 'Engineering' },
+    location: { id: 'loc-ny', name: 'New York' },
+    company: {
+      id: 'comp-lv-acme',
+      slug: 'lv--acme',
+      name: 'Acme (Lever)',
+      logoUrl: null,
+      source: 'LEVER',
+      atsToken: 'acme',
+      _count: { jobs: 1 },
+    },
+  };
+}
+
+/**
  * @summary Compares response payload against committed contract fixture or updates fixture file when UPDATE_CONTRACT_FIXTURES=1
  * @param fixtureName Fixture base name (e.g. 'jobs.default')
  * @param actualData Live response payload received from endpoint
@@ -199,6 +260,7 @@ describe('ContractFixtures API Integration Suite (P8a)', () => {
         { id: 'comp-acme', slug: 'acme-corp', name: 'Acme Corp', logoUrl: 'https://example.com/acme-logo.png', status: 'ACTIVE', source: 'ASHBY', atsToken: 'acme-corp', _count: { jobs: 3 } },
         { id: 'comp-beta', slug: 'beta-inc', name: 'Beta Inc', logoUrl: null, status: 'ACTIVE', source: 'ASHBY', atsToken: 'beta-inc', _count: { jobs: 2 } },
         { id: 'comp-stripe', slug: 'gh--stripe', name: 'Stripe', logoUrl: null, status: 'ACTIVE', source: 'GREENHOUSE', atsToken: 'stripe', _count: { jobs: 1 } },
+        { id: 'comp-lv-acme', slug: 'lv--acme', name: 'Acme (Lever)', logoUrl: null, status: 'ACTIVE', source: 'LEVER', atsToken: 'acme', _count: { jobs: 1 } },
       ],
       departments: [
         { id: 'dept-eng', name: 'Engineering' },
@@ -214,6 +276,7 @@ describe('ContractFixtures API Integration Suite (P8a)', () => {
       statefulPrisma.seed('job', createSampleJob(i));
     }
     statefulPrisma.seed('job', createGreenhouseJob());
+    statefulPrisma.seed('job', createLeverJob());
 
     Object.assign(mockCompany, statefulPrisma.company);
     Object.assign(mockJob, statefulPrisma.job);
@@ -231,7 +294,7 @@ describe('ContractFixtures API Integration Suite (P8a)', () => {
     });
 
     it('verifies GET /v1/jobs (filtered: workplaceType=Remote&country=US)', async () => {
-      const allJobs = [...[1, 2, 3, 4, 5].map(createSampleJob), createGreenhouseJob()];
+      const allJobs = [...[1, 2, 3, 4, 5].map(createSampleJob), createGreenhouseJob(), createLeverJob()];
       const filtered = allJobs.filter((j) => j.workplaceType === 'Remote' && j.country === 'US');
       mockJob.findMany.mockResolvedValueOnce(filtered);
       mockJob.count.mockResolvedValueOnce(filtered.length);
@@ -250,6 +313,15 @@ describe('ContractFixtures API Integration Suite (P8a)', () => {
       expect(res.body.data[0].source).toBe('greenhouse');
       expect(res.body.data[0].externalId).toBe('5678901');
       assertOrUpdateFixture('jobs.source-greenhouse', res.body);
+    });
+
+    it('verifies GET /v1/jobs?source=lever', async () => {
+      const res = await request(app).get('/v1/jobs?source=lever').set('X-Forwarded-For', '10.0.0.16');
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(1);
+      expect(res.body.data[0].source).toBe('lever');
+      expect(res.body.data[0].externalId).toBe('77777777-7777-4777-8777-777777777777');
+      assertOrUpdateFixture('jobs.source-lever', res.body);
     });
 
     it('verifies GET /v1/jobs (empty page)', async () => {

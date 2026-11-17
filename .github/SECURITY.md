@@ -18,7 +18,7 @@ In scope: the code in this repository, the REST API (`/v1/*`, `/health`) and the
 `www.boolean.page`.
 
 Out of scope: denial-of-service or load testing against the live site, social engineering, and the
-third-party job boards (Ashby, Greenhouse) whose public postings the scraper reads.
+third-party job boards (Ashby, Greenhouse, Lever) whose public postings the scraper reads.
 
 ## Supported versions
 

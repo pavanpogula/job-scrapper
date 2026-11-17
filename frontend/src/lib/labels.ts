@@ -3,6 +3,25 @@
  * @summary Human-readable labels and formatting for ATS enums, workplace types, employment types, salary, and countries
  */
 
+import type { JobSource } from '../types/api';
+
+/**
+ * Single source of truth for human-readable ATS provider names.
+ */
+export const SOURCE_LABELS: Record<JobSource, string> = {
+  ashby: 'Ashby',
+  greenhouse: 'Greenhouse',
+  lever: 'Lever',
+};
+
+/**
+ * Resolves a raw source string safely via own-property lookup (falling back to null if unknown).
+ */
+export function resolveJobSource(source?: string | null): JobSource | null {
+  const raw = (source || '').trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(SOURCE_LABELS, raw) ? (raw as JobSource) : null;
+}
+
 /**
  * Maps raw workplace type enum to a clean, human-readable label
  */

@@ -3625,7 +3625,7 @@
       },
       {
         "label": "Functions",
-        "value": "3"
+        "value": "4"
       }
     ],
     "functions": [
@@ -3636,6 +3636,10 @@
       {
         "name": "createGreenhouseJob()",
         "desc": "Creates a deterministic sample Greenhouse job for contract fixture testing"
+      },
+      {
+        "name": "createLeverJob()",
+        "desc": "Creates a deterministic sample Lever job for contract fixture testing (non-Remote so jobs.filtered stays unchanged)"
       },
       {
         "name": "assertOrUpdateFixture()",
@@ -3879,15 +3883,17 @@
     "path": "tests/integration/MixedSources.test.ts",
     "icon": "📝",
     "iconClass": "blue",
-    "summary": "Proves source filter, source/externalId fields, facets, board links and underscore slugs with Ashby and Greenhouse rows side by side (ADR-0021)",
+    "summary": "Proves source filter, source/externalId fields, facets, board links and special-char tokens with Ashby, Greenhouse, and Lever rows side by side (ADR-0021, ADR-0022)",
     "tags": [
       "tests",
       "integration",
       "multi-source",
-      "greenhouse",
       "ashby",
+      "greenhouse",
+      "lever",
       "postgres",
-      "ADR-0021"
+      "ADR-0021",
+      "ADR-0022"
     ],
     "info": [
       {

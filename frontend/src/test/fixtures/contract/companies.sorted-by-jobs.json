@@ -17,6 +17,14 @@
       "jobCount": 2
     },
     {
+      "slug": "lv--acme",
+      "name": "Acme (Lever)",
+      "logoUrl": null,
+      "source": "lever",
+      "boardUrl": "https://jobs.lever.co/acme",
+      "jobCount": 1
+    },
+    {
       "slug": "gh--stripe",
       "name": "Stripe",
       "logoUrl": null,
@@ -25,7 +33,7 @@
       "jobCount": 1
     }
   ],
-  "total": 3,
+  "total": 4,
   "page": 1,
   "pageSize": 30,
   "totalPages": 1
