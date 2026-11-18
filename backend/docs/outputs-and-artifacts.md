@@ -9,6 +9,7 @@ Every file written by the code (verified by grepping `writeFile*`, `createWriteS
 | `output/reports/<YYYY-MM>/<runId>.md` | Markdown | `classifyReport()` / `ReportClassifier.ts` | `npm run report:classify` | ❌ | Human-readable run summary |
 | `output/latest-<mode>.json` | JSON | `ErrorTracker.saveReport()` / `saveMergedReport()` | `npm run scrape`, `scrape:parallel`, `scrape:csv` | ❌ | Copy of the newest report for that mode (`cluster`, `single`, `csv`) |
 | `output/latest-error-report.json` | JSON | `ErrorTracker.saveReport()` / `saveMergedReport()` | `npm run scrape`, `scrape:parallel` | ❌ | Copy of newest DB-mode run, kept for compatibility (CSV runs do not overwrite) |
+| `output/lever-discovery-state.json` | JSON | `saveLeverDiscoveryState()` in `src/discovery/LeverDiscovery.ts` | `npm run discover -- --source=lever` | ❌ (`output/` ignored) | Persistent Wayback harvest cursor & validation outcomes cache (`lever-discovery-v1-*`); never printed, safe to delete for fresh start |
 | `apikeys/oauth-token.json` | JSON (Google OAuth tokens) | `src/lib/GoogleDriveUserOAuth.ts` | `GoogleDriveUserOAuth.ts` | ❌ (`apikeys/` ignored) | Secret — never print or commit |
 | `extracted-slugs.json` (CWD) | JSON array | `processRawCDXData()` in `src/utils/ProcessCdxData.ts` | `npm run process:cdx -- <file>` | ✅ tracked (despite `/extracted-slugs*` in `.gitignore`) | 3,072 slugs; read by `npm run seed -- --all` |
 | `JOBS.md` (repo root) | Markdown | `scripts/generate-readme.ts` | `npx ts-node scripts/generate-readme.ts` | ✅ tracked | ~5.4 MB, 29,911-row table (last generated 2026-01-05 UTC from `jobs_2025-12-29.csv`) |
@@ -154,3 +155,28 @@ Written by `ErrorTracker` (`src/lib/ErrorTracker.ts`) at the end of every `npm r
 
 Merge semantics (`mergeReports`): numeric summary fields and category counts are summed across workers, `startedAt` / `durationSeconds`
 come from the coordinator, and events are capped at 100 per category. `jobsSanitized` and `jobsFilteredOut` track distinct job IDs.
+
+## 6. `output/lever-discovery-state.json` (Lever Discovery State Cache)
+
+Written by `saveLeverDiscoveryState()` (`src/discovery/LeverDiscovery.ts`) at the end of every `npm run discover -- --source=lever` run (inside `finally`, so partial progress is saved even if interrupted by budget/time).
+
+```jsonc
+{
+  "version": 1,
+  "harvest": {
+    "nextPrefix": "m",        // null once a cycle finishes; next run restarts from "a"
+    "resumeKey": null,        // active Wayback CDX continuation cursor, if paused mid-prefix
+    "completedAt": null       // ISO-8601 timestamp once prefix "9" completes
+  },
+  "tokens": {
+    "spotify": {
+      "firstSeen": "2026-11-17T00:10:00.000Z",
+      "outcome": "live",      // "live" | "empty" | "not_found" | "dead_board" | "error"
+      "checkedAt": "2026-11-17T00:55:00.000Z"
+    }
+  }
+}
+```
+
+- **Actions Cache Key:** Restored before and saved after (`if: always()`) in `.github/workflows/discover-weekly.yml` using `actions/cache/restore@v6` and `actions/cache/save@v6` with key `lever-discovery-v1-${{ github.run_id }}` and restore-key `lever-discovery-v1-`.
+- **Privacy & Recovery:** Discovery code never prints the contents of `lever-discovery-state.json`. Deleting, missing, or corrupting the file is completely safe — `loadLeverDiscoveryState()` starts a fresh v1 cycle from prefix `"a"` without disturbing already-seeded `Company` rows in PostgreSQL.

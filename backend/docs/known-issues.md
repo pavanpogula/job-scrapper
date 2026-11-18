@@ -76,6 +76,8 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 | 37 | `fetchCommonCrawlUrls()` reads only the first result page (no `page` param / `showNumPages`), and the crawl id `CC-MAIN-2024-51` is hard-coded | `CdxWorker.ts` |
 | 38 | [RESOLVED in P1-T14] `scrapeToCSV()` closes the write stream **before** calling `tracker.saveReport()`, guaranteeing complete CSV export when telemetry report is written | `ScraperCSV.ts` |
 | 39 | Default `scrape:parallel` worker count is `min(4, max(2, cpus))`, not 8. The documented 141.3 s / 34,035-job run used `--workers=8`. Per-worker concurrency is hard-coded at 12 when there are more than 100 companies | `ClusterScraper.ts` `resolveWorkerCount()` |
+| 58 | EU Lever boards (`jobs.eu.lever.co` / `api.eu.lever.co`, e.g. `engelvoelkers`) are skipped by `extractLeverToken()` and not discovered or scraped in v1 (`api.lever.co` returns 404 for EU boards; requires per-company region storage in a follow-up ADR) | `LeverDiscovery.ts`, `LeverClient.ts` |
+| 59 | Wayback Machine CDX prefix queries for `jobs.lever.co/*` frequently return transient `503`/`504` responses (~40 % of calls) and 15–28 s latency (Common Crawl cannot substitute because `jobs.lever.co/robots.txt` blocks `CCBot`); mitigated via 3× 30–60 s retries, two-character prefix splits (`a0…a9`, `aa…az`, `a-`, `a.`, `a_`, `a%26`), and resumable cursor state | `LeverDiscovery.ts`, `CdxWorker.ts` |
 
 ## 🟡 Inconsistencies & docs drift (open)
 

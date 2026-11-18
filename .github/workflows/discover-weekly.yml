@@ -108,3 +108,59 @@ jobs:
       - name: Run Greenhouse discovery pipeline
         run: npm run discover -- --source=greenhouse --enrich
 
+  discover-lever:
+    name: Discover & Seed Lever Companies
+    needs: discover-greenhouse
+    if: always() && vars.DISCOVERY_LEVER_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    environment: production
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      TS_NODE_TRANSPILE_ONLY: 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            backend
+            scripts/ci
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Sync database schema
+        run: npx prisma db push --skip-generate
+
+      - name: Restore Lever discovery state cache
+        uses: actions/cache/restore@v6
+        with:
+          path: backend/output/lever-discovery-state.json
+          key: lever-discovery-v1-${{ github.run_id }}
+          restore-keys: |
+            lever-discovery-v1-
+
+      - name: Run Lever discovery pipeline
+        run: npm run discover -- --source=lever --enrich
+
+      - name: Save Lever discovery state cache
+        uses: actions/cache/save@v6
+        if: always()
+        with:
+          path: backend/output/lever-discovery-state.json
+          key: lever-discovery-v1-${{ github.run_id }}
+
+

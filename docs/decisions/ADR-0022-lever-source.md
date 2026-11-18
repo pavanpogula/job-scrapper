@@ -1,6 +1,6 @@
 # ADR-0022: Multi-Source ATS Architecture Extension (Lever Onboarding)
 
-- Status: Accepted (L1–L3 implemented; L4–L5 pending)
+- Status: Accepted (L1–L4 implemented; L5 pending)
 - Date: 2026-11-16
 - Deciders: owner, scraper-architect
 - Related: [ADR-0021](./ADR-0021-multi-source-ats.md), [ADR-0001](./ADR-0001-postgres-source-of-truth.md), [ADR-0003](./ADR-0003-immutable-cache-generations.md), [ADR-0018](./ADR-0018-job-last-updated-detection.md)
@@ -36,8 +36,8 @@ Extend the multi-source architecture established in ADR-0021 across a 5-phase pl
    Introduce `--lever-max-boards` (default 600) picking boards with oldest `lastCheckedAt` first to keep scrape duration well within the 30-minute CI workflow budget.
 6. **Job Normalization:**
    Descriptions combine `description`, `lists[]` headings/content, `salaryDescription`, and `additional` (EEO blurb) into sanitized HTML. `publishedAt` is mapped from epoch ms `createdAt`. `_normVersion: 1` stops unnecessary updates.
-7. **Discovery:**
-   Lever board discovery leverages Wayback Machine CDX API with token validation against both the Postings API and the hosted board page.
+7. **Discovery (L4 — landed):**
+   Lever board discovery uses Wayback Machine CDX (`jobs.lever.co/{a..z,0..9}`, `showResumeKey=true`, 503/504 backoff + two-character prefix splits, 50% time budget, 100-min default), persists state in `backend/output/lever-discovery-state.json` (30-day rejection cooldown), validates candidates via `LeverClient.validateSite` (`live` requires both postings API and 200 HTML board), allocates `lv--<sanitized>` slugs, and enriches missing names/logos via `EnrichCompanies.ts` (7-day retry, 200 cap). Behind repo variable `DISCOVERY_LEVER_ENABLED`.
 8. **Activation:**
    Disabled by default; enabled in production scheduled scrapes via repo variable `LEVER_ENABLED`.
 

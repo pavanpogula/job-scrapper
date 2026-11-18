@@ -112,10 +112,11 @@ the owner runs this workflow (ADR-0016).
 ### 3.4 Weekly Discovery Workflow (`.github/workflows/discover-weekly.yml`)
 - **Triggers:** Cron schedule `0 4 * * 0` (04:00 UTC every Sunday) and manual `workflow_dispatch`.
 - **Inputs:** `common_crawl` (boolean, default true), `enrich` (boolean, default true).
-- **Concurrency:** `group: discovery-pipeline`, non-overlapping runs.
+- **Concurrency:** `group: discovery-pipeline`, non-overlapping runs (do **not** set a job-level `concurrency:` on child jobs inside the same workflow group).
 - **Jobs:**
   1. `discover`: Discovers and seeds new Ashby companies from Wayback CDX (+ Common Crawl). Gated by `vars.DISCOVERY_ENABLED != 'false'`. Syncs DB schema with `npx prisma db push --skip-generate` before running discovery.
   2. `discover-greenhouse`: Discovers and seeds new Greenhouse companies from Common Crawl paged CDX index (`--source=greenhouse --enrich`). Runs after the Ashby job (`needs: discover`). Gated by repo variable `vars.DISCOVERY_GREENHOUSE_ENABLED == 'true'` (default off). Runs schema sync (`prisma db push`), then `npm run discover -- --source=greenhouse --enrich` with a 30-minute timeout. Outputs summary to step summary. Discovered companies remain hidden from public endpoints until jobs are scraped in G6.
+  3. `discover-lever`: Discovers and seeds new Lever companies from Wayback Machine CDX (`--source=lever --enrich`). Runs after `discover-greenhouse` (`needs: discover-greenhouse`, `if: always() && vars.DISCOVERY_LEVER_ENABLED == 'true'`, default off) with `timeout-minutes: 120` and no job-level `concurrency:`. Restores `backend/output/lever-discovery-state.json` via `actions/cache/restore@v6` (`key: lever-discovery-v1-${{ github.run_id }}`, `restore-keys: lever-discovery-v1-`), syncs schema (`npx prisma db push --skip-generate`), runs `npm run discover -- --source=lever --enrich` (100-min default time budget: 50 % harvest / 50 % validation, 500-token validation budget), and always saves the state cache via `actions/cache/save@v6` (`if: always()`). Appends harvest status, prefix counts, Wayback rows read, unique tokens found (the board-count estimate once harvest completes), and validation counts (`live`, `empty`, `not_found`, `dead_board`, `left by budget/time`) to `$GITHUB_STEP_SUMMARY`. Discovered Lever companies remain hidden from `/v1/companies` and unscraped until L5.
 
 ---
 

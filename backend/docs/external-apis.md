@@ -12,9 +12,9 @@
 | 2c | Ashby Hosted Board page | `GET https://jobs.ashbyhq.com/{slug}` (HTML) | none | `src/lib/AshbyClient.ts` `fetchOrganizationMetadata()` (`npm run discover -- --enrich`) |
 | 2d | Greenhouse Job Board API (Jobs) | `GET https://boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true&pay_transparency=true` | none | `src/lib/ats/GreenhouseClient.ts` `fetchBoard()` (`Scraper.ts`, `ClusterScraper.ts`) |
 | 2e | Greenhouse Job Board API (Board Info) | `GET https://boards-api.greenhouse.io/v1/boards/{token}` | none | `src/lib/ats/GreenhouseClient.ts` `fetchCompanyMetadata()` (`SeedGreenhouse.ts`, `EnrichCompanies.ts`) |
-| 2f | Lever Postings API (Board Jobs) | `GET https://api.lever.co/v0/postings/{site}?mode=json` | none | `src/lib/ats/LeverClient.ts` `fetchBoard()`, `validateSite()` (`Scraper.ts`, `ClusterScraper.ts`, `SeedLever.ts`) |
-| 2g | Lever Hosted Board page (HTML) | `GET https://jobs.lever.co/{site}` | none | `src/lib/ats/LeverClient.ts` `validateSite()`, `fetchCompanyMetadata()` (`SeedLever.ts`, `EnrichCompanies.ts`) |
-| 3 | Wayback CDX | `GET http://web.archive.org/cdx/search/cdx` | none | `src/discovery/CdxWorker.ts` (+ manual download for `process:cdx`) |
+| 2f | Lever Postings API (Board Jobs) | `GET https://api.lever.co/v0/postings/{site}?mode=json` | none | `src/lib/ats/LeverClient.ts` `fetchBoard()`, `validateSite()` (`Scraper.ts`, `ClusterScraper.ts`, `SeedLever.ts`, `LeverDiscovery.ts`) |
+| 2g | Lever Hosted Board page (HTML) | `GET https://jobs.lever.co/{site}` | none | `src/lib/ats/LeverClient.ts` `validateSite()`, `fetchCompanyMetadata()` (`SeedLever.ts`, `LeverDiscovery.ts`, `EnrichCompanies.ts`) |
+| 3 | Wayback CDX | `GET http://web.archive.org/cdx/search/cdx` | none | `src/discovery/CdxWorker.ts`, `src/discovery/LeverDiscovery.ts` (+ manual download for `process:cdx`) |
 | 3b | CommonCrawl Index | `GET https://index.commoncrawl.org/CC-MAIN-2024-51-index` | none | `src/discovery/CdxWorker.ts` `fetchCommonCrawlUrls()` (`npm run discover -- --common-crawl`) |
 | 4 | Google Drive v3 | `files.create` (multipart upload), `files.list` | Service-account JWT | `src/lib/GoogleDriveOAuth.ts` |
 | 5 | Google Drive v3 | `files.create`, `files.list` | User OAuth2 (Desktop app) | `src/lib/GoogleDriveUserOAuth.ts` |
@@ -256,6 +256,26 @@ the code splits on `\n`, parses each line and keeps `.url`. Non-string body or a
 - Hosted page: `GET https://job-boards.greenhouse.io/{token}` (HTML).
 - Extracts `og:image` (or the header logo `<img>`) and accepts it only when it is an absolute `https://` URL on a `greenhouse.io` host under `/external_greenhouse_job_boards/logos/` (the board's uploaded logo). Boards without one (e.g. Figma, Robinhood) set `og:image` to a 1200×630 marketing banner on another CDN, which is rejected: the result is `null` and the UI displays company initials. HTML entities (`&amp;`) in the URL are decoded.
 - Retried at most once per 7 days using `Company.lastCheckedAt`, capped at 200 companies per run in `enrich:companies`.
+
+## 3d. Wayback Machine CDX API (Lever Discovery & Enrichment)
+
+**Why Wayback CDX instead of Common Crawl:** `https://jobs.lever.co/robots.txt` declares `Disallow` for `CCBot`, so Common Crawl contains almost no Lever board URLs (524 URLs measured in `CC-MAIN-2026-43`). Lever discovery (`src/discovery/LeverDiscovery.ts`, invoked via `npm run discover -- --source=lever`) therefore harvests archived URLs from Wayback Machine CDX instead.
+
+**Wayback CDX Prefix Queries:**
+- Iterates prefixes `a…z`, `0…9`:
+  `GET http://web.archive.org/cdx/search/cdx?url=jobs.lever.co/{p}&matchType=prefix&fl=original&collapse=urlkey&from=<currentYear-2>&limit=20000&showResumeKey=true`
+- Continues with `&resumeKey=<key>` whenever a trailing resume key is returned, stopping at 50 % of `--time-budget-min` (default `100` min -> `50` min harvest / `50` min validation).
+- Enforces `>= 1 s` pacing between Wayback requests. Transient `503`/`504`/timeouts (~40 % of Wayback prefix calls) are retried up to 3× via `fetchWithRetry()` with 30–60 s backoff and `429 Retry-After` honoring. If a primary prefix fails after all retries, it splits once into 40 two-character prefixes (`a0…a9`, `aa…az`, `a-`, `a.`, `a_`, `a%26`) and counts only sub-prefixes that finally fail.
+
+**Token Extraction, Validation & Persistent State:**
+- `extractLeverToken()` keeps only `jobs.lever.co` URLs (`jobs.eu.lever.co` is rejected; EU boards on `api.eu.lever.co` are out of scope for v1), safely `decodeURIComponent`-decodes the first path segment, preserves exact case (plus `.` and `&`, e.g. `AIFund`, `arcteryx.com`, `1840&Company`, `100ms`), enforces `/^[A-Za-z0-9][A-Za-z0-9._&-]{0,79}$/`, and rejects reserved segments (`img`, `css`, `js`, `assets`, `static`, `favicon.ico`, `robots.txt`, `sitemap.xml`, `v0`, `api`, `search`, `embed`) case-insensitively. Tokens are deduplicated case-sensitively (`assembly` and `Assembly` are tracked separately).
+- Harvest cursors (`nextPrefix`, `resumeKey`, `completedAt`) and per-token outcomes are persisted in `backend/output/lever-discovery-state.json` (restored/saved in GitHub Actions cache `lever-discovery-v1-*`; never printed; missing/corrupt file starts fresh at `a`).
+- Validation excludes tokens already present in `Company` (`source = 'LEVER'`, exact `atsToken` match), then checks never-validated tokens first followed by rejected tokens (`empty`, `not_found`, `dead_board`, `error`) older than 30 days (oldest first), capped at `--budget` (default `500`).
+- Each candidate runs through `LeverClient.validateSite()` (`<= 1 req/s`, concurrency 1): a site is seeded **only** when `'live'` (API returns `>= 1` posting **and** `https://jobs.lever.co/{site}` returns `200`). Live sites get permanent collision-safe `lv--<sanitized>` slugs via `allocateCompanySlug()` and are upserted by `(source, atsToken)` (`status = 'ACTIVE'`; company display name/logo are fetched when `--enrich` and time remain, or left to `enrich:companies`).
+
+**Lever Best-Effort Logo & Name Enrichment (`src/utils/EnrichCompanies.ts`, `src/lib/ats/LeverClient.ts`):**
+- Queries active `LEVER` boards missing `logoUrl` or `name` (or `name = slug`), retried at most once per 7 days via `Company.lastEnrichedAt` (`>= 7 days` cooldown), capped at `200` companies per source per run.
+- `extractLeverLogo()` extracts only the header `<img alt="… logo">` on `lever-client-logos.s3.<region>.amazonaws.com` or `lever-client-logos.s3.amazonaws.com` (never the `og:image` banner) and reads company display name from `<title>`.
 
 ---
 

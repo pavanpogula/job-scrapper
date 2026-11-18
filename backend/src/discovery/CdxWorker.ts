@@ -1,7 +1,7 @@
 /**
  * @file Company discovery service
- * @summary Auto-discovers companies from Wayback Machine CDX and CommonCrawl APIs, validates slugs/tokens, and enriches organization metadata for Ashby and Greenhouse
- * @tags Discovery, Wayback Machine, CommonCrawl, Validation, Greenhouse, Ashby, Regex, Blocklist
+ * @summary Auto-discovers companies from Wayback Machine CDX and CommonCrawl APIs, validates slugs/tokens, and enriches organization metadata for Ashby, Greenhouse, and Lever
+ * @tags Discovery, Wayback Machine, CommonCrawl, Validation, Greenhouse, Ashby, Lever, Regex, Blocklist
  */
 
 import axios from 'axios';
@@ -12,6 +12,15 @@ import { createLimiter } from '../lib/Concurrency';
 import { GreenhouseClient } from '../lib/ats/GreenhouseClient';
 import { BoardRef } from '../lib/ats/AtsClient';
 import { AtsSource } from '../lib/ats/source';
+import { runLeverDiscovery } from './LeverDiscovery';
+
+export {
+    extractLeverToken,
+    runLeverDiscovery,
+    LeverDiscoveryOptions,
+    LeverDiscoveryState,
+    LeverDiscoverySummary,
+} from './LeverDiscovery';
 
 const prisma = new PrismaClient();
 
@@ -258,17 +267,51 @@ export async function fetchLatestCrawlId(fallback = 'CC-MAIN-2024-51'): Promise<
     }
 }
 
+export interface FetchWithRetryOptions {
+    delayMs?: number;
+    honorRetryAfter?: boolean;
+    maxRetryAfterMs?: number;
+    retryOn5xxDelayMs?: number;
+}
+
 /**
- * Helper to retry an axios GET request with exponential backoff on 504 / 502 / 503 / 429
+ * @summary Retries an async HTTP request with exponential backoff on 504/502/503/429 or network errors, optionally honoring 429 Retry-After and custom 5xx delays
+ * @tags Discovery, HTTP, Retry, Backoff
  */
-async function fetchWithRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 500): Promise<T | null> {
+export async function fetchWithRetry<T>(
+    fn: () => Promise<T>,
+    retries = 2,
+    delayOrOptions: number | FetchWithRetryOptions = 500,
+    maybeOptions?: FetchWithRetryOptions
+): Promise<T | null> {
+    const opts: FetchWithRetryOptions =
+        typeof delayOrOptions === 'object' && delayOrOptions !== null
+            ? delayOrOptions
+            : (maybeOptions ?? {});
+    const baseDelayMs = typeof delayOrOptions === 'number' ? delayOrOptions : (opts.delayMs ?? 500);
+
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
             return await fn();
         } catch (err: unknown) {
-            const status = (err as { response?: { status?: number } })?.response?.status;
+            const response = (
+                err as { response?: { status?: number; headers?: Record<string, string | string[] | undefined> } }
+            )?.response;
+            const status = response?.status;
             if (attempt < retries && (status === 504 || status === 502 || status === 503 || status === 429 || !status)) {
-                await new Promise(r => setTimeout(r, delayMs * Math.pow(2, attempt)));
+                let waitMs = baseDelayMs * Math.pow(2, attempt);
+                if (status === 429 && opts.honorRetryAfter) {
+                    const rawHeader = response?.headers?.['retry-after'] ?? response?.headers?.['Retry-After'];
+                    const headerStr = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+                    const maxCap = opts.maxRetryAfterMs ?? MAX_RETRY_AFTER_MS;
+                    waitMs = Math.min(parseRetryAfterMs(headerStr), maxCap);
+                } else if (
+                    opts.retryOn5xxDelayMs !== undefined &&
+                    (status === 503 || status === 504 || status === 502 || !status)
+                ) {
+                    waitMs = Math.min(opts.retryOn5xxDelayMs * 2, opts.retryOn5xxDelayMs * Math.pow(2, attempt));
+                }
+                await new Promise(r => setTimeout(r, waitMs));
                 continue;
             }
             return null;
@@ -576,15 +619,15 @@ export function parseTimeBudgetMs(raw: string): number {
 }
 
 /**
- * @summary Main discovery function. Discovers company tokens for Ashby or Greenhouse and upserts to DB.
+ * @summary Main discovery function. Discovers company tokens for Ashby, Greenhouse, or Lever and upserts to DB.
  */
 export async function runDiscovery(options: DiscoveryOptions = {}): Promise<DiscoverySummary | void> {
     const sourceArg = process.argv.find(a => a.startsWith('--source='));
-    const source = options.source ?? (sourceArg ? sourceArg.split('=')[1].toLowerCase() as AtsSource : 'ashby');
+    const source: AtsSource = options.source ?? (sourceArg ? sourceArg.split('=')[1].toLowerCase() as AtsSource : 'ashby');
     const db = options.prismaClient ?? prisma;
 
     if (source === 'lever') {
-        throw new Error('Lever discovery not implemented yet (L4)');
+        return runLeverDiscovery({ ...options, prismaClient: db });
     }
 
     if (source === 'greenhouse') {
@@ -717,10 +760,6 @@ if (require.main === module) {
     const enrichMetadata = process.argv.includes('--enrich');
     const sourceArg = process.argv.find(a => a.startsWith('--source='));
     const rawSource = sourceArg ? sourceArg.split('=')[1].toLowerCase() : undefined;
-    if (rawSource === 'lever') {
-        console.error('❌ Lever discovery not implemented yet (L4)');
-        process.exit(1);
-    }
     const source = rawSource as AtsSource | undefined;
 
     let tokenBudget: number | undefined;
@@ -735,8 +774,8 @@ if (require.main === module) {
         process.exit(1);
     }
 
-    if (source !== 'greenhouse' && (tokenBudget !== undefined || timeBudgetMs !== undefined)) {
-        console.warn('⚠️  --budget and --time-budget-min only apply with --source=greenhouse; ignored for Ashby discovery.');
+    if (source !== 'greenhouse' && source !== 'lever' && (tokenBudget !== undefined || timeBudgetMs !== undefined)) {
+        console.warn('⚠️  --budget and --time-budget-min only apply with --source=greenhouse or --source=lever; ignored for Ashby discovery.');
     }
 
     runDiscovery({ source, includeCommonCrawl, enrichMetadata, tokenBudget, timeBudgetMs })

@@ -138,4 +138,41 @@ test('discover-weekly.yml has DISCOVERY_ENABLED toggle', () => {
   );
   assert.ok(runGhDiscoveryIndex !== -1, 'discover-greenhouse must run npm run discover -- --source=greenhouse --enrich');
   assert.ok(dbPushIndex < runGhDiscoveryIndex, 'discover-greenhouse db push must run before discovery');
+
+  const leverJob = parsed.jobs?.['discover-lever'];
+  assert.ok(leverJob, 'discover-lever job must exist in discover-weekly.yml');
+  assert.ok(
+    String(leverJob.if).includes("vars.DISCOVERY_LEVER_ENABLED == 'true'"),
+    `discover-lever job must guard with vars.DISCOVERY_LEVER_ENABLED == 'true', found: ${leverJob.if}`
+  );
+  assert.equal(leverJob['timeout-minutes'] || leverJob.timeout_minutes, 120, 'discover-lever must have 120 min timeout');
+  assert.equal(leverJob.needs, 'discover-greenhouse', 'discover-lever must run after discover-greenhouse');
+  assert.equal(leverJob.concurrency, undefined, 'discover-lever must not set job-level concurrency (avoids deadlock with workflow group)');
+
+  const leverSteps = leverJob.steps || [];
+  const leverDbPushIdx = leverSteps.findIndex((s) => String(s.run).includes('prisma db push'));
+  assert.ok(leverDbPushIdx !== -1, 'discover-lever must have a prisma db push step');
+
+  const restoreIdx = leverSteps.findIndex(
+    (s) =>
+      String(s.uses).startsWith('actions/cache/restore') &&
+      String(s.with?.path).includes('backend/output/lever-discovery-state.json')
+  );
+  assert.ok(restoreIdx !== -1, 'discover-lever must restore backend/output/lever-discovery-state.json cache');
+
+  const runLeverIdx = leverSteps.findIndex((s) =>
+    String(s.run).includes('npm run discover -- --source=lever --enrich')
+  );
+  assert.ok(runLeverIdx !== -1, 'discover-lever must run npm run discover -- --source=lever --enrich');
+
+  const saveIdx = leverSteps.findIndex(
+    (s) =>
+      String(s.uses).startsWith('actions/cache/save') &&
+      String(s.if).includes('always()') &&
+      String(s.with?.path).includes('backend/output/lever-discovery-state.json')
+  );
+  assert.ok(saveIdx !== -1, 'discover-lever must save backend/output/lever-discovery-state.json cache with if: always()');
+
+  assert.ok(leverDbPushIdx < runLeverIdx, 'discover-lever db push must run before discovery');
+  assert.ok(restoreIdx < runLeverIdx && runLeverIdx < saveIdx, 'discover-lever must restore before and save after running discovery');
 });
