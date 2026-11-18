@@ -27,7 +27,7 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-27 (ADR-
 - **REST Endpoints:** `/v1/jobs`, `/v1/jobs/:id`, `/v1/companies`, `/v1/companies/:slug`, `/v1/facets`, `/v1/meta`, `/health` (shallow, 0 DB/Redis warm). Unknown `/v1/*` returns JSON 404 (O14).
 - **Backpressure & Concurrency:** `DbGuard` limits active database queries to 3 with queue size 10 (returns 503 + Retry-After on backpressure). Coalesces concurrent identical DB queries via `singleFlight`.
 - **Telemetry:** Each run writes `output/reports/<YYYY-MM>/<runId>.json` (ErrorTracker v2) and `output/latest-<mode>.json`.
-- **Multi-source (ADR-0021, ADR-0022):** `Job.source`/`externalId`, `Company.source`/`atsToken`; `ashbyId` = legacy key; Greenhouse enabled via `GREENHOUSE_ENABLED` (per-source gate: drop > 30% from baseline >= 100); Lever planned (ADR-0022).
+- **Multi-source (ADR-0021, ADR-0022):** `Job.source`/`externalId`, `Company.source`/`atsToken`; `ashbyId` = legacy key; Greenhouse via `GREENHOUSE_ENABLED` (per-source gate: drop > 30% from baseline >= 100); Lever via `LEVER_ENABLED`, staged scrape via `STAGED_SCRAPE` (both default off).
 
 ## Regression Invariants (doc 10)
 - **BF-001…BF-010:** see `docs/testing.md` §6.

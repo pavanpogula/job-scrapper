@@ -176,3 +176,53 @@ test('discover-weekly.yml has DISCOVERY_ENABLED toggle', () => {
   assert.ok(leverDbPushIdx < runLeverIdx, 'discover-lever db push must run before discovery');
   assert.ok(restoreIdx < runLeverIdx && runLeverIdx < saveIdx, 'discover-lever must restore before and save after running discovery');
 });
+
+test('scrape-daily.yml wires LEVER_ENABLED and STAGED_SCRAPE with a timeout below the cron cadence', () => {
+  const root = getRepoRoot();
+  const content = fs.readFileSync(path.join(root, '.github/workflows/scrape-daily.yml'), 'utf-8');
+  const parsed = parseYaml(content);
+  const scrapeJob = parsed.jobs?.scrape;
+  assert.ok(scrapeJob, 'scrape job must exist');
+
+  // EFFECTIVE_SOURCES stays a job-level env expression and now also checks LEVER_ENABLED
+  const env = scrapeJob.env || {};
+  const effective = String(env.EFFECTIVE_SOURCES);
+  assert.ok(effective.includes("vars.GREENHOUSE_ENABLED == 'true'"), 'EFFECTIVE_SOURCES must check GREENHOUSE_ENABLED');
+  assert.ok(effective.includes("vars.LEVER_ENABLED == 'true'"), 'EFFECTIVE_SOURCES must check LEVER_ENABLED');
+  assert.ok(effective.includes("format('ashby{0}{1}'"), 'EFFECTIVE_SOURCES must start from ashby and append the enabled sources');
+  assert.ok(String(env.LEVER_ENABLED).includes('vars.LEVER_ENABLED'), 'LEVER_ENABLED env must come from the repo variable');
+  assert.ok(String(env.STAGED_SCRAPE).includes('vars.STAGED_SCRAPE'), 'STAGED_SCRAPE env must come from the repo variable');
+
+  // The job timeout must leave at least 20 minutes before the next scheduled run (cron hours are 3 h apart)
+  const cron = String(parsed.on?.schedule?.[0]?.cron);
+  const hours = cron.split(' ')[1].split(',').map((h) => parseInt(h, 10)).sort((a, b) => a - b);
+  let minGapMinutes = Infinity;
+  for (let i = 0; i < hours.length; i++) {
+    const next = hours[(i + 1) % hours.length] + (i + 1 === hours.length ? 24 : 0);
+    minGapMinutes = Math.min(minGapMinutes, (next - hours[i]) * 60);
+  }
+  assert.equal(minGapMinutes, 180, 'scheduled runs must stay 3 hours apart (or update the timeout rule and docs)');
+  const timeout = Number(scrapeJob['timeout-minutes']);
+  assert.equal(timeout, 150, 'scrape job timeout must be 150 minutes (staged worst case about 120)');
+  assert.ok(minGapMinutes - timeout >= 20, `scrape timeout ${timeout} must leave 20+ minutes before the next run (gap ${minGapMinutes})`);
+  assert.equal(scrapeJob.concurrency, undefined, 'scrape job must not set job-level concurrency (workflow-level group serializes runs)');
+
+  // New dispatch inputs and the rollback choice
+  const inputs = parsed.on?.workflow_dispatch?.inputs;
+  assert.ok(inputs.staged, 'inputs.staged must exist');
+  assert.ok(inputs.lever_max_boards, 'inputs.lever_max_boards must exist');
+  assert.ok(inputs.lever_stage_min, 'inputs.lever_stage_min must exist');
+  assert.ok(inputs.deactivate_source.options.includes('lever'), 'deactivate_source options must include lever');
+
+  // The scrape step adds --staged only for the input or the variable, and the Lever flags only when set and validated
+  const scrapeStep = scrapeJob.steps?.find((/** @type {any} */ s) => s.id === 'scrape');
+  const run = String(scrapeStep.run);
+  assert.ok(run.includes('"$STAGED_INPUT" = "true"') && run.includes('"$STAGED_SCRAPE" = "true"'), 'staged must depend on the input or STAGED_SCRAPE');
+  assert.ok(run.includes('--staged'), 'scrape step must pass --staged');
+  assert.ok(run.includes('--lever-max-boards=$LEVER_MAX_BOARDS_INPUT'), 'lever_max_boards must be passed through');
+  assert.ok(run.includes('--lever-stage-min=$LEVER_STAGE_MIN_INPUT'), 'lever_stage_min must be passed through');
+  assert.ok(run.includes('[ -n "$LEVER_MAX_BOARDS_INPUT" ]') && run.includes('[ -n "$LEVER_STAGE_MIN_INPUT" ]'), 'Lever flags only when the inputs are set');
+  assert.ok(run.includes("grep -Eq '^([0-9]+|all)$'") && run.includes("grep -Eq '^[0-9]+$'"), 'Lever inputs must be validated as digits (or all)');
+  assert.ok(!run.includes('${{ inputs.lever'), 'Lever inputs must reach the shell through env vars, never interpolated into the script');
+  assert.ok(String(scrapeStep.env?.LEVER_MAX_BOARDS_INPUT).includes('inputs.lever_max_boards'), 'LEVER_MAX_BOARDS_INPUT env must come from the input');
+});

@@ -13,7 +13,7 @@ This document details account quotas, secrets management, CI/CD workflows, edge 
 | **Vercel** | Hobby (Free tier) | • 1M edge/serverless invocations/month<br>• 4 CPU-hours execution time/month<br>• 1 custom WAF rate limit rule (per region) | Functions region set to `iad1` (US East) matching Neon & Upstash to minimize round-trip latency. Max function duration: 15s. |
 | **Neon** | Serverless PostgreSQL (Free tier) | • Neon compute-hours: 100 Compute Unit (CU) hours/month<br>• 1 GB storage<br>• 5 GB data egress/month | All serverless API connections **must** route through the pgBouncer pooled URL (`*-pooler.*.neon.tech`) with `?sslmode=require&pgbouncer=true`. |
 | **Upstash** | Serverless Redis (Free tier) | • Budget cap: 10,000 commands/day<br>• 256 MB data storage<br>• 1 concurrent connection pool | Uses double-buffered generation swap (`jc:v1:*`) and in-process API LRU caching to keep commands well within the 10,000/day quota. Automatically enters Circuit breaker cooldown on `budget_exhausted`. |
-| **GitHub** | Actions (Free tier) | • 2,000 runner minutes/month<br>• Standard 2-core runners (`ubuntu-24.04`) | Scheduled scrape runs 7 times a day (every 3 hours, 5:17 AM to 11:17 PM PST) with 4 worker processes. Recent runs take 2-4 minutes, so about 15-30 runner minutes a day. The repository is public, so standard runners do not count against the 2,000-minute quota. |
+| **GitHub** | Actions (Free tier) | • Public repo (this repo): standard runners are free and unlimited; private repos get 2,000 minutes/month<br>• One job may run up to 6 h, 20 jobs run at once, cache 10 GB per repo (entries unused for 7 days are evicted), scheduled workflows stop after 60 days without repo activity<br>• Standard 2-core runners (`ubuntu-24.04`) *(verify at docs.github.com/actions)* | Scheduled scrape runs 7 times a day (every 3 hours, 5:17 AM to 11:17 PM PST) with 4 worker processes. Recent runs take 2-4 minutes, so about 15-30 runner minutes a day. The repository is public, so standard runners do not count against the 2,000-minute quota. |
 
 ---
 
@@ -50,9 +50,9 @@ The matrix below documents where every secret is configured and consumed:
 ### 3.2 Daily Scheduled Scraper (`.github/workflows/scrape-daily.yml`)
 - **Triggers:** Cron schedule `17 1,4,7,13,16,19,22 * * *` and manual `workflow_dispatch`. GitHub cron is UTC only: the hours are 5, 8 and 11 AM and 2, 5, 8 and 11 PM Pacific Standard Time (7 runs a day, none between 11:17 PM and 5:17 AM). During daylight time (PDT) every run is 1 hour later.
 - **Per-run counters now move faster:** the scraper counts consecutive runs, not days. A company is quarantined after 3 consecutive 404 runs (about 6 hours of daytime runs, was 3 days) and reported after 7 consecutive failed runs (about 1 day, was 1 week). The thresholds themselves are unchanged.
-- **Inputs:** `workers` (default 4), `skip_publish`, `publish_only`, `recheck_not_found`, `skip_fixer`, `fixture_report`, `sources` (comma-separated, e.g. `ashby,greenhouse`), `force_publish` (boolean), `deactivate_source` (`none` / `greenhouse`).
-- **Source Configuration (`GREENHOUSE_ENABLED`):**
-  - Effective sources: `inputs.sources` if set, else `ashby,greenhouse` when `vars.GREENHOUSE_ENABLED == 'true'`, else `ashby`.
+- **Inputs:** `staged` (boolean), `lever_max_boards` (digits or `all`), `lever_stage_min` (digits), `workers` (default 4), `skip_publish`, `publish_only`, `recheck_not_found`, `skip_fixer`, `fixture_report`, `sources` (comma-separated, e.g. `ashby,greenhouse`), `force_publish` (boolean), `deactivate_source` (`none` / `greenhouse`).
+- **Source Configuration (`GREENHOUSE_ENABLED`, `LEVER_ENABLED`):**
+  - Effective sources: `inputs.sources` if set, else `ashby`, plus `greenhouse` when `vars.GREENHOUSE_ENABLED == 'true'` and `lever` when `vars.LEVER_ENABLED == 'true'` (a job-level `format()` expression).
   - Passed as `--sources=<effective>` to `scrape:parallel` and `enrich:companies`.
 - **Steps:**
   1. Syncs database schema (`npx prisma db push --skip-generate`).
@@ -65,6 +65,32 @@ The matrix below documents where every secret is configured and consumed:
   8. Uploads `scrape-report-<runId>` artifact (30-day retention).
   9. On failure (`exitCode = 1` or infra alert), runs `scripts/ci/alert-issue.sh` to create or update a `scrape-alert` issue.
   10. Chains to the automated Claude fixer job when actionable issues are detected.
+
+#### Staged scrape and Lever (ADR-0022, BF-025)
+
+- **Variables (both default off):** `STAGED_SCRAPE=true` makes the scheduled run staged (also available as the dispatch input `staged`); `LEVER_ENABLED=true` adds Lever to the effective sources. A staged run scrapes Ashby, then Greenhouse, then Lever, each as its own stage (Lever with 1 worker), merges the reports once and publishes the cache once. Without `STAGED_SCRAPE`, Lever (if enabled) runs interleaved and limited to 600 boards / 11 minutes.
+- **Dispatch flags:** `lever_max_boards` (digits or `all`, default 3000 when staged) and `lever_stage_min` (1-120, default 70) become `--lever-max-boards` / `--lever-stage-min` only when set and valid; an invalid value is ignored and a warning is written to the step summary. They reach the shell through env vars, never interpolated into the script.
+- **Timing (expected / worst case):**
+
+| Part | Expected | Worst case (hard stop) |
+|---|---|---|
+| checkout, `npm ci`, prisma, typecheck, `db push` | 3 min | 5 min |
+| enrichment (Greenhouse up to 200 + Lever up to 200 boards) | 4-7 min | 8 min |
+| Ashby stage (~1,700 boards) | 6 min | 15 min (worker watchdog) |
+| Greenhouse stage (~1,700 boards) | 8 min | 15 min (worker watchdog) |
+| Lever stage (~1,800 boards, <= 1 request/s, 1 worker) | 50-55 min | 75 min (`--lever-stage-min=70` + 5) |
+| classify, artifacts, cache saves | 1 min | 2 min |
+| **Total** | **~75-80 min** | **~120 min** |
+
+  The `scrape` job has `timeout-minutes: 150`, above the worst case and below the 3-hour cadence (a repo test keeps the gap at 20+ minutes). Runs are serialized by the workflow-level `scrape-production` concurrency group.
+- **Free GitHub Actions:** this repo is public, so standard runners are free and unlimited; a staged run is about 80 minutes x 7 runs = about 9 hours of runner time a day. If the repo were ever made private, the 2,000 free minutes a month would cover only about 25 staged runs.
+- **Lever load:** about 1,800 requests per run, about 12,600 a day, always <= 1 request/s. If Lever asks for less, lower `lever_max_boards` or the schedule; never raise the rate.
+- **How to enable:**
+  1. Set repo variable `STAGED_SCRAPE=true` (Lever still off). The next scheduled run is staged ashby -> greenhouse; compare per-stage wall time and counts in the step summary with the previous run.
+  2. Measure Lever: Actions -> **Daily scrape** -> Run workflow with `sources=ashby,greenhouse,lever`, `staged=true`, `skip_publish=true`. This is a real write (Lever jobs are refreshed in the database). Check per-stage time, Lever boards scraped/available/cap, errors by source and `skippedByDeadline`; tune `lever_stage_min` if the Lever stage ends near its deadline.
+  3. If healthy, set repo variable `LEVER_ENABLED=true`; the next scheduled run includes Lever.
+- **How to roll back:** set `LEVER_ENABLED=false`, then run **Daily scrape** with `deactivate_source=lever` (hides Lever jobs; skips scraping and classify), then, only if Redis is configured, `publish_only=true` + `force_publish=true`. Set `STAGED_SCRAPE=false` to return to the interleaved run. Lever companies stay in the database, hidden while they have no active jobs.
+- **Order of operations:** deploy the backend that knows a new enum value before anything writes it to the production database.
 
 #### How to Enable, Measure, and Roll Back Greenhouse
 
@@ -116,7 +142,7 @@ the owner runs this workflow (ADR-0016).
 - **Jobs:**
   1. `discover`: Discovers and seeds new Ashby companies from Wayback CDX (+ Common Crawl). Gated by `vars.DISCOVERY_ENABLED != 'false'`. Syncs DB schema with `npx prisma db push --skip-generate` before running discovery.
   2. `discover-greenhouse`: Discovers and seeds new Greenhouse companies from Common Crawl paged CDX index (`--source=greenhouse --enrich`). Runs after the Ashby job (`needs: discover`). Gated by repo variable `vars.DISCOVERY_GREENHOUSE_ENABLED == 'true'` (default off). Runs schema sync (`prisma db push`), then `npm run discover -- --source=greenhouse --enrich` with a 30-minute timeout. Outputs summary to step summary. Discovered companies remain hidden from public endpoints until jobs are scraped in G6.
-  3. `discover-lever`: Discovers and seeds new Lever companies from Wayback Machine CDX (`--source=lever --enrich`). Runs after `discover-greenhouse` (`needs: discover-greenhouse`, `if: always() && vars.DISCOVERY_LEVER_ENABLED == 'true'`, default off) with `timeout-minutes: 120` and no job-level `concurrency:`. Restores `backend/output/lever-discovery-state.json` via `actions/cache/restore@v6` (`key: lever-discovery-v1-${{ github.run_id }}`, `restore-keys: lever-discovery-v1-`), syncs schema (`npx prisma db push --skip-generate`), runs `npm run discover -- --source=lever --enrich` (100-min default time budget: 50 % harvest / 50 % validation, 500-token validation budget), and always saves the state cache via `actions/cache/save@v6` (`if: always()`). Appends harvest status, prefix counts, Wayback rows read, unique tokens found (the board-count estimate once harvest completes), and validation counts (`live`, `empty`, `not_found`, `dead_board`, `left by budget/time`) to `$GITHUB_STEP_SUMMARY`. Discovered Lever companies remain hidden from `/v1/companies` and unscraped until L5.
+  3. `discover-lever`: Discovers and seeds new Lever companies from Wayback Machine CDX (`--source=lever --enrich`). Runs after `discover-greenhouse` (`needs: discover-greenhouse`, `if: always() && vars.DISCOVERY_LEVER_ENABLED == 'true'`, default off) with `timeout-minutes: 120` and no job-level `concurrency:`. Restores `backend/output/lever-discovery-state.json` via `actions/cache/restore@v6` (`key: lever-discovery-v1-${{ github.run_id }}`, `restore-keys: lever-discovery-v1-`), syncs schema (`npx prisma db push --skip-generate`), runs `npm run discover -- --source=lever --enrich` (100-min default time budget: 50 % harvest / 50 % validation, 500-token validation budget), and always saves the state cache via `actions/cache/save@v6` (`if: always()`). Appends harvest status, prefix counts, Wayback rows read, unique tokens found (the board-count estimate once harvest completes), and validation counts (`live`, `empty`, `not_found`, `dead_board`, `left by budget/time`) to `$GITHUB_STEP_SUMMARY`. Discovered Lever companies remain hidden from `/v1/companies` until they have jobs and are scraped only after `LEVER_ENABLED=true` (or by a manual `sources=lever` run).
 
 ---
 

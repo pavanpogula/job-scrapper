@@ -1,6 +1,6 @@
 # ADR-0022: Multi-Source ATS Architecture Extension (Lever Onboarding)
 
-- Status: Accepted (L1–L4 implemented; L5 staged runner implemented, opt-in; L6 workflow wiring pending)
+- Status: Implemented (L1–L4 shipped; L5 staged runner and L6 workflow wiring behind `STAGED_SCRAPE` and `LEVER_ENABLED`, both default off)
 - Date: 2026-11-16
 - Deciders: owner, scraper-architect
 - Related: [ADR-0021](./ADR-0021-multi-source-ats.md), [ADR-0001](./ADR-0001-postgres-source-of-truth.md), [ADR-0003](./ADR-0003-immutable-cache-generations.md), [ADR-0018](./ADR-0018-job-last-updated-detection.md)

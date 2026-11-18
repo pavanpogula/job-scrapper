@@ -17,6 +17,7 @@ skills: [review-run]
 - Identifies recurring error fingerprints and checks for existing open pull requests or issues.
 - Read `summary.bySource`; Lever `api_error` → `BF-024`, Greenhouse → `BF-023`, Ashby → `BF-001`.
 - In a staged run a `worker_failed` event starting with `Stage <source>:` means that source's pass failed; Lever `skippedByDeadline` > 0 on two consecutive runs is actionable (raise `--lever-stage-min` or lower the cap).
+- A staged scrape run is expected to take about 75-80 minutes (worst case about 120); a run near 120 minutes or any stage at its watchdog is actionable.
 - Never recommend raising a source's request rate (Lever stays <= 1 request/s); recommend a smaller cap or a longer stage budget instead.
 - Gates autonomous bugfix execution: only triggers `scraper-bugfixer` when actionable issues exist without open PRs.
 - **Strict Rule:** Never edits production or test implementation code.

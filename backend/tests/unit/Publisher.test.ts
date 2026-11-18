@@ -367,6 +367,60 @@ describe('Publisher - publishCacheGeneration (P2-T03)', () => {
       expect(res.status).toBe('published');
       expect(res.bySource).toEqual({ ashby: 190, greenhouse: 10 });
     });
+
+    it('trips the per-source gate when Lever with baseline >= 100 drops > 30%, and does not gate a first Lever publish', async () => {
+      await fakeRedis.set(
+        KEY_LAST_PUBLISH,
+        JSON.stringify({
+          gen: 'old-gen',
+          jobCount: 350,
+          companiesWithJobs: 20,
+          bySource: { ashby: 200, lever: 150 },
+        })
+      );
+      await fakeRedis.set(KEY_CURRENT, 'old-gen');
+      for (let i = 0; i < 200; i++) {
+        mockPrisma.seed('job', {
+          ...sampleJobs[0],
+          id: `10000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
+          ashbyId: `ashby-${i}`,
+          source: 'ASHBY',
+          contentHash: `hash-a-${i}`,
+        });
+      }
+      for (let i = 0; i < 90; i++) {
+        mockPrisma.seed('job', {
+          ...sampleJobs[0],
+          id: `30000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
+          ashbyId: `lever:00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+          source: 'LEVER',
+          contentHash: `hash-l-${i}`,
+        });
+      }
+
+      const gated = await publishCacheGeneration({
+        runId: 'lever-gated-run',
+        scrapeFinishedAt: '2026-01-01T12:00:00Z',
+        prisma: mockPrisma,
+        redis: fakeRedis,
+      });
+      expect(gated.status).toBe('gated');
+      expect(await fakeRedis.get(KEY_CURRENT)).toBe('old-gen');
+
+      // First Lever publish: previous baseline has no Lever entry, so the same 90 Lever jobs must not gate
+      await fakeRedis.set(
+        KEY_LAST_PUBLISH,
+        JSON.stringify({ gen: 'old-gen', jobCount: 200, companiesWithJobs: 1, bySource: { ashby: 200 } })
+      );
+      const first = await publishCacheGeneration({
+        runId: 'lever-first-run',
+        scrapeFinishedAt: '2026-01-01T13:00:00Z',
+        prisma: mockPrisma,
+        redis: fakeRedis,
+      });
+      expect(first.status).toBe('published');
+      expect(first.bySource).toEqual({ ashby: 200, lever: 90 });
+    });
   });
 
   describe('Detail Diffing and Purging', () => {
