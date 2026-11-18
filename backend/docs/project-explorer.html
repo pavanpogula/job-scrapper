@@ -1089,6 +1089,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_StagedScrape_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>StagedScrape.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_Verify_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>Verify.test.ts</span>
@@ -1851,7 +1857,7 @@
       },
       {
         "label": "Functions",
-        "value": "4"
+        "value": "12"
       }
     ],
     "functions": [
@@ -1860,12 +1866,44 @@
         "desc": "Parses --workers=N from CLI arguments, defaulting to min(4, max(2, CPU cores))"
       },
       {
+        "name": "parseLeverStageMinutes()",
+        "desc": "Parses --lever-stage-min=N (integer 1-120, default 70); returns null when the value is invalid"
+      },
+      {
+        "name": "orderStages()",
+        "desc": "Orders enabled sources by registry order (ashby, greenhouse, lever), whatever order the caller typed"
+      },
+      {
         "name": "partitionSlugs()",
         "desc": "Distributes company slugs evenly across N worker shards using round-robin partitioning with source interleaving"
       },
       {
         "name": "runWorkerShard()",
         "desc": "Spawns a single OS worker process with watchdog timeout and resolves with WorkerResult"
+      },
+      {
+        "name": "finalizeRun()",
+        "desc": "Merges worker reports, applies the BF-017 failure policy, publishes the cache once (unless skipped), saves telemetry and prints the run summary; shared by the interleaved and staged runs"
+      },
+      {
+        "name": "settledToResults()",
+        "desc": "Converts settled worker promises into WorkerResults, optionally tagging each with its stage source"
+      },
+      {
+        "name": "registerSignalForwarders()",
+        "desc": "Registers single SIGINT/SIGTERM listeners forwarding signals to active children and returns cleanup callback"
+      },
+      {
+        "name": "executeShards()",
+        "desc": "Partitions selected companies into worker shards, spawns processes with child tracking, and collects WorkerResults"
+      },
+      {
+        "name": "runStage()",
+        "desc": "Executes one source stage (select, shard with 1 worker for Lever, run shards, collect StageResult)"
+      },
+      {
+        "name": "runStagedScrape()",
+        "desc": "Staged scrape (BF-025): runs each enabled source as its own stage in registry order (ashby, greenhouse, lever), isolates stage failures, then merges and publishes once. The Lever stage always uses 1 worker because its 1 request/s limit is global."
       },
       {
         "name": "runClusterScrape()",
@@ -1930,7 +1968,7 @@
       },
       {
         "label": "Functions",
-        "value": "10"
+        "value": "11"
       }
     ],
     "functions": [
@@ -1973,6 +2011,10 @@
       {
         "name": "runAll()",
         "desc": "Entry point. Fetches companies concurrently with adaptive rate-limiting and streams batch writes to DB."
+      },
+      {
+        "name": "buildIpcScraperOptions()",
+        "desc": "Builds AshbyScraper constructor options from an IPC worker message, honouring leverDeadlineMs when provided"
       }
     ]
   },
@@ -2049,7 +2091,7 @@
     "functions": [
       {
         "name": "parseLeverMaxBoards()",
-        "desc": "Parses --lever-max-boards=N from CLI arguments, defaulting to 600"
+        "desc": "Parses --lever-max-boards=N|all from CLI arguments; `all` means no cap (Infinity), a missing or invalid value falls back to defaultValue (600)"
       },
       {
         "name": "selectCompanies()",
@@ -5624,6 +5666,42 @@
       }
     ],
     "functions": []
+  },
+  "tests_unit_StagedScrape_test_ts": {
+    "name": "StagedScrape.test.ts",
+    "path": "tests/unit/StagedScrape.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Tests --staged stage order, failure isolation, single publish, Lever 1-worker stage with its own deadline/watchdog, per-source telemetry, flag parsing, signal listeners, and the unchanged interleaved payload",
+    "tags": [
+      "Unit Test",
+      "Cluster",
+      "Staged",
+      "Lever",
+      "BF-025",
+      "BF-017",
+      "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "2"
+      }
+    ],
+    "functions": [
+      {
+        "name": "asReport()",
+        "desc": "Worker report fixtures are minimal on purpose; cast once through unknown instead of using any"
+      },
+      {
+        "name": "installForkMock()",
+        "desc": "Installs a fork mock whose children answer each send() with worker_done (or worker_error for failing sources),"
+      }
+    ]
   },
   "tests_unit_Verify_test_ts": {
     "name": "Verify.test.ts",

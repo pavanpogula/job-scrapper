@@ -254,6 +254,8 @@ sequenceDiagram
 
 File: [ClusterScraper.ts](../src/core/ClusterScraper.ts), entry `runClusterScrape(argv)`.
 
+**Staged mode (`--staged`, BF-025).** `runClusterScrape` hands over to `runStagedScrape`: for each enabled source in registry order it selects that source's boards, shards them, runs that stage's workers to completion, then starts the next stage. Ashby and Greenhouse stages use `--workers` and the normal watchdog; the Lever stage uses 1 worker, `leverDeadlineMs = (--lever-stage-min - 5) min` and a watchdog of `--lever-stage-min + 5` min. A failed stage does not stop later stages. All stage reports are merged once and `finalizeRun` publishes once after the last stage (unless any worker failed, BF-017). The steps below describe the interleaved run, which is what runs without `--staged`.
+
 1. Select `ACTIVE` companies for enabled sources via `selectCompanies()` (applying `--lever-max-boards`, default `600`, oldest `lastCheckedAt` first), then `prisma.$disconnect()` (the coordinator never touches the DB again). If none → prints "Run: npm run seed" and returns `null`.
 2. `resolveWorkerCount(argv, slugs.length)`: default `min(4, max(2, os.cpus().length))` (i.e. 2–4); `--workers=N` (N ≥ 1)
    overrides it; result is capped at the number of companies. The documented 34k-job / 141.3 s run used `--workers=8`.

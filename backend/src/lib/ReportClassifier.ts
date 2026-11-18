@@ -114,6 +114,9 @@ const CATEGORY_BF_MAP: Record<string, string[]> = {
  * @summary Resolves source-aware related BF IDs for an issue category and source
  */
 export function resolveRelatedBF(category: string, source?: string): string[] {
+    if (category === 'worker_failed' && source) {
+        return ['BF-008', 'BF-025'];
+    }
     if (source === 'greenhouse') {
         if (category === 'api_error' || category === 'not_found') {
             return ['BF-023'];
@@ -209,6 +212,12 @@ export function classifyReport(
             matchedSource = sourceFromSlug(ev.companySlug);
         }
         if (!matchedSource && ev.message) {
+            const stageMatch = ev.message.match(/^Stage (ashby|greenhouse|lever):/);
+            if (stageMatch) {
+                matchedSource = stageMatch[1];
+            }
+        }
+        if (!matchedSource && ev.message) {
             for (const info of Object.values(ATS_SOURCES)) {
                 if (info.source !== 'ashby' && info.apiName && ev.message.includes(info.apiName)) {
                     matchedSource = info.source;
@@ -291,6 +300,10 @@ export function classifyReport(
             actionable = true;
             severity = 'S1';
             rule = 'R-REGRESS-1';
+        } else if (item.category === 'worker_failed') {
+            actionable = true;
+            severity = 'S1';
+            rule = 'R-RUN-1';
         } else if (item.category === 'db_error' && !isInfraAlert) {
             actionable = true;
             severity = 'S1';
@@ -364,8 +377,8 @@ export function classifyReport(
         }
     }
 
-    // Evaluate summary-level rules (R-RUN-1, R-GATE-2, R-NF-2, R-RL-1)
-    if (report.run.outcome !== 'success' && !isInfraAlert && classifiedIssues.length === 0) {
+    // Evaluate summary-level rules (R-RUN-1, R-GATE-2, R-TIME-1)
+    if (report.run.outcome !== 'success' && !isInfraAlert && !classifiedIssues.some(i => i.rule === 'R-RUN-1')) {
         const fp = computeIssueFingerprint('run_outcome', undefined, undefined, `Scrape run outcome: ${report.run.outcome}`);
         classifiedIssues.push({
             fingerprint: fp,
@@ -412,6 +425,39 @@ export function classifyReport(
         }
     }
 
+    const leverSkipped = report.summary.bySource?.lever?.skippedByDeadline ?? 0;
+    const leverSkipFp = computeIssueFingerprint(
+        'early_warning',
+        'lever_deadline_skipped',
+        undefined,
+        'Lever boards skipped by stage deadline'
+    );
+    if (leverSkipped > 0) {
+        const consecutiveSkipRuns = getConsecutiveRuns(leverSkipFp);
+        const openSkipPr = findOpenPr(leverSkipFp);
+        if (consecutiveSkipRuns >= 2 && !openSkipPr) {
+            classifiedIssues.push({
+                fingerprint: leverSkipFp,
+                category: 'early_warning',
+                subkind: 'lever_deadline_skipped',
+                severity: 'S2',
+                actionable: true,
+                rule: 'R-TIME-1',
+                count: leverSkipped,
+                companies: [],
+                sampleEventIds: [],
+                status: 'recurring',
+                firstSeenRunId: report.run.runId,
+                consecutiveRuns: consecutiveSkipRuns,
+                relatedBF: ['BF-024', 'BF-025'],
+                suggestedAction:
+                    'Lever stage hit leverDeadlineMs on 2 consecutive runs; raise --lever-stage-min or lower --lever-max-boards (never raise request rate)',
+                fixAttempts: 0,
+                openPr: null
+            });
+        }
+    }
+
     // Sort issues by severity: S1 > S2 > S3, then regressed, then consecutiveRuns desc
     const sevScore: Record<Severity, number> = { S1: 3, S2: 2, S3: 1 };
     classifiedIssues.sort((a, b) => {
@@ -429,11 +475,14 @@ export function classifyReport(
 
     // 4. Update run history (max 30 items)
     const currentFingerprints = classifiedIssues.map(i => i.fingerprint);
+    if (leverSkipped > 0 && !currentFingerprints.includes(leverSkipFp)) {
+        currentFingerprints.push(leverSkipFp);
+    }
     const resolvedFingerprints: string[] = [];
 
     if (previousRun && previousRun.fingerprints) {
         for (const prevFp of previousRun.fingerprints) {
-            if (!currentFingerprints.includes(prevFp)) {
+            if (!currentFingerprints.includes(prevFp) && prevFp !== leverSkipFp) {
                 resolvedFingerprints.push(prevFp);
             }
         }
@@ -490,10 +539,15 @@ export function classifyReport(
 
     if (report.summary.bySource && Object.keys(report.summary.bySource).length > 0) {
         markdown += `### By Source\n`;
-        markdown += `| Source | Companies Attempted | With Jobs | Jobs Collected | Not Found | Errors |\n`;
-        markdown += `|---|---|---|---|---|---|\n`;
+        markdown += `| Source | Companies Attempted | With Jobs | Jobs Collected | Not Found | Errors | Wall time | Boards (scraped/available/cap) | Skipped by deadline |\n`;
+        markdown += `|---|---|---|---|---|---|---|---|---|\n`;
         for (const [src, s] of Object.entries(report.summary.bySource)) {
-            markdown += `| ${src} | ${s.companiesAttempted} | ${s.companiesWithJobs} | ${s.jobsCollected} | ${s.notFound} | ${s.apiErrors} |\n`;
+            const wall = typeof s.durationMs === 'number' ? `${Math.round(s.durationMs / 1000)}s` : '—';
+            const boards =
+                typeof s.boardsAvailable === 'number'
+                    ? `${s.companiesAttempted}/${s.boardsAvailable}/${typeof s.boardsCap === 'number' ? s.boardsCap : 'all'}`
+                    : '—';
+            markdown += `| ${src} | ${s.companiesAttempted} | ${s.companiesWithJobs} | ${s.jobsCollected} | ${s.notFound} | ${s.apiErrors} | ${wall} | ${boards} | ${s.skippedByDeadline ?? 0} |\n`;
         }
         markdown += '\n';
     }
@@ -515,7 +569,7 @@ export function classifyReport(
 
     if (report.workers && report.workers.length > 0) {
         markdown += `## Workers\n`;
-        markdown += report.workers.map(w => `w${w.workerId} ${w.status} ${w.durationSeconds} s`).join(' · ') + '\n';
+        markdown += report.workers.map(w => `${w.stage ? `${w.stage}:` : ''}w${w.workerId} ${w.status} ${w.durationSeconds} s`).join(' · ') + '\n';
     }
 
     // 6. Write artifact files

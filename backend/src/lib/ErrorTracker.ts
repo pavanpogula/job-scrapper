@@ -51,6 +51,11 @@ export interface SourceTelemetrySummary {
     notFound: number;
     apiErrors: number;
     skippedByDeadline?: number;
+    /** Staged scrape: wall time of this source's stage in ms (merge = max) */
+    durationMs?: number;
+    /** Staged scrape, Lever only: active boards available / cap applied (merge = max; cap omitted when uncapped) */
+    boardsAvailable?: number;
+    boardsCap?: number;
 }
 
 export interface RunMetadata {
@@ -115,6 +120,8 @@ export interface ErrorReportDocument {
         status: 'ok' | 'failed' | 'timeout';
         durationSeconds: number;
         error?: string;
+        /** Staged scrape only: the source this worker scraped */
+        stage?: AtsSource;
     }>;
     cache?: Record<string, any>;
     categories: Record<string, CategoryTelemetry>;
@@ -608,6 +615,12 @@ export class ErrorTracker {
                     dest.apiErrors += srcStats.apiErrors || 0;
                     if (srcStats.skippedByDeadline) {
                         dest.skippedByDeadline = (dest.skippedByDeadline || 0) + srcStats.skippedByDeadline;
+                    }
+                    for (const key of ['durationMs', 'boardsAvailable', 'boardsCap'] as const) {
+                        const value = srcStats[key];
+                        if (typeof value === 'number') {
+                            dest[key] = Math.max(dest[key] ?? 0, value);
+                        }
                     }
                 }
             }
