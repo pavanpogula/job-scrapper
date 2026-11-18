@@ -25,6 +25,7 @@ maxTurns: 40
 6. `backend/docs/architecture-and-workflows.md`
 7. `backend/docs/database-and-cache.md`
 8. `docs/bug-fix-log.md`
+9. `docs/plans/lever/00-PLAN.md` (status, decisions, timing budget)
 
 ## Allowed Scope
 - Read-only access to all codebase files.

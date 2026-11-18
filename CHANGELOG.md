@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **docs(plan)**: Lever plan status update and the staged daily scrape plan (`docs/plans/lever/L5-staged-scrape.md`, `L6-enable-lever.md`; replaces the old L5): one source per stage, one publish, ~75-80 min per run under a 150-min job timeout; agent rule 13 (deploy the backend before writing a new enum value) and reviewer deep-review mode.
 - **feat(discovery)**: Lever site discovery via Wayback CDX and enrichment (ADR-0022).
   - Why: Discover US Lever boards at scale via Wayback Machine CDX (Common Crawl is blocked by `jobs.lever.co/robots.txt`) and keep company display names/logos fresh without enabling Lever scraping yet (L5).
   - Changes:

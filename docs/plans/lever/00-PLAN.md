@@ -1,9 +1,16 @@
 # Plan — Lever as a third job source (`jobs.lever.co/<company>`)
 
 > Owner request (2026-11-16): "extend the repo to also scrape https://jobs.lever.co/<company>, the way we did
-> Greenhouse". This folder holds the plan (this file) and one Antigravity prompt per PR (`L1-…` to `L5-…`). Run the
+> Greenhouse". This folder holds the plan (this file) and one Antigravity prompt per PR (`L1-…` to `L6-…`). Run the
 > PRs **in order**; each is squash-merged (and deployed where the table says) before the next starts.
 > Decision record: **ADR-0022** (written in L1). It extends ADR-0021 (multi-source ATS) and does not replace it.
+
+## Status (2026-11-18)
+- **Merged:** L1 #47 (registry + enum), L2 #48 (client), L3 #49 (API + UI), L4 #50 (discovery). Backend and frontend are deployed on L3.
+- **Discovery done locally** (owner's Mac, against production): 5,993 Wayback board names, about 1,823 live Lever boards inserted.
+- **First Lever scrape done locally** (`--sources=lever --skip-publish`): 782 boards gave 36,103 jobs (~46 jobs per board); the full
+  site had 128,506 active jobs. The scheduled GitHub scrape still excludes Lever (`LEVER_ENABLED` unset), so those rows do not refresh yet.
+- **Next:** L5 (staged runner, code) → L6 (workflow wiring + enable). L7 (optional hardening) is described in §4.
 
 ## 0. Why this is smaller than Greenhouse
 
@@ -108,12 +115,11 @@ enum value in the same transaction that adds it — nothing we run does that.)
    (retries included), and worker *k* delays its first Lever request by `(k-1) × 1000 ms`, so the whole parallel run
    stays ≤ 1 req/s. `workerCount` travels in the ClusterScraper → worker IPC message (new field). Lever limiter
    concurrency = 1. Headers = the existing `BROWSER_HEADERS` (as Greenhouse) with `Accept: application/json`.
-7. **Run-time budget:** the scrape job has `timeout-minutes: 30`, Ashby takes ~6 min, and the scrape runs 7×/day. At
-   1 req/s, 600 boards ≈ 10 min. `--lever-max-boards` (default **600**) picks Lever boards with the oldest
-   `lastCheckedAt` first (≈ 4,200 board-checks/day, enough for the ~2–3k estimated boards). The cap is applied where
-   companies are selected — in the **coordinator** (`ClusterScraper`) for `scrape:parallel` and in `Scraper.runAll`
-   for `scrape` — through one shared helper. A board not picked is scraped on a later run (its jobs are not deactivated:
-   deactivation only runs for boards scraped in this run). L5 measures and tunes it.
+7. **Run-time budget (superseded by decision 12 for the scheduled run):** outside staged mode the scrape job has a short
+   timeout, so Lever is limited: `--lever-max-boards` (default **600**, oldest `lastCheckedAt` first) and a per-scraper
+   `leverDeadlineMs` of 11 min (L2). The cap is applied where companies are selected — in the **coordinator**
+   (`ClusterScraper`) for `scrape:parallel` and in `Scraper.runAll` for `scrape` — through one shared helper. A board not
+   picked is scraped on a later run (its jobs are not deactivated: deactivation only runs for boards scraped in this run).
 8. **Description:** `description` + each `lists[]` as `<h3>{text}</h3>` + content (wrapped in `<ul>` only when the
    trimmed content starts with `<li`) + `salaryDescription` + `additional`, then `sanitizeJobDescriptionHtml`.
    No entity-unescape (the HTML is raw). `descriptionPlain = sanitizeJobDescriptionPlain(undefined, html)`.
@@ -134,6 +140,29 @@ enum value in the same transaction that adds it — nothing we run does that.)
 13. **UI:** "via Lever" badge, Lever in the Source filter, copy says "Ashby, Greenhouse & Lever". Board links always
     come from API `boardUrl`. The two places that build Greenhouse URLs from the slug in the browser
     (`CompanyHeader.tsx:38`, `CompanyCard.tsx:23`) are removed in L1.
+
+12. **Staged scrape (L5 code, L6 wiring):** with ~1,800 live Lever boards at ≤ 1 request/s, Lever needs ~50 min per
+    pass, while Ashby and Greenhouse need ~6–8 min each. So the scheduled run goes **staged**: `--staged` scrapes one
+    source completely, then the next (registry order ashby → greenhouse → lever), each with its own worker count and
+    wall time, then publishes the cache **once**. Rules:
+    - Ashby and Greenhouse stages use the normal worker count and the 15-min worker watchdog. The Lever stage always uses
+      **1 worker** (the 1 req/s limit is global), stops starting boards at `--lever-stage-min − 5` min and has a watchdog of
+      `--lever-stage-min + 5` min. `--lever-stage-min` defaults to **70**; the Lever cap in staged mode defaults to 3000
+      boards (`--lever-max-boards=all` removes it).
+    - A failed stage never stops the later stages (so a Greenhouse block cannot hide a Lever pass). BF-017 is unchanged:
+      any failed worker means no cache publish and exit 1. Earlier stages' rows are already written.
+    - The report gains per-source wall time (`durationMs`), Lever `boardsAvailable/boardsCap` and stage-tagged workers
+      (all additive, `schemaVersion` stays `2.0`).
+    - Timing table (expected / worst case): setup 3 / 5 min, enrichment 4–7 / 8, Ashby 6 / 15, Greenhouse 8 / 15,
+      Lever 50–55 / 75, classify + artifacts 1 / 2 → **~75–80 min expected, ~120 min worst case**. The `scrape` job
+      timeout is **150 min**, under the 180-min cadence (7 runs a day, 3 h apart), so runs never overlap.
+    - Free GitHub Actions (public repo): standard runners are free and unlimited, one job may run up to 6 h, 20 jobs run
+      at once, the cache is 10 GB with 7-day eviction, scheduled workflows stop after 60 days without repo activity.
+    - Lever load: ~1,800 requests per run, ~12,600 per day, always ≤ 1 request/s. If Lever asks for less, lower the cap or
+      run Lever on fewer runs; never raise the rate.
+    - Rollout is two variables, both default off: `STAGED_SCRAPE=true` (staged run) then `LEVER_ENABLED=true`
+      (include Lever). Rollback: `LEVER_ENABLED=false` → `deactivate_source=lever`; `STAGED_SCRAPE=false` returns to the
+      interleaved run.
 
 ## 3. Hard-coded spots L1 must generalize (from `grep -i greenhouse` on main @ 78efdfe)
 
@@ -160,7 +189,9 @@ Frontend: `types/api.ts:10,158`, `hooks/useJobFilters.ts:39`, `store/slices/filt
 | L2 | `L2-lever-client.md` | `LeverClient` + `normalizeLeverJob` + pacer + `seed:lever` + `--lever-max-boards`; BF-024; source-aware telemetry; **disabled by default** | Nothing live. Owner may run a local `--slugs=lv--spotify` try on a throwaway DB |
 | L3 | `L3-api-and-ui.md` | `source=lever` filter/facet/cache key, contract fixtures; "via Lever" badge, filter option, copy | Deploy backend → frontend |
 | L4 | `L4-lever-discovery.md` | Wayback CDX discovery, token validation, name+logo enrichment, weekly workflow job behind `DISCOVERY_LEVER_ENABLED` | Set variable, dispatch discover-weekly, send step summary |
-| L5 | `L5-enable-lever.md` | `LEVER_ENABLED` in scrape-daily, rollback choice `lever`, step-summary timing, tune `--lever-max-boards` | `sources=ashby,greenhouse,lever` + `skip_publish` measure run → flip variable |
+| L5 | `L5-staged-scrape.md` | `scrape:parallel --staged` (one source per stage, Lever 1 worker + own deadline, one publish), `--lever-max-boards=all`, `--lever-stage-min`, per-source wall time in the report, BF-025. **Opt-in, no workflow change** | Nothing live |
+| L6 | `L6-enable-lever.md` | scrape-daily: `STAGED_SCRAPE` + `LEVER_ENABLED` variables, `staged`/`lever_max_boards`/`lever_stage_min` inputs, job timeout 150, rollback choice `lever`, docs and agent files | Set `STAGED_SCRAPE=true`, then a `staged=true` + `skip_publish` measure run with Lever, then `LEVER_ENABLED=true` |
+| L7 (optional) | no prompt yet | Source circuit breaker: stop starting boards of a source after a burst of 403s, and an S1 alert when most of a source's boards fail (the 17 Nov Greenhouse block) | Write only if the owner asks |
 
 ## 5. Risks (and mitigations)
 
@@ -170,7 +201,7 @@ Frontend: `types/api.ts:10,158`, `hooks/useJobFilters.ts:39`, `store/slices/filt
 | Lever slug collides with an Ashby/Greenhouse slug | `lv--` prefix; Ashby/Greenhouse seed + discovery already reject `--`; L1 adds a test that no source's discovery yields a `xx--` slug |
 | Raw UUID passed to deactivation (Ashby UUIDs look the same) | L2 test: activeIds for Lever are `lever:<uuid>`; coexistence integration test Ashby `spotify` + Lever `lv--spotify` |
 | Breaking `Crawl-delay: 1` / getting blocked | Pacer at `1000 ms × workers`, concurrency 1, honour 429 Retry-After (cap 10 s), discovery ≤ 1 req/s |
-| Scrape job passes 30-min timeout | `--lever-max-boards` (default 600, oldest-checked first); L5 measures before flipping the variable |
+| Scrape job passes its timeout | Outside staged mode: cap 600 + 11-min deadline. Staged (L5/L6): per-stage deadlines and watchdogs, job timeout 150 min vs 180-min cadence; the measure run in L6 checks real timings before `LEVER_ENABLED` |
 | 12 MB boards → slow / memory | 60 s timeout; normalizer drops `description/opening/descriptionBody/lists/additional` from stored metadata (description stored once, as sanitized HTML + plain) |
 | Description missing "lists"/"additional" sections | Decision 8 + fixture test that asserts list headings and the EEO text appear in `descriptionHtml` |
 | `og:image` banner used as logo | Logo only from the header `<img alt="… logo">` on the `lever-client-logos` S3 host; test with recorded HTML |
@@ -181,7 +212,10 @@ Frontend: `types/api.ts:10,158`, `hooks/useJobFilters.ts:39`, `store/slices/filt
 | Discovery takes weeks to validate ~2–3k boards at 1 req/s | Accepted: `--budget` per run; harvest progress + every validation outcome persist in a cached state file, so each run resumes and rejected tokens are re-checked only after 30 days (L4) |
 | One slow Lever board overruns the 15-min worker watchdog → no cache publish for any source | Lever deadline per scraper instance (`leverDeadlineMs`, 11 min): stop starting Lever boards; unstarted boards keep `lastCheckedAt` and go first next run (L2) |
 | Lever ToS / `use=reference` content signal | **Owner reviews Lever's terms before L5**; we show title/summary/description and always link back to the Lever posting for applying |
-| Neon storage (+10–24 KB raw per job) | L5 measure run (`skip_publish`) reports bytes per job before the flip |
+| Neon storage (+10–24 KB raw per job) | L6 measure run (`skip_publish`) reports bytes per job before the flip; at ~46 jobs per board Lever may add 60–85k jobs, so watch the Neon size after the first full pass |
+| A staged stage fails or hangs and blocks the others | Stages are isolated (later stages still run); every stage has its own watchdog; BF-017 only skips the publish, never the writes (L5) |
+| Lever stage grows past its budget as discovery adds boards | `skippedByDeadline` and `boardsAvailable/boardsCap` in the By Source table; two consecutive runs with skips = S2; tune `--lever-stage-min` or the cap, never the rate |
+| Writing Lever rows before the deployed backend knows `LEVER` breaks `/v1/companies` (happened 17 Nov: the Prisma client of the old deploy rejected the new enum value) | Rule: deploy the backend that knows a new enum value **before** any code or script writes that value to the production database |
 | Auto-fixer editing `schema.prisma` during L1 | L1 temporarily removes `schema.prisma` from fixer scope; L2 restores it (same as G1/G6) |
 
 ## 6. Verification per PR (all PRs)

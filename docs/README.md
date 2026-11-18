@@ -181,7 +181,8 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
   - L2 Lever Client: [`docs/plans/lever/L2-lever-client.md`](./plans/lever/L2-lever-client.md)
   - L3 API & UI: [`docs/plans/lever/L3-api-and-ui.md`](./plans/lever/L3-api-and-ui.md)
   - L4 Lever Discovery: [`docs/plans/lever/L4-lever-discovery.md`](./plans/lever/L4-lever-discovery.md)
-  - L5 Enable Lever: [`docs/plans/lever/L5-enable-lever.md`](./plans/lever/L5-enable-lever.md)
+  - L5 Staged Scrape Runner: [`docs/plans/lever/L5-staged-scrape.md`](./plans/lever/L5-staged-scrape.md)
+  - L6 Enable Lever (staged daily scrape): [`docs/plans/lever/L6-enable-lever.md`](./plans/lever/L6-enable-lever.md)
   - Review Guide: [`docs/plans/lever/REVIEW.md`](./plans/lever/REVIEW.md)
 
 ---
