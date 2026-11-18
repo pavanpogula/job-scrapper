@@ -16,7 +16,7 @@ skills: [release, release-notes, record-decision, verify-change]
 - Maintains the ADR directory and index in `docs/decisions/README.md`.
 - Regenerates the interactive documentation visualizer (`backend/docs/project-explorer.html`) via `npm --prefix backend run docs:generate`.
 - Audits and maintains prompt/shell parity between Claude Code and Google Antigravity environments.
-- Checks that staged-scrape timing and limits docs (`docs/deployment-and-operations.md`) match the `scrape-daily.yml` timeouts.
+- Checks that staged-scrape timing, variables (`STAGED_SCRAPE`, `LEVER_ENABLED`) and free-tier docs (`docs/deployment-and-operations.md`, ADR-0010) match `scrape-daily.yml`.
 - Manages version bumping, release documentation, and release branches (`release/x.y.z`).
 
 ## Read-First List

@@ -30,7 +30,17 @@ on:
         description: 'Repo path of a v2 report fixture, e.g. backend/tests/fixtures/reports/actionable.json; skips scraping'
         default: ''
       sources:
-        description: 'ATS sources to scrape (comma-separated, e.g. ashby,greenhouse; empty uses GREENHOUSE_ENABLED toggle)'
+        description: 'ATS sources to scrape (comma-separated, e.g. ashby,greenhouse,lever; empty uses the GREENHOUSE_ENABLED and LEVER_ENABLED toggles)'
+        default: ''
+      staged:
+        description: 'Run sources one after another (ashby, greenhouse, lever) and publish once; the STAGED_SCRAPE variable turns this on for scheduled runs'
+        type: boolean
+        default: false
+      lever_max_boards:
+        description: 'Staged only: Lever board cap (whole number or all); empty uses the code default (3000)'
+        default: ''
+      lever_stage_min:
+        description: 'Staged only: Lever stage length in minutes, 1 to 120; empty uses the code default (70)'
         default: ''
       force_publish:
         description: 'Force cache publish (appends --force to cache:publish in publish_only path)'
@@ -42,6 +52,7 @@ on:
         options:
           - 'none'
           - 'greenhouse'
+          - 'lever'
         default: 'none'
 
 permissions:
@@ -58,7 +69,9 @@ jobs:
     name: Scrape & Publish
     if: vars.SCRAPE_ENABLED != 'false'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # Staged run: about 75-80 min expected, about 120 min worst case (setup 5, enrichment 8, Ashby 15, Greenhouse 15,
+    # Lever 75, classify 2). Must stay below the 3-hour cron cadence so runs never overlap (docs/deployment-and-operations.md).
+    timeout-minutes: 150
     environment: production
     defaults:
       run:
@@ -77,7 +90,9 @@ jobs:
       SCRAPE_WORKER_TIMEOUT_MS: '900000'
       GH_TOKEN: ${{ github.token }}
       GREENHOUSE_ENABLED: ${{ vars.GREENHOUSE_ENABLED }}
-      EFFECTIVE_SOURCES: ${{ inputs.sources != '' && inputs.sources || (vars.GREENHOUSE_ENABLED == 'true' && 'ashby,greenhouse' || 'ashby') }}
+      LEVER_ENABLED: ${{ vars.LEVER_ENABLED }}
+      STAGED_SCRAPE: ${{ vars.STAGED_SCRAPE }}
+      EFFECTIVE_SOURCES: ${{ inputs.sources != '' && inputs.sources || format('ashby{0}{1}', vars.GREENHOUSE_ENABLED == 'true' && ',greenhouse' || '', vars.LEVER_ENABLED == 'true' && ',lever' || '') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -133,6 +148,10 @@ jobs:
 
       - name: Run scrape or fixture
         id: scrape
+        env:
+          STAGED_INPUT: ${{ inputs.staged }}
+          LEVER_MAX_BOARDS_INPUT: ${{ inputs.lever_max_boards }}
+          LEVER_STAGE_MIN_INPUT: ${{ inputs.lever_stage_min }}
         run: |
           set +e
           if [ -n "${{ inputs.deactivate_source }}" ] && [ "${{ inputs.deactivate_source }}" != "none" ]; then
@@ -149,6 +168,23 @@ jobs:
             fi
           else
             ARGS="--workers=${{ inputs.workers || '4' }} --sources=$EFFECTIVE_SOURCES"
+            if [ "$STAGED_INPUT" = "true" ] || [ "$STAGED_SCRAPE" = "true" ]; then
+              ARGS="$ARGS --staged"
+              if [ -n "$LEVER_MAX_BOARDS_INPUT" ]; then
+                if printf '%s' "$LEVER_MAX_BOARDS_INPUT" | grep -Eq '^([0-9]+|all)$'; then
+                  ARGS="$ARGS --lever-max-boards=$LEVER_MAX_BOARDS_INPUT"
+                else
+                  echo "Invalid lever_max_boards (use digits or all); ignoring it" >> "$GITHUB_STEP_SUMMARY"
+                fi
+              fi
+              if [ -n "$LEVER_STAGE_MIN_INPUT" ]; then
+                if printf '%s' "$LEVER_STAGE_MIN_INPUT" | grep -Eq '^[0-9]+$'; then
+                  ARGS="$ARGS --lever-stage-min=$LEVER_STAGE_MIN_INPUT"
+                else
+                  echo "Invalid lever_stage_min (use digits); ignoring it" >> "$GITHUB_STEP_SUMMARY"
+                fi
+              fi
+            fi
             [ "${{ inputs.skip_publish }}" = "true" ] && ARGS="$ARGS --skip-publish"
             [ "${{ inputs.recheck_not_found }}" = "true" ] && ARGS="$ARGS --recheck-not-found"
             npm run scrape:parallel -- $ARGS

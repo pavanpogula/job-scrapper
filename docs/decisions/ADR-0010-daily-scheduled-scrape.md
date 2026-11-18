@@ -23,3 +23,7 @@ Schedule automated scrapes once daily at 06:17 UTC (`17 6 * * *`) on GitHub Acti
 - Scrapes complete in approximately 1–2 minutes with full telemetry reports.
 - Non-standard cron time avoids runner scheduling stampedes.
 - Guarded by `.github/workflows/scrape-daily.yml`.
+
+## Update (ADR-0022, staged scrape)
+- With Lever enabled the scheduled run goes staged (`STAGED_SCRAPE=true`): Ashby, Greenhouse, then Lever, one publish at the end, about 75-80 minutes per run (about 120 minutes worst case). The `scrape` job timeout is 150 minutes, below the 3-hour cadence.
+- The earlier "less than 2% of free runner minutes" estimate no longer holds (about 9 hours of runner time a day). It stays free because the repository is public (standard runners are unlimited); a private repository's 2,000 free minutes would not cover it.

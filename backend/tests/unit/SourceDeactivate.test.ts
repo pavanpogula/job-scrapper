@@ -163,4 +163,31 @@ describe('G6: Source Deactivation CLI', () => {
       })
     ).rejects.toThrow(/Invalid ATS source "workday"/);
   });
+  it('lever dry-run counts only Lever jobs and never touches other sources (ADR-0022)', async () => {
+    const leverPrisma = createStatefulPrisma({
+      companies: [
+        { id: 'c1', slug: 'ashby-corp', name: 'Ashby Corp', source: 'ASHBY', status: 'ACTIVE' },
+        { id: 'c3', slug: 'lv--lever-corp', name: 'Lever Corp', source: 'LEVER', status: 'ACTIVE' },
+      ],
+      jobs: [
+        { id: 'a1', ashbyId: 'ashby-1', source: 'ASHBY', companySlug: 'ashby-corp', active: true, isListed: true },
+        { id: 'l1', ashbyId: 'lever:11111111-1111-4111-8111-111111111111', source: 'LEVER', companySlug: 'lv--lever-corp', active: true, isListed: true },
+        { id: 'l2', ashbyId: 'lever:22222222-2222-4222-8222-222222222222', source: 'LEVER', companySlug: 'lv--lever-corp', active: true, isListed: true },
+        { id: 'l3', ashbyId: 'lever:33333333-3333-4333-8333-333333333333', source: 'LEVER', companySlug: 'lv--lever-corp', active: false, isListed: true },
+      ],
+    });
+
+    const res = await deactivateSource({
+      source: 'lever',
+      dryRun: true,
+      prismaClient: leverPrisma as unknown as PrismaClient,
+    });
+
+    expect(res.source).toBe('lever');
+    expect(res.activeJobs).toBe(2);
+    expect(res.totalJobs).toBe(3);
+    expect(res.deactivatedCount).toBe(0);
+    const ashbyActive = await (leverPrisma as unknown as PrismaClient).job.count({ where: { source: 'ASHBY', active: true } });
+    expect(ashbyActive).toBe(1);
+  });
 });
