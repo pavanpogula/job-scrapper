@@ -20,11 +20,9 @@ export function parseLeverMaxBoards(
   if (!flag) return defaultValue;
   const raw = (flag.split('=')[1] ?? '').trim().toLowerCase();
   if (raw === 'all') return Number.POSITIVE_INFINITY;
+  if (!/^\d+$/.test(raw)) return defaultValue;
   const parsed = parseInt(raw, 10);
-  if (!Number.isNaN(parsed) && parsed >= 1) {
-    return parsed;
-  }
-  return defaultValue;
+  return parsed >= 1 ? parsed : defaultValue;
 }
 
 export interface SelectCompaniesOptions<S extends Prisma.CompanySelect> {
@@ -48,7 +46,11 @@ export async function selectCompanies<S extends Prisma.CompanySelect>(
   db: Pick<PrismaClient, 'company'>,
   options: SelectCompaniesOptions<S>
 ): Promise<SelectCompaniesResult<S>> {
-  const leverCap = Math.max(1, options.leverMaxBoards ?? DEFAULT_LEVER_MAX_BOARDS);
+  const rawCap = options.leverMaxBoards ?? DEFAULT_LEVER_MAX_BOARDS;
+  const leverCap =
+    typeof rawCap === 'number' && !Number.isNaN(rawCap)
+      ? Math.max(1, rawCap)
+      : DEFAULT_LEVER_MAX_BOARDS;
   const enabledDbSources = options.sources.map(toDbAts);
 
   if (options.explicitSlugs) {

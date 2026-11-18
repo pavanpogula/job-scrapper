@@ -1857,7 +1857,7 @@
       },
       {
         "label": "Functions",
-        "value": "9"
+        "value": "12"
       }
     ],
     "functions": [
@@ -1887,7 +1887,19 @@
       },
       {
         "name": "settledToResults()",
-        "desc": "Converts settled worker promises into WorkerResults, tagging each with its stage source"
+        "desc": "Converts settled worker promises into WorkerResults, optionally tagging each with its stage source"
+      },
+      {
+        "name": "registerSignalForwarders()",
+        "desc": "Registers single SIGINT/SIGTERM listeners forwarding signals to active children and returns cleanup callback"
+      },
+      {
+        "name": "executeShards()",
+        "desc": "Partitions selected companies into worker shards, spawns processes with child tracking, and collects WorkerResults"
+      },
+      {
+        "name": "runStage()",
+        "desc": "Executes one source stage (select, shard with 1 worker for Lever, run shards, collect StageResult)"
       },
       {
         "name": "runStagedScrape()",
@@ -1956,7 +1968,7 @@
       },
       {
         "label": "Functions",
-        "value": "10"
+        "value": "11"
       }
     ],
     "functions": [
@@ -1999,6 +2011,10 @@
       {
         "name": "runAll()",
         "desc": "Entry point. Fetches companies concurrently with adaptive rate-limiting and streams batch writes to DB."
+      },
+      {
+        "name": "buildIpcScraperOptions()",
+        "desc": "Builds AshbyScraper constructor options from an IPC worker message, honouring leverDeadlineMs when provided"
       }
     ]
   },

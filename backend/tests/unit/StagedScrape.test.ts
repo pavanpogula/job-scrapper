@@ -6,15 +6,39 @@
 
 import { EventEmitter } from 'events';
 import * as child_process from 'child_process';
+
+const mockDisconnect = jest.fn().mockResolvedValue(undefined);
+jest.mock('@prisma/client', () => {
+    const actualMock = jest.requireActual('../../__mocks__/@prisma/client');
+    return {
+        ...actualMock,
+        PrismaClient: jest.fn().mockImplementation(() => ({
+            company: actualMock.mockCompany,
+            job: actualMock.mockJob,
+            department: actualMock.mockDepartment,
+            location: actualMock.mockLocation,
+            $transaction: jest.fn().mockResolvedValue([]),
+            $disconnect: mockDisconnect,
+            $queryRaw: jest.fn().mockResolvedValue([]),
+            $queryRawUnsafe: jest.fn().mockResolvedValue([])
+        }))
+    };
+});
+
 import {
     orderStages,
     parseLeverStageMinutes,
     runClusterScrape
 } from '../../src/core/ClusterScraper';
-import { parseLeverMaxBoards } from '../../src/core/selectCompanies';
+import { AshbyScraper, buildIpcScraperOptions, DEFAULT_LEVER_DEADLINE_MS } from '../../src/core/Scraper';
+import { parseLeverMaxBoards, selectCompanies } from '../../src/core/selectCompanies';
 import { ErrorReportDocument, ErrorTracker } from '../../src/lib/ErrorTracker';
 import { classifyReport } from '../../src/lib/ReportClassifier';
 import { publishCacheGeneration, recordScrapeFinished } from '../../src/cache/Publisher';
+import { AtsSource, toDbAts } from '../../src/lib/ats/source';
+import { createStatefulPrisma } from '../helpers/prismaFactory';
+import { BoardRef } from '../../src/lib/ats/AtsClient';
+import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -126,20 +150,48 @@ function installForkMock(opts: { failSources?: string[]; onSend?: (msg: SentMess
     return { log, sent };
 }
 
-function mockCompanies(...stages: Array<string[] | { slugs: string[]; available?: number }>) {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
+type StageMockSpec = string[] | { slugs: string[]; available?: number };
+
+function sourceFromWhere(where: { source?: string | { in?: string[] } } | undefined): AtsSource | null {
+    const srcField = where?.source;
+    const raw = typeof srcField === 'string' ? srcField : srcField?.in?.[0];
+    if (raw === 'ASHBY') return 'ashby';
+    if (raw === 'GREENHOUSE') return 'greenhouse';
+    if (raw === 'LEVER') return 'lever';
+    return null;
+}
+
+function mockCompanies(stages: Partial<Record<AtsSource, StageMockSpec>>) {
+    const { PrismaClient: MockPrisma } = require('@prisma/client');
+    const prisma = new MockPrisma();
     prisma.company.findMany.mockReset();
     prisma.company.count.mockReset();
-    for (const stage of stages) {
-        const slugs = Array.isArray(stage) ? stage : stage.slugs;
-        prisma.company.findMany.mockResolvedValueOnce(slugs.map(slug => ({ slug, source: 'ASHBY' })));
-        if (!Array.isArray(stage) && stage.available !== undefined) {
-            prisma.company.count.mockResolvedValueOnce(stage.available);
+
+    prisma.company.findMany.mockImplementation(
+        async (args?: { where?: { source?: string | { in?: string[] }; slug?: { in?: string[] } } }) => {
+            const src = sourceFromWhere(args?.where);
+            if (!src || !stages[src]) return [];
+            const spec = stages[src]!;
+            const slugs = Array.isArray(spec) ? spec : spec.slugs;
+            const slugFilter = args?.where?.slug?.in;
+            const filtered = slugFilter ? slugs.filter(s => slugFilter.includes(s)) : slugs;
+            const dbSource = toDbAts(src);
+            return filtered.map(slug => ({ slug, source: dbSource }));
         }
-    }
-    prisma.company.findMany.mockResolvedValue([]);
-    prisma.company.count.mockResolvedValue(0);
+    );
+
+    prisma.company.count.mockImplementation(
+        async (args?: { where?: { source?: string | { in?: string[] } } }) => {
+            const src = sourceFromWhere(args?.where);
+            if (!src || !stages[src]) return 0;
+            const spec = stages[src]!;
+            if (!Array.isArray(spec) && spec.available !== undefined) {
+                return spec.available;
+            }
+            return Array.isArray(spec) ? spec.length : spec.slugs.length;
+        }
+    );
+
     return prisma;
 }
 
@@ -166,18 +218,35 @@ describe('Staged scrape (BF-025)', () => {
             }
         });
 
-        it('parseLeverMaxBoards accepts all (no cap) and a caller-supplied default', () => {
+        it('parseLeverMaxBoards accepts all (no cap), rejects trailing junk, and falls back to caller default', () => {
             expect(parseLeverMaxBoards([])).toBe(600);
             expect(parseLeverMaxBoards([], 3000)).toBe(3000);
             expect(parseLeverMaxBoards(['--lever-max-boards=all'], 3000)).toBe(Number.POSITIVE_INFINITY);
             expect(parseLeverMaxBoards(['--lever-max-boards=250'], 3000)).toBe(250);
-            expect(parseLeverMaxBoards(['--lever-max-boards=nope'], 3000)).toBe(3000);
+            for (const bad of ['nope', '10abc', '1.5', '0', '-1', '']) {
+                expect(parseLeverMaxBoards([`--lever-max-boards=${bad}`], 3000)).toBe(3000);
+            }
+        });
+
+        it('selectCompanies guards against NaN leverMaxBoards instead of dropping take', async () => {
+            const prisma = mockCompanies({ lever: ['l1'] });
+            await selectCompanies(prisma, {
+                sources: ['lever'],
+                statusFilter: 'ACTIVE',
+                leverMaxBoards: Number.NaN,
+                select: { slug: true, source: true }
+            });
+            expect(prisma.company.findMany.mock.calls[0][0].take).toBe(600);
         });
     });
 
     it('runs ashby -> greenhouse -> lever in registry order, one stage fully before the next, Lever with 1 worker and its own deadline', async () => {
         const timeoutSpy = jest.spyOn(global, 'setTimeout');
-        mockCompanies(['a1', 'a2'], ['g1'], { slugs: ['l1', 'l2', 'l3'], available: 1800 });
+        const prisma = mockCompanies({
+            ashby: ['a1', 'a2'],
+            greenhouse: ['g1'],
+            lever: { slugs: ['l1', 'l2', 'l3'], available: 1800 }
+        });
         const { log, sent } = installForkMock();
 
         const report = await runClusterScrape(
@@ -185,9 +254,16 @@ describe('Staged scrape (BF-025)', () => {
         );
 
         expect(report?.run.exitCode).toBe(0);
+        expect(report?.run.workers).toBe(4);
+        // Verified source queries happened in registry order (ashby -> greenhouse -> lever)
+        const queriedSources = prisma.company.findMany.mock.calls.map(
+            (call: Array<{ where?: { source?: string | { in?: string[] } } }>) => sourceFromWhere(call[0]?.where)
+        );
+        expect(queriedSources).toEqual(['ashby', 'greenhouse', 'lever']);
         // 2 ashby workers, 1 greenhouse, 1 lever; each stage's workers exit before the next stage forks
         expect(log).toEqual(['f', 'f', 'e', 'e', 'f', 'e', 'f', 'e']);
         expect(sent.map(m => m.sources)).toEqual([['ashby'], ['ashby'], ['greenhouse'], ['lever']]);
+        expect(prisma.$disconnect).toHaveBeenCalledTimes(1);
 
         const lever = sent[3];
         expect(lever.workerCount).toBe(1);
@@ -204,7 +280,7 @@ describe('Staged scrape (BF-025)', () => {
     });
 
     it('a failed stage never stops the later stages, skips the publish and exits 1 with a stage-tagged event', async () => {
-        mockCompanies(['a1'], ['g1'], ['l1']);
+        mockCompanies({ ashby: ['a1'], greenhouse: ['g1'], lever: ['l1'] });
         const { sent } = installForkMock({ failSources: ['ashby'] });
 
         const report = await runClusterScrape([...STAGED, '--sources=ashby,greenhouse,lever']);
@@ -224,7 +300,7 @@ describe('Staged scrape (BF-025)', () => {
     });
 
     it('publishes exactly once after the last stage and records per-source wall time and Lever boards', async () => {
-        mockCompanies(['a1'], ['g1'], { slugs: ['l1', 'l2'], available: 1800 });
+        mockCompanies({ ashby: ['a1'], greenhouse: ['g1'], lever: { slugs: ['l1', 'l2'], available: 1800 } });
         const { sent } = installForkMock();
 
         const report = await runClusterScrape([...STAGED, '--sources=ashby,greenhouse,lever']);
@@ -232,6 +308,7 @@ describe('Staged scrape (BF-025)', () => {
         expect(sent).toHaveLength(3);
         expect(publishCacheGeneration).toHaveBeenCalledTimes(1);
         expect(report?.run.exitCode).toBe(0);
+        expect(report?.run.workers).toBe(3);
         const by = report!.summary.bySource!;
         for (const src of ['ashby', 'greenhouse', 'lever'] as const) {
             expect(typeof by[src]?.durationMs).toBe('number');
@@ -243,7 +320,7 @@ describe('Staged scrape (BF-025)', () => {
     });
 
     it('--skip-publish records the scrape finish without publishing', async () => {
-        mockCompanies(['a1'], ['g1']);
+        mockCompanies({ ashby: ['a1'], greenhouse: ['g1'] });
         installForkMock();
 
         const report = await runClusterScrape([...STAGED, '--sources=ashby,greenhouse', '--skip-publish']);
@@ -254,7 +331,7 @@ describe('Staged scrape (BF-025)', () => {
     });
 
     it('--lever-max-boards=all selects Lever without a take limit and omits boardsCap', async () => {
-        const prisma = mockCompanies({ slugs: ['l1'], available: 5 });
+        const prisma = mockCompanies({ lever: { slugs: ['l1'], available: 5 } });
         installForkMock();
 
         const report = await runClusterScrape([...STAGED, '--sources=lever', '--lever-max-boards=all']);
@@ -265,8 +342,25 @@ describe('Staged scrape (BF-025)', () => {
         expect(report?.summary.bySource?.lever?.boardsAvailable).toBe(5);
     });
 
+    it('filters --slugs per stage in --staged mode and skips stages with no matching slugs', async () => {
+        mockCompanies({ ashby: ['a1', 'a2'], greenhouse: ['g1'], lever: ['l1', 'l2'] });
+        const { sent } = installForkMock();
+
+        const report = await runClusterScrape([
+            ...STAGED,
+            '--sources=lever,ashby,greenhouse',
+            '--slugs=l1,a1'
+        ]);
+
+        expect(report?.run.exitCode).toBe(0);
+        expect(sent.map(m => ({ sources: m.sources, slugs: m.slugs }))).toEqual([
+            { sources: ['ashby'], slugs: ['a1'] },
+            { sources: ['lever'], slugs: ['l1'] }
+        ]);
+    });
+
     it('skips an empty stage without spawning and still runs the others; all empty returns null', async () => {
-        mockCompanies([], ['g1']);
+        mockCompanies({ ashby: [], greenhouse: ['g1'] });
         const first = installForkMock();
         const report = await runClusterScrape([...STAGED, '--sources=ashby,greenhouse']);
         expect(first.sent.map(m => m.sources?.[0])).toEqual(['greenhouse']);
@@ -274,7 +368,7 @@ describe('Staged scrape (BF-025)', () => {
 
         jest.clearAllMocks();
         (child_process.fork as jest.Mock).mockReset();
-        mockCompanies([], []);
+        mockCompanies({ ashby: [], greenhouse: [] });
         const second = installForkMock();
         const none = await runClusterScrape([...STAGED, '--sources=ashby,greenhouse']);
         expect(none).toBeNull();
@@ -286,7 +380,7 @@ describe('Staged scrape (BF-025)', () => {
             throw new Error(`exit:${code}`);
         }) as never);
         const errSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-        mockCompanies(['a1']);
+        mockCompanies({ ashby: ['a1'] });
         installForkMock();
 
         await expect(
@@ -297,10 +391,33 @@ describe('Staged scrape (BF-025)', () => {
         errSpy.mockRestore();
     });
 
+    it.each([0, -5, 121, 1.5, Number.NaN])(
+        'rejects invalid ClusterScrapeOptions.leverStageMin=%s with exit 1',
+        async bad => {
+            const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+                throw new Error(`exit:${code}`);
+            }) as never);
+            const errSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            mockCompanies({ ashby: ['a1'] });
+            installForkMock();
+
+            await expect(
+                runClusterScrape(['node', 'ClusterScraper.ts'], {
+                    staged: true,
+                    sources: ['ashby', 'lever'],
+                    leverStageMin: bad
+                })
+            ).rejects.toThrow('exit:1');
+            expect(child_process.fork).not.toHaveBeenCalled();
+            exitSpy.mockRestore();
+            errSpy.mockRestore();
+        }
+    );
+
     it('registers one SIGINT/SIGTERM listener for the whole run and removes it afterwards', async () => {
         const before = { int: process.listenerCount('SIGINT'), term: process.listenerCount('SIGTERM') };
         const seen: Array<{ int: number; term: number }> = [];
-        mockCompanies(['a1'], ['g1'], ['l1']);
+        mockCompanies({ ashby: ['a1'], greenhouse: ['g1'], lever: ['l1'] });
         installForkMock({
             onSend: () => seen.push({ int: process.listenerCount('SIGINT'), term: process.listenerCount('SIGTERM') })
         });
@@ -315,15 +432,28 @@ describe('Staged scrape (BF-025)', () => {
         expect(process.listenerCount('SIGTERM')).toBe(before.term);
     });
 
-    it('without --staged the interleaved run is unchanged: one shared set of workers and the old IPC payload keys', async () => {
-        const prisma = mockCompanies(['a1', 'g1', 'l1']);
-        prisma.company.findMany.mockReset();
-        prisma.company.findMany.mockResolvedValueOnce([
-            { slug: 'a1', source: 'ASHBY' },
-            { slug: 'g1', source: 'GREENHOUSE' }
-        ]);
-        prisma.company.findMany.mockResolvedValueOnce([{ slug: 'l1', source: 'LEVER' }]);
-        prisma.company.count.mockResolvedValue(1);
+    it('without --staged the interleaved run keeps the same IPC payload keys and disconnects prisma only after publish', async () => {
+        const prisma = mockCompanies({
+            ashby: ['a1'],
+            greenhouse: ['g1'],
+            lever: ['l1']
+        });
+        const callOrder: string[] = [];
+        (publishCacheGeneration as jest.Mock).mockImplementationOnce(async () => {
+            callOrder.push('publish');
+            return { attempted: true, status: 'published', gen: 'mock-gen', fields: 10, bytes: 1000, durationMs: 50 };
+        });
+        prisma.$disconnect.mockImplementationOnce(async () => {
+            callOrder.push('disconnect');
+        });
+        // Non-staged queries non-lever sources in one call then lever in the next
+        prisma.company.findMany
+            .mockReset()
+            .mockResolvedValueOnce([
+                { slug: 'a1', source: 'ASHBY' },
+                { slug: 'g1', source: 'GREENHOUSE' }
+            ])
+            .mockResolvedValueOnce([{ slug: 'l1', source: 'LEVER' }]);
         const { sent } = installForkMock();
 
         await runClusterScrape(['node', 'ClusterScraper.ts', '--sources=ashby,greenhouse,lever', '--workers=1']);
@@ -332,15 +462,78 @@ describe('Staged scrape (BF-025)', () => {
         expect(Object.keys(sent[0]).sort()).toEqual(['concurrency', 'slugs', 'sources', 'workerCount', 'workerId']);
         expect(sent[0].sources).toEqual(['ashby', 'greenhouse', 'lever']);
         expect(sent[0].slugs).toHaveLength(3);
+        expect(callOrder).toEqual(['publish', 'disconnect']);
     });
 
     it('--lever-stage-min without --staged is ignored with a warning', async () => {
         const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-        mockCompanies(['a1']);
+        mockCompanies({ ashby: ['a1'] });
         installForkMock();
         await runClusterScrape(['node', 'ClusterScraper.ts', '--sources=ashby', '--lever-stage-min=30']);
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('--lever-stage-min only applies with --staged'));
         warn.mockRestore();
+    });
+
+    it('worker IPC option helper honours leverDeadlineMs and defaults to 11 min when omitted', async () => {
+        expect(buildIpcScraperOptions({ workerId: 1, workerCount: 1, leverDeadlineMs: 65 * 60_000 })).toEqual({
+            leverMinIntervalMs: 1000,
+            leverInitialDelayMs: 0,
+            leverDeadlineMs: 65 * 60_000
+        });
+        expect(buildIpcScraperOptions({ workerId: 2, workerCount: 2 })).toEqual({
+            leverMinIntervalMs: 2000,
+            leverInitialDelayMs: 1000
+        });
+        expect(DEFAULT_LEVER_DEADLINE_MS).toBe(11 * 60_000);
+
+        jest.useFakeTimers();
+        jest.setSystemTime(0);
+        try {
+            const mkFactory = () =>
+                createStatefulPrisma({
+                    companies: [
+                        { slug: 'lv--one', source: 'LEVER', atsToken: 'one', status: 'ACTIVE' },
+                        { slug: 'lv--two', source: 'LEVER', atsToken: 'two', status: 'ACTIVE' }
+                    ]
+                });
+            const mkClient = (delayMs: number) => ({
+                source: 'lever' as const,
+                fetchBoard: jest.fn(async (ref: BoardRef) => {
+                    await new Promise(r => setTimeout(r, delayMs));
+                    return { slug: ref.slug, source: 'lever' as const, jobs: [], notFound: false, fetchMode: 'primary' as const };
+                }),
+                fetchCompanyMetadata: jest.fn(),
+                canonicalUrls: jest.fn()
+            });
+
+            // 1. Custom leverDeadlineMs (1500 ms) stops board #2
+            const customClient = mkClient(2000);
+            const customScraper = new AshbyScraper({
+                ...buildIpcScraperOptions({ workerId: 1, workerCount: 1, leverDeadlineMs: 1500 }),
+                prisma: mkFactory() as unknown as PrismaClient,
+                clients: new Map([['lever', customClient]])
+            });
+            const customPromise = customScraper.runAll({ sources: ['lever'], publish: false, saveTelemetry: false });
+            await jest.advanceTimersByTimeAsync(2500);
+            const customReport = await customPromise;
+            expect(customClient.fetchBoard).toHaveBeenCalledTimes(1);
+            expect(customReport.summary.bySource?.lever?.skippedByDeadline).toBe(1);
+
+            // 2. Omitted leverDeadlineMs defaults to 11 min so a 2000ms first board does NOT skip board #2
+            const defaultClient = mkClient(2000);
+            const defaultScraper = new AshbyScraper({
+                ...buildIpcScraperOptions({ workerId: 1, workerCount: 1 }),
+                prisma: mkFactory() as unknown as PrismaClient,
+                clients: new Map([['lever', defaultClient]])
+            });
+            const defaultPromise = defaultScraper.runAll({ sources: ['lever'], publish: false, saveTelemetry: false });
+            await jest.advanceTimersByTimeAsync(5000);
+            const defaultReport = await defaultPromise;
+            expect(defaultClient.fetchBoard).toHaveBeenCalledTimes(2);
+            expect(defaultReport.summary.bySource?.lever?.skippedByDeadline).toBeUndefined();
+        } finally {
+            jest.useRealTimers();
+        }
     });
 });
 
@@ -358,7 +551,7 @@ describe('Staged telemetry merge and report table', () => {
         expect(merged.summary.bySource?.lever).toMatchObject({ durationMs: 4000, boardsAvailable: 25, boardsCap: 600 });
     });
 
-    it('By Source table shows wall time, Lever boards and skipped-by-deadline; unset values render as dashes/zero', () => {
+    it('By Source table shows wall time, Lever boards and skipped-by-deadline and Workers renders stage prefix', () => {
         const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'staged-table-'));
         try {
             const report = ErrorTracker.mergeReports(
@@ -366,6 +559,11 @@ describe('Staged telemetry merge and report table', () => {
                 Date.now() - 1000,
                 'cluster'
             );
+            report.run.workers = 2;
+            report.workers = [
+                { workerId: 1, companies: 2, status: 'ok', durationSeconds: 2.1, stage: 'ashby' },
+                { workerId: 1, companies: 3, status: 'ok', durationSeconds: 5.4, stage: 'lever' }
+            ];
             const by = report.summary.bySource!;
             by.ashby!.durationMs = 312_000;
             by.lever!.durationMs = 3_000_000;
@@ -375,9 +573,95 @@ describe('Staged telemetry merge and report table', () => {
 
             const result = classifyReport(report, { outputDir: tmp, runHistoryPath: path.join(tmp, 'run-history.json') });
             const md = result.markdownSummary;
+            expect(md).toContain('· 2 workers ·');
             expect(md).toContain('| Wall time | Boards (scraped/available/cap) | Skipped by deadline |');
             expect(md).toMatch(/\| ashby \|.*\| 312s \| — \| 0 \|/);
             expect(md).toMatch(/\| lever \|.*\| 3000s \| 3\/1800\/3000 \| 4 \|/);
+            expect(md).toContain('ashby:w1 ok 2.1 s · lever:w1 ok 5.4 s');
+        } finally {
+            fs.rmSync(tmp, { recursive: true, force: true });
+        }
+    });
+
+    it('classifies staged worker_failed as S1 R-RUN-1 even when a surviving stage emits an S2 validation issue', () => {
+        const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'staged-worker-fail-'));
+        try {
+            const report = asReport(workerReport('lever', 3));
+            report.run.outcome = 'failed';
+            report.run.exitCode = 1;
+            report.events.push(
+                {
+                    id: 'ev-val',
+                    timestamp: new Date().toISOString(),
+                    category: 'validation_filtered',
+                    source: 'lever',
+                    subkind: 'title',
+                    field: 'title',
+                    companySlug: 'lv--spotify',
+                    message: 'Job title is empty',
+                    actionTaken: 'filtered'
+                },
+                {
+                    id: 'ev-wf',
+                    timestamp: new Date().toISOString(),
+                    category: 'worker_failed',
+                    companySlug: 'worker-1',
+                    message: 'Stage ashby: Worker #1 failed: Process crashed',
+                    actionTaken: 'failed'
+                }
+            );
+
+            const res = classifyReport(report, { outputDir: tmp, runHistoryPath: path.join(tmp, 'run-history.json') });
+            expect(res.actionable).toBe(true);
+            const wf = res.issues.find(i => i.category === 'worker_failed');
+            expect(wf).toMatchObject({
+                severity: 'S1',
+                rule: 'R-RUN-1',
+                relatedBF: ['BF-008', 'BF-025']
+            });
+            expect(res.issues.some(i => i.category === 'validation_filtered')).toBe(true);
+        } finally {
+            fs.rmSync(tmp, { recursive: true, force: true });
+        }
+    });
+
+    it('treats Lever skippedByDeadline as noise once, actionable S2 (R-TIME-1) on 2 consecutive runs, and resets after 0 skips', () => {
+        const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'staged-skip-s2-'));
+        const historyPath = path.join(tmp, 'run-history.json');
+        const makeRun = (runId: string, skipped: number) => {
+            const r = asReport(workerReport('lever', 3));
+            r.run.runId = runId;
+            r.run.outcome = 'success';
+            r.run.exitCode = 0;
+            if (skipped > 0) {
+                r.summary.bySource!.lever!.skippedByDeadline = skipped;
+            }
+            return classifyReport(r, { outputDir: tmp, runHistoryPath: historyPath });
+        };
+
+        try {
+            const r1 = makeRun('run-1', 4);
+            expect(r1.actionable).toBe(false);
+            expect(r1.issues).toHaveLength(0);
+
+            const r2 = makeRun('run-2', 3);
+            expect(r2.actionable).toBe(true);
+            expect(r2.issues[0]).toMatchObject({
+                category: 'early_warning',
+                subkind: 'lever_deadline_skipped',
+                severity: 'S2',
+                rule: 'R-TIME-1',
+                consecutiveRuns: 2,
+                relatedBF: ['BF-024', 'BF-025']
+            });
+
+            const r3 = makeRun('run-3', 0);
+            expect(r3.actionable).toBe(false);
+
+            // Next single skip after recovery must be noise again, not R-REGRESS-1 S1
+            const r4 = makeRun('run-4', 2);
+            expect(r4.actionable).toBe(false);
+            expect(r4.issues).toHaveLength(0);
         } finally {
             fs.rmSync(tmp, { recursive: true, force: true });
         }
