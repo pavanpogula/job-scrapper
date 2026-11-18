@@ -95,8 +95,9 @@ Isolation rules (this is the point of the PR):
   including `--skip-publish`, `--dry-run`, `--force`).
 - `ReportClassifier.ts`: the existing "By Source" table gains columns **Wall time** (from `durationMs`, `—` when unset),
   **Boards (scraped/available/cap)** (Lever rows only, `—` otherwise) and **Skipped by deadline** (L2's
-  `skippedByDeadline`, `0` when unset). Existing column text and fingerprints are unchanged. (Automatic S2 classification of
-  repeated Lever skips is **not** part of this PR; the run-reviewer role handles it by reading the table.)
+  `skippedByDeadline`, `0` when unset). Existing column text and fingerprints are unchanged. Add the S2 rule: Lever
+  `skippedByDeadline > 0` is **noise** for one run and **actionable (S2)** only when `run-history` shows it on two
+  consecutive runs (reuse the existing consecutive-run mechanism; no new state file).
 
 ### 4. `source:deactivate`
 Accepts `lever` through the registry already; add the test only.
@@ -118,7 +119,7 @@ New file `backend/tests/unit/StagedScrape.test.ts`:
    shards with the same IPC payload as before (keep the existing assertions green; add one explicit snapshot of the IPC
    message keys, which must **not** include `leverDeadlineMs`).
 Also: `ErrorTracker` (`durationMs`/`boardsAvailable`/`boardsCap` merge = max, `stage` survives merge), `ReportClassifier`
-(new columns), `selectCompanies` (`all`),
+(new columns; Lever `skippedByDeadline` noise once / S2 on two consecutive runs), `selectCompanies` (`all`),
 `Scraper` worker IPC (`leverDeadlineMs` honoured, absent → 11 min), `source:deactivate lever --dry-run`.
 
 ## DOCS

@@ -27,6 +27,29 @@ export interface WorkerResult {
     stage?: AtsSource;
 }
 
+export interface StageResult {
+    source: AtsSource;
+    companies: number;
+    workerCount: number;
+    durationMs: number;
+    results: WorkerResult[];
+    failed: boolean;
+    leverAvailable?: number;
+    leverCap?: number;
+}
+
+export interface StageContext {
+    argv: string[];
+    options: ClusterScrapeOptions;
+    statusFilter: Prisma.CompanyWhereInput['status'];
+    explicitSlugs?: string[];
+    leverMaxBoards: number;
+    leverStageMin: number;
+    activeChildren: Set<ChildProcess>;
+    stageIndex?: number;
+    totalStages?: number;
+}
+
 export interface ClusterScrapeOptions {
     sources?: AtsSource[];
     slugs?: string[];
@@ -314,6 +337,7 @@ async function finalizeRun(params: {
     const hasFailures = results.some(w => w.status !== 'ok');
 
     const mergedReport = ErrorTracker.mergeReports(successfulReports, startedAtMs, 'cluster');
+    mergedReport.run.workers = workersSpawned;
     mergedReport.workers = results.map(r => ({
         workerId: r.workerId,
         pid: r.pid,
@@ -409,16 +433,16 @@ async function finalizeRun(params: {
 }
 
 /**
- * @summary Converts settled worker promises into WorkerResults, tagging each with its stage source
+ * @summary Converts settled worker promises into WorkerResults, optionally tagging each with its stage source
  */
 function settledToResults(
     settled: PromiseSettledResult<WorkerResult>[],
     shards: string[][],
-    stage: AtsSource
+    stage?: AtsSource
 ): WorkerResult[] {
     return settled.map((s, idx) => {
         if (s.status === 'fulfilled') {
-            return { ...s.value, stage };
+            return stage ? { ...s.value, stage } : s.value;
         }
         return {
             workerId: idx + 1,
@@ -426,38 +450,15 @@ function settledToResults(
             status: 'failed' as const,
             durationSeconds: 0,
             error: s.reason?.message || String(s.reason),
-            stage
+            ...(stage ? { stage } : {})
         };
     });
 }
 
 /**
- * @summary Staged scrape (BF-025): runs each enabled source as its own stage in registry order (ashby, greenhouse, lever), isolates stage failures, then merges and publishes once. The Lever stage always uses 1 worker because its 1 request/s limit is global.
+ * @summary Registers single SIGINT/SIGTERM listeners forwarding signals to active children and returns cleanup callback
  */
-async function runStagedScrape(params: {
-    argv: string[];
-    options: ClusterScrapeOptions;
-    enabledSources: AtsSource[];
-    explicitSlugs?: string[];
-    startedAtMs: number;
-}): Promise<ErrorReportDocument | null> {
-    const { argv, options, enabledSources, explicitSlugs, startedAtMs } = params;
-
-    const leverStageMin = options.leverStageMin ?? parseLeverStageMinutes(argv);
-    if (leverStageMin === null || leverStageMin === undefined) {
-        console.error('❌ Invalid --lever-stage-min: use a whole number of minutes from 1 to 120');
-        process.exit(1);
-    }
-    const leverMaxBoards = options.leverMaxBoards ?? parseLeverMaxBoards(argv, STAGED_LEVER_MAX_BOARDS);
-    const stages = orderStages(enabledSources);
-
-    const isSundayUtc = new Date().getUTCDay() === 0;
-    const recheckNotFound = argv.includes('--recheck-not-found') || isSundayUtc;
-    const statusFilter: Prisma.CompanyWhereInput['status'] = recheckNotFound ? { in: ['ACTIVE', 'NOT_FOUND'] } : 'ACTIVE';
-
-    console.log(`⚡ STAGED CLUSTER SCRAPER: ${stages.join(' → ')}\n`);
-
-    const activeChildren = new Set<ChildProcess>();
+function registerSignalForwarders(activeChildren: Set<ChildProcess>): () => void {
     const forwardSignal = (signal: 'SIGINT' | 'SIGTERM') => {
         console.warn(`\n⚠️  Coordinator received ${signal}. Forwarding to ${activeChildren.size} active worker processes...`);
         for (const child of activeChildren) {
@@ -472,111 +473,232 @@ async function runStagedScrape(params: {
     const sigtermListener = () => forwardSignal('SIGTERM');
     process.once('SIGINT', sigintListener);
     process.once('SIGTERM', sigtermListener);
+    return () => {
+        process.removeListener('SIGINT', sigintListener);
+        process.removeListener('SIGTERM', sigtermListener);
+    };
+}
+
+/**
+ * @summary Partitions selected companies into worker shards, spawns processes with child tracking, and collects WorkerResults
+ */
+async function executeShards(params: {
+    companies: Array<{ slug: string; source?: string }>;
+    workerCount: number;
+    sources: AtsSource[];
+    activeChildren: Set<ChildProcess>;
+    workerTimeoutMs?: number;
+    killGracePeriodMs?: number;
+    leverDeadlineMs?: number;
+    stage?: AtsSource;
+    onBeforeSpawn?: (shardsCount: number, perWorkerConcurrency: number) => void;
+}): Promise<WorkerResult[]> {
+    const {
+        companies,
+        workerCount,
+        sources,
+        activeChildren,
+        workerTimeoutMs,
+        killGracePeriodMs,
+        leverDeadlineMs,
+        stage,
+        onBeforeSpawn
+    } = params;
+
+    const shards = partitionSlugs(companies, workerCount);
+    const perWorkerConcurrency = companies.length > 100 ? 12 : Math.max(5, Math.ceil(20 / shards.length));
+    onBeforeSpawn?.(shards.length, perWorkerConcurrency);
+
+    let settled: PromiseSettledResult<WorkerResult>[];
+    try {
+        settled = await Promise.allSettled(
+            shards.map((shardSlugs, idx) =>
+                runWorkerShard(idx + 1, shardSlugs, perWorkerConcurrency, {
+                    workerTimeoutMs,
+                    killGracePeriodMs,
+                    sources,
+                    workerCount: shards.length,
+                    leverDeadlineMs,
+                    onSpawn: child => activeChildren.add(child)
+                })
+            )
+        );
+    } finally {
+        activeChildren.clear();
+    }
+
+    return settledToResults(settled, shards, stage);
+}
+
+/**
+ * @summary Executes one source stage (select, shard with 1 worker for Lever, run shards, collect StageResult)
+ */
+export async function runStage(source: AtsSource, ctx: StageContext): Promise<StageResult> {
+    const isLever = source === 'lever';
+    const hasLabel = ctx.stageIndex !== undefined && ctx.totalStages !== undefined;
+    const label = hasLabel ? `${ctx.stageIndex}/${ctx.totalStages}` : '';
+
+    const { companies, leverAvailable, leverCap } = await selectCompanies(prisma, {
+        sources: [source],
+        statusFilter: ctx.statusFilter,
+        explicitSlugs: ctx.explicitSlugs,
+        leverMaxBoards: ctx.leverMaxBoards,
+        select: { slug: true, source: true }
+    });
+
+    if (companies.length === 0) {
+        console.log(`⏭  Stage ${label ? `${label} ` : ''}${source}: no active companies, skipped`);
+        return {
+            source,
+            companies: 0,
+            workerCount: 0,
+            durationMs: 0,
+            results: [],
+            failed: false,
+            ...(isLever ? { leverAvailable, leverCap } : {})
+        };
+    }
+
+    // Lever's 1 req/s Crawl-delay limit is global, so extra workers add no throughput; force 1 worker.
+    const workerCount = isLever ? 1 : resolveWorkerCount(ctx.argv, companies.length);
+    const stopStartingMs = isLever
+        ? Math.max(60_000, (ctx.leverStageMin - LEVER_STAGE_DEADLINE_MARGIN_MIN) * 60_000)
+        : undefined;
+    const watchdogMs = isLever
+        ? (ctx.leverStageMin + LEVER_STAGE_DEADLINE_MARGIN_MIN) * 60_000
+        : ctx.options.workerTimeoutMs;
+
+    const stageStart = Date.now();
+    const results = await executeShards({
+        companies,
+        workerCount,
+        sources: [source],
+        activeChildren: ctx.activeChildren,
+        workerTimeoutMs: watchdogMs,
+        killGracePeriodMs: ctx.options.killGracePeriodMs,
+        leverDeadlineMs: stopStartingMs,
+        stage: source,
+        onBeforeSpawn: shardsCount => {
+            console.log(`▶ Stage ${label ? `${label}: ` : ''}${source} (${companies.length} boards, ${shardsCount} worker(s))`);
+        }
+    });
+
+    const durationMs = Date.now() - stageStart;
+    const okCount = results.filter(r => r.status === 'ok').length;
+    console.log(
+        `✔ Stage ${label ? `${label}: ` : ''}${source} done in ${(durationMs / 1000).toFixed(1)}s (${okCount}/${results.length} workers ok)\n`
+    );
+
+    return {
+        source,
+        companies: companies.length,
+        workerCount: results.length,
+        durationMs,
+        results,
+        failed: results.some(r => r.status !== 'ok'),
+        ...(isLever ? { leverAvailable, leverCap } : {})
+    };
+}
+
+/**
+ * @summary Staged scrape (BF-025): runs each enabled source as its own stage in registry order (ashby, greenhouse, lever), isolates stage failures, then merges and publishes once. The Lever stage always uses 1 worker because its 1 request/s limit is global.
+ */
+async function runStagedScrape(params: {
+    argv: string[];
+    options: ClusterScrapeOptions;
+    enabledSources: AtsSource[];
+    explicitSlugs?: string[];
+    startedAtMs: number;
+}): Promise<ErrorReportDocument | null> {
+    const { argv, options, enabledSources, explicitSlugs, startedAtMs } = params;
+
+    const leverStageMin =
+        options.leverStageMin !== undefined ? options.leverStageMin : parseLeverStageMinutes(argv);
+    if (
+        leverStageMin === null ||
+        typeof leverStageMin !== 'number' ||
+        !Number.isInteger(leverStageMin) ||
+        leverStageMin < 1 ||
+        leverStageMin > 120
+    ) {
+        console.error('❌ Invalid --lever-stage-min: use a whole number of minutes from 1 to 120');
+        process.exit(1);
+    }
+    const leverMaxBoards = options.leverMaxBoards ?? parseLeverMaxBoards(argv, STAGED_LEVER_MAX_BOARDS);
+    const stages = orderStages(enabledSources);
+
+    const isSundayUtc = new Date().getUTCDay() === 0;
+    const recheckNotFound = argv.includes('--recheck-not-found') || isSundayUtc;
+    const statusFilter: Prisma.CompanyWhereInput['status'] = recheckNotFound ? { in: ['ACTIVE', 'NOT_FOUND'] } : 'ACTIVE';
+
+    console.log(`⚡ STAGED CLUSTER SCRAPER: ${stages.join(' → ')}\n`);
+
+    const activeChildren = new Set<ChildProcess>();
+    const unregisterSignals = registerSignalForwarders(activeChildren);
 
     const allResults: WorkerResult[] = [];
-    const stageStats: Array<{ source: AtsSource; durationMs: number; leverAvailable?: number; leverCap?: number }> = [];
+    const stageStats: StageResult[] = [];
     let totalWorkers = 0;
 
     try {
-        for (let i = 0; i < stages.length; i++) {
-            const source = stages[i];
-            const label = `${i + 1}/${stages.length}`;
-            const isLever = source === 'lever';
-
-            const { companies, leverAvailable, leverCap } = await selectCompanies(prisma, {
-                sources: [source],
-                statusFilter,
-                explicitSlugs,
-                leverMaxBoards,
-                select: { slug: true, source: true }
-            });
-
-            if (companies.length === 0) {
-                console.log(`⏭  Stage ${label} ${source}: no active companies, skipped`);
-                continue;
-            }
-
-            const workerCount = isLever ? 1 : resolveWorkerCount(argv, companies.length);
-            const shards = partitionSlugs(companies, workerCount);
-            const perWorkerConcurrency = companies.length > 100 ? 12 : Math.max(5, Math.ceil(20 / shards.length));
-            const stopStartingMs = isLever
-                ? Math.max(60_000, (leverStageMin - LEVER_STAGE_DEADLINE_MARGIN_MIN) * 60_000)
-                : undefined;
-            const watchdogMs = isLever
-                ? (leverStageMin + LEVER_STAGE_DEADLINE_MARGIN_MIN) * 60_000
-                : options.workerTimeoutMs;
-
-            console.log(`▶ Stage ${label}: ${source} (${companies.length} boards, ${shards.length} worker(s))`);
-            const stageStart = Date.now();
-
-            const settled = await Promise.allSettled(
-                shards.map((shardSlugs, idx) =>
-                    runWorkerShard(idx + 1, shardSlugs, perWorkerConcurrency, {
-                        workerTimeoutMs: watchdogMs,
-                        killGracePeriodMs: options.killGracePeriodMs,
-                        sources: [source],
-                        workerCount: shards.length,
-                        leverDeadlineMs: stopStartingMs,
-                        onSpawn: child => activeChildren.add(child)
-                    })
-                )
-            );
-            activeChildren.clear();
-
-            const stageResults = settledToResults(settled, shards, source);
-            const durationMs = Date.now() - stageStart;
-            const okCount = stageResults.filter(r => r.status === 'ok').length;
-            console.log(
-                `✔ Stage ${label}: ${source} done in ${(durationMs / 1000).toFixed(1)}s (${okCount}/${stageResults.length} workers ok)\n`
-            );
-
-            allResults.push(...stageResults);
-            totalWorkers += shards.length;
-            stageStats.push({
-                source,
-                durationMs,
-                ...(isLever ? { leverAvailable, leverCap } : {})
-            });
-        }
-    } finally {
-        process.removeListener('SIGINT', sigintListener);
-        process.removeListener('SIGTERM', sigtermListener);
-    }
-
-    if (stageStats.length === 0) {
-        console.log('⚠️  No active companies found in database. Run: npm run seed');
-        await prisma.$disconnect();
-        return null;
-    }
-
-    const report = await finalizeRun({
-        results: allResults,
-        workersSpawned: totalWorkers,
-        startedAtMs,
-        argv,
-        options,
-        decorate: merged => {
-            const bySource = (merged.summary.bySource = merged.summary.bySource || {});
-            for (const stat of stageStats) {
-                const entry = (bySource[stat.source] = bySource[stat.source] || {
-                    companiesAttempted: 0,
-                    companiesWithJobs: 0,
-                    jobsCollected: 0,
-                    notFound: 0,
-                    apiErrors: 0
+        try {
+            for (let i = 0; i < stages.length; i++) {
+                const stageResult = await runStage(stages[i], {
+                    argv,
+                    options,
+                    statusFilter,
+                    explicitSlugs,
+                    leverMaxBoards,
+                    leverStageMin,
+                    activeChildren,
+                    stageIndex: i + 1,
+                    totalStages: stages.length
                 });
-                entry.durationMs = stat.durationMs;
-                if (stat.source === 'lever') {
-                    if (typeof stat.leverAvailable === 'number') entry.boardsAvailable = stat.leverAvailable;
-                    if (typeof stat.leverCap === 'number' && Number.isFinite(stat.leverCap)) {
-                        entry.boardsCap = stat.leverCap;
+                if (stageResult.companies === 0) {
+                    continue;
+                }
+                allResults.push(...stageResult.results);
+                totalWorkers += stageResult.workerCount;
+                stageStats.push(stageResult);
+            }
+        } finally {
+            unregisterSignals();
+        }
+
+        if (stageStats.length === 0) {
+            console.log('⚠️  No active companies found in database. Run: npm run seed');
+            return null;
+        }
+
+        return await finalizeRun({
+            results: allResults,
+            workersSpawned: totalWorkers,
+            startedAtMs,
+            argv,
+            options,
+            decorate: merged => {
+                const bySource = (merged.summary.bySource = merged.summary.bySource || {});
+                for (const stat of stageStats) {
+                    const entry = (bySource[stat.source] = bySource[stat.source] || {
+                        companiesAttempted: 0,
+                        companiesWithJobs: 0,
+                        jobsCollected: 0,
+                        notFound: 0,
+                        apiErrors: 0
+                    });
+                    entry.durationMs = stat.durationMs;
+                    if (stat.source === 'lever') {
+                        if (typeof stat.leverAvailable === 'number') entry.boardsAvailable = stat.leverAvailable;
+                        if (typeof stat.leverCap === 'number' && Number.isFinite(stat.leverCap)) {
+                            entry.boardsCap = stat.leverCap;
+                        }
                     }
                 }
             }
-        }
-    });
-    await prisma.$disconnect();
-    return report;
+        });
+    } finally {
+        await prisma.$disconnect();
+    }
 }
 
 /**
@@ -617,90 +739,56 @@ export async function runClusterScrape(
     if (argv.includes('--staged') || options.staged === true) {
         return runStagedScrape({ argv, options, enabledSources, explicitSlugs, startedAtMs });
     }
-    if (argv.some(arg => arg.startsWith('--lever-stage-min='))) {
+    if (argv.some(arg => arg.startsWith('--lever-stage-min=')) || options.leverStageMin !== undefined) {
         console.warn('⚠️  --lever-stage-min only applies with --staged; ignored.');
     }
 
     const isSundayUtc = new Date().getUTCDay() === 0;
     const recheckNotFound = argv.includes('--recheck-not-found') || isSundayUtc;
-    const statusFilter = recheckNotFound ? { in: ['ACTIVE', 'NOT_FOUND'] as any } : 'ACTIVE';
+    const statusFilter: Prisma.CompanyWhereInput['status'] = recheckNotFound ? { in: ['ACTIVE', 'NOT_FOUND'] } : 'ACTIVE';
 
-    const { companies } = await selectCompanies(prisma, {
-        sources: enabledSources,
-        statusFilter,
-        explicitSlugs,
-        leverMaxBoards: options.leverMaxBoards ?? parseLeverMaxBoards(argv),
-        select: { slug: true, source: true }
-    });
-    await prisma.$disconnect();
-
-    if (companies.length === 0) {
-        console.log('⚠️  No active companies found in database. Run: npm run seed');
-        return null;
-    }
-
-    const slugs = companies.map(c => c.slug);
-    const workerCount = resolveWorkerCount(argv, companies.length);
-    const shards = partitionSlugs(companies, workerCount);
-    const perWorkerConcurrency = companies.length > 100 ? 12 : Math.max(5, Math.ceil(20 / shards.length));
-
-    console.log(`⚡ MULTI-PROCESS CLUSTER SCRAPER`);
-    console.log(`   Active Companies : ${slugs.length}`);
-    console.log(`   OS Worker Procs  : ${shards.length} (CPU cores available: ${os.cpus().length})`);
-    console.log(`   Per-Worker HTTP  : ${perWorkerConcurrency} concurrent requests\n`);
-
-    const activeChildren = new Set<ChildProcess>();
-
-    // Signal forwarding for SIGINT and SIGTERM
-    const forwardSignal = (signal: 'SIGINT' | 'SIGTERM') => {
-        console.warn(`\n⚠️  Coordinator received ${signal}. Forwarding to ${activeChildren.size} active worker processes...`);
-        for (const child of activeChildren) {
-            try {
-                child.kill(signal);
-            } catch {
-                // child may have already exited
-            }
-        }
-    };
-
-    const sigintListener = () => forwardSignal('SIGINT');
-    const sigtermListener = () => forwardSignal('SIGTERM');
-
-    process.once('SIGINT', sigintListener);
-    process.once('SIGTERM', sigtermListener);
-
-    const workerPromises = shards.map((shardSlugs, idx) =>
-        runWorkerShard(idx + 1, shardSlugs, perWorkerConcurrency, {
-            workerTimeoutMs: options.workerTimeoutMs,
-            killGracePeriodMs: options.killGracePeriodMs,
-            sources: enabledSources,
-            workerCount: shards.length,
-            onSpawn: child => activeChildren.add(child)
-        })
-    );
-
-    let settledResults: PromiseSettledResult<WorkerResult>[];
     try {
-        settledResults = await Promise.allSettled(workerPromises);
-    } finally {
-        process.removeListener('SIGINT', sigintListener);
-        process.removeListener('SIGTERM', sigtermListener);
-    }
+        const { companies } = await selectCompanies(prisma, {
+            sources: enabledSources,
+            statusFilter,
+            explicitSlugs,
+            leverMaxBoards: options.leverMaxBoards ?? parseLeverMaxBoards(argv),
+            select: { slug: true, source: true }
+        });
 
-    const results: WorkerResult[] = settledResults.map((s, idx) => {
-        if (s.status === 'fulfilled') {
-            return s.value;
+        if (companies.length === 0) {
+            console.log('⚠️  No active companies found in database. Run: npm run seed');
+            return null;
         }
-        return {
-            workerId: idx + 1,
-            companies: shards[idx].length,
-            status: 'failed',
-            durationSeconds: 0,
-            error: s.reason?.message || String(s.reason)
-        };
-    });
 
-    return finalizeRun({ results, workersSpawned: shards.length, startedAtMs, argv, options });
+        const workerCount = resolveWorkerCount(argv, companies.length);
+        const activeChildren = new Set<ChildProcess>();
+        const unregisterSignals = registerSignalForwarders(activeChildren);
+
+        let results: WorkerResult[];
+        try {
+            results = await executeShards({
+                companies,
+                workerCount,
+                sources: enabledSources,
+                activeChildren,
+                workerTimeoutMs: options.workerTimeoutMs,
+                killGracePeriodMs: options.killGracePeriodMs,
+                onBeforeSpawn: (shardsCount, perWorkerConcurrency) => {
+                    console.log(`⚡ MULTI-PROCESS CLUSTER SCRAPER`);
+                    console.log(`   Active Companies : ${companies.length}`);
+                    console.log(`   OS Worker Procs  : ${shardsCount} (CPU cores available: ${os.cpus().length})`);
+                    console.log(`   Per-Worker HTTP  : ${perWorkerConcurrency} concurrent requests\n`);
+                }
+            });
+        } finally {
+            unregisterSignals();
+        }
+
+        return await finalizeRun({ results, workersSpawned: results.length, startedAtMs, argv, options });
+    } finally {
+        await prisma.$disconnect();
+    }
 }
 
 if (require.main === module) {

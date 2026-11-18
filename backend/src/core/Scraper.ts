@@ -163,7 +163,7 @@ export interface AshbyScraperOptions {
     leverDeadlineMs?: number;
 }
 
-const DEFAULT_LEVER_DEADLINE_MS = 11 * 60_000;
+export const DEFAULT_LEVER_DEADLINE_MS = 11 * 60_000;
 
 /**
  * @summary High-performance scraper class with adaptive concurrency, 3-strike quarantine, stale job deactivation, and streaming batch DB writes
@@ -1209,15 +1209,26 @@ export class AshbyScraper {
     }
 }
 
+/**
+ * @summary Builds AshbyScraper constructor options from an IPC worker message, honouring leverDeadlineMs when provided
+ */
+export function buildIpcScraperOptions(msg: {
+    workerId: number;
+    workerCount?: number;
+    leverDeadlineMs?: number;
+}): AshbyScraperOptions {
+    const workerCount = Math.max(1, msg.workerCount ?? 1);
+    return {
+        leverMinIntervalMs: 1000 * workerCount,
+        leverInitialDelayMs: Math.max(0, msg.workerId - 1) * 1000,
+        ...(typeof msg.leverDeadlineMs === 'number' ? { leverDeadlineMs: msg.leverDeadlineMs } : {})
+    };
+}
+
 if (require.main === module) {
     if (process.argv.includes('--ipc-worker')) {
         process.once('message', async (msg: { workerId: number; workerCount?: number; slugs: string[]; concurrency?: number; sources?: AtsSource[]; leverDeadlineMs?: number }) => {
-            const workerCount = Math.max(1, msg.workerCount ?? 1);
-            const scraper = new AshbyScraper({
-                leverMinIntervalMs: 1000 * workerCount,
-                leverInitialDelayMs: Math.max(0, msg.workerId - 1) * 1000,
-                ...(typeof msg.leverDeadlineMs === 'number' ? { leverDeadlineMs: msg.leverDeadlineMs } : {})
-            });
+            const scraper = new AshbyScraper(buildIpcScraperOptions(msg));
             try {
                 const report = await scraper.runAll({
                     slugs: msg.slugs,

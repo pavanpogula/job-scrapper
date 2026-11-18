@@ -38,6 +38,7 @@ Reports are classified by `src/lib/ReportClassifier.ts` against the telemetry ru
 | R-API-1 | `api_error` rate > 5% of attempted companies | Actionable S2 |
 | R-RATE-1 | `rate_limited` rate > 10% of attempted companies | Actionable S2 |
 | R-CO-1 | `company_error` ≥ 1 or `company_unreachable` ≥ 1 | Actionable S2 |
+| R-TIME-1 | Lever `skippedByDeadline` > 0 for 2 consecutive runs | Actionable S2 (raise `--lever-stage-min` or lower cap; never raise rate) |
 | R-RECUR-1 | Fingerprint already has open PR | Comment on that PR; stop |
 | R-STOP-1 | `fixAttempts` ≥ 2 on open `fix-failed` issue | Stop fixer; label `needs-human` |
 | R-REGRESS-1 | `status === 'regressed'` | Actionable S1, handled first |
