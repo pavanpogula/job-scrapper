@@ -1211,11 +1211,12 @@ export class AshbyScraper {
 
 if (require.main === module) {
     if (process.argv.includes('--ipc-worker')) {
-        process.once('message', async (msg: { workerId: number; workerCount?: number; slugs: string[]; concurrency?: number; sources?: AtsSource[] }) => {
+        process.once('message', async (msg: { workerId: number; workerCount?: number; slugs: string[]; concurrency?: number; sources?: AtsSource[]; leverDeadlineMs?: number }) => {
             const workerCount = Math.max(1, msg.workerCount ?? 1);
             const scraper = new AshbyScraper({
                 leverMinIntervalMs: 1000 * workerCount,
-                leverInitialDelayMs: Math.max(0, msg.workerId - 1) * 1000
+                leverInitialDelayMs: Math.max(0, msg.workerId - 1) * 1000,
+                ...(typeof msg.leverDeadlineMs === 'number' ? { leverDeadlineMs: msg.leverDeadlineMs } : {})
             });
             try {
                 const report = await scraper.runAll({

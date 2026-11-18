@@ -7,10 +7,10 @@
 import { fork, ChildProcess } from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type Prisma } from '@prisma/client';
 import { ErrorReportDocument, ErrorTracker } from '../lib/ErrorTracker';
 import { publishCacheGeneration, recordScrapeFinished } from '../cache/Publisher';
-import { AtsSource, parseAtsSources } from '../lib/ats/source';
+import { AtsSource, SUPPORTED_ATS_SOURCES, parseAtsSources } from '../lib/ats/source';
 import { parseLeverMaxBoards, selectCompanies } from './selectCompanies';
 
 const prisma = new PrismaClient();
@@ -23,12 +23,18 @@ export interface WorkerResult {
     durationSeconds: number;
     error?: string;
     report?: ErrorReportDocument;
+    /** Staged scrape only: the source this worker scraped */
+    stage?: AtsSource;
 }
 
 export interface ClusterScrapeOptions {
     sources?: AtsSource[];
     slugs?: string[];
     leverMaxBoards?: number;
+    /** Opt-in staged mode: one source per stage, one publish at the end (BF-025) */
+    staged?: boolean;
+    /** Staged mode: Lever stage length in minutes (1-120, default 70) */
+    leverStageMin?: number;
     workerTimeoutMs?: number;
     killGracePeriodMs?: number;
     saveTelemetry?: boolean;
@@ -57,6 +63,29 @@ export function resolveWorkerCount(argv: string[], totalItems: number, cpuCount:
     }
 
     return Math.max(1, Math.min(requested, Math.max(1, totalItems)));
+}
+
+export const DEFAULT_LEVER_STAGE_MIN = 70;
+export const STAGED_LEVER_MAX_BOARDS = 3000;
+const LEVER_STAGE_DEADLINE_MARGIN_MIN = 5;
+
+/**
+ * @summary Parses --lever-stage-min=N (integer 1-120, default 70); returns null when the value is invalid
+ */
+export function parseLeverStageMinutes(argv: string[]): number | null {
+    const flag = argv.find(arg => arg.startsWith('--lever-stage-min='));
+    if (!flag) return DEFAULT_LEVER_STAGE_MIN;
+    const raw = (flag.split('=')[1] ?? '').trim();
+    if (!/^\d+$/.test(raw)) return null;
+    const parsed = parseInt(raw, 10);
+    return parsed >= 1 && parsed <= 120 ? parsed : null;
+}
+
+/**
+ * @summary Orders enabled sources by registry order (ashby, greenhouse, lever), whatever order the caller typed
+ */
+export function orderStages(sources: AtsSource[]): AtsSource[] {
+    return SUPPORTED_ATS_SOURCES.filter(s => sources.includes(s));
 }
 
 export type PartitionItem = string | { slug: string; source?: string };
@@ -121,6 +150,7 @@ export function runWorkerShard(
         killGracePeriodMs?: number;
         sources?: AtsSource[];
         workerCount?: number;
+        leverDeadlineMs?: number;
         onSpawn?: (child: ChildProcess) => void;
     } = {}
 ): Promise<WorkerResult> {
@@ -248,7 +278,8 @@ export function runWorkerShard(
                 workerCount: options.workerCount ?? 1,
                 slugs,
                 concurrency: perWorkerConcurrency,
-                sources: options.sources
+                sources: options.sources,
+                ...(options.leverDeadlineMs !== undefined ? { leverDeadlineMs: options.leverDeadlineMs } : {})
             });
         } catch (err: any) {
             cleanupAndResolve({
@@ -261,6 +292,291 @@ export function runWorkerShard(
             });
         }
     });
+}
+
+/**
+ * @summary Merges worker reports, applies the BF-017 failure policy, publishes the cache once (unless skipped), saves telemetry and prints the run summary; shared by the interleaved and staged runs
+ */
+async function finalizeRun(params: {
+    results: WorkerResult[];
+    workersSpawned: number;
+    startedAtMs: number;
+    argv: string[];
+    options: ClusterScrapeOptions;
+    decorate?: (report: ErrorReportDocument) => void;
+}): Promise<ErrorReportDocument> {
+    const { results, workersSpawned, startedAtMs, argv, options } = params;
+
+    const successfulReports = results
+        .filter(w => w.status === 'ok' && w.report)
+        .map(w => w.report!);
+
+    const hasFailures = results.some(w => w.status !== 'ok');
+
+    const mergedReport = ErrorTracker.mergeReports(successfulReports, startedAtMs, 'cluster');
+    mergedReport.workers = results.map(r => ({
+        workerId: r.workerId,
+        pid: r.pid,
+        companies: r.companies,
+        status: r.status,
+        durationSeconds: r.durationSeconds,
+        error: r.error,
+        ...(r.stage ? { stage: r.stage } : {})
+    }));
+    params.decorate?.(mergedReport);
+
+    if (hasFailures) {
+        mergedReport.run.outcome = 'failed';
+        mergedReport.run.exitCode = 1;
+        mergedReport.cache = {
+            attempted: false,
+            status: 'skipped_incomplete_run',
+            durationMs: 0
+        };
+
+        for (const failedWorker of results.filter(w => w.status !== 'ok')) {
+            if (!mergedReport.categories['worker_failed']) {
+                mergedReport.categories['worker_failed'] = { count: 0 };
+            }
+            mergedReport.categories['worker_failed'].count++;
+            mergedReport.events.push({
+                timestamp: new Date().toISOString(),
+                category: 'worker_failed',
+                companySlug: `worker-${failedWorker.workerId}`,
+                message: `${failedWorker.stage ? `Stage ${failedWorker.stage}: ` : ''}Worker #${failedWorker.workerId} ${failedWorker.status}: ${failedWorker.error || 'failure during scrape'}`,
+                actionTaken: failedWorker.status
+            });
+        }
+    } else {
+        const isSkipPublish = argv.includes('--skip-publish') || options.skipPublish;
+        if (isSkipPublish) {
+            await recordScrapeFinished({
+                scrapeFinishedAt: new Date().toISOString(),
+                redis: options.redis
+            });
+            mergedReport.cache = {
+                attempted: false,
+                status: 'skipped_flag',
+                durationMs: 0
+            };
+            mergedReport.run.outcome = 'success';
+            mergedReport.run.exitCode = 0;
+        } else {
+            try {
+                const publishResult = await publishCacheGeneration({
+                    runId: mergedReport.run.runId,
+                    scrapeFinishedAt: new Date().toISOString(),
+                    prisma,
+                    redis: options.redis,
+                    dryRun: argv.includes('--dry-run') || options.dryRun,
+                    force: argv.includes('--force') || options.force
+                });
+                mergedReport.cache = publishResult;
+                if (publishResult.status === 'published' || publishResult.status.startsWith('skipped')) {
+                    mergedReport.run.outcome = 'success';
+                    mergedReport.run.exitCode = 0;
+                } else {
+                    mergedReport.run.outcome = 'failed';
+                    mergedReport.run.exitCode = 2;
+                }
+            } catch (err: any) {
+                mergedReport.cache = {
+                    attempted: true,
+                    status: 'failed',
+                    durationMs: 0,
+                    error: err.message || String(err)
+                };
+                mergedReport.run.outcome = 'failed';
+                mergedReport.run.exitCode = 2;
+            }
+        }
+    }
+
+    const savedPath = ErrorTracker.saveMergedReport(mergedReport);
+
+    console.log(`\n🏁 MULTI-PROCESS SCRAPE COMPLETE in ${mergedReport.summary.durationSeconds}s`);
+    console.log(`   Workers Spawned        : ${workersSpawned} (Success: ${results.filter(r => r.status === 'ok').length}, Failed: ${results.filter(r => r.status !== 'ok').length})`);
+    console.log(`   Companies Attempted    : ${mergedReport.summary.companiesAttempted}`);
+    console.log(`   Companies With Jobs    : ${mergedReport.summary.companiesWithJobs}`);
+    console.log(`   GraphQL Fallbacks Used : ${mergedReport.summary.graphqlFallbacksUsed}`);
+    console.log(`   Total Jobs Collected   : ${mergedReport.summary.jobsCollected}`);
+    console.log(`   Jobs Sanitized/Filtered: ${mergedReport.summary.jobsSanitized} / ${mergedReport.summary.jobsFilteredOut}`);
+    if (savedPath) {
+        console.log(`   📋 Aggregated Telemetry: ${savedPath}`);
+    }
+
+    return mergedReport;
+}
+
+/**
+ * @summary Converts settled worker promises into WorkerResults, tagging each with its stage source
+ */
+function settledToResults(
+    settled: PromiseSettledResult<WorkerResult>[],
+    shards: string[][],
+    stage: AtsSource
+): WorkerResult[] {
+    return settled.map((s, idx) => {
+        if (s.status === 'fulfilled') {
+            return { ...s.value, stage };
+        }
+        return {
+            workerId: idx + 1,
+            companies: shards[idx].length,
+            status: 'failed' as const,
+            durationSeconds: 0,
+            error: s.reason?.message || String(s.reason),
+            stage
+        };
+    });
+}
+
+/**
+ * @summary Staged scrape (BF-025): runs each enabled source as its own stage in registry order (ashby, greenhouse, lever), isolates stage failures, then merges and publishes once. The Lever stage always uses 1 worker because its 1 request/s limit is global.
+ */
+async function runStagedScrape(params: {
+    argv: string[];
+    options: ClusterScrapeOptions;
+    enabledSources: AtsSource[];
+    explicitSlugs?: string[];
+    startedAtMs: number;
+}): Promise<ErrorReportDocument | null> {
+    const { argv, options, enabledSources, explicitSlugs, startedAtMs } = params;
+
+    const leverStageMin = options.leverStageMin ?? parseLeverStageMinutes(argv);
+    if (leverStageMin === null || leverStageMin === undefined) {
+        console.error('❌ Invalid --lever-stage-min: use a whole number of minutes from 1 to 120');
+        process.exit(1);
+    }
+    const leverMaxBoards = options.leverMaxBoards ?? parseLeverMaxBoards(argv, STAGED_LEVER_MAX_BOARDS);
+    const stages = orderStages(enabledSources);
+
+    const isSundayUtc = new Date().getUTCDay() === 0;
+    const recheckNotFound = argv.includes('--recheck-not-found') || isSundayUtc;
+    const statusFilter: Prisma.CompanyWhereInput['status'] = recheckNotFound ? { in: ['ACTIVE', 'NOT_FOUND'] } : 'ACTIVE';
+
+    console.log(`⚡ STAGED CLUSTER SCRAPER: ${stages.join(' → ')}\n`);
+
+    const activeChildren = new Set<ChildProcess>();
+    const forwardSignal = (signal: 'SIGINT' | 'SIGTERM') => {
+        console.warn(`\n⚠️  Coordinator received ${signal}. Forwarding to ${activeChildren.size} active worker processes...`);
+        for (const child of activeChildren) {
+            try {
+                child.kill(signal);
+            } catch {
+                // child may have already exited
+            }
+        }
+    };
+    const sigintListener = () => forwardSignal('SIGINT');
+    const sigtermListener = () => forwardSignal('SIGTERM');
+    process.once('SIGINT', sigintListener);
+    process.once('SIGTERM', sigtermListener);
+
+    const allResults: WorkerResult[] = [];
+    const stageStats: Array<{ source: AtsSource; durationMs: number; leverAvailable?: number; leverCap?: number }> = [];
+    let totalWorkers = 0;
+
+    try {
+        for (let i = 0; i < stages.length; i++) {
+            const source = stages[i];
+            const label = `${i + 1}/${stages.length}`;
+            const isLever = source === 'lever';
+
+            const { companies, leverAvailable, leverCap } = await selectCompanies(prisma, {
+                sources: [source],
+                statusFilter,
+                explicitSlugs,
+                leverMaxBoards,
+                select: { slug: true, source: true }
+            });
+
+            if (companies.length === 0) {
+                console.log(`⏭  Stage ${label} ${source}: no active companies, skipped`);
+                continue;
+            }
+
+            const workerCount = isLever ? 1 : resolveWorkerCount(argv, companies.length);
+            const shards = partitionSlugs(companies, workerCount);
+            const perWorkerConcurrency = companies.length > 100 ? 12 : Math.max(5, Math.ceil(20 / shards.length));
+            const stopStartingMs = isLever
+                ? Math.max(60_000, (leverStageMin - LEVER_STAGE_DEADLINE_MARGIN_MIN) * 60_000)
+                : undefined;
+            const watchdogMs = isLever
+                ? (leverStageMin + LEVER_STAGE_DEADLINE_MARGIN_MIN) * 60_000
+                : options.workerTimeoutMs;
+
+            console.log(`▶ Stage ${label}: ${source} (${companies.length} boards, ${shards.length} worker(s))`);
+            const stageStart = Date.now();
+
+            const settled = await Promise.allSettled(
+                shards.map((shardSlugs, idx) =>
+                    runWorkerShard(idx + 1, shardSlugs, perWorkerConcurrency, {
+                        workerTimeoutMs: watchdogMs,
+                        killGracePeriodMs: options.killGracePeriodMs,
+                        sources: [source],
+                        workerCount: shards.length,
+                        leverDeadlineMs: stopStartingMs,
+                        onSpawn: child => activeChildren.add(child)
+                    })
+                )
+            );
+            activeChildren.clear();
+
+            const stageResults = settledToResults(settled, shards, source);
+            const durationMs = Date.now() - stageStart;
+            const okCount = stageResults.filter(r => r.status === 'ok').length;
+            console.log(
+                `✔ Stage ${label}: ${source} done in ${(durationMs / 1000).toFixed(1)}s (${okCount}/${stageResults.length} workers ok)\n`
+            );
+
+            allResults.push(...stageResults);
+            totalWorkers += shards.length;
+            stageStats.push({
+                source,
+                durationMs,
+                ...(isLever ? { leverAvailable, leverCap } : {})
+            });
+        }
+    } finally {
+        process.removeListener('SIGINT', sigintListener);
+        process.removeListener('SIGTERM', sigtermListener);
+    }
+
+    if (stageStats.length === 0) {
+        console.log('⚠️  No active companies found in database. Run: npm run seed');
+        await prisma.$disconnect();
+        return null;
+    }
+
+    const report = await finalizeRun({
+        results: allResults,
+        workersSpawned: totalWorkers,
+        startedAtMs,
+        argv,
+        options,
+        decorate: merged => {
+            const bySource = (merged.summary.bySource = merged.summary.bySource || {});
+            for (const stat of stageStats) {
+                const entry = (bySource[stat.source] = bySource[stat.source] || {
+                    companiesAttempted: 0,
+                    companiesWithJobs: 0,
+                    jobsCollected: 0,
+                    notFound: 0,
+                    apiErrors: 0
+                });
+                entry.durationMs = stat.durationMs;
+                if (stat.source === 'lever') {
+                    if (typeof stat.leverAvailable === 'number') entry.boardsAvailable = stat.leverAvailable;
+                    if (typeof stat.leverCap === 'number' && Number.isFinite(stat.leverCap)) {
+                        entry.boardsCap = stat.leverCap;
+                    }
+                }
+            }
+        }
+    });
+    await prisma.$disconnect();
+    return report;
 }
 
 /**
@@ -296,6 +612,13 @@ export async function runClusterScrape(
     let explicitSlugs = options.slugs;
     if (!explicitSlugs && slugsFlag) {
         explicitSlugs = slugsFlag.split('=')[1].split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    if (argv.includes('--staged') || options.staged === true) {
+        return runStagedScrape({ argv, options, enabledSources, explicitSlugs, startedAtMs });
+    }
+    if (argv.some(arg => arg.startsWith('--lever-stage-min='))) {
+        console.warn('⚠️  --lever-stage-min only applies with --staged; ignored.');
     }
 
     const isSundayUtc = new Date().getUTCDay() === 0;
@@ -377,103 +700,7 @@ export async function runClusterScrape(
         };
     });
 
-    const successfulReports = results
-        .filter(w => w.status === 'ok' && w.report)
-        .map(w => w.report!);
-
-    const hasFailures = results.some(w => w.status !== 'ok');
-
-    const mergedReport = ErrorTracker.mergeReports(successfulReports, startedAtMs, 'cluster');
-    mergedReport.workers = results.map(r => ({
-        workerId: r.workerId,
-        pid: r.pid,
-        companies: r.companies,
-        status: r.status,
-        durationSeconds: r.durationSeconds,
-        error: r.error
-    }));
-
-    if (hasFailures) {
-        mergedReport.run.outcome = 'failed';
-        mergedReport.run.exitCode = 1;
-        mergedReport.cache = {
-            attempted: false,
-            status: 'skipped_incomplete_run',
-            durationMs: 0
-        };
-
-        for (const failedWorker of results.filter(w => w.status !== 'ok')) {
-            if (!mergedReport.categories['worker_failed']) {
-                mergedReport.categories['worker_failed'] = { count: 0 };
-            }
-            mergedReport.categories['worker_failed'].count++;
-            mergedReport.events.push({
-                timestamp: new Date().toISOString(),
-                category: 'worker_failed',
-                companySlug: `worker-${failedWorker.workerId}`,
-                message: `Worker #${failedWorker.workerId} ${failedWorker.status}: ${failedWorker.error || 'failure during scrape'}`,
-                actionTaken: failedWorker.status
-            });
-        }
-    } else {
-        const isSkipPublish = argv.includes('--skip-publish') || options.skipPublish;
-        if (isSkipPublish) {
-            await recordScrapeFinished({
-                scrapeFinishedAt: new Date().toISOString(),
-                redis: options.redis
-            });
-            mergedReport.cache = {
-                attempted: false,
-                status: 'skipped_flag',
-                durationMs: 0
-            };
-            mergedReport.run.outcome = 'success';
-            mergedReport.run.exitCode = 0;
-        } else {
-            try {
-                const publishResult = await publishCacheGeneration({
-                    runId: mergedReport.run.runId,
-                    scrapeFinishedAt: new Date().toISOString(),
-                    prisma,
-                    redis: options.redis,
-                    dryRun: argv.includes('--dry-run') || options.dryRun,
-                    force: argv.includes('--force') || options.force
-                });
-                mergedReport.cache = publishResult;
-                if (publishResult.status === 'published' || publishResult.status.startsWith('skipped')) {
-                    mergedReport.run.outcome = 'success';
-                    mergedReport.run.exitCode = 0;
-                } else {
-                    mergedReport.run.outcome = 'failed';
-                    mergedReport.run.exitCode = 2;
-                }
-            } catch (err: any) {
-                mergedReport.cache = {
-                    attempted: true,
-                    status: 'failed',
-                    durationMs: 0,
-                    error: err.message || String(err)
-                };
-                mergedReport.run.outcome = 'failed';
-                mergedReport.run.exitCode = 2;
-            }
-        }
-    }
-
-    const savedPath = ErrorTracker.saveMergedReport(mergedReport);
-
-    console.log(`\n🏁 MULTI-PROCESS SCRAPE COMPLETE in ${mergedReport.summary.durationSeconds}s`);
-    console.log(`   Workers Spawned        : ${shards.length} (Success: ${results.filter(r => r.status === 'ok').length}, Failed: ${results.filter(r => r.status !== 'ok').length})`);
-    console.log(`   Companies Attempted    : ${mergedReport.summary.companiesAttempted}`);
-    console.log(`   Companies With Jobs    : ${mergedReport.summary.companiesWithJobs}`);
-    console.log(`   GraphQL Fallbacks Used : ${mergedReport.summary.graphqlFallbacksUsed}`);
-    console.log(`   Total Jobs Collected   : ${mergedReport.summary.jobsCollected}`);
-    console.log(`   Jobs Sanitized/Filtered: ${mergedReport.summary.jobsSanitized} / ${mergedReport.summary.jobsFilteredOut}`);
-    if (savedPath) {
-        console.log(`   📋 Aggregated Telemetry: ${savedPath}`);
-    }
-
-    return mergedReport;
+    return finalizeRun({ results, workersSpawned: shards.length, startedAtMs, argv, options });
 }
 
 if (require.main === module) {

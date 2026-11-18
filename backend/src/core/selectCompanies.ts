@@ -10,17 +10,21 @@ import { AtsSource, toDbAts } from '../lib/ats/source';
 export const DEFAULT_LEVER_MAX_BOARDS = 600;
 
 /**
- * @summary Parses --lever-max-boards=N from CLI arguments, defaulting to 600
+ * @summary Parses --lever-max-boards=N|all from CLI arguments; `all` means no cap (Infinity), a missing or invalid value falls back to defaultValue (600)
  */
-export function parseLeverMaxBoards(argv: string[] = process.argv): number {
+export function parseLeverMaxBoards(
+  argv: string[] = process.argv,
+  defaultValue: number = DEFAULT_LEVER_MAX_BOARDS
+): number {
   const flag = argv.find((arg) => arg.startsWith('--lever-max-boards='));
-  if (!flag) return DEFAULT_LEVER_MAX_BOARDS;
-  const raw = flag.split('=')[1] ?? '';
+  if (!flag) return defaultValue;
+  const raw = (flag.split('=')[1] ?? '').trim().toLowerCase();
+  if (raw === 'all') return Number.POSITIVE_INFINITY;
   const parsed = parseInt(raw, 10);
   if (!Number.isNaN(parsed) && parsed >= 1) {
     return parsed;
   }
-  return DEFAULT_LEVER_MAX_BOARDS;
+  return defaultValue;
 }
 
 export interface SelectCompaniesOptions<S extends Prisma.CompanySelect> {
@@ -95,7 +99,7 @@ export async function selectCompanies<S extends Prisma.CompanySelect>(
     leverCompanies = (await db.company.findMany({
       where: leverWhere,
       orderBy: { lastCheckedAt: { sort: 'asc', nulls: 'first' } },
-      take: leverCap,
+      ...(Number.isFinite(leverCap) ? { take: leverCap } : {}),
       select: options.select,
     })) as Prisma.CompanyGetPayload<{ select: S }>[];
 
@@ -106,7 +110,7 @@ export async function selectCompanies<S extends Prisma.CompanySelect>(
         : leverCompanies.length;
 
     console.log(
-      `📌 Lever: scraping ${leverCompanies.length} of ${leverAvailable} boards (cap ${leverCap})`
+      `📌 Lever: scraping ${leverCompanies.length} of ${leverAvailable} boards (cap ${Number.isFinite(leverCap) ? leverCap : 'all'})`
     );
   }
 

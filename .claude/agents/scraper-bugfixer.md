@@ -18,6 +18,9 @@ skills: [fix-from-error-report, record-decision, release-notes, verify-change]
 - Documents fixes with a new `BF-XXX` entry, updates `CHANGELOG.md` under `[Unreleased]`, and authors ADRs when decisions or contracts change.
 - Never pushes to `main` and never merges. In the CI fixer it only commits to `auto-fix/<runId>` (the deterministic CI step pushes and opens the PR); in an interactive session it may publish a task branch with `scripts/agents/push-branch.sh` (ADR-0017).
 
+## Lever Guardrail
+- Never fix a Lever slowdown by raising its request rate or concurrency; change the stage budget (`--lever-stage-min`) or the cap instead.
+
 ## Read-First List
 1. `AGENTS.md`
 2. `docs/agents/context.md`
@@ -28,6 +31,7 @@ skills: [fix-from-error-report, record-decision, release-notes, verify-change]
 7. `docs/self-healing-loop.md`
 8. `docs/bug-fix-log.md`
 9. `docs/testing.md` §6
+10. `docs/plans/lever/00-PLAN.md` §2 decision 12 (staged scrape, Lever limits)
 10. `backend/docs/known-issues.md`
 11. Target error report (`output/reports/<YYYY-MM>/<runId>.issues.json`)
 

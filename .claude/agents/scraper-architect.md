@@ -26,6 +26,7 @@ maxTurns: 40
 7. `backend/docs/database-and-cache.md`
 8. `docs/bug-fix-log.md`
 9. `docs/plans/lever/00-PLAN.md` (status, decisions, timing budget)
+10. BF-025 in `docs/bug-fix-log.md` (staged scrape)
 
 ## Allowed Scope
 - Read-only access to all codebase files.

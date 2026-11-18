@@ -82,6 +82,9 @@ sequenceDiagram
   Co-->>Cron: exit 0 (ok) | 1 (hard failure) | 2 (scrape ok, publish failed or gated)
 ```
 
+> Staged mode (`--staged`, BF-025): the coordinator runs one source per stage (ashby, greenhouse, lever), each with its own workers and budget, merges all stage reports once and publishes the cache once after the last stage.
+
+
 ---
 
 ## 3. Read-Path Sequence (API Request Flow)

@@ -180,3 +180,7 @@ Written by `saveLeverDiscoveryState()` (`src/discovery/LeverDiscovery.ts`) at th
 
 - **Actions Cache Key:** Restored before and saved after (`if: always()`) in `.github/workflows/discover-weekly.yml` using `actions/cache/restore@v6` and `actions/cache/save@v6` with key `lever-discovery-v1-${{ github.run_id }}` and restore-key `lever-discovery-v1-`.
 - **Privacy & Recovery:** Discovery code never prints the contents of `lever-discovery-state.json`. Deleting, missing, or corrupting the file is completely safe — `loadLeverDiscoveryState()` starts a fresh v1 cycle from prefix `"a"` without disturbing already-seeded `Company` rows in PostgreSQL.
+
+## Staged scrape telemetry (BF-025)
+
+When a run uses `--staged`, the merged report adds three optional, additive fields (`schemaVersion` stays `2.0`; absent in interleaved runs): `summary.bySource.<source>.durationMs` (wall time of that source's stage, merge = max), `summary.bySource.lever.boardsAvailable` and `boardsCap` (active Lever boards and the cap applied; `boardsCap` is omitted when uncapped), and `workers[].stage` (the source a worker scraped). The `### By Source` table in the run summary shows them as `Wall time`, `Boards (scraped/available/cap)` and `Skipped by deadline`.

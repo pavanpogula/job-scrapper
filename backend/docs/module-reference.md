@@ -67,6 +67,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 |---|---|---|
 | `resolveWorkerCount(argv, totalItems, cpuCount = os.cpus().length)` | L18 | `--workers=N` (N ≥ 1) or default `min(4, max(2, cpuCount))`; capped at `totalItems` (min 1) |
 | `partitionSlugs(slugs, workerCount)` | L35 | Round-robin shards; empty shards removed |
+| `orderStages(sources)` / `parseLeverStageMinutes(argv)` / `runStagedScrape(...)` / `finalizeRun(...)` | — | BF-025: registry-order stages, `--lever-stage-min` parser (1-120, default 70), the staged coordinator (one source per stage, Lever 1 worker with `leverDeadlineMs`, failure isolation) and the shared merge/BF-017/publish tail used by both the interleaved and staged runs |
 | `runWorkerShard(workerId, slugs, perWorkerConcurrency, sources?, workerCount?)` *(private)* | L49 | `fork(Scraper.ts, ['--ipc-worker'])` (adds `-r ts-node/register` if needed), sends `{ workerId, workerCount, slugs, concurrency, sources }`, resolves on `worker_done`; rejects on `worker_error`, child `error`, or `exit` before a message |
 | `runClusterScrape(argv = process.argv)` | L101 | Selects ACTIVE companies via `selectCompanies()` (`--lever-max-boards`), computes per-worker concurrency, runs shards in parallel, `mergeReports` + `saveMergedReport`; returns merged report or `null` |
 | `require.main` guard | L148 | Exit 1 on failure |

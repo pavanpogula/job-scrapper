@@ -78,6 +78,7 @@ Evidence from the latest run (`output/latest-error-report.json`, cluster `db_scr
 | 39 | Default `scrape:parallel` worker count is `min(4, max(2, cpus))`, not 8. The documented 141.3 s / 34,035-job run used `--workers=8`. Per-worker concurrency is hard-coded at 12 when there are more than 100 companies | `ClusterScraper.ts` `resolveWorkerCount()` |
 | 58 | EU Lever boards (`jobs.eu.lever.co` / `api.eu.lever.co`, e.g. `engelvoelkers`) are skipped by `extractLeverToken()` and not discovered or scraped in v1 (`api.lever.co` returns 404 for EU boards; requires per-company region storage in a follow-up ADR) | `LeverDiscovery.ts`, `LeverClient.ts` |
 | 59 | Wayback Machine CDX prefix queries for `jobs.lever.co/*` frequently return transient `503`/`504` responses (~40 % of calls) and 15–28 s latency (Common Crawl cannot substitute because `jobs.lever.co/robots.txt` blocks `CCBot`); mitigated via 3× 30–60 s retries, two-character prefix splits (`a0…a9`, `aa…az`, `a-`, `a.`, `a_`, `a%26`), and resumable cursor state | `LeverDiscovery.ts`, `CdxWorker.ts` |
+| 60 | Staged scrape (`--staged`, BF-025) is opt-in and runs the sources one after another, so a run takes about the sum of the stages (~75-80 min with Lever, up to ~120 min worst case). Any failed worker in any stage skips the cache publish (BF-017) although earlier stages' rows are already written | `src/core/ClusterScraper.ts` |
 
 ## 🟡 Inconsistencies & docs drift (open)
 

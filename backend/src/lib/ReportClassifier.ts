@@ -490,10 +490,15 @@ export function classifyReport(
 
     if (report.summary.bySource && Object.keys(report.summary.bySource).length > 0) {
         markdown += `### By Source\n`;
-        markdown += `| Source | Companies Attempted | With Jobs | Jobs Collected | Not Found | Errors |\n`;
-        markdown += `|---|---|---|---|---|---|\n`;
+        markdown += `| Source | Companies Attempted | With Jobs | Jobs Collected | Not Found | Errors | Wall time | Boards (scraped/available/cap) | Skipped by deadline |\n`;
+        markdown += `|---|---|---|---|---|---|---|---|---|\n`;
         for (const [src, s] of Object.entries(report.summary.bySource)) {
-            markdown += `| ${src} | ${s.companiesAttempted} | ${s.companiesWithJobs} | ${s.jobsCollected} | ${s.notFound} | ${s.apiErrors} |\n`;
+            const wall = typeof s.durationMs === 'number' ? `${Math.round(s.durationMs / 1000)}s` : '—';
+            const boards =
+                typeof s.boardsAvailable === 'number'
+                    ? `${s.companiesAttempted}/${s.boardsAvailable}/${typeof s.boardsCap === 'number' ? s.boardsCap : 'all'}`
+                    : '—';
+            markdown += `| ${src} | ${s.companiesAttempted} | ${s.companiesWithJobs} | ${s.jobsCollected} | ${s.notFound} | ${s.apiErrors} | ${wall} | ${boards} | ${s.skippedByDeadline ?? 0} |\n`;
         }
         markdown += '\n';
     }
