@@ -1,6 +1,6 @@
 # Agent Context
 
-Authoritative quick context for AI coding agents. Last updated: 2026-11-24 (ADR-0023).
+Authoritative quick context for AI coding agents. Last updated: 2026-11-24 (BF-027, ADR-0023).
 
 ## Components & Entry Points
 - **Scraper:** `backend/src/core/Scraper.ts` (single process / IPC worker), `backend/src/core/ClusterScraper.ts` (parallel OS worker coordinator), `backend/src/core/ScraperCSV.ts` (streaming CSV exporter).
@@ -18,6 +18,7 @@ Authoritative quick context for AI coding agents. Last updated: 2026-11-24 (ADR-
 - `npm run cache:status`: Inspect active generation, last scrape, and last publish telemetry.
 - `npm run cache:purge-legacy`: Clean up un-namespaced historical keys.
 - `npm run report:classify`: Classify scrape report into actionable vs noise.
+- `npm run enrich:jobs [-- --all --budget-min=M --dry-run]`: Time-boxed job attribute enrichment pass (raw SQL; writes `output/latest-enrich.json`).
 - `npm --prefix frontend run check`: Run UI typecheck, lint, tests, and build.
 
 ## Data & Cache Facts
@@ -36,6 +37,7 @@ Authoritative quick context for AI coding agents. Last updated: 2026-11-24 (ADR-
 - **BF-024:** Lever fetch & normalizer (`lever:<uuid>` legacyKey, ≤1 req/s pacer, cap 600 + `leverDeadlineMs`, `allocateCompanySlug`, `bySource.lever`; guarded: `LeverClient.test.ts`, `LeverCoexistence.test.ts`).
 - **BF-025:** Staged scrape (`--staged`: one source per stage, failed stage never stops later ones, one publish; guarded: `StagedScrape.test.ts`).
 - **BF-026:** Job attribute rules are pure; golden-set P/R ≥ 0.90 (guarded: `JobAttributesGolden.test.ts`).
+- **BF-027:** Enrichment pass (raw-SQL writes never touch updatedAt/contentHash/lastUpdated*; picker re-picks on contentHash change; guarded: `EnrichPass.test.ts`).
 
 ## Top Gotchas
 1. **Modules executing on import:** `DbMenu.ts`, `DbInspect.ts`, `GenerateDocs.ts` run on import—never import them into other modules.

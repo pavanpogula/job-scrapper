@@ -338,6 +338,17 @@ a single self-contained `docs/project-explorer.html`. This is why ESLint nudges 
 
 ---
 
+## 8b. Workflow G — Job Attribute Enrichment: `npm run enrich:jobs`
+
+Files: [EnrichCli.ts](../src/enrichment/EnrichCli.ts), [run.ts](../src/enrichment/run.ts), [picker.ts](../src/enrichment/picker.ts), [step.ts](../src/enrichment/step.ts), [rulesStep.ts](../src/enrichment/rulesStep.ts), [writer.ts](../src/enrichment/writer.ts), [report.ts](../src/enrichment/report.ts).
+
+1. **Keyset picker (`pickJobsForEnrichment`):** Queries `Job` in `id` ASC batches of 500 where `active = true` and (`attrsVersion IS NULL`, `attrsVersion < ATTRS_VERSION`, `attrsDescHash IS DISTINCT FROM contentHash`, or — when an active model step is registered — `attrsConfidence = 'low'` and `attrsModelVersion` is null/stale). Change detection compares `attrsDescHash` against `contentHash` directly in PostgreSQL (`contentHash` already covers both `descriptionPlain` and `descriptionHtml`), projecting only the needed description key (`CASE` expression) to minimize Neon egress.
+2. **Ordered pipeline (`runEnrichment`):** Runs registered steps (`createRulesStep()` in E2; E3 appends Gemini fallback) with wall-time (`--budget-min`, 30 s step deadline margin) and `--max-jobs` enforcement.
+3. **Raw-SQL writer (`writeAttributes`):** Executes one parameterized `UPDATE "Job" AS j ... FROM unnest(...)` per batch writing only `experienceMinYears`, `clearanceRequired`, `attrsVersion`, `attrsDescHash`, `attrsSource`, `attrsConfidence`, `attrsEvidence`, and `attrsModelVersion` while guarding `active = true AND contentHash = desc_hash`. Uses raw SQL so Prisma `@updatedAt` (`lastUpdatedAt` / `updatedAt`) is never bumped.
+4. **Remaining & report:** Counts `remaining` via `countPickable` (keeping the model arm whenever a model step is registered), writes `output/latest-enrich.json` and `output/reports/<YYYY-MM>/enrich-<runId>.json` (isolated from `report:classify`), prints the Markdown summary table, and appends to `$GITHUB_STEP_SUMMARY` if set. In E2 nothing reads the new columns at runtime yet — values reach the API/Redis cache only once E4 lands, at the next scheduled publish.
+
+---
+
 ## 9. Recommended Operational Sequence
 
 ```bash

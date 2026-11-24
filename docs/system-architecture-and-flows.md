@@ -83,6 +83,7 @@ sequenceDiagram
 ```
 
 > Staged mode (`--staged`, BF-025): the coordinator runs one source per stage (ashby, greenhouse, lever), each with its own workers and budget, merges all stage reports once and publishes the cache once after the last stage.
+> Job attribute enrichment (`BF-027`): when `ENRICH_ENABLED=true`, `scrape-daily.yml` runs `npm run enrich:jobs -- --budget-min=10` after `report:classify` (`continue-on-error: true`), updating attribute columns via raw `UPDATE … FROM unnest` without altering `updatedAt`, `contentHash`, or scrape telemetry (or runs `npm run enrich:jobs -- --all` alone on manual `enrich_backfill`).
 
 
 ---

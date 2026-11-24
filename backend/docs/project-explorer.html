@@ -437,6 +437,42 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_EnrichCli_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>EnrichCli.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_picker_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>picker.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_report_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>report.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_rulesStep_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>rulesStep.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_run_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>run.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_step_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>step.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('src_enrichment_text_ts')">
                         <span class="material-icons-round">description</span>
                         <span>text.ts</span>
@@ -452,6 +488,12 @@
                     <div class="tree-item file" onclick="showFile('src_enrichment_version_ts')">
                         <span class="material-icons-round">description</span>
                         <span>version.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_writer_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>writer.ts</span>
                         
                     </div>
                 </li></ul>
@@ -790,6 +832,18 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_EnrichPass_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>EnrichPass.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_integration_enrichSeed_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>enrichSeed.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_integration_GreenhouseCoexistence_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GreenhouseCoexistence.test.ts</span>
@@ -992,6 +1046,12 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_EnrichmentDispatch_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>EnrichmentDispatch.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_EnrichPass_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>EnrichPass.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -2672,6 +2732,48 @@
       }
     ]
   },
+  "src_enrichment_EnrichCli_ts": {
+    "name": "EnrichCli.ts",
+    "path": "src/enrichment/EnrichCli.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "CLI entry point for npm run enrich:jobs with flag validation, report writing, and GitHub step summary output (BF-027)",
+    "tags": [
+      "enrichment",
+      "cli",
+      "report",
+      "prisma",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "parseStrictInt()",
+        "desc": "Parses an exact non-negative base-10 integer string or throws a validation error"
+      },
+      {
+        "name": "parseEnrichArgs()",
+        "desc": "Parses and validates CLI flags for enrich:jobs"
+      },
+      {
+        "name": "sanitizeErrorMessage()",
+        "desc": "Redacts potential Postgres connection strings from CLI error messages before logging"
+      },
+      {
+        "name": "main()",
+        "desc": "Executes the enrichment CLI pass, writes JSON reports, prints the summary, and appends GitHub step summary"
+      }
+    ]
+  },
   "src_enrichment_buckets_ts": {
     "name": "buckets.ts",
     "path": "src/enrichment/buckets.ts",
@@ -2703,6 +2805,83 @@
       {
         "name": "bucketOf()",
         "desc": "Maps a non-negative integer year requirement (or null) to its experience bucket"
+      }
+    ]
+  },
+  "src_enrichment_picker_ts": {
+    "name": "picker.ts",
+    "path": "src/enrichment/picker.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Keyset-paginated SQL picker and count helper with contentHash change detection (BF-027)",
+    "tags": [
+      "enrichment",
+      "picker",
+      "prisma",
+      "sql",
+      "job-attributes",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "pickableWhere()",
+        "desc": "Builds the shared SQL WHERE fragment for pickable active jobs inside function scope"
+      },
+      {
+        "name": "toAttrsConfidence()",
+        "desc": "Normalizes database attrsConfidence values to the AttrsConfidence union or null"
+      },
+      {
+        "name": "pickJobsForEnrichment()",
+        "desc": "Keyset-picks a batch of active jobs needing enrichment, projecting only the description key needed"
+      },
+      {
+        "name": "countPickable()",
+        "desc": "Counts all active jobs currently matching the picker selection criteria"
+      }
+    ]
+  },
+  "src_enrichment_report_ts": {
+    "name": "report.ts",
+    "path": "src/enrichment/report.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Persists enrich-<runId>.json and latest-enrich.json without touching scrape telemetry, and formats GitHub step summaries (BF-027)",
+    "tags": [
+      "enrichment",
+      "report",
+      "summary",
+      "artifacts",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "2"
+      }
+    ],
+    "functions": [
+      {
+        "name": "writeEnrichReport()",
+        "desc": "Writes the monthly archive enrich report and latest-enrich.json, never touching latest-error-report.json"
+      },
+      {
+        "name": "formatEnrichSummary()",
+        "desc": "Formats the pinned Markdown summary table and backfill completion line for stdout and GitHub step summaries"
       }
     ]
   },
@@ -2840,6 +3019,107 @@
       }
     ]
   },
+  "src_enrichment_rulesStep_ts": {
+    "name": "rulesStep.ts",
+    "path": "src/enrichment/rulesStep.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Pipeline step wrapping extractAttributesByRules for picked job batches",
+    "tags": [
+      "enrichment",
+      "rules",
+      "step",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "createRulesStep()",
+        "desc": "Creates the deterministic rules step that classifies every job in a picked batch"
+      }
+    ]
+  },
+  "src_enrichment_run_ts": {
+    "name": "run.ts",
+    "path": "src/enrichment/run.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Batched sequential enrichment loop with keyset pagination, budget enforcement, max-jobs cap, dry run, and remaining count (BF-027)",
+    "tags": [
+      "enrichment",
+      "runner",
+      "batching",
+      "budget",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "runEnrichment()",
+        "desc": "Runs sequential keyset batches of job attribute enrichment until exhausted, capped, or budget expires"
+      }
+    ]
+  },
+  "src_enrichment_step_ts": {
+    "name": "step.ts",
+    "path": "src/enrichment/step.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Defines the pluggable enrichment step interface, shared counters, and default step factory registry",
+    "tags": [
+      "enrichment",
+      "step",
+      "pipeline",
+      "registry",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "buildSteps()",
+        "desc": "Instantiates enabled enrichment steps in factory order, dropping disabled null entries"
+      },
+      {
+        "name": "isModelEnabled()",
+        "desc": "Returns true when an active, non-exhausted model step should receive low-confidence rows"
+      },
+      {
+        "name": "hasModelStep()",
+        "desc": "Returns true when a model step is registered, ignoring exhausted state, for remaining counts"
+      },
+      {
+        "name": "emptyCounts()",
+        "desc": "Creates a zeroed EnrichCounts object for a new enrichment pass"
+      }
+    ]
+  },
   "src_enrichment_text_ts": {
     "name": "text.ts",
     "path": "src/enrichment/text.ts",
@@ -2922,6 +3202,37 @@
       }
     ],
     "functions": []
+  },
+  "src_enrichment_writer_ts": {
+    "name": "writer.ts",
+    "path": "src/enrichment/writer.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Updates enrichment attribute columns via single-statement unnest SQL without mutating updatedAt (BF-027)",
+    "tags": [
+      "enrichment",
+      "writer",
+      "prisma",
+      "sql",
+      "job-attributes",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "1"
+      }
+    ],
+    "functions": [
+      {
+        "name": "writeAttributes()",
+        "desc": "Persists a batch of enrichment results via raw UPDATE FROM unnest, guarding active and contentHash"
+      }
+    ]
   },
   "src_lib_AshbyClient_ts": {
     "name": "AshbyClient.ts",
@@ -4403,6 +4714,32 @@
     ],
     "functions": []
   },
+  "tests_integration_EnrichPass_test_ts": {
+    "name": "EnrichPass.test.ts",
+    "path": "tests/integration/EnrichPass.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Real PostgreSQL tests for keyset picker, SQL change detection, raw-SQL writer, and batched run loop (BF-027)",
+    "tags": [
+      "integration",
+      "postgres",
+      "enrichment",
+      "picker",
+      "writer",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_integration_GreenhouseCoexistence_test_ts": {
     "name": "GreenhouseCoexistence.test.ts",
     "path": "tests/integration/GreenhouseCoexistence.test.ts",
@@ -4603,6 +4940,48 @@
       {
         "name": "walk()",
         "desc": "Walks every page and returns ids in page order, checking the page metadata on the way."
+      }
+    ]
+  },
+  "tests_integration_enrichSeed_ts": {
+    "name": "enrichSeed.ts",
+    "path": "tests/integration/enrichSeed.ts",
+    "icon": "🌱",
+    "iconClass": "green",
+    "summary": "Shared seed helper for EnrichPass integration tests and localhost-only local rehearsal CLI",
+    "tags": [
+      "integration",
+      "enrichment",
+      "seed",
+      "test-helper",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "ensureSeedCompany()",
+        "desc": "Ensures the shared test company exists once before seeding enrichment test jobs"
+      },
+      {
+        "name": "seedEnrichJob()",
+        "desc": "Seeds a single synthetic Job row for enrichment integration tests"
+      },
+      {
+        "name": "seedEnrichJobs()",
+        "desc": "Bulk-seeds n active unprocessed jobs with realistic varied descriptions for tests and rehearsal"
+      },
+      {
+        "name": "assertLocalDatabaseUrl()",
+        "desc": "Asserts that DATABASE_URL is explicitly set and targets localhost or 127.0.0.1"
       }
     ]
   },
@@ -5443,6 +5822,32 @@
       "Backoff",
       "RateLimit",
       "SCR-22"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_EnrichPass_test_ts": {
+    "name": "EnrichPass.test.ts",
+    "path": "tests/unit/EnrichPass.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Unit tests for enrichment step contract, rules step, run loop, reports, and CLI args (BF-027)",
+    "tags": [
+      "unit",
+      "enrichment",
+      "pipeline",
+      "cli",
+      "report",
+      "BF-027"
     ],
     "info": [
       {

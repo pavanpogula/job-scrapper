@@ -1,6 +1,6 @@
 # ADR-0023: Job Attribute Enrichment (Experience & Security Clearance)
 
-- Status: Accepted
+- Status: Accepted (E1: schema & rules implemented; E2: enrichment pass implemented, BF-027)
 - Date: 2026-11-24
 - Deciders: owner, scraper-architect, implementer
 - Related: BF-026, BF-011, [ADR-0018](./ADR-0018-job-last-updated-detection.md), [ADR-0021](./ADR-0021-multi-source-ats.md), [ADR-0022](./ADR-0022-lever-source.md)

@@ -155,6 +155,54 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 |---|---|
 | `extractAttributesByRules(input)` | Combines `extractMinYears(descriptionPlain)` and `detectClearance(title + descriptionPlain)` into `JobAttributes` with `source: 'rules'` |
 
+### [step.ts](../src/enrichment/step.ts) — Step Contract & Registry
+| Symbol | Description |
+|---|---|
+| `PickedJob` / `EnrichCounts` / `StepRunContext` | Picked row shape, shared run counters, and batch context passed across steps |
+| `EnrichmentStep` / `StepOptions` / `StepFactory` | Step interface (`name: 'rules' \| 'model'`, optional `exhausted`, `run`) and factory contract |
+| `DEFAULT_STEP_FACTORIES` | Default factory list (`[() => createRulesStep()]`) |
+| `buildSteps(opts, factories?)` | Instantiates non-null enabled steps in registry order |
+| `isModelEnabled(steps)` / `hasModelStep(steps)` / `emptyCounts()` | Picking/counting helpers and zeroed counter constructor |
+
+### [rulesStep.ts](../src/enrichment/rulesStep.ts) — Rules Pipeline Step
+| Symbol | Description |
+|---|---|
+| `createRulesStep()` | Wraps `extractAttributesByRules` for batch execution and increments `rulesHigh` / `rulesLow` counters |
+
+### [picker.ts](../src/enrichment/picker.ts) — Keyset SQL Picker
+| Symbol | Description |
+|---|---|
+| `PickedJob` *(re-export)* | Canonical `PickedJob` type exported for external pipeline consumers |
+| `pickJobsForEnrichment(prisma, opts)` | Keyset-paginated SQL query over `id > afterId` projecting only `descriptionPlain` or `descriptionHtml` |
+| `countPickable(prisma, opts)` | Exact `COUNT(*)` using the shared `pickableWhere` SQL fragment |
+
+### [writer.ts](../src/enrichment/writer.ts) — Raw-SQL Batch Writer
+| Symbol | Description |
+|---|---|
+| `AttributeWrite` | Batch write payload `{ id, attrs, descHash, modelTried }` |
+| `writeAttributes(prisma, rows)` | Parameterized `UPDATE "Job" ... FROM unnest(...)` touching only the 8 attribute columns while guarding `active` and `contentHash` |
+
+### [run.ts](../src/enrichment/run.ts) — Enrichment Pass Runner
+| Symbol | Description |
+|---|---|
+| `ENRICH_BATCH_SIZE` | Default batch size constant (`500`) |
+| `StopReason` / `EnrichOptions` / `EnrichDeps` / `EnrichResult` | Runner configuration, injectable test deps, and result types |
+| `runEnrichment(prisma, opts, deps?)` | Executes sequential keyset batches under budget/`--max-jobs` limits, supports `--dry-run`, and counts `remaining` |
+
+### [report.ts](../src/enrichment/report.ts) — Report & Step Summary
+| Symbol | Description |
+|---|---|
+| `EnrichReport` | Version `'enrich-1'` JSON report schema (`run`, `counts`, `remaining`, `descBytes`) |
+| `writeEnrichReport(report, baseDir?)` | Writes `reports/<YYYY-MM>/enrich-<runId>.json` and `latest-enrich.json` (never writes `latest-error-report.json`) |
+| `formatEnrichSummary(report)` | Renders the pinned Markdown summary table and `Backfill complete:` status line |
+
+### [EnrichCli.ts](../src/enrichment/EnrichCli.ts) — `npm run enrich:jobs`
+| Symbol | Description |
+|---|---|
+| `EnrichCliArgs` / `parseEnrichArgs(argv)` | Strict CLI flag parser (`--max-jobs`, `--all`, `--budget-min`, `--dry-run`, `--model-max-calls`) |
+| `main(argv?)` | Entrypoint calling `dotenv.config`, running `runEnrichment`, writing reports, and appending `$GITHUB_STEP_SUMMARY` |
+| `require.main` guard | Exits `0` on success (`budget`/`maxJobs`/`done`/`--dry-run`) or `1` with redacted DB error message |
+
 ## `../src/lib/`
 
 ### [ats/AtsClient.ts](../src/lib/ats/AtsClient.ts) — ATS Client Interface & Normalized Models
