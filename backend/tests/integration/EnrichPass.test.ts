@@ -513,4 +513,40 @@ describeIfDb('BF-027: Job attribute enrichment pass on real PostgreSQL', () => {
       expect(row.attrsVersion).toBeNull();
     }
   });
+
+  it('remaining counts the picker WHERE clause', async () => {
+    for (let i = 1; i <= 10; i++) {
+      await seedEnrichJob(prisma, `unp-${String(i).padStart(2, '0')}`, { attrsVersion: null });
+    }
+    await seedEnrichJob(prisma, 'ina-1', { active: false, attrsVersion: null });
+    await seedEnrichJob(prisma, 'ina-2', { active: false, attrsVersion: null });
+    for (let i = 1; i <= 3; i++) {
+      await seedEnrichJob(prisma, `pro-${i}`, {
+        attrsVersion: ATTRS_VERSION,
+        attrsDescHash: 'h',
+        contentHash: 'h',
+        attrsConfidence: 'high',
+      });
+    }
+    for (let i = 1; i <= 2; i++) {
+      await seedEnrichJob(prisma, `low-${i}`, {
+        attrsVersion: ATTRS_VERSION,
+        attrsDescHash: 'h',
+        contentHash: 'h',
+        attrsConfidence: 'low',
+        attrsModelVersion: null,
+      });
+    }
+
+    expect(await countPickable(prisma, { modelEnabled: false })).toBe(10);
+    expect(await countPickable(prisma, { modelEnabled: true })).toBe(12);
+
+    const res = await runEnrichment(prisma, {
+      maxJobs: 4,
+      budgetMin: 10,
+      dryRun: false,
+      modelMaxCalls: 0,
+    });
+    expect(res).toMatchObject({ written: 4, remaining: 6, stoppedBy: 'maxJobs' });
+  });
 });

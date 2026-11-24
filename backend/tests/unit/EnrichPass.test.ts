@@ -4,6 +4,9 @@
  * @tags unit, enrichment, pipeline, cli, report, BF-027
  */
 
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import * as stepModule from '../../src/enrichment/step';
 import {
@@ -17,6 +20,10 @@ import {
 } from '../../src/enrichment/step';
 import { createRulesStep } from '../../src/enrichment/rulesStep';
 import { runEnrichment, ENRICH_BATCH_SIZE } from '../../src/enrichment/run';
+import { EnrichReport, writeEnrichReport, formatEnrichSummary } from '../../src/enrichment/report';
+import { parseEnrichArgs } from '../../src/enrichment/EnrichCli';
+import { generateRunId } from '../../src/lib/ErrorTracker';
+import { ATTRS_VERSION } from '../../src/enrichment/version';
 
 describe('EnrichPass unit', () => {
   it('buildSteps returns only the rules step by default', () => {
@@ -233,6 +240,35 @@ describe('EnrichPass unit', () => {
     spy.mockRestore();
   });
 
+  function sampleReport(startedAt = '2026-11-23T05:00:00.000Z', remaining = 42): EnrichReport {
+    return {
+      schemaVersion: 'enrich-1',
+      run: {
+        runId: '20261123T050000Z-enrich-abc1234',
+        startedAt,
+        finishedAt: '2026-11-23T05:01:00.000Z',
+        dryRun: false,
+        attrsVersion: ATTRS_VERSION,
+        modelEnabled: false,
+        flags: { maxJobs: 20000, budgetMin: 10, modelMaxCalls: 2000 },
+      },
+      counts: {
+        picked: 500,
+        rulesHigh: 410,
+        rulesLow: 90,
+        modelCalls: 0,
+        modelAccepted: 0,
+        modelRejected: 0,
+        modelErrors: 0,
+        written: 500,
+        remaining,
+        durationMs: 61234,
+        stoppedBy: 'budget',
+        descBytes: 2_516_582,
+      },
+    };
+  }
+
   it('remaining includes untried low rows after the model step is exhausted', async () => {
     const exhaustedModel: EnrichmentStep = {
       name: 'model',
@@ -252,6 +288,9 @@ describe('EnrichPass unit', () => {
     expect(pick).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ modelEnabled: false }));
     expect(count).toHaveBeenCalledWith(expect.anything(), { modelEnabled: true });
     expect(first.remaining).toBe(3);
+    expect(formatEnrichSummary(sampleReport('2026-11-23T05:00:00.000Z', first.remaining))).toContain(
+      'Backfill complete: no'
+    );
 
     const second = await runEnrichment(
       new PrismaClient(),
@@ -259,6 +298,9 @@ describe('EnrichPass unit', () => {
       { pick, count, steps: [createRulesStep(), exhaustedModel], now: () => 0 }
     );
     expect(second.remaining).toBe(0);
+    expect(formatEnrichSummary(sampleReport('2026-11-23T05:00:00.000Z', second.remaining))).toContain(
+      'Backfill complete: yes'
+    );
   });
 
   it('a pick error propagates', async () => {
@@ -275,5 +317,61 @@ describe('EnrichPass unit', () => {
         }
       )
     ).rejects.toThrow('db down');
+  });
+
+  it('parseEnrichArgs defaults', () => {
+    expect(parseEnrichArgs([])).toEqual({
+      maxJobs: 20000,
+      budgetMin: 10,
+      dryRun: false,
+      modelMaxCalls: 2000,
+    });
+  });
+
+  it('parseEnrichArgs --all removes the cap', () => {
+    expect(parseEnrichArgs(['--all', '--budget-min=120'])).toEqual({
+      maxJobs: null,
+      budgetMin: 120,
+      dryRun: false,
+      modelMaxCalls: 2000,
+    });
+  });
+
+  it.each([
+    [['--budget-min=0']],
+    [['--budget-min=131']],
+    [['--budget-min=abc']],
+    [['--max-jobs=0']],
+    [['--model-max-calls=-1']],
+    [['--all', '--max-jobs=5']],
+    [['--nope']],
+  ])('parseEnrichArgs rejects %j', (args) => {
+    expect(() => parseEnrichArgs(args)).toThrow();
+  });
+
+  it('writeEnrichReport writes the month report and latest-enrich.json only', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'enrich-'));
+    try {
+      const report = sampleReport('2026-11-23T05:00:00.000Z', 42);
+      const { reportPath, latestPath } = writeEnrichReport(report, dir);
+      expect(reportPath).toBe(path.join(dir, 'reports', '2026-11', `enrich-${report.run.runId}.json`));
+      expect(latestPath).toBe(path.join(dir, 'latest-enrich.json'));
+      expect(fs.existsSync(path.join(dir, 'latest-error-report.json'))).toBe(false);
+      expect(JSON.parse(fs.readFileSync(latestPath, 'utf8')).counts.remaining).toBe(42);
+      expect(JSON.parse(fs.readFileSync(reportPath, 'utf8')).schemaVersion).toBe('enrich-1');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('generateRunId accepts enrich', () => {
+    expect(generateRunId('enrich', Date.UTC(2026, 10, 23, 5))).toMatch(/^20261123T050000Z-enrich-/);
+  });
+
+  it('formatEnrichSummary prints remaining and the completion line', () => {
+    expect(formatEnrichSummary(sampleReport('2026-11-23T05:00:00.000Z', 0))).toContain('Backfill complete: yes');
+    expect(formatEnrichSummary(sampleReport('2026-11-23T05:00:00.000Z', 7))).toMatch(
+      /\| 7 \|.*\| (done|budget|maxJobs) \|/
+    );
   });
 });
