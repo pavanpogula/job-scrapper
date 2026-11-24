@@ -272,6 +272,13 @@ The clause-by-clause test mapping and coverage numbers are in [`11-testing-guide
 - **Regression Invariant:** without `--staged` the run is unchanged (same shards, IPC keys, logs, report). A failed stage never stops later stages; the cache is published at most once, after the last stage; the Lever stage uses 1 worker and never raises the request rate.
 - **Guarding tests:** `backend/tests/unit/StagedScrape.test.ts`, `backend/tests/unit/ClusterScraper.test.ts`, `backend/tests/unit/ErrorTrackerV2.test.ts`, `backend/tests/unit/SourceDeactivate.test.ts`.
 
+### BF-026: Job attribute rules extractor and golden set (ADR-0023)
+- **Symptom / Need:** Job seekers need reliable structured filtering on minimum required years of experience and security clearance across Ashby, Greenhouse, and Lever boards without title-guessing false positives, company-blurb leaks, or negated-clearance errors.
+- **Root cause & fix:** Added additive nullable `Job` columns and indexes (`experienceMinYears`, `clearanceRequired`, `attrsVersion`, `attrsModelVersion`, `attrsDescHash`, `attrsSource`, `attrsConfidence`, `attrsEvidence`), pure rules-first extraction modules under `backend/src/enrichment/` (`types.ts`, `version.ts`, `buckets.ts`, `text.ts`, `rules/{years,clearance,index}.ts`), and a 242-job production-normalized, blindly hand-labelled golden set (`tune=145`, `holdout=97`, `clr+=48`, `holdout clr+=21`, `holdout yrs=79`) in `backend/tests/fixtures/job-attributes/`. `extractMinYears` scans `descriptionPlain` only; `detectClearance` scans `${title}\n${descriptionPlain}` with frozen, stateless false-friend/US/non-US/negation patterns.
+- **Implemented in:** `backend/prisma/schema.prisma`, `backend/src/enrichment/{types,version,buckets,text}.ts`, `backend/src/enrichment/rules/{years,clearance,index}.ts`, `backend/scripts/BuildJobAttributeFixtures.ts`, `backend/tests/helpers/goldenScore.ts`.
+- **Regression Invariant:** rules are pure; years P/R >= 0.90 and clearance P/R >= 0.90 on the frozen holdout; every DESIGN §2 / §6.2 failure mode has a named case; the API does not expose attribute columns until E4.
+- **Guarding tests:** `backend/tests/unit/JobAttributesYears.test.ts`, `backend/tests/unit/JobAttributesClearance.test.ts`, `backend/tests/unit/JobAttributesGolden.test.ts`, `backend/tests/unit/JobAttributesBuckets.test.ts`, `backend/tests/unit/JobAttributesText.test.ts`, `backend/tests/unit/JobAttributesNotExposed.test.ts`, `backend/tests/integration/JobAttributesSchema.test.ts`.
+
 ---
 
 ## 📈 Improvement Log & Future Packaging Roadmap

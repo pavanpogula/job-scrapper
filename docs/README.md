@@ -153,6 +153,7 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
 - [ADR-0020: B.O.O.L.E.A.N Rebrand, LinkedIn-Style Job Browsing, and Company Directory Pages](./decisions/ADR-0020-boolean-ui-and-company-pages.md)
 - [ADR-0021: Multi-Source ATS Architecture (Greenhouse Onboarding)](./decisions/ADR-0021-multi-source-ats.md)
 - [ADR-0022: Multi-Source ATS Architecture Extension (Lever Onboarding)](./decisions/ADR-0022-lever-source.md)
+- [ADR-0023: Job Attribute Enrichment (Experience and Security Clearance)](./decisions/ADR-0023-job-attribute-enrichment.md)
 
 ---
 

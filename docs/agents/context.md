@@ -1,6 +1,6 @@
 # Agent Context
 
-Authoritative quick context for AI coding agents. Last updated: 2026-10-27 (ADR-0021).
+Authoritative quick context for AI coding agents. Last updated: 2026-11-24 (ADR-0023).
 
 ## Components & Entry Points
 - **Scraper:** `backend/src/core/Scraper.ts` (single process / IPC worker), `backend/src/core/ClusterScraper.ts` (parallel OS worker coordinator), `backend/src/core/ScraperCSV.ts` (streaming CSV exporter).
@@ -28,22 +28,14 @@ Authoritative quick context for AI coding agents. Last updated: 2026-10-27 (ADR-
 - **Backpressure & Concurrency:** `DbGuard` limits active database queries to 3 with queue size 10 (returns 503 + Retry-After on backpressure). Coalesces concurrent identical DB queries via `singleFlight`.
 - **Telemetry:** Each run writes `output/reports/<YYYY-MM>/<runId>.json` (ErrorTracker v2) and `output/latest-<mode>.json`.
 - **Multi-source (ADR-0021, ADR-0022):** `Job.source`/`externalId`, `Company.source`/`atsToken`; `ashbyId` = legacy key; Greenhouse via `GREENHOUSE_ENABLED` (per-source gate: drop > 30% from baseline >= 100); Lever via `LEVER_ENABLED`, staged scrape via `STAGED_SCRAPE` (both default off).
+- **Job attributes (ADR-0023):** `experienceMinYears`, `clearanceRequired`, `attrs*` on `Job`; outside `contentHash`; not in the API until E4.
 
 ## Regression Invariants (doc 10)
-- **BF-001…BF-010:** see `docs/testing.md` §6.
-- **BF-011:** Structured columns and 17-field content hash (guarded: `ContentHash.test.ts`).
-- **BF-012:** Express REST API pagination, rate limiting, security headers (guarded: `ApiServer.test.ts`).
-- **BF-013:** Filter AND-accumulation, `/v1/facets`, DOMPurify XSS defense (guarded: `ApiServer.test.ts`, UI tests).
-- **BF-014:** Limiter pause timer retains event loop (guarded: `ConcurrencyExit.test.ts`).
-- **BF-015:** 429 rate limit scoping, Retry-After header, api_error forwarding (guarded: `AshbyClient.test.ts`, `ScraperRunAll.test.ts`).
-- **BF-016:** GraphQL source preservation against REST overwrite and empty board deferral (guarded: `ScraperRunAll.test.ts`).
-- **BF-017:** Cache publishing orchestration, worker failure isolation, and exit code contract (guarded: `ClusterScraper.test.ts`, `Publisher.test.ts`, `ScraperRunAll.test.ts`).
-- **BF-018:** API cache read-through parity, detail sharding, negative 404 LRU cache (guarded: `ReadThrough.test.ts`, `Hardening.test.ts`, `HealthMeta.test.ts`).
-- **BF-019:** Cache bodies equal DB-path bodies, all company pages are cached, and an idle API Redis client connects before its first command (guarded: `CacheParity.test.ts`, `HealthMeta.test.ts`).
-- **BF-020:** Search: every word starts a word in title/company/department/location, any order (guarded: `Search.test.ts` on real Postgres, `SearchTokenize.test.ts`).
+- **BF-001…BF-020:** see `docs/testing.md` §6 (BF-011 17-field content hash, BF-013 filter AND, BF-017 publish + exit codes, BF-019 cache = DB bodies).
 - **BF-023:** Greenhouse fetch & normalizer (`greenhouse:<id>` legacyKey, single unescape, cents/hourly salary, `_normVersion` freshness, `bySource` telemetry; guarded: `GreenhouseClient.test.ts`, `GreenhouseCoexistence.test.ts`).
 - **BF-024:** Lever fetch & normalizer (`lever:<uuid>` legacyKey, ≤1 req/s pacer, cap 600 + `leverDeadlineMs`, `allocateCompanySlug`, `bySource.lever`; guarded: `LeverClient.test.ts`, `LeverCoexistence.test.ts`).
 - **BF-025:** Staged scrape (`--staged`: one source per stage, failed stage never stops later ones, one publish; guarded: `StagedScrape.test.ts`).
+- **BF-026:** Job attribute rules are pure; golden-set P/R ≥ 0.90 (guarded: `JobAttributesGolden.test.ts`).
 
 ## Top Gotchas
 1. **Modules executing on import:** `DbMenu.ts`, `DbInspect.ts`, `GenerateDocs.ts` run on import—never import them into other modules.

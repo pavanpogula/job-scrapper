@@ -104,6 +104,16 @@ model Job {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  // Job attributes (enrichment, ADR-0023; outside contentHash, written by enrich:jobs)
+  experienceMinYears Int?
+  clearanceRequired  Boolean?
+  attrsVersion       Int?
+  attrsModelVersion  Int?
+  attrsDescHash      String?
+  attrsSource        String?   // 'rules' | 'model'
+  attrsConfidence    String?   // 'high' | 'low'
+  attrsEvidence      Json?     // { years?: string; clearance?: string }
+
   // Index for efficient filtering
   @@unique([source, externalId])
   @@index([source, active, isListed, publishedAt(sort: Desc)])
@@ -117,4 +127,7 @@ model Job {
   @@index([active, lastSeenAt])
   @@index([isRemote])
   @@index([city])
+  @@index([active, attrsVersion])
+  @@index([experienceMinYears])
+  @@index([clearanceRequired])
 }
