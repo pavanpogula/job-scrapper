@@ -285,243 +285,300 @@
     },
     "ab:openai:e808f3eb-f1bc-42ed-bf0c-12e339cabc92": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "Have 8+ years of technical consulting (or equivalent) experience, managing C-level technical and business relationships"
     },
     "ab:picogrid:4669a3a7-8675-464c-81b2-9526b4e26d14": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": true,
+      "yearsEvidence": "2+ years of experience in deployments, military operations, technical program or project execution, customer-facing operations",
+      "clearanceEvidence": "Ability to obtain and maintain a U.S. Government security clearance"
     },
     "ab:picogrid:4fa686c1-1909-490b-bc0c-e5b6d11acff6": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": true,
+      "clearanceEvidence": "U.S. citizenship and ability to obtain and maintain a Top Secret security clearance."
     },
     "ab:picogrid:5e7e2454-938a-4fe9-880a-67249e69ae40": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": true,
+      "yearsEvidence": "8+ years of progressive software engineering experience, with significant time in a hands-on technical lead",
+      "clearanceEvidence": "U.S. citizenship and ability to obtain and maintain a Top Secret security clearance.",
+      "note": "Preferred Top Secret security clearance eligibility"
     },
     "ab:picogrid:878960ad-41bb-40bf-86c2-0e89870571ad": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": true,
+      "clearanceEvidence": "U.S. citizenship and ability to obtain and maintain a Top Secret security clearance."
     },
     "ab:picogrid:8ab232fe-868d-42e1-a7ca-a798da69f18e": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "3–6 years in management consulting, corporate strategy, business operations, investment banking",
+      "note": "ITAR / U.S. Person only, no security clearance"
     },
     "ab:picogrid:93b1fca5-bc02-4c75-91d9-0dcbd1b13226": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 4,
+      "clearance": true,
+      "yearsEvidence": "4+ years of experience in deployments, military operations, technical program or project execution, field operations",
+      "clearanceEvidence": "Ability to obtain and maintain a U.S. Government security clearance"
     },
     "ab:picogrid:949f6f4d-4a85-47c8-990d-0e7ac0ae622d": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 4,
+      "clearance": false,
+      "yearsEvidence": "4+ years of experience in partner operations, ecosystem or alliance programs, program management, business operations"
     },
     "ab:picogrid:b7f41de3-569d-476b-a4f0-93d8cbf89aca": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": false,
+      "note": "2+ years appears only under PREFERRED QUALIFICATIONS -> null"
     },
     "ab:picogrid:c74a4eaa-f9dd-4bcf-8a88-477a0f2178d6": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": true,
+      "clearanceEvidence": "U.S. citizenship and ability to obtain and maintain a Top Secret security clearance."
     },
     "ab:picogrid:cd63347f-1236-478d-84d3-91b33244064e": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": false,
+      "note": "2+ years appears only under PREFERRED QUALIFICATIONS -> null"
     },
     "ab:picogrid:e5555c47-c0b2-4de0-ae63-a9470019dcda": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": true,
+      "clearanceEvidence": "U.S. citizenship and ability to obtain and maintain a Top Secret security clearance."
     },
     "ab:picogrid:eb462f04-d5cf-4a42-83be-fb955ec24336": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": true,
+      "clearanceEvidence": "U.S. citizenship and ability to obtain and maintain a Top Secret security clearance."
     },
     "ab:ramp:2888b101-b1da-4e53-a02e-1bb9b1b5a951": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "A minimum of 5 years of industry experience as a Machine Learning Engineer, Applied Scientist or Data Scientist"
     },
     "ab:ramp:4859cd5e-f2a9-44d7-81f7-8bfc0e62369f": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 1,
+      "clearance": false,
+      "yearsEvidence": "Minimum 1 year of experience in mobile development."
     },
     "ab:ramp:70c26b31-1afb-4fab-b3d3-019261d428c2": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "Roughly 3+ years of relevant experience in customer success, onboarding, implementations, or a related customer-facing role"
     },
     "ab:saronic:2bade3e9-0ef9-4ebf-8cca-52761794def7": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "ab:saronic:3472000e-0c61-4ab6-b7b1-e03684038735": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of experience in executive protection, law enforcement, military, or private security"
     },
     "ab:saronic:3e316509-47fb-45c9-a79f-5a427d78e773": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 7,
+      "clearance": false,
+      "yearsEvidence": "7-9 years of accounting experience, including significant cost accounting experience in a manufacturing environment"
     },
     "ab:saronic:43834e25-fdf8-416c-975f-0ca6e49c87e3": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "10+ years of shipbuilding, heavy manufacturing, or maritime industrial experience"
     },
     "ab:saronic:7e9137a4-8f6d-49b8-a19f-6aec1a3873bf": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "ab:saronic:846faa91-763f-4c16-aec5-2cd48830d3ff": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 1,
+      "clearance": false,
+      "yearsEvidence": "1–3 years of experience in systems administration, IT support, or infrastructure roles."
     },
     "ab:saronic:8e6399b9-2a1b-42f4-90f9-fcfabc51ac2f": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "ab:saronic:94cfa160-de72-4bb5-8edb-af5ab0b46639": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": true,
+      "yearsEvidence": "5+ years of hands-on diesel mechanical experience in marine, automotive, aerospace, heavy industrial, or a related technical field.",
+      "clearanceEvidence": "Ability to obtain and maintain a Secret clearance."
     },
     "ab:saronic:b4c33d43-b036-4177-b750-4ad9eed98d24": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 6,
+      "clearance": false,
+      "yearsEvidence": "6+ years of CAD drafting experience in the marine industry"
     },
     "ab:saronic:c77a1355-5cae-4aa9-bc77-01c3b2273bc8": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 7,
+      "clearance": false,
+      "yearsEvidence": "7+ years of experience in systems engineering or infrastructure roles."
     },
     "ab:saronic:ca3be1c5-3021-41e4-aa22-a9e6069c237e": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": true,
+      "yearsEvidence": "3–6 years of experience in test range operations, missile/weapons or flight test, range safety, or military test and operations.",
+      "clearanceEvidence": "Active Secret clearance (or higher).",
+      "note": "Preferred Active Secret clearance; also mentions range clearance false friend"
     },
     "gh:airbnb:7587869": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 7,
+      "clearance": false,
+      "yearsEvidence": "7+ years of experience in new sales, business acquisition, account management, and partner support"
     },
     "gh:airbnb:7592146": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 12,
+      "clearance": false,
+      "yearsEvidence": "12+ years of industry experience in applied Machine Learning",
+      "note": "12+ yrs ML vs 2-3+ yrs LLMs"
     },
     "gh:airbnb:8272848": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of experience in new sales, account management, and partner support"
     },
     "gh:airbnb:8337229": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "10-15+ years of experience in a Policy, Legal, or Trust and Safety role"
     },
     "gh:andurilindustries:4687724007": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": true,
+      "yearsEvidence": "3+ years of experience (non-internship) designing, testing, and troubleshooting complex board designs",
+      "clearanceEvidence": "Eligible to obtain and maintain an active U.S. Secret security clearance"
     },
     "gh:andurilindustries:5015217007": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": true,
+      "yearsEvidence": "8+ years of experience overall in relevant domains.",
+      "clearanceEvidence": "Eligible to obtain and maintain an active U.S. Secret security clearance",
+      "note": "8+ yrs overall vs 3+ yrs project management"
     },
     "gh:andurilindustries:5075880007": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": true,
+      "clearanceEvidence": "Currently possesses and is able to maintain an active U.S. Top Secret security clearance"
     },
     "gh:andurilindustries:5100128007": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": true,
+      "clearanceEvidence": "Must be able to obtain a Secret Clearance."
     },
     "gh:andurilindustries:5173257007": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 15,
+      "clearance": false,
+      "yearsEvidence": "15+ years of progressive manufacturing leadership experience, with at least 7-10 years in a senior or executive role",
+      "note": "15+ yrs overall vs 7-10 yrs executive"
     },
     "gh:andurilindustries:5196254007": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": true,
+      "yearsEvidence": "5+ years of experience in supply chain commodity management of batteries manufacturing, and/or sourcing engineering",
+      "clearanceEvidence": "Ability to obtain and maintain a U.S. TS clearance",
+      "note": "Clearance listed under PREFERRED QUALIFICATIONS"
     },
     "gh:andurilindustries:5209998007": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 12,
+      "clearance": true,
+      "yearsEvidence": "12+ years of experience in a software engineering role building products, ideally in a fast-paced environment.",
+      "clearanceEvidence": "Eligible to obtain and maintain a U.S. TS clearance.",
+      "note": "Clearance listed under PREFERRED QUALIFICATIONS"
     },
     "gh:andurilindustries:5224110007": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": true,
+      "yearsEvidence": "5+ years of experience in sourcing engineering, supplier engagement and development, or design of electronics and/or mechanical devices",
+      "clearanceEvidence": "Ability to obtain and maintain a U.S. TS clearance",
+      "note": "Clearance listed under PREFERRED QUALIFICATIONS"
     },
     "gh:andurilindustries:5224758007": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 6,
+      "clearance": true,
+      "yearsEvidence": "6+ years of relevant contract management experience.",
+      "clearanceEvidence": "Australian citizenship and ability to obtain and maintain an NV1 security clearance."
     },
     "gh:andurilindustries:5227261007": {
       "split": "holdout",
