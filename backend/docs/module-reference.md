@@ -109,6 +109,52 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `selectLeverValidationCandidates(tokens, knownTokens, nowMs?)` | Orders unseeded candidates: never-checked first, then rejections (`empty`, `not_found`, `dead_board`, `error`) older than 30 days oldest-first |
 | `runLeverDiscovery(options)` | Orchestrates Wayback harvest + `LeverClient.validateSite` (`<= 1 req/s`), `allocateCompanySlug` upsert, optional enrichment, and `$GITHUB_STEP_SUMMARY` output |
 
+## `../src/enrichment/`
+
+### [types.ts](../src/enrichment/types.ts) — Job Attribute Enrichment Types
+| Symbol | Description |
+|---|---|
+| `AttrsConfidence` / `AttrsSource` | Confidence (`'high' \| 'low'`) and source (`'rules' \| 'model'`) union types |
+| `EnrichmentInput` | Input shape `{ id, title, descriptionPlain }` consumed by extractors |
+| `JobAttributes` | Extracted attributes `{ experienceMinYears, clearanceRequired, confidence, source, evidence }` |
+
+### [version.ts](../src/enrichment/version.ts) — Enrichment Version Constant
+| Symbol | Description |
+|---|---|
+| `ATTRS_VERSION` | Positive integer version (`1`) written to `Job.attrsVersion` once enriched |
+
+### [buckets.ts](../src/enrichment/buckets.ts) — Experience Filter Buckets
+| Symbol | Description |
+|---|---|
+| `EXPERIENCE_BUCKETS` | Frozen ordered bucket list `['0-2', '3-5', '6-9', '10plus', 'unspecified']` |
+| `ExperienceBucket` / `BucketRange` | Bucket union type and inclusive `{ min, max }` numeric range |
+| `bucketRange(bucket)` | Maps numeric experience bucket (`0-2`, `3-5`, `6-9`, `10plus`) to min/max bounds |
+| `bucketOf(years)` | Maps `null` or integer `>= 0` years to its `ExperienceBucket` (throws `RangeError` otherwise) |
+
+### [text.ts](../src/enrichment/text.ts) — Description Text & Hash Helpers
+| Symbol | Description |
+|---|---|
+| `getDescriptionText(metadata)` | Extracts `descriptionPlain` or lazily strips `descriptionHtml` via `sanitizeJobDescriptionPlain` |
+| `hashDescription(text)` | Computes 64-char hex SHA-256 hash of whitespace-collapsed description text (for evidence checks & tests) |
+
+### [rules/years.ts](../src/enrichment/rules/years.ts) — Years of Experience Rules
+| Symbol | Description |
+|---|---|
+| `YearsResult` | `{ value: number \| null, evidence: string \| null, ambiguous: boolean }` |
+| `extractMinYears(text)` | Pure 9-step line/section extractor over normalized description text; ignores blurbs/money/hyphenated adjectives and flags conflicting/preferred-only lines ambiguous |
+
+### [rules/clearance.ts](../src/enrichment/rules/clearance.ts) — Security Clearance Rules
+| Symbol | Description |
+|---|---|
+| `ClearanceResult` | `{ required: boolean, evidence: string \| null, ambiguous: boolean }` |
+| `CLEARANCE_*` constants | Six frozen stateless lexicon exports (`CLEARANCE_FALSE_FRIENDS`, `CLEARANCE_STRONG_PATTERNS`, `CLEARANCE_NON_US_PATTERNS`, `CLEARANCE_WEAK_PATTERNS`, `CLEARANCE_NEGATION`, `CLEARANCE_PREFERRED`) |
+| `detectClearance(text)` | Sentence-scoped detector for US and allied security clearances respecting false friends and negations |
+
+### [rules/index.ts](../src/enrichment/rules/index.ts) — Rules Combiner
+| Symbol | Description |
+|---|---|
+| `extractAttributesByRules(input)` | Combines `extractMinYears(descriptionPlain)` and `detectClearance(title + descriptionPlain)` into `JobAttributes` with `source: 'rules'` |
+
 ## `../src/lib/`
 
 ### [ats/AtsClient.ts](../src/lib/ats/AtsClient.ts) — ATS Client Interface & Normalized Models
@@ -325,6 +371,7 @@ No exports; **runs on import** (L66). *(private)* `inspectDatabase()` (L14) — 
 | | `parseCSV(content)` | L32 | Quote-aware CSV parser (skips header/blank lines) |
 | | `generateMarkdownTable(jobs)` | L78 | `JOBS.md` table with truncation and safe links |
 | | `main()` *(private)* | L109 | Newest `output/jobs_*.csv` → `JOBS.md`; `require.main` guard L141 |
+| [BuildJobAttributeFixtures.ts](../scripts/BuildJobAttributeFixtures.ts) | `parseArgs` / `sha256` / `main` | — | Fetches live postings via production ATS normalizers into `backend/tests/fixtures/job-attributes/{jobs,labels}.json` (manual script, never run in CI) |
 
 ## Coding Conventions
 

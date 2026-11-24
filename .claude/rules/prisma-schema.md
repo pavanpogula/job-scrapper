@@ -9,3 +9,4 @@ paths: ["backend/prisma/**"]
 3. **Index Efficiency:** Any foreign key or query filter column (company slug, department, location, posted date) must have an accompanying index.
 4. **Content Hash Parity:** Any schema change affecting job comparison fields must update `calculateContentHash` in `backend/src/core/Scraper.ts` and the hash regression test.
 5. Enum values are added, never removed or renamed (`Ats`).
+6. Enrichment columns (`experienceMinYears`, `clearanceRequired`, `attrs*`) are never part of `computeJobContentHash` and are never written by the scraper.

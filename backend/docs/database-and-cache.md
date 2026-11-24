@@ -56,6 +56,14 @@ erDiagram
         Json postalAddress "nullable jsonb"
         Json metadata "sanitized raw Ashby job"
         String contentHash "md5 across 16 fields"
+        Int experienceMinYears "nullable (indexed)"
+        Boolean clearanceRequired "nullable (indexed)"
+        Int attrsVersion "nullable"
+        String attrsConfidence "nullable ('high'|'low')"
+        String attrsSource "nullable ('rules'|'model')"
+        String attrsModel "nullable"
+        String attrsDescHash "nullable (contentHash snapshot)"
+        DateTime attrsUpdatedAt "nullable"
         Boolean active "default true"
         DateTime createdAt "default now()"
         DateTime updatedAt "@updatedAt"
@@ -141,6 +149,14 @@ Empty names (`""`) are not stored → `departmentId`/`locationId = null`.
 | `postalAddress` | `Json?` | Full normalized postal address object |
 | `metadata` | `Json` (Postgres `jsonb`) | `sanitizeJsonMetadata(job)` — whole sanitized Ashby job object |
 | `contentHash` | `String` | `md5` across 16 fields (`title`, `location`, `department`, `salary.min`, `salary.max`, `salary.currency`, `salary.interval`, `isRemote`, `workplaceType`, `employmentType`, `publishedAt`, `applyUrl`, `isListed`, `country`, `region`, `city`) |
+| `experienceMinYears` | `Int?` | Minimum required years of experience extracted by enrichment (`0..30`, or `null` when unspecified; indexed) |
+| `clearanceRequired` | `Boolean?` | Security clearance requirement or eligibility flag (`true`/`false`, `null` when unprocessed; indexed) |
+| `attrsVersion` | `Int?` | Schema/ruleset version (`ATTRS_VERSION`) when processed (`IS NULL` = unprocessed) |
+| `attrsConfidence` | `String?` | Enrichment confidence (`'high'` \| `'low'`) |
+| `attrsSource` | `String?` | Enrichment source (`'rules'` \| `'model'`) |
+| `attrsModel` | `String?` | Model identifier when LLM fallback produced/verified attributes, else `null` |
+| `attrsDescHash` | `String?` | Snapshot of the job's `contentHash` when attributes were processed (00-PLAN Amendment) |
+| `attrsUpdatedAt` | `DateTime?` | Timestamp when enrichment attributes were written |
 | `active` | `Boolean` | `@default(true)`; `true` on every create/update, `false` via `deactivateStaleJobs()` |
 | `createdAt` | `DateTime` | `@default(now())` |
 | `updatedAt` | `DateTime` | `@updatedAt` (also set explicitly to `new Date()` on update) |
@@ -152,8 +168,11 @@ Empty names (`""`) are not stored → `departmentId`/`locationId = null`.
 - `@@index([active, isListed, country, publishedAt(sort: Desc)])`
 - `@@index([companySlug, active])` (replaces superseded `@@index([companySlug])`)
 - `@@index([active, lastSeenAt])` (accelerates stale job deactivation)
-- Single-column indexes preserved: `@@index([departmentId])`, `@@index([locationId])`, `@@index([isRemote])`, `@@index([city])`.
+- `@@index([active, attrsVersion])` (accelerates enrichment picker scans)
+- Single-column indexes preserved: `@@index([departmentId])`, `@@index([locationId])`, `@@index([isRemote])`, `@@index([city])`, `@@index([experienceMinYears])`, `@@index([clearanceRequired])`.
 (Plus unique indexes on `Company.slug`, `Department.name`, `Location.name`.)
+
+**Enrichment columns note (ADR-0023):** `experienceMinYears`, `clearanceRequired`, and `attrs*` are not part of `contentHash`; they will be written only by `enrich:jobs` (E2) with raw SQL so `updatedAt` / `lastUpdatedAt` stay untouched, and `attrsVersion IS NULL` indicates an unprocessed job.
 
 **Relations / referential actions:** none declared, so Prisma defaults apply — `Job.company` (required):
 `onDelete: Restrict`; `Job.department` / `Job.location` (optional): `onDelete: SetNull`; all `onUpdate: Cascade`.
