@@ -1,0 +1,106 @@
+==== ASHBY
+  1password: jobs=80 years=59 (74%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  abridge: jobs=30 years=30 (100%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  hadrian-automation: jobs=180 years=133 (74%) clearance-any=10 (6%) clearance-strict=9 (5%)
+  linear: jobs=30 years=30 (100%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  multiverse: jobs=23 years=10 (43%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  notion: jobs=172 years=81 (47%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  openai: jobs=856 years=469 (55%) clearance-any=24 (3%) clearance-strict=21 (2%)
+  picogrid: jobs=26 years=21 (81%) clearance-any=15 (58%) clearance-strict=15 (58%)
+  ramp: jobs=181 years=127 (70%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  saronic: jobs=301 years=208 (69%) clearance-any=52 (17%) clearance-strict=46 (15%)
+  skydio: jobs=183 years=100 (55%) clearance-any=3 (2%) clearance-strict=3 (2%)
+  keys: {'id': 2062, 'title': 2062, 'department': 2062, 'team': 2062, 'employmentType': 2062, 'location': 2062, 'shouldDisplayCompensationOnJobPostings': 2062, 'secondaryLocations': 2062, 'publishedAt': 2062, 'isListed': 2062, 'isRemote': 2062, 'workplaceType': 2062, 'address': 2062, 'jobUrl': 2062, 'applyUrl': 2062, 'descriptionHtml': 2062, 'descriptionPlain': 2062, 'compensation': 2062}
+ASHBY TOTAL: jobs=2062 years=1268 (61%) clearance-any=104 (5%) clearance-strict=94 (5%)
+==== GREENHOUSE
+  airbnb: jobs=198 years=183 (92%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  andurilindustries: jobs=2605 years=2191 (84%) clearance-any=2074 (80%) clearance-strict=1847 (71%)
+  astranis: jobs=164 years=91 (55%) clearance-any=9 (5%) clearance-strict=9 (5%)
+  cloudflare: jobs=504 years=333 (66%) clearance-any=2 (0%) clearance-strict=1 (0%)
+  coinbase: jobs=249 years=216 (87%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  databricks: jobs=883 years=710 (80%) clearance-any=30 (3%) clearance-strict=27 (3%)
+  datadog: jobs=383 years=245 (64%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  discord: jobs=29 years=28 (97%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  dropbox: jobs=54 years=43 (80%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  epirus: jobs=41 years=40 (98%) clearance-any=20 (49%) clearance-strict=15 (37%)
+  figma: jobs=148 years=100 (68%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  gitlab: jobs=252 years=25 (10%) clearance-any=4 (2%) clearance-strict=3 (1%)
+  lyft: jobs=144 years=119 (83%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  pinterest: jobs=171 years=121 (71%) clearance-any=1 (1%) clearance-strict=0 (0%)
+  relativity: jobs=394 years=350 (89%) clearance-any=67 (17%) clearance-strict=62 (16%)
+  robinhood: jobs=159 years=129 (81%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  rocketlab: jobs=554 years=459 (83%) clearance-any=177 (32%) clearance-strict=175 (32%)
+  scaleai: jobs=160 years=124 (78%) clearance-any=38 (24%) clearance-strict=37 (23%)
+  spacex: jobs=2862 years=2766 (97%) clearance-any=262 (9%) clearance-strict=230 (8%)
+  stripe: jobs=771 years=679 (88%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  vannevarlabs: jobs=35 years=26 (74%) clearance-any=30 (86%) clearance-strict=30 (86%)
+  top-level keys: {'absolute_url': 10760, 'data_compliance': 10760, 'internal_job_id': 10760, 'location': 10760, 'metadata': 10760, 'id': 10760, 'updated_at': 10760, 'requisition_id': 10760, 'title': 10760, 'pay_input_ranges': 10760, 'company_name': 10760, 'first_published': 10760, 'language': 10760, 'application_deadline': 10760, 'content': 10760, 'departments': 10760, 'offices': 10760, 'ai_disclaimer': 10760, 'include_ai_disclaimer': 10760, 'ai_opt_out_request_url': 10760, 'education': 4426, 'employment': 458}
+  jobs with non-empty metadata: 9371/10760
+  meta['Employment Type'] boards=['andurilindustries', 'dropbox', 'pinterest', 'rocketlab', 'spacex'] jobs=6246 types={'single_select'} vals=[('"Regular"', 3510), ('"Full-time"', 1812), ('null', 727), ('"Intern"', 131), ('"Temporary"', 30)]
+  meta['Discipline'] boards=['spacex'] jobs=2862 types={'single_select'} vals=[('"Engineering - Software & Analytics"', 379), ('"Engineering - Aerospace & Mechanical"', 342), ('"Supply Chain & Logistics - Sourcing & Planning"', 236), ('"Engineering - Electrical"', 194), ('"Corporate - Sales & Business Operations"', 167)]
+  meta['Program'] boards=['spacex'] jobs=2862 types={'multi_select'} vals=[('["Starlink"]', 1053), ('["Starship"]', 773), ('["Corporate"]', 639), ('["Starshield"]', 183), ('["Falcon"]', 103)]
+  meta['External Department Name for Job Board'] boards=['andurilindustries'] jobs=2605 types={'single_select'} vals=[('"Software"', 520), ('"Manufacturing"', 371), ('"Supply Chain"', 229), ('"Electrical Engineering"', 131), ('"Maritime"', 121)]
+  meta['ET Talent Identifier'] boards=['andurilindustries'] jobs=2605 types={'single_select'} vals=[('null', 2353), ('"None"', 153), ('"Intern"', 46), ('"Early Career/New Grad Hire"', 43), ('"Skillbridge Intern"', 5)]
+  meta['Arsenal Launch Team'] boards=['andurilindustries'] jobs=2605 types={'single_select'} vals=[('null', 2594), ('"Altius Launch Team"', 5), ('"Redbud Launch Team"', 5), ('"Barracuda Launch Team"', 1)]
+  meta['Cost Center'] boards=['cloudflare', 'datadog'] jobs=887 types={'single_select'} vals=[('"5150 - Field Sales"', 83), ('"Sales - Enterprise Sales"', 83), ('"5200 - Solution Engineers"', 62), ('"5100 - Mid Market"', 53), ('"Engineering - Dev Eng"', 36)]
+  meta['Company Assignment'] boards=['databricks'] jobs=883 types={'single_select'} vals=[('"Databricks, Inc."', 478), ('"Databricks India Private Limited"', 70), ('"Databricks U.K. Limited"', 49), ('"Databricks Asiapac Unified Analytics PTE.LTD."', 34), ('"Databricks Australia PTY LTD"', 29)]
+  meta['Career Page Posting Category'] boards=['databricks'] jobs=883 types={'multi_select'} vals=[('["Field Engineering"]', 221), ('["Engineering"]', 207), ('["Sales"]', 154), ('["Forward Deployed Engineering"]', 120), ('["Product"]', 30)]
+  meta['Job Discipline'] boards=['rocketlab'] jobs=554 types={'multi_select'} vals=[('null', 67), ('["Internships"]', 53), ('["Engineering - Software, Firmware, GNC"]', 53), ('["Engineering - Electrical, Electronic Design & Test"]', 45), ('["Engineering - Manufacturing & Integration"]', 32)]
+  meta['Job Posting Location'] boards=['cloudflare'] jobs=504 types={'multi_select'} vals=[('["Austin, US"]', 37), ('["Austin, TX"]', 30), ('["Singapore"]', 25), ('["London, UK"]', 22), ('["Bengaluru, India"]', 18)]
+  meta['Career Site Department'] boards=['cloudflare'] jobs=504 types={'multi_select'} vals=[('["Sales"]', 243), ('["Engineering"]', 114), ('["Customer Support"]', 19), ('["People & Places"]', 17), ('["Security"]', 13)]
+  meta['Time Type'] boards=['datadog', 'dropbox'] jobs=437 types={'single_select'} vals=[('"Full time"', 383), ('"Full Time"', 50), ('null', 4)]
+  meta['Area - Engineering'] boards=['datadog'] jobs=383 types={'single_select'} vals=[('null', 305), ('"Backend"', 16), ('"Product Management"', 15), ('"AI Research"', 12), ('"Technical Community"', 9)]
+  meta['Geography'] boards=['datadog'] jobs=383 types={'single_select'} vals=[('"North America"', 212), ('"APAC"', 83), ('"EMEA"', 74), ('"LATAM"', 14)]
+  meta['Early Career Time Type'] boards=['datadog'] jobs=383 types={'single_select'} vals=[('null', 376), ('"Internship"', 5), ('"Early Career"', 2)]
+  meta['Pay Transparency Range'] boards=['datadog'] jobs=383 types={'currency_range'} vals=[('null', 170), ('{"unit": "USD", "max_value": "165000.0", "min_value": "12400', 17), ('{"unit": "USD", "max_value": "240000.0", "min_value": "19200', 13), ('{"unit": "USD", "max_value": "198000.0", "min_value": "14900', 9), ('{"unit": "USD", "max_value": "305000.0", "min_value": "24400', 8)]
+  meta['Does this role require access to ITAR-controlled data?'] boards=['datadog'] jobs=383 types={'single_select'} vals=[('null', 332), ('"No"', 35), ('"Pipeline - Some roles may require an ITAR licence"', 7), ('"Yes"', 5), ('"I\\u2019m not sure"', 4)]
+  meta['IC or MG'] boards=['datadog'] jobs=383 types={'single_select'} vals=[('"IC"', 302), ('"MG"', 81)]
+  meta['Quota Coverage Type'] boards=['gitlab'] jobs=252 types={'single_select'} vals=[('"n/a"', 135), ('"Account Executive"', 43), ('"Overlay"', 31), ('"N/A"', 26), ('"Overlay Quota Rep (OQR)"', 17)]
+  meta['Team'] boards=['coinbase'] jobs=249 types={'single_select'} vals=[('"Platform"', 53), ('"Consumer & Business"', 40), ('"Customer Experience"', 38), ('"Finance"', 29), ('"Institutional"', 18)]
+  meta['HM Employee ID (WD)'] boards=['coinbase'] jobs=249 types={'short_text'} vals=[('"209354"', 5), ('"211800"', 5), ('"203429"', 4), ('"207761"', 4), ('"208714"', 3)]
+  meta['Careersite Department (for job postings)'] boards=['coinbase'] jobs=249 types={'single_select'} vals=[('"Engineering"', 70), ('"Customer Experience"', 29), ('"Internships & Emerging Talent Positions"', 22), ('"Finance & Accounting"', 21), ('"Product Management"', 17)]
+  meta['mule_sourcers_counter_custom'] boards=['coinbase'] jobs=249 types={'number'} vals=[('"0.0"', 151), ('null', 98)]
+  meta['mule_recruiters_counter_custom'] boards=['coinbase'] jobs=249 types={'number'} vals=[('"0.0"', 151), ('null', 98)]
+  meta['Is this job part of ACC?'] boards=['airbnb'] jobs=198 types={'yes_no'} vals=[('false', 187), ('true', 11)]
+  meta['Workplace Type'] boards=['airbnb'] jobs=198 types={'single_select'} vals=[('"Remote"', 131), ('"Hybrid"', 54), ('"Onsite"', 13)]
+  meta['Career Track'] boards=['pinterest'] jobs=171 types={'single_select'} vals=[('"Individual Contributor"', 108), ('null', 41), ('"Sr. Manager"', 8), ('"Manager II"', 7), ('"Director"', 6)]
+  meta['Careers Page Department'] boards=['pinterest'] jobs=171 types={'multi_select'} vals=[('["Engineering"]', 72), ('["Sales"]', 32), ('["University"]', 20), ('["Product"]', 12), ('["Marketing, Communications, and Creative"]', 11)]
+  meta['Recruiting Difficulty - ONCE SET, DO NOT CHANGE'] boards=['astranis'] jobs=164 types={'single_select'} vals=[('"1"', 81), ('"3"', 36), ('"5"', 36), ('"2"', 11)]
+  ***meta['Level Estimate'] boards=['astranis'] jobs=164 types={'single_select'} vals=[('"N1"', 64), ('"N4"', 22), ('"N3"', 14), ('"N2"', 13), ('"P3"', 11)]
+  meta['Domain'] boards=['scaleai'] jobs=160 types={'multi_select'} vals=[('null', 154), ('[]', 6)]
+  meta['External Department'] boards=['scaleai'] jobs=160 types={'single_select'} vals=[('"Engineering"', 42), ('"Public Sector"', 30), ('"Sales"', 16), ('null', 14), ('"Product and Design"', 13)]
+  meta['Careers Page Bucket'] boards=['robinhood'] jobs=159 types={'single_select'} vals=[('"SOFTWARE ENGINEERING"', 34), ('"CUSTOMER EXPERIENCE"', 16), ('"PRODUCT"', 14), ('"INFRASTRUCTURE ENGINEERING"', 13), ('"DATA/AI/ML"', 11)]
+  meta['Career Site Category'] boards=['lyft'] jobs=144 types={'single_select'} vals=[('"Software Engineering"', 36), ('"University"', 23), ('"Accounting & Finance"', 10), ('"Operations"', 9), ('"Legal"', 8)]
+  meta['Recruiting Team Responsible'] boards=['dropbox'] jobs=54 types={'single_select'} vals=[('"GCO Recruiting"', 17), ('"Engineering Recruiting"', 16), ('"International EPD"', 12), ('"G&A Recruiting"', 5), ('"NAMER - Executive Recruiting"', 4)]
+  meta['Weighted Value'] boards=['dropbox'] jobs=54 types={'single_select'} vals=[('null', 53), ('"Not Applicable"', 1)]
+  meta['Parent Job ID'] boards=['dropbox'] jobs=54 types={'single_select'} vals=[('null', 47), ('"Eng - 3398503"', 1), ('"Eng - 3220847"', 1), ('"Eng - 3220902"', 1), ('"Eng - 3398391"', 1)]
+  meta['Active Until Date'] boards=['dropbox'] jobs=54 types={'date'} vals=[('""', 54)]
+  ***meta['Location Cost Tier'] boards=['dropbox'] jobs=54 types={'single_select'} vals=[('"Mid"', 39), ('"Low"', 7), ('null', 4), ('"High"', 4)]
+  meta['Skillset'] boards=['dropbox'] jobs=54 types={'single_select'} vals=[('"Security"', 10), ('"ITS, Niche"', 5), ('"Infra SWE"', 4), ('"Marketing, Niche"', 3), ('"Product SWE FS"', 3)]
+  ***meta['Dropboxer Level'] boards=['dropbox'] jobs=54 types={'single_select'} vals=[('"IC4"', 23), ('"IC3"', 18), ('"IC2"', 5), ('"IC6"', 4), ('"MGR5"', 3)]
+  meta['Career Page Allocation'] boards=['dropbox'] jobs=54 types={'single_select'} vals=[('"Engineering"', 26), ('"Sales"', 7), ('"Finance"', 5), ('"Marketing"', 4), ('"Customer Experience and Success"', 3)]
+  meta['Featured on Website'] boards=['discord'] jobs=29 types={'multi_select'} vals=[('[]', 29)]
+  meta['Careers Site Department'] boards=['discord'] jobs=29 types={'single_select'} vals=[('null', 27), ('"Security Engineering"', 1), ('"Product Engineering"', 1)]
+GREENHOUSE TOTAL: jobs=10760 years=8978 (83%) clearance-any=2714 (25%) clearance-strict=2436 (23%)
+==== LEVER
+  anchorage: jobs=19 years=15 (79%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  anomali: jobs=7 years=7 (100%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  binance: jobs=4 years=3 (75%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  jumpcloud: jobs=34 years=26 (76%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  matchgroup: jobs=73 years=45 (62%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  outreach: jobs=17 years=16 (94%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  palantir: jobs=306 years=133 (43%) clearance-any=164 (54%) clearance-strict=161 (53%)
+  spotify: jobs=88 years=49 (56%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  sysdig: jobs=35 years=35 (100%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  veeva: jobs=864 years=797 (92%) clearance-any=0 (0%) clearance-strict=0 (0%)
+  zoox: jobs=243 years=196 (81%) clearance-any=9 (4%) clearance-strict=0 (0%)
+  keys: {'additionalPlain': 1690, 'additional': 1690, 'categories': 1690, 'createdAt': 1690, 'descriptionPlain': 1690, 'description': 1690, 'id': 1690, 'lists': 1690, 'text': 1690, 'country': 1690, 'workplaceType': 1690, 'opening': 1690, 'openingPlain': 1690, 'descriptionBody': 1690, 'descriptionBodyPlain': 1690, 'hostedUrl': 1690, 'applyUrl': 1690, 'salaryRange': 271, 'salaryDescription': 248, 'salaryDescriptionPlain': 248}
+  categories keys: {'commitment': 1671, 'department': 1384, 'location': 1690, 'team': 1690, 'allLocations': 1690, 'level': 27}
+    commitment [('Full-Time', 872), ('Full-time', 518), ('Permanent', 84), ('Internship', 66), ('Regular - Full Time', 35), ('Full Time', 33)]
+    department [('Professional Services', 206), ('Sales', 157), ('Product Management & Alliances', 128), ('Software', 98), ('Marketing', 85), ('Business Consulting', 85)]
+    location [('Massachusetts - Boston', 220), ('Foster City, CA', 216), ('New York, NY', 132), ('Washington, D.C.', 65), ('United Kingdom - London', 64), ('Spain - Barcelona', 58)]
+    team [('Dev', 94), ('Product Management & Alliances - NA', 78), ('Delta', 58), ('R&D - NA', 47), ('R&D - EU', 43), ('Professional Services', 38)]
+    allLocations [("['Massachusetts - Boston']", 220), ("['Foster City, CA']", 194), ("['New York, NY']", 124), ("['Washington, D.C.']", 65), ("['United Kingdom - London']", 64), ("['Spain - Barcelona']", 58)]
+    level [('All Levels', 22), ('Junior', 3), ('Senior', 2)]
+  top list headings: [('Requirements', 828), ("What You'll Do", 714), ('Interviewing with Veeva', 710), ('Compensation', 672), ('Perks & Benefits', 669), ('Nice to Have', 653), ('What We Value', 296), ('What We Require', 281), ('What You’ll Do', 229), ('Bonus Qualifications', 176), ('Qualifications', 174), ('Core Responsibilities', 149), ('In this role, you will:', 135), ('Who You Are', 76), ("Where You'll Be", 69)]
+LEVER TOTAL: jobs=1690 years=1322 (78%) clearance-any=173 (10%) clearance-strict=161 (10%)

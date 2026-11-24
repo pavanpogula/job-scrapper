@@ -184,6 +184,17 @@ All decisions are recorded under [`docs/decisions/`](./decisions/README.md):
   - L5 Staged Scrape Runner: [`docs/plans/lever/L5-staged-scrape.md`](./plans/lever/L5-staged-scrape.md)
   - L6 Enable Lever (staged daily scrape): [`docs/plans/lever/L6-enable-lever.md`](./plans/lever/L6-enable-lever.md)
   - Review Guide: [`docs/plans/lever/REVIEW.md`](./plans/lever/REVIEW.md)
+- **Job Attribute Enrichment Plans (`docs/plans/job-attributes/`):**
+  - Design: [`docs/plans/job-attributes/DESIGN.md`](./plans/job-attributes/DESIGN.md)
+  - Overview Plan: [`docs/plans/job-attributes/00-PLAN.md`](./plans/job-attributes/00-PLAN.md)
+  - E1 Schema & Rules Extractor: [`docs/plans/job-attributes/E1-schema-and-rules.md`](./plans/job-attributes/E1-schema-and-rules.md)
+  - E2 Enrichment Pass: [`docs/plans/job-attributes/E2-enrich-pass.md`](./plans/job-attributes/E2-enrich-pass.md)
+  - E3 Gemini Model Step: [`docs/plans/job-attributes/E3-gemini-step.md`](./plans/job-attributes/E3-gemini-step.md)
+  - E4 API Filters: [`docs/plans/job-attributes/E4-api-filters.md`](./plans/job-attributes/E4-api-filters.md)
+  - E5 UI Filters: [`docs/plans/job-attributes/E5-ui-filters.md`](./plans/job-attributes/E5-ui-filters.md)
+  - E6 Rollout & Release: [`docs/plans/job-attributes/E6-rollout-and-release.md`](./plans/job-attributes/E6-rollout-and-release.md)
+  - Owner Rollout Runbook: [`docs/plans/job-attributes/ROLLOUT.md`](./plans/job-attributes/ROLLOUT.md)
+  - Review Guide: [`docs/plans/job-attributes/REVIEW.md`](./plans/job-attributes/REVIEW.md)
 
 ---
 
