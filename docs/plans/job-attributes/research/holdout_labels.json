@@ -1,0 +1,4 @@
+{"years":[3,5,8,4,12,12,5,5,7,2,2,null,4,null,5,null,null,5,null,null,3,null,10,null,5,6,10,10,1,7,5,12,10,null,null,null,5,null,3,10],
+"clr":{"1":["TS/SCI","ACTIVE",false],"2":["SECRET","ELIGIBLE",false],"4":["SECRET","ACTIVE",true],"5":["TOP_SECRET","ELIGIBLE",false],
+"6":["TOP_SECRET","ELIGIBLE",false],"7":["TOP_SECRET","ELIGIBLE",false],"9":["SECRET","ELIGIBLE",false],"12":["TOP_SECRET","ACTIVE",false],
+"17":["UNSPECIFIED","ELIGIBLE",false],"18":["SECRET","ELIGIBLE",false],"20":["SECRET","ACTIVE",false],"22":["UNSPECIFIED","ELIGIBLE",false]}}
