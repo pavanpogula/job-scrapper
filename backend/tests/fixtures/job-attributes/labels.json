@@ -844,7 +844,7 @@
       "labelled": true,
       "years": 8,
       "clearance": false,
-      "yearsEvidence": "8+ years of progressive experience in technical program management, engineering program management, security program management, or an equivalent technical leadership role."
+      "yearsEvidence": "8+ years of progressive experience in technical program management, engineering program management, security program management"
     },
     "gh:databricks:8912711002": {
       "split": "tune",
@@ -920,11 +920,11 @@
     "gh:epirus:5979030004": {
       "split": "holdout",
       "labelled": true,
-      "years": 3,
+      "years": 5,
       "clearance": true,
       "yearsEvidence": "Typically requires a minimum of 5 years of related experience with a Bachelor\u2019s degree; or 3 years and a Master\u2019s degree",
       "clearanceEvidence": "Active Secret clearance: TS/SCI eligibility preferred.",
-      "note": "Degree-substituted requirement (5 BS / 3 MS / 0 PhD); lower numeric bound 3"
+      "note": "Degree-dependent paths (5 BS / 3 MS / PhD); \u00a76.2 base BS path = 5"
     },
     "gh:epirus:5996532004": {
       "split": "holdout",
@@ -1154,243 +1154,295 @@
     },
     "gh:rocketlab:7783209003": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": true,
+      "yearsEvidence": "Bachelor\u2019s degree and 5+ years of industry experience in GNC/ADCS",
+      "clearanceEvidence": "Active Secret security clearance OR Ability to obtain and maintain one"
     },
     "gh:rocketlab:7990063003": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": false,
+      "note": "Intern requiring 3+ months supply chain experience (< 1 year)"
     },
     "gh:rocketlab:7997785003": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 12,
+      "clearance": true,
+      "yearsEvidence": "Bachelor's degree with 12+ years of experience, master's degree with 8+ years of experience, or Ph.D. with 5+ years of experience",
+      "clearanceEvidence": "Ability to obtain and maintain a U.S. Government Security Clearance.",
+      "note": "Degree-dependent paths (12 BS / 8 MS / 5 PhD); \u00a76.2 base BS path = 12"
     },
     "gh:rocketlab:8009530003": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 15,
+      "clearance": true,
+      "yearsEvidence": "15+ years of experience in business development, program management, or systems engineering within the aerospace sector",
+      "clearanceEvidence": "Ability to obtain and maintain a security clearance"
     },
     "gh:rocketlab:8010670003": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": false,
+      "note": "Bachelor\u2019s degree or equivalent years of work experience (4+ years total work experience) -> 0 required with BS"
     },
     "gh:rocketlab:8016306003": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5\u20138 years of engineering experience, ideally in R&D, product development, or mechanical design"
     },
     "gh:rocketlab:8020929003": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of relevant manufacturing experience or demonstrated subject matter expertise, preferably in aerospace."
     },
     "gh:rocketlab:8034180003": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "gh:rocketlab:8054076003": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of mechanical engineering experience"
     },
     "gh:rocketlab:8056192003": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of experience with RF hardware development and RF testing"
     },
     "gh:rocketlab:8198334003": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of professional engineering experience in a highly regulated manufacturing environment"
     },
     "gh:rocketlab:8199770003": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 0,
+      "clearance": false,
+      "yearsEvidence": "0\u20136 years industry experience, ideally from Aerospace, Automotive, Mechatronics, or Marine"
     },
     "gh:rocketlab:8200505003": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 12,
+      "clearance": true,
+      "yearsEvidence": "12+ years of experience in business development, program management, or systems engineering within the aerospace, space, defense, or related technology sector",
+      "clearanceEvidence": "Ability to obtain and maintain any required German or European security clearance, if applicable to assigned programs",
+      "note": "Non-US clearance (German or European security clearance)"
     },
     "gh:rocketlab:8200829003": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years related experience supporting a manufacturing line in a technical role"
     },
     "gh:rocketlab:8204603003": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of professional experience in test engineering, hardware verification, electrical engineering, or related technical functions."
     },
     "gh:rocketlab:8213823003": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of recruitment experience"
     },
     "gh:rocketlab:8214656003": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": true,
+      "yearsEvidence": "B.S and 5+ years of industry experience in GNC/ADCS",
+      "clearanceEvidence": "Ability to maintain and obtain a security clearance"
     },
     "gh:scaleai:4565834005": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "gh:scaleai:4687052005": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "3+ years in a technical AI/ML role, such as ML engineering, research, applied science, technical product management"
     },
     "gh:scaleai:4726264005": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": true,
+      "yearsEvidence": "5+ years of experience in technical program management, software engineering, systems engineering, product management, technical consulting",
+      "clearanceEvidence": "Active TS/SCI clearance"
     },
     "gh:scaleai:4732394005": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of post-graduation, full-stack engineering experience with demonstrated proficiency in React (required)",
+      "note": "Listed under 'Ideally you'd have' which is the sole qualifications section before 'Nice to haves'"
     },
     "gh:scaleai:4736426005": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": false,
+      "note": "New Grad role; 'For 10 years, Scale has' in company blurb"
     },
     "gh:scaleai:4748328005": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 6,
+      "clearance": false,
+      "yearsEvidence": "6+ years of product marketing, industry marketing, or segment marketing experience in B2B enterprise environments",
+      "note": "Listed under 'Ideally you'd have' which is the sole qualifications section before 'Nice to haves'"
     },
     "gh:spacex:8601813002": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 1,
+      "clearance": false,
+      "yearsEvidence": "1+ years of engineering experience in manufacturing or production (internship and school projects experience qualifies)"
     },
     "gh:spacex:8642056002": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of research and/or industry experience in RF/microwave circuit design"
     },
     "gh:spacex:8642280002": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 7,
+      "clearance": false,
+      "yearsEvidence": "7+ years of enterprise sales experience"
     },
     "gh:spacex:8703162002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of experience in business development, partnerships, growth, sales, marketing, consulting, or operations"
     },
     "gh:spacex:8749208002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 1,
+      "clearance": true,
+      "yearsEvidence": "1+ year of professional experience in software development",
+      "clearanceEvidence": "Active Top Secret, Top Secret SCI, or DOE Level Q clearance, or the ability to obtain and maintain one",
+      "note": "BS or 3+ yrs in lieu + 1+ yr required -> 1 yr with BS; preferred clearance"
     },
     "gh:spacex:8788674002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 1,
+      "clearance": false,
+      "yearsEvidence": "6+ months as a SpaceX HR Coordinator or 1+ years of professional human resources experience"
     },
     "gh:spacex:8815104002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 1,
+      "clearance": false,
+      "yearsEvidence": "1+ years of experience in one or more of the following areas: manufacturing engineering, surface mount technology (SMT)",
+      "note": "Starshield pay differential ('Those with an active clearance will receive a 10% differential') is optional bonus pay, not a requirement"
     },
     "gh:spacex:8864869002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "Bachelor\u2019s degree and 5+ years of recruiting experience; or associate degree and 6+ years of experience; or 7+ years",
+      "note": "Degree-dependent paths (BS+5 / Assoc+6 / 7 in lieu); \u00a76.2 BS path = 5"
     },
     "gh:spacex:8876611002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of experience in food preparation, customer service, or other food services support roles"
     },
     "gh:spacex:8893314002": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": false,
+      "note": "Bachelor's degree or 3+ years in lieu of degree -> 0 required with BS"
     },
     "gh:spacex:8912189002": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "8+ years of experience in manufacturing"
     },
     "gh:spacex:8935168002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "Advanced degree; or bachelor\u2019s degree and 2+ years of experience working in one or more of the following; or 6+ years",
+      "note": "BS+2 / Adv degree / 6 in lieu; \u00a76.2 BS path = 2"
     },
     "gh:stripe:8077971": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "10+ years of sales experience, preferably selling a technical product, with a track record of top performance"
     },
     "gh:stripe:8131339": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "gh:stripe:8146053": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "10+ years of experience in partnerships, business development, corporate development, strategy, financial services, or a related field."
     },
     "gh:stripe:8221776": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of experience in data analytics, technical operations, business intelligence, automation, solutions delivery, or a related field."
     },
     "gh:stripe:8237526": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "8+ years of full-cycle recruiting experience (in-house experience strongly preferred)"
     },
     "gh:stripe:8346417": {
       "split": "tune",
