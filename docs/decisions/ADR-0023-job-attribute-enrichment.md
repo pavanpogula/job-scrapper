@@ -19,10 +19,10 @@ Job seekers browsing direct company boards across Ashby, Greenhouse, and Lever n
 | 3. Rules-first + bounded LLM fallback (**Chosen**) | Pure rules run first on all jobs; optional Gemini Flash-Lite runs only on `low`-confidence rows under time/job budgets | Fast & free on >90% high-confidence rows; bounded cost on ambiguous tail; deterministic baseline always available |
 
 ## Decision
-Implement a phased hybrid enrichment architecture (PRs E1–E4) following `docs/plans/job-attributes/DESIGN.md` and `00-PLAN.md` Amendments:
+Implement a phased hybrid enrichment architecture (PRs E1–E6) following `docs/plans/job-attributes/DESIGN.md` and `00-PLAN.md` Amendments:
 
 1. **Additive Schema (`E1`):**
-   Add 8 nullable columns to `Job` (`experienceMinYears Int?`, `clearanceRequired Boolean?`, `attrsVersion Int?`, `attrsConfidence String?`, `attrsSource String?`, `attrsModel String?`, `attrsDescHash String?`, `attrsUpdatedAt DateTime?`) and 3 indexes (`Job_active_attrsVersion_idx` on `(active, attrsVersion)`, `Job_experienceMinYears_idx`, `Job_clearanceRequired_idx`). Processed state is marked exclusively by `attrsVersion IS NOT NULL`.
+   Add 8 nullable columns to `Job` (`experienceMinYears Int?`, `clearanceRequired Boolean?`, `attrsVersion Int?`, `attrsModelVersion Int?`, `attrsDescHash String?`, `attrsSource String?`, `attrsConfidence String?`, `attrsEvidence Json?`) and 3 indexes (`Job_active_attrsVersion_idx` on `(active, attrsVersion)`, `Job_experienceMinYears_idx`, `Job_clearanceRequired_idx`). Processed state is marked exclusively by `attrsVersion IS NOT NULL`.
 2. **Content-Hash & Scraper Isolation (`00-PLAN Amendment`):**
    Enrichment columns remain outside `computeJobContentHash` (BF-011) and are never written by the scraper. `attrsDescHash` stores the job's `contentHash` at processing time (not a separate hash of `descriptionPlain`), so `enrich:jobs` re-evaluates only when `contentHash` changes or `ATTRS_VERSION` bumps (`hashDescription` in `text.ts` is reserved for evidence checks and tests).
 3. **Pure Rules-First Extractor (`E1`):**
@@ -32,8 +32,8 @@ Implement a phased hybrid enrichment architecture (PRs E1–E4) following `docs/
    - `detectClearance` scans `` `${input.title}\n${input.descriptionPlain}` `` (E1 Note 8) so title-only clearances (`Engineer (TS/SCI)`) are captured, strips false friends, evaluates allied US/non-US patterns, respects sentence-scoped negation, and marks preferred/weak/mixed cases `ambiguous`.
 4. **Labelling Rule (`DESIGN §6.2`):**
    Minimum years required for a typical applicant: overall beats sub-skill, base lowest-degree path wins (`5+ BS / 3+ MS`), required beats preferred (preferred-only yields `null`), and ranges use the lower bound.
-5. **Phased Rollout (`E1–E4`):**
-   E1 ships schema + pure rules + hand-labelled 242-job golden set (`tune=145`, `holdout=97`). E2 adds `enrich:jobs` CLI (raw SQL writes preserving `@updatedAt`) and workflow wiring behind `ENRICH_ENABLED=false`. E3 adds optional Gemini fallback behind `GEMINI_ENABLED=false`. E4 exposes attributes in API DTOs/filters, Redis cache, contract fixtures, and UI.
+5. **Phased Rollout (`E1–E6`):**
+   E1 ships schema + pure rules + hand-labelled 242-job golden set (`tune=145`, `holdout=97`). E2 adds `enrich:jobs` CLI (raw SQL writes preserving `@updatedAt`) and workflow wiring behind `ENRICH_ENABLED=false`. E3 adds optional Gemini fallback behind `GEMINI_ENABLED=false`. E4 exposes attributes in API DTOs/filters, Redis cache, and contract fixtures; E5 adds UI filters and badges; E6 completes ops runbook and release.
 
 ## Consequences
 - Enrichment columns live outside `contentHash` (BF-011 preserved) and remain completely invisible to production API/cache/UI until E4.

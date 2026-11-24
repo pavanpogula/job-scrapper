@@ -59,11 +59,11 @@ erDiagram
         Int experienceMinYears "nullable (indexed)"
         Boolean clearanceRequired "nullable (indexed)"
         Int attrsVersion "nullable"
-        String attrsConfidence "nullable ('high'|'low')"
-        String attrsSource "nullable ('rules'|'model')"
-        String attrsModel "nullable"
+        Int attrsModelVersion "nullable"
         String attrsDescHash "nullable (contentHash snapshot)"
-        DateTime attrsUpdatedAt "nullable"
+        String attrsSource "nullable ('rules'|'model')"
+        String attrsConfidence "nullable ('high'|'low')"
+        Json attrsEvidence "nullable jsonb ({years?, clearance?})"
         Boolean active "default true"
         DateTime createdAt "default now()"
         DateTime updatedAt "@updatedAt"
@@ -149,14 +149,14 @@ Empty names (`""`) are not stored → `departmentId`/`locationId = null`.
 | `postalAddress` | `Json?` | Full normalized postal address object |
 | `metadata` | `Json` (Postgres `jsonb`) | `sanitizeJsonMetadata(job)` — whole sanitized Ashby job object |
 | `contentHash` | `String` | `md5` across 16 fields (`title`, `location`, `department`, `salary.min`, `salary.max`, `salary.currency`, `salary.interval`, `isRemote`, `workplaceType`, `employmentType`, `publishedAt`, `applyUrl`, `isListed`, `country`, `region`, `city`) |
-| `experienceMinYears` | `Int?` | Minimum required years of experience extracted by enrichment (`0..30`, or `null` when unspecified; indexed) |
+| `experienceMinYears` | `Int?` | Minimum required years of experience extracted by enrichment (`0..30`, or `null` when unspecified / unprocessed; indexed) |
 | `clearanceRequired` | `Boolean?` | Security clearance requirement or eligibility flag (`true`/`false`, `null` when unprocessed; indexed) |
-| `attrsVersion` | `Int?` | Schema/ruleset version (`ATTRS_VERSION`) when processed (`IS NULL` = unprocessed) |
-| `attrsConfidence` | `String?` | Enrichment confidence (`'high'` \| `'low'`) |
+| `attrsVersion` | `Int?` | Extractor version (`ATTRS_VERSION`) that produced the values (`IS NULL` = unprocessed) |
+| `attrsModelVersion` | `Int?` | Extractor version at which the LLM fallback was last tried for this row (`null` when not tried for current content) |
+| `attrsDescHash` | `String?` | The job's `contentHash` when it was processed (00-PLAN Amendment) |
 | `attrsSource` | `String?` | Enrichment source (`'rules'` \| `'model'`) |
-| `attrsModel` | `String?` | Model identifier when LLM fallback produced/verified attributes, else `null` |
-| `attrsDescHash` | `String?` | Snapshot of the job's `contentHash` when attributes were processed (00-PLAN Amendment) |
-| `attrsUpdatedAt` | `DateTime?` | Timestamp when enrichment attributes were written |
+| `attrsConfidence` | `String?` | Enrichment confidence (`'high'` \| `'low'`) |
+| `attrsEvidence` | `Json?` (Postgres `jsonb`) | Short original-text evidence snippets (`{ years?: string; clearance?: string }`, each `<= 160` chars) for audits |
 | `active` | `Boolean` | `@default(true)`; `true` on every create/update, `false` via `deactivateStaleJobs()` |
 | `createdAt` | `DateTime` | `@default(now())` |
 | `updatedAt` | `DateTime` | `@updatedAt` (also set explicitly to `new Date()` on update) |
