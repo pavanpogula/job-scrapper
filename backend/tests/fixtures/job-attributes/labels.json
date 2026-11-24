@@ -869,243 +869,288 @@
     },
     "gh:discord:8846330002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of experience in UX or product design, including 2+ years working on design systems"
     },
     "gh:discord:8917177002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 4,
+      "clearance": false,
+      "yearsEvidence": "At least 4 years of commercial transactional experience"
     },
     "gh:discord:8927168002": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 6,
+      "clearance": false,
+      "yearsEvidence": "6+ years in digital media or advertising sales"
     },
     "gh:epirus:5633540004": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of experience in development in C and C++"
     },
     "gh:epirus:5633561004": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of experience in quality, manufacturing, and/or industrial engineering, or working experience in the aerospace or defense manufacturing field"
     },
     "gh:epirus:5819352004": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": true,
+      "yearsEvidence": "8 years of experience in business development, program support, or related roles in defense, government, or technology sectors",
+      "clearanceEvidence": "Current or ability to obtain a Secret security clearance"
     },
     "gh:epirus:5973070004": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "3+ years of experience in quality, manufacturing, or engineering for complex mechanical or electromechanical systems."
     },
     "gh:epirus:5979030004": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": true,
+      "yearsEvidence": "Typically requires a minimum of 5 years of related experience with a Bachelor\u2019s degree; or 3 years and a Master\u2019s degree",
+      "clearanceEvidence": "Active Secret clearance: TS/SCI eligibility preferred.",
+      "note": "Degree-substituted requirement (5 BS / 3 MS / 0 PhD); lower numeric bound 3"
     },
     "gh:epirus:5996532004": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "8+ years of experience as a Business Systems Analyst, ERP Functional Analyst, ERP Support Analyst, Finance Systems Analyst"
     },
     "gh:epirus:6142451004": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": true,
+      "yearsEvidence": "2+ years of technical experience",
+      "clearanceEvidence": "US Citizen and/or Permanent Resident (future US Security Clearance will be required)"
     },
     "gh:epirus:6180379004": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": true,
+      "yearsEvidence": "2+ years experience in a supervisory role (or equivalent experience)",
+      "clearanceEvidence": "future security clearance may be required"
     },
     "gh:epirus:6203947004": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "8\u201312+ years of experience managing complex international programs"
     },
     "gh:epirus:6208432004": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 12,
+      "clearance": true,
+      "yearsEvidence": "12+ years of Systems Engineering or closely related experience.",
+      "clearanceEvidence": "Active SECRET clearance or ability to obtain and maintain a SECRET clearance."
     },
     "gh:epirus:6235960004": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "8+ years of experience in structural/stress design & analysis of metallic structures."
     },
     "gh:epirus:6266833004": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of relevant experience including hands-on design and build experience"
     },
     "gh:figma:5993635004": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "8+ years professional experience, including 4+ years of sales engineering or solution consulting experience in a SaaS organization"
     },
     "gh:figma:6008752004": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "3+ years of experience managing infrastructure, platform, or developer experience engineering teams"
     },
     "gh:figma:6020719004": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "8+ years in Infrastructure TPM or related roles (cloud engineering, SRE, or infra-focused software engineering)"
     },
     "gh:figma:6150563004": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "gh:figma:6204556004": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "10+ years across video, brand storytelling, editorial, content strategy, or production leadership"
     },
     "gh:gitlab:8592555002": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "gh:gitlab:8621733002": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "gh:gitlab:8806017002": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "gh:gitlab:8918853002": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "gh:gitlab:8926435002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 15,
+      "clearance": false,
+      "yearsEvidence": "15+ years of experience in channel/alliance/partner management or ecosystem sales"
     },
     "gh:relativity:8451321002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years writing Linux kernel code, actual driver development involving PCI/PCIe devices"
     },
     "gh:relativity:8470266002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "10+ years of work or project experience with design, build, and commissioning of tooling and fixtures"
     },
     "gh:relativity:8782930002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5\u20138+ years of procurement or strategic sourcing experience",
+      "note": "Mentions US government background check for on-site Cape Canaveral access (badge/site access, not a security clearance)"
     },
     "gh:relativity:8873946002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of experience in fusion welding process development, qualification, and production support"
     },
     "gh:relativity:8879377002": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "Minimum of 5+ years' experience working in the EHS field."
     },
     "gh:relativity:8879714002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of EHS experience.",
+      "note": "Mentions US government background check for on-site Cape Canaveral access (badge/site access, not a security clearance)"
     },
     "gh:relativity:8909695002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of experience in performing computation fluid dynamics analyses"
     },
     "gh:relativity:8914636002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "BS degree in aerospace, mechanical, or manufacturing engineering with 2+ years of experience building and testing hardware"
     },
     "gh:relativity:8933718002": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "BS degree in aerospace, mechanical, or manufacturing engineering with 2+ years of experience building and testing hardware"
     },
     "gh:relativity:8937242002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "Minimum of 3 + years' experience working in the EHS field."
     },
     "gh:relativity:8938197002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 4,
+      "clearance": false,
+      "yearsEvidence": "4+ years of OTW experience"
     },
     "gh:relativity:8944095002": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of experience working in the development of propulsion components, combustion components, or energetic hardware"
     },
     "gh:rocketlab:7499339003": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 12,
+      "clearance": true,
+      "yearsEvidence": "12+ years of experience in leadership roles, with a focus on business development, strategy execution",
+      "clearanceEvidence": "Ability to obtain and maintain a security clearance."
     },
     "gh:rocketlab:7608110003": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 4,
+      "clearance": false,
+      "yearsEvidence": "Trade qualified in relevant industry or must be able to demonstrate 4+ years of relevant industry experience"
     },
     "gh:rocketlab:7731436003": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of experience in mechanical assembly, technical repair, mechanical maintenance or similar",
+      "note": "Multi-level posting (Tech I: 2+, Tech II: 5+, Senior: 8+); min level requirement is 2+"
     },
     "gh:rocketlab:7783209003": {
       "split": "holdout",
