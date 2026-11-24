@@ -1446,255 +1446,295 @@
     },
     "gh:stripe:8346417": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "gh:stripe:8348839": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "8+ years of experience in a similar customer-facing engineering role such as solution consultant, solutions architect, sales engineer"
     },
     "lv:palantir:00c2c97b-8514-4617-9883-e53e486b6dcd": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "lv:palantir:0492e9c4-9ba9-4da0-896f-75be5151bae9": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": true,
+      "yearsEvidence": "5+ years of experience in a physical security role leading physical security programs",
+      "clearanceEvidence": "Eligibility and willingness to obtain a US Security Clearance"
     },
     "lv:palantir:14dbdeb9-1537-4ccf-83ac-608287efa00f": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years\u2019 experience within a large public accounting firm and/or a small to mid-sized enterprise software company."
     },
     "lv:palantir:211f99dc-269e-4f25-84d3-d73dea782080": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 4,
+      "clearance": true,
+      "yearsEvidence": "4+ years of experience with Linux system administration (RHEL or equivalent preferred)",
+      "clearanceEvidence": "Active US Security Clearance at or above the Top Secret level"
     },
     "lv:palantir:26032bad-d713-429d-8b04-2de7db93b5c3": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 4,
+      "clearance": false,
+      "yearsEvidence": "At least 4 years of finance operations experience, preferably in a rapidly growing and/or evolving environment."
     },
     "lv:palantir:2bfdcb53-7abd-42a4-9eaf-ebe07450f798": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "lv:palantir:2da72708-a7b0-4178-9cb2-6b009eb6e07f": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "3+ years of project/program management experience, preferably in a fast-paced or dynamic environment."
     },
     "lv:palantir:4255e21c-d0f2-4f57-b5db-1f65830d6425": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": true,
+      "yearsEvidence": "2+ years of frontend software engineering experience.",
+      "clearanceEvidence": "Eligibility and willingness to obtain a US Security clearance."
     },
     "lv:palantir:4bf39879-251f-43bd-be2a-c33a2663622d": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years experience in an operational role, preferably in a fast-paced or dynamic environment"
     },
     "lv:palantir:5f7a90e7-f927-47bf-90ed-52d17c58ae02": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": true,
+      "clearanceEvidence": "Active US Security clearance or eligibility and willingness to obtain a US Security clearance."
     },
     "lv:palantir:8bcf4f33-0a79-4248-bbfd-49ac4be9dd8e": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": true,
+      "clearanceEvidence": "Active US Security clearance, or eligibility and willingness to obtain a US Security clearance prior to start of internship."
     },
     "lv:palantir:909875b4-1940-41bd-b08d-a269c7235100": {
       "split": "tune",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": true,
+      "clearanceEvidence": "Active Security Clearance",
+      "note": "AUS Government role requiring Active Security Clearance"
     },
     "lv:palantir:9d0cf52c-089a-41fd-93ee-3d501c8c14d8": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "3+ years of previous legal and/or contract administrative support experience, preferably in a fast-paced legal environment"
     },
     "lv:palantir:b11a97bd-ac86-4cf8-a008-ffe1772a190a": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "3+ years of technical writing experience or similar experience in software development."
     },
     "lv:palantir:c80690ca-704b-46c2-9d95-e4f6e98ce4e2": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "lv:palantir:cd64bcd4-50bb-4aeb-a135-4e0487ffd312": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
-      "clearance": false
+      "clearance": false,
+      "note": "Negated clearance: beneficial but not required"
     },
     "lv:palantir:fd952b52-7b9c-4056-a3dd-0bc41fcfe603": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "lv:spotify:3a0d23b5-5dda-456a-967b-0fcada78daf1": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "You have 5+ years of experience in transfer pricing, gained at a Big 4 firm, in industry, or both."
     },
     "lv:spotify:436046d9-6ac2-4d0f-92ee-a36d957cb566": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "You have 10+ years of relevant experience in the music industry, policy, legal, or technology platforms."
     },
     "lv:spotify:77d3435e-569e-4644-876d-afc960da8d0a": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 4,
+      "clearance": false,
+      "yearsEvidence": "You have 4+ years of experience in artist relations, partnerships, music marketing or a related field"
     },
     "lv:spotify:785989a6-b219-43b1-92d9-750a67054f24": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "You have 3+ years of AV experience and have delivered AV projects through design, integration, commissioning, and ongoing support."
     },
     "lv:spotify:8d54dd6d-d7e0-4298-b051-423bcec4089e": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "You have 5+ years of litigation experience at a law firm, in-house, or both, including meaningful experience with copyright litigation."
     },
     "lv:spotify:babebec3-0061-4c39-a4ad-c51a54d23567": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "lv:spotify:d174a24c-bf16-4661-9b9a-32396e883c25": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 6,
+      "clearance": false,
+      "yearsEvidence": "You have 6+ years of experience in consumer or brand marketing, with strong experience leading marketing initiatives in Taiwan"
     },
     "lv:zoox:05762fb8-07fa-43a3-aa30-e079bb31018e": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "8+ years of technical recruiting experience"
     },
     "lv:zoox:0accbf9e-9b09-4733-b495-fb6dce13ba62": {
       "split": "holdout",
-      "labelled": false,
+      "labelled": true,
       "years": null,
       "clearance": false
     },
     "lv:zoox:1825c7df-ea96-4a2d-b57b-609a61300382": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "3+ years of professional experience in software development or related fields and BS in computer science or related field"
     },
     "lv:zoox:240ae92f-51ec-4d32-a0a4-3d4669508e3d": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 6,
+      "clearance": false,
+      "yearsEvidence": "MS or PhD in Computer Science, Robotics, Machine Learning, or related field with 6+ years of industry experience."
     },
     "lv:zoox:2ae1f38f-1b7e-4ec1-8a20-cc3816f96878": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 7,
+      "clearance": false,
+      "yearsEvidence": "7+ years of total experience"
     },
     "lv:zoox:4258cd55-95e1-424e-9fe6-edbec8235281": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "At least 10 years of work experience, and at least 5 of those in program management"
     },
     "lv:zoox:7980e9a3-99f3-4988-ae6d-355c9199d8fb": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 4,
+      "clearance": false,
+      "yearsEvidence": "4+ years experience in automotive body system design/engineering (OEM/supplier, university SAE team, or equivalent)"
     },
     "lv:zoox:8321d00e-9e2b-4947-a37e-fdbad7dcd637": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 8,
+      "clearance": false,
+      "yearsEvidence": "8+ years of network security engineering experience securing enterprise and cloud environments"
     },
     "lv:zoox:916715e4-4cab-47bc-acdd-9ecbc31f25b8": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "10+ years of program management experience, with a strong preference for backgrounds that blend technical depth with operational execution"
     },
     "lv:zoox:94b5b4a5-257a-43d8-96bb-8dccd6d690f0": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "At least 5 years of industry experience"
     },
     "lv:zoox:a3f526bf-2417-4596-be1f-479c5c079367": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of hands-on automotive technician experience combined with 2+ years of people leadership or supervisory experience.",
+      "note": "5+ automotive craft vs 2+ supervisory sub-skill"
     },
     "lv:zoox:c8894e25-83b0-4200-a2ab-9f5764bab7ae": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "10-12+ years of experience in engineering program management"
     },
     "lv:zoox:ccddfb39-ba95-485c-b18e-b9c3cb08dcec": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 10,
+      "clearance": false,
+      "yearsEvidence": "10+ years of experience in management consulting, corporate strategy, CEO/COO office roles, project management"
     },
     "lv:zoox:d181ce5a-a906-4656-a748-f4128a43dd48": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 12,
+      "clearance": false,
+      "yearsEvidence": "12+ years of experience in engineering, technical program management, or management consulting."
     },
     "lv:zoox:ef2fe77d-9b7b-4fdf-a98d-93e46f7ed272": {
       "split": "tune",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 5,
+      "clearance": false,
+      "yearsEvidence": "5+ years of professional software engineering experience, with strong expertise in React, modern TypeScript and Python."
     },
     "lv:zoox:f10acec0-4887-4e3b-b6dc-2fd351ae2ca5": {
       "split": "holdout",
-      "labelled": false,
-      "years": null,
-      "clearance": false
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "3+ years of industry experience in testing complex systems (autonomy, robotics, and autonomous behaviors)"
     }
   }
 }
