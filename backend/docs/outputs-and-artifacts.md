@@ -184,3 +184,36 @@ Written by `saveLeverDiscoveryState()` (`src/discovery/LeverDiscovery.ts`) at th
 ## Staged scrape telemetry (BF-025)
 
 When a run uses `--staged`, the merged report adds three optional, additive fields (`schemaVersion` stays `2.0`; absent in interleaved runs): `summary.bySource.<source>.durationMs` (wall time of that source's stage, merge = max), `summary.bySource.lever.boardsAvailable` and `boardsCap` (active Lever boards and the cap applied; `boardsCap` is omitted when uncapped), and `workers[].stage` (the source a worker scraped). The `### By Source` table in the run summary shows them as `Wall time`, `Boards (scraped/available/cap)` and `Skipped by deadline`.
+
+## 7. `output/latest-enrich.json` and `reports/<YYYY-MM>/enrich-<runId>.json` (Job Attribute Enrichment Report, BF-027)
+
+Written by `writeEnrichReport()` (`src/enrichment/report.ts`) at the end of every `npm run enrich:jobs` run. **Never** writes `latest-error-report.json` or `latest-<cluster|single|csv>.json`, so it is never read by `report:classify` (`ReportClassifyCli.ts`) or the autonomous fixer; inside `scrape-daily.yml`, `reports/<YYYY-MM>/enrich-<runId>.json` is uploaded with the `scrape-report-…` artifact (`backend/output/reports/**`).
+
+```jsonc
+{
+  "schemaVersion": "enrich-1",
+  "run": {
+    "runId": "20261124T120000Z-enrich-abc1234",
+    "startedAt": "<ISO-8601>",
+    "finishedAt": "<ISO-8601>",
+    "dryRun": false,
+    "attrsVersion": 1,
+    "modelEnabled": false,
+    "flags": { "maxJobs": 20000, "budgetMin": 10, "modelMaxCalls": 2000 }
+  },
+  "counts": {
+    "picked": 500,
+    "rulesHigh": 410,
+    "rulesLow": 90,
+    "modelCalls": 0,
+    "modelAccepted": 0,
+    "modelRejected": 0,
+    "modelErrors": 0,
+    "written": 500,
+    "remaining": 128000,    // countPickable(..., { modelEnabled: hasModelStep(steps) }); 0 = backfill complete
+    "durationMs": 61234,
+    "stoppedBy": "budget",  // "done" | "budget" | "maxJobs"
+    "descBytes": 2516582
+  }
+}
+```

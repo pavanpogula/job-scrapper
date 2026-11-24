@@ -50,7 +50,7 @@ The matrix below documents where every secret is configured and consumed:
 ### 3.2 Daily Scheduled Scraper (`.github/workflows/scrape-daily.yml`)
 - **Triggers:** Cron schedule `17 1,4,7,13,16,19,22 * * *` and manual `workflow_dispatch`. GitHub cron is UTC only: the hours are 5, 8 and 11 AM and 2, 5, 8 and 11 PM Pacific Standard Time (7 runs a day, none between 11:17 PM and 5:17 AM). During daylight time (PDT) every run is 1 hour later.
 - **Per-run counters now move faster:** the scraper counts consecutive runs, not days. A company is quarantined after 3 consecutive 404 runs (about 6 hours of daytime runs, was 3 days) and reported after 7 consecutive failed runs (about 1 day, was 1 week). The thresholds themselves are unchanged.
-- **Inputs:** `staged` (boolean), `lever_max_boards` (digits or `all`), `lever_stage_min` (digits), `workers` (default 4), `skip_publish`, `publish_only`, `recheck_not_found`, `skip_fixer`, `fixture_report`, `sources` (comma-separated, e.g. `ashby,greenhouse`), `force_publish` (boolean), `deactivate_source` (`none` / `greenhouse`).
+- **Inputs:** `staged` (boolean), `lever_max_boards` (digits or `all`), `lever_stage_min` (digits), `workers` (default 4), `skip_publish`, `publish_only`, `recheck_not_found`, `skip_fixer`, `fixture_report`, `sources` (comma-separated, e.g. `ashby,greenhouse`), `force_publish` (boolean), `deactivate_source` (`none` / `greenhouse` / `lever`), `enrich_backfill` (boolean: runs `enrich:jobs --all` alone, skipping company enrichment/scrape/classify; works with `ENRICH_ENABLED` off), `enrich_budget_min` (backfill budget minutes `1–130`, default `'120'`).
 - **Source Configuration (`GREENHOUSE_ENABLED`, `LEVER_ENABLED`):**
   - Effective sources: `inputs.sources` if set, else `ashby`, plus `greenhouse` when `vars.GREENHOUSE_ENABLED == 'true'` and `lever` when `vars.LEVER_ENABLED == 'true'` (a job-level `format()` expression).
   - Passed as `--sources=<effective>` to `scrape:parallel` and `enrich:companies`.
@@ -59,10 +59,11 @@ The matrix below documents where every secret is configured and consumed:
   2. Backfills multi-source columns and validates uniqueness (`npm run db:backfill-source`, `continue-on-error: true`).
   3. Emergency source rollback if requested (`npm run source:deactivate -- <source>` when `inputs.deactivate_source != 'none'`).
   4. Restores historical scrape run cache (`output/run-history.json`).
-  5. Runs `npm run enrich:companies -- --sources=<effective>` to update display names and logos.
-  6. Executes `npm run scrape:parallel -- --workers=4 --sources=<effective>` with automatic cache publishing.
-  7. Classifies error telemetry via `npm run report:classify` and writes metrics (including `summary.bySource`) to GitHub Actions step summary.
-  8. Uploads `scrape-report-<runId>` artifact (30-day retention).
+  5. Runs `npm run enrich:companies -- --sources=<effective>` to update display names and logos (skipped on `enrich_backfill=true`).
+  6. Executes `npm run scrape:parallel -- --workers=4 --sources=<effective>` with automatic cache publishing (skipped on `enrich_backfill=true`).
+  7. Classifies error telemetry via `npm run report:classify` and writes metrics (including `summary.bySource`) to GitHub Actions step summary (skipped on `enrich_backfill=true`).
+  7b. Enrich job attributes (`vars.ENRICH_ENABLED == 'true'`, `continue-on-error: true`, `--budget-min=10`, `--model-max-calls=300` unless `vars.GEMINI_MAX_CALLS` is set; skipped on `fixture_report`, `deactivate_source`, `publish_only`, `enrich_backfill`, or scrape exit code `1`). When `inputs.enrich_backfill == true`, runs `Backfill job attributes` (`--all --budget-min=ENRICH_BUDGET_INPUT`) instead.
+  8. Uploads `scrape-report-<runId>` artifact (30-day retention, including any `enrich-<runId>.json`).
   9. On failure (`exitCode = 1` or infra alert), runs `scripts/ci/alert-issue.sh` to create or update a `scrape-alert` issue.
   10. Chains to the automated Claude fixer job when actionable issues are detected.
 
@@ -80,9 +81,12 @@ The matrix below documents where every secret is configured and consumed:
 | Greenhouse stage (~1,700 boards) | 8 min | 15 min (worker watchdog) |
 | Lever stage (~1,800 boards, <= 1 request/s, 1 worker) | 50-55 min | 75 min (`--lever-stage-min=70` + 5) |
 | classify, artifacts, cache saves | 1 min | 2 min |
-| **Total** | **~75-80 min** | **~120 min** |
+| job attribute enrichment (`ENRICH_ENABLED=true`) | 0–10 min | 12 min |
+| **Total** | **~75-85 min** | **~132 min** |
 
-  The `scrape` job has `timeout-minutes: 150`, above the worst case and below the 3-hour cadence (a repo test keeps the gap at 20+ minutes). Runs are serialized by the workflow-level `scrape-production` concurrency group.
+  The `scrape` job has `timeout-minutes: 150`, above the worst case (~132 min) and below the 3-hour cadence (a repo test keeps the gap at 20+ minutes). Runs are serialized by the workflow-level `scrape-production` concurrency group.
+- **Job attribute backfill (ADR-0023, BF-027):** Before enabling `ENRICH_ENABLED=true` on scheduled scrapes, run **Actions → Daily scrape → Run workflow** with `enrich_backfill=true` and `enrich_budget_min=120` (skip if another `scrape-production` run is Queued/Waiting, so the newer dispatch does not cancel it). Inspect the step summary table (`picked`, `written`, `remaining`) and repeat `enrich_backfill` runs until the summary reports `Backfill complete: yes (remaining = 0)`. Once complete, set repository variable `ENRICH_ENABLED=true` for automatic post-scrape 10-minute passes (rollback: set `ENRICH_ENABLED=false`).
+  - *Neon egress watch (5 GB/month free tier):* the initial ~128.5k-job backfill reads roughly **0.6–1.3 GB** (more where `descriptionHtml` fallback is used), and scheduled runs read `descBytes` per pass — check the Neon usage page after completing the backfill and watch `Description bytes read` in scheduled summaries.
 - **Free GitHub Actions:** this repo is public, so standard runners are free and unlimited; a staged run is about 80 minutes x 7 runs = about 9 hours of runner time a day. If the repo were ever made private, the 2,000 free minutes a month would cover only about 25 staged runs.
 - **Lever load:** about 1,800 requests per run, about 12,600 a day, always <= 1 request/s. If Lever asks for less, lower `lever_max_boards` or the schedule; never raise the rate.
 - **How to enable:**

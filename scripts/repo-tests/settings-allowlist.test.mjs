@@ -26,6 +26,7 @@ const DANGEROUS = [
   'seed:lever',
   'discover',
   'enrich:companies',
+  'enrich:jobs',
   'cache:publish',
   'cache:purge-legacy',
   'source:deactivate',

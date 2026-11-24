@@ -27,6 +27,15 @@ No other tunables are environment-driven: concurrency (`CONCURRENCY_LIMIT = 15` 
 > because Prisma loaded `.env`. If that ever changes, the folder ID would silently be `undefined`. Safer: add
 > `import 'dotenv/config'` to entry points.
 
+## 1b. GitHub Actions Variables & Dispatch Inputs (`scrape-daily.yml`)
+
+| Name | Kind | Default | Effect |
+|---|---|---|---|
+| `ENRICH_ENABLED` | Repository variable | unset (`false`) | Workflow gate for the post-classify `Enrich job attributes` step (`--budget-min=10`); `enrich:jobs` CLI itself does not read this variable |
+| `GEMINI_MAX_CALLS` | Repository variable | unset (`300` in workflow; `2000` in CLI) | Optional integer `0..100000` passed as `--model-max-calls` to both `Enrich job attributes` and `Backfill job attributes` (consumed once E3 adds the model step) |
+| `enrich_backfill` | `workflow_dispatch` boolean | `false` | Runs `npm run enrich:jobs -- --all` alone (skips `enrich:companies`, `scrape`, and `classify`); works with `ENRICH_ENABLED` off |
+| `enrich_budget_min` | `workflow_dispatch` string | `'120'` | Backfill wall-time budget in minutes (`1..130`; invalid values fall back to `120`) |
+
 ## 2. Credential Files (`apikeys/`, gitignored)
 
 | File | Kind | Required for | Read/written by | Created by |

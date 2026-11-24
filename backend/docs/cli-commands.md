@@ -25,6 +25,7 @@ parser, so unknown flags are silently ignored and typos (e.g. `--excute`) fall b
 | `npm run db:backfill-source` | `src/database/BackfillSource.ts` | ✅ | — | — | backfills `externalId` & `atsToken`, creates unique indexes | 1 |
 | `npm run source:deactivate -- <source> [--dry-run] [--i-know]` | `src/database/SourceDeactivate.ts` | ✅ | — | — | deactivates all active jobs for source (`active=false`) | 1 |
 | `npm run enrich:companies [-- --concurrency=N] [-- --limit=N] [-- --force] [-- --sources=s1,s2]` | `../src/utils/EnrichCompanies.ts` | ✅ | — | Ashby / Greenhouse / Lever boards | updates `Company.name`, `Company.logoUrl` & `lastEnrichedAt` | 1 |
+| `npm run enrich:jobs [-- --max-jobs=N\|--all] [-- --budget-min=M] [-- --dry-run] [-- --model-max-calls=N]` | `src/enrichment/EnrichCli.ts` | ✅ | — | — | updates `Job` attribute columns via raw SQL (`updatedAt` untouched) + `output/latest-enrich.json` & `output/reports/<YYYY-MM>/enrich-<runId>.json` | 1 |
 | `npm run verify` | `../src/utils/Verify.ts` | ✅ | — | — | read-only (console report) | 1 |
 | `npm run api:start` | `../src/api/Server.ts` | ✅ | — | — | HTTP server on port 3001 with rate limiting and static UI serving | 1 |
 | `npm run prisma:studio` | Prisma CLI (`npx prisma studio`) | ✅ | — | — | GUI (can edit rows) | — |
@@ -196,6 +197,27 @@ Interactive `readline` loop (`Select an option [1-8]`). Runs on import (no `requ
   * `--force`: Force enrichment for all companies, not just those missing name or logo.
   * `--sources=ashby[,greenhouse,lever]`: comma-separated ATS sources to enrich (default: `ashby`). Unknown source exits 1.
 - For `ASHBY`, queries active hiring companies lacking `name`/`logoUrl`. For `GREENHOUSE` and `LEVER`, queries `ACTIVE` boards missing `logoUrl` or `name` (or `name = slug`), throttled to at most once every 7 days via `Company.lastEnrichedAt`. Dispatches each company to its source's registered `AtsClient.fetchCompanyMetadata` (for `lever`, lazily constructed at `<= 1 req/s`). Unregistered sources are skipped and counted.
+
+### `npm run enrich:jobs [-- --max-jobs=N|--all] [-- --budget-min=M] [-- --dry-run] [-- --model-max-calls=N]` — `src/enrichment/EnrichCli.ts`
+- **Job attribute enrichment** (populates `Job.experienceMinYears`, `clearanceRequired`, `attrs*`; distinct from `enrich:companies`, which updates `Company` display names and logos).
+- Flags (unknown flags throw and exit `1`):
+  * `--max-jobs=N`: Cap picked jobs per invocation (`N >= 1`, default `20000`).
+  * `--all`: Remove the job cap (`maxJobs = null`); cannot be combined with `--max-jobs`.
+  * `--budget-min=M`: Wall-time budget in minutes (`1..130`, default `10`; step deadline leaves a 30 s margin).
+  * `--dry-run`: Pick and classify jobs without executing raw-SQL writes; still advances keyset cursor and reports `remaining` (`written: 0`).
+  * `--model-max-calls=N`: Max model calls passed to step options (`0..100000`, default `2000`; parsed and unused until E3).
+- Exit codes: `0` on clean completion (including budget/max-jobs stops and `--dry-run`), `1` on invalid flags or DB/runtime error (redacts DB credentials in stderr).
+- Writes `output/latest-enrich.json` and `output/reports/<YYYY-MM>/enrich-<runId>.json` (never writes `latest-error-report.json`), and appends Markdown summary to `$GITHUB_STEP_SUMMARY` when set.
+- **Localhost DB safety:** `EnrichCli` calls `dotenv.config()` inside `main()` and `backend/.env` may point at production. For local runs or testing, always set and guard a localhost URL in the same shell:
+  ```bash
+  export DATABASE_URL='postgresql://test:test@localhost:5432/enrich_test?schema=enrich_rehearsal'
+  case "$DATABASE_URL" in *localhost*|*127.0.0.1*) ;; *) echo "not local" >&2; exit 1;; esac
+  npm run enrich:jobs -- --dry-run --budget-min=1
+  ```
+- Examples:
+  * Scheduled CI pass: `npm run enrich:jobs -- --budget-min=10 --model-max-calls=$MAX_CALLS`
+  * Manual CI backfill: `npm run enrich:jobs -- --all --budget-min=120 --model-max-calls=$MAX_CALLS`
+  * Local dry run: `npm run enrich:jobs -- --dry-run --budget-min=1`
 
 ### `npm run source:deactivate -- <source> [--dry-run] [--i-know]` — `src/database/SourceDeactivate.ts`
 - Emergency rollback CLI to deactivate all jobs for an ATS source (e.g. `greenhouse`) by setting `active = false`.

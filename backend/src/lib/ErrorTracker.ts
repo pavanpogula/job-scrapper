@@ -141,11 +141,11 @@ const MAX_LOCAL_REPORTS_KEPT = 60;
 
 /**
  * @summary Generates standard runId in format YYYYMMDDTHHmmssZ-<mode>-<sha>
- * @param mode Operational mode (cluster, single, csv)
+ * @param mode Operational mode (cluster, single, csv, enrich)
  * @param startTime Milliseconds timestamp
  * @returns Formatted run ID string
  */
-export function generateRunId(mode: 'cluster' | 'single' | 'csv', startTime: number): string {
+export function generateRunId(mode: 'cluster' | 'single' | 'csv' | 'enrich', startTime: number): string {
     const d = new Date(startTime);
     const pad = (n: number) => String(n).padStart(2, '0');
     const yyyy = d.getUTCFullYear();
