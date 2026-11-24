@@ -203,7 +203,7 @@ test('scrape-daily.yml wires LEVER_ENABLED and STAGED_SCRAPE with a timeout belo
   }
   assert.equal(minGapMinutes, 180, 'scheduled runs must stay 3 hours apart (or update the timeout rule and docs)');
   const timeout = Number(scrapeJob['timeout-minutes']);
-  assert.equal(timeout, 150, 'scrape job timeout must be 150 minutes (staged worst case about 120)');
+  assert.equal(timeout, 150, 'scrape job timeout must be 150 minutes (staged worst case about 132)');
   assert.ok(minGapMinutes - timeout >= 20, `scrape timeout ${timeout} must leave 20+ minutes before the next run (gap ${minGapMinutes})`);
   assert.equal(scrapeJob.concurrency, undefined, 'scrape job must not set job-level concurrency (workflow-level group serializes runs)');
 
@@ -225,4 +225,112 @@ test('scrape-daily.yml wires LEVER_ENABLED and STAGED_SCRAPE with a timeout belo
   assert.ok(run.includes("grep -Eq '^([0-9]+|all)$'") && run.includes("grep -Eq '^[0-9]+$'"), 'Lever inputs must be validated as digits (or all)');
   assert.ok(!run.includes('${{ inputs.lever'), 'Lever inputs must reach the shell through env vars, never interpolated into the script');
   assert.ok(String(scrapeStep.env?.LEVER_MAX_BOARDS_INPUT).includes('inputs.lever_max_boards'), 'LEVER_MAX_BOARDS_INPUT env must come from the input');
+});
+
+test('scrape-daily.yml wires job attribute enrichment behind ENRICH_ENABLED and an enrich_backfill dispatch', () => {
+  const root = getRepoRoot();
+  const content = fs.readFileSync(path.join(root, '.github/workflows/scrape-daily.yml'), 'utf-8');
+  const parsed = parseYaml(content);
+
+  const inputs = parsed.on?.workflow_dispatch?.inputs;
+  assert.ok(inputs?.enrich_backfill, 'inputs.enrich_backfill must exist');
+  assert.equal(inputs.enrich_backfill.type, 'boolean', 'inputs.enrich_backfill must be boolean');
+  assert.equal(inputs.enrich_backfill.default, false, 'inputs.enrich_backfill default must be false');
+  assert.ok(inputs?.enrich_budget_min, 'inputs.enrich_budget_min must exist');
+  assert.equal(inputs.enrich_budget_min.default, '120', 'inputs.enrich_budget_min default must be 120');
+
+  const scrapeJob = parsed.jobs?.scrape;
+  assert.ok(scrapeJob, 'scrape job must exist');
+  assert.equal(Number(scrapeJob['timeout-minutes']), 150, 'scrape job timeout-minutes must stay 150');
+  assert.equal(scrapeJob.concurrency, undefined, 'scrape job must not set job-level concurrency');
+
+  const steps = scrapeJob.steps || [];
+  const enrichCompaniesStep = steps.find((/** @type {any} */ s) => s.name === 'Enrich active companies metadata');
+  const scrapeStep = steps.find((/** @type {any} */ s) => s.id === 'scrape');
+  const classifyStep = steps.find((/** @type {any} */ s) => s.id === 'classify');
+  const enrichAttrStep = steps.find((/** @type {any} */ s) => s.name === 'Enrich job attributes');
+  const backfillStep = steps.find((/** @type {any} */ s) => s.name === 'Backfill job attributes');
+  const uploadStep = steps.find((/** @type {any} */ s) => s.name === 'Upload scrape report artifact');
+
+  assert.ok(enrichCompaniesStep, 'Enrich active companies metadata step must exist');
+  assert.ok(scrapeStep, 'Run scrape or fixture step must exist');
+  assert.ok(classifyStep, 'Classify scrape telemetry step must exist');
+  assert.ok(enrichAttrStep, 'Enrich job attributes step must exist');
+  assert.ok(backfillStep, 'Backfill job attributes step must exist');
+  assert.ok(uploadStep, 'Upload scrape report artifact step must exist');
+
+  assert.ok(
+    String(scrapeStep.if).includes('inputs.enrich_backfill != true'),
+    `scrape step must skip on enrich_backfill, found: ${scrapeStep.if}`
+  );
+  assert.ok(
+    String(classifyStep.if).includes('inputs.enrich_backfill != true'),
+    `classify step must skip on enrich_backfill, found: ${classifyStep.if}`
+  );
+  assert.ok(
+    String(enrichCompaniesStep.if).includes('inputs.enrich_backfill != true'),
+    `Enrich active companies metadata step must skip on enrich_backfill, found: ${enrichCompaniesStep.if}`
+  );
+
+  const classifyIdx = steps.indexOf(classifyStep);
+  const enrichIdx = steps.indexOf(enrichAttrStep);
+  const backfillIdx = steps.indexOf(backfillStep);
+  const uploadIdx = steps.indexOf(uploadStep);
+  assert.ok(
+    classifyIdx < enrichIdx && enrichIdx < backfillIdx && backfillIdx < uploadIdx,
+    `step order must be classify (${classifyIdx}) < Enrich job attributes (${enrichIdx}) < Backfill job attributes (${backfillIdx}) < Upload artifact (${uploadIdx})`
+  );
+
+  const enrichIf = String(enrichAttrStep.if);
+  assert.ok(enrichIf.includes("vars.ENRICH_ENABLED == 'true'"), 'Enrich job attributes must gate on ENRICH_ENABLED');
+  assert.ok(enrichIf.includes('inputs.enrich_backfill != true'), 'Enrich job attributes must skip on backfill');
+  assert.ok(enrichIf.includes('inputs.fixture_report'), 'Enrich job attributes must guard fixture_report');
+  assert.ok(enrichIf.includes('inputs.deactivate_source'), 'Enrich job attributes must guard deactivate_source');
+  assert.ok(enrichIf.includes('inputs.publish_only != true'), 'Enrich job attributes must guard publish_only');
+  assert.ok(
+    enrichIf.includes("steps.scrape.outputs.exit_code == '0'") &&
+      enrichIf.includes("steps.scrape.outputs.exit_code == '2'"),
+    'Enrich job attributes must run only when scrape exit_code is 0 or 2'
+  );
+  assert.equal(enrichAttrStep['continue-on-error'], true, 'Enrich job attributes must be continue-on-error: true');
+  assert.equal(Number(enrichAttrStep['timeout-minutes']), 15, 'Enrich job attributes timeout-minutes must be 15');
+
+  const enrichRun = String(enrichAttrStep.run);
+  assert.ok(enrichRun.includes('enrich:jobs'), 'Enrich job attributes must run enrich:jobs');
+  assert.ok(enrichRun.includes('--budget-min=10'), 'Enrich job attributes must use --budget-min=10');
+  assert.ok(enrichRun.includes('MAX_CALLS=300'), 'Enrich job attributes must default MAX_CALLS=300');
+  assert.ok(enrichRun.includes('--model-max-calls=$MAX_CALLS'), 'Enrich job attributes must pass --model-max-calls=$MAX_CALLS');
+  assert.ok(enrichRun.includes("grep -Eq '^[0-9]+$'"), 'Enrich job attributes must validate GEMINI_MAX_CALLS');
+  assert.ok(
+    String(enrichAttrStep.env?.GEMINI_MAX_CALLS_VAR).includes('vars.GEMINI_MAX_CALLS'),
+    'GEMINI_MAX_CALLS_VAR must come from vars.GEMINI_MAX_CALLS in Enrich job attributes'
+  );
+
+  assert.equal(
+    String(backfillStep.if),
+    'inputs.enrich_backfill == true',
+    'Backfill job attributes if condition must be inputs.enrich_backfill == true'
+  );
+  assert.equal(
+    backfillStep['continue-on-error'],
+    undefined,
+    'Backfill job attributes must not set continue-on-error'
+  );
+  assert.equal(Number(backfillStep['timeout-minutes']), 140, 'Backfill job attributes timeout-minutes must be 140');
+
+  const backfillRun = String(backfillStep.run);
+  assert.ok(backfillRun.includes('--all'), 'Backfill job attributes must pass --all');
+  assert.ok(backfillRun.includes("grep -Eq '^[0-9]+$'"), 'Backfill job attributes must validate digits');
+  assert.ok(
+    !backfillRun.includes('${{ inputs.enrich_budget_min'),
+    'Backfill script must never splice inputs.enrich_budget_min directly'
+  );
+  assert.ok(
+    String(backfillStep.env?.ENRICH_BUDGET_INPUT).includes('inputs.enrich_budget_min'),
+    'ENRICH_BUDGET_INPUT must come from inputs.enrich_budget_min'
+  );
+  assert.ok(
+    String(backfillStep.env?.GEMINI_MAX_CALLS_VAR).includes('vars.GEMINI_MAX_CALLS'),
+    'GEMINI_MAX_CALLS_VAR must come from vars.GEMINI_MAX_CALLS in Backfill job attributes'
+  );
 });
