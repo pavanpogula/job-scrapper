@@ -10,6 +10,7 @@ import { PrismaClient } from '@prisma/client';
 import { ATTRS_VERSION } from '../../src/enrichment/version';
 import { getDescriptionText } from '../../src/enrichment/text';
 import { pickJobsForEnrichment, countPickable } from '../../src/enrichment/picker';
+import { writeAttributes } from '../../src/enrichment/writer';
 import { seedEnrichJob } from './enrichSeed';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -203,5 +204,221 @@ describeIfDb('BF-027: Job attribute enrichment pass on real PostgreSQL', () => {
 
     expect(await countPickable(prisma, { modelEnabled: false })).toBe(3);
     expect(await countPickable(prisma, { modelEnabled: true })).toBe(4);
+  });
+
+  it('writer leaves updatedAt untouched', async () => {
+    const fixedLastUpdated = new Date('2026-01-01T00:00:00.000Z');
+    await seedEnrichJob(prisma, 'n1', {
+      contentHash: 'h',
+      lastUpdatedAt: fixedLastUpdated,
+      lastUpdatedSource: 'ashby',
+    });
+
+    const before = await prisma.job.findUniqueOrThrow({ where: { id: 'n1' } });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const updated = await writeAttributes(prisma, [
+      {
+        id: 'n1',
+        descHash: 'h',
+        modelTried: false,
+        attrs: {
+          experienceMinYears: 5,
+          clearanceRequired: true,
+          confidence: 'high',
+          source: 'rules',
+          evidence: { years: '5+ years', clearance: 'TS/SCI' },
+        },
+      },
+    ]);
+
+    const after = await prisma.job.findUniqueOrThrow({ where: { id: 'n1' } });
+    expect(updated).toBe(1);
+    expect(after.updatedAt.getTime()).toBe(before.updatedAt.getTime());
+    expect(after.contentHash).toBe(before.contentHash);
+    expect(after.lastUpdatedAt?.getTime()).toBe(before.lastUpdatedAt?.getTime());
+    expect(after.lastUpdatedSource).toBe(before.lastUpdatedSource);
+    expect(after.metadata).toEqual(before.metadata);
+    expect(after).toMatchObject({
+      experienceMinYears: 5,
+      clearanceRequired: true,
+      attrsVersion: ATTRS_VERSION,
+      attrsDescHash: 'h',
+      attrsSource: 'rules',
+      attrsConfidence: 'high',
+      attrsModelVersion: null,
+      attrsEvidence: { years: '5+ years', clearance: 'TS/SCI' },
+    });
+  });
+
+  it('writer stores null years and false clearance', async () => {
+    await seedEnrichJob(prisma, 'n1', { contentHash: 'h' });
+
+    const updated = await writeAttributes(prisma, [
+      {
+        id: 'n1',
+        descHash: 'h',
+        modelTried: false,
+        attrs: {
+          experienceMinYears: null,
+          clearanceRequired: false,
+          confidence: 'high',
+          source: 'rules',
+          evidence: {},
+        },
+      },
+    ]);
+
+    const after = await prisma.job.findUniqueOrThrow({ where: { id: 'n1' } });
+    expect(updated).toBe(1);
+    expect(after.experienceMinYears).toBeNull();
+    expect(after.clearanceRequired).toBe(false);
+    expect(after.attrsVersion).toBe(ATTRS_VERSION);
+    expect(after.attrsEvidence).toEqual({});
+  });
+
+  it('writer skips a row whose contentHash changed after pick', async () => {
+    await seedEnrichJob(prisma, 'n1', { contentHash: 'h2' });
+
+    const updated = await writeAttributes(prisma, [
+      {
+        id: 'n1',
+        descHash: 'h1',
+        modelTried: false,
+        attrs: {
+          experienceMinYears: 5,
+          clearanceRequired: false,
+          confidence: 'high',
+          source: 'rules',
+          evidence: { years: '5+ years' },
+        },
+      },
+    ]);
+
+    const after = await prisma.job.findUniqueOrThrow({ where: { id: 'n1' } });
+    expect(updated).toBe(0);
+    expect(after.attrsVersion).toBeNull();
+  });
+
+  it('writer skips inactive rows', async () => {
+    await seedEnrichJob(prisma, 'n1', { active: false, contentHash: 'h' });
+
+    const updated = await writeAttributes(prisma, [
+      {
+        id: 'n1',
+        descHash: 'h',
+        modelTried: false,
+        attrs: {
+          experienceMinYears: 3,
+          clearanceRequired: false,
+          confidence: 'high',
+          source: 'rules',
+          evidence: { years: '3+ years' },
+        },
+      },
+    ]);
+
+    const after = await prisma.job.findUniqueOrThrow({ where: { id: 'n1' } });
+    expect(updated).toBe(0);
+    expect(after.attrsVersion).toBeNull();
+  });
+
+  it('writer sets attrsModelVersion only when the model was tried', async () => {
+    await seedEnrichJob(prisma, 'm1', { contentHash: 'h1' });
+    await seedEnrichJob(prisma, 'm2', { contentHash: 'h2' });
+
+    const firstWrite = await writeAttributes(prisma, [
+      {
+        id: 'm1',
+        descHash: 'h1',
+        modelTried: true,
+        attrs: {
+          experienceMinYears: 4,
+          clearanceRequired: false,
+          confidence: 'high',
+          source: 'model',
+          evidence: { years: '4+ years' },
+        },
+      },
+      {
+        id: 'm2',
+        descHash: 'h2',
+        modelTried: false,
+        attrs: {
+          experienceMinYears: null,
+          clearanceRequired: false,
+          confidence: 'low',
+          source: 'rules',
+          evidence: {},
+        },
+      },
+    ]);
+
+    expect(firstWrite).toBe(2);
+    const m1First = await prisma.job.findUniqueOrThrow({ where: { id: 'm1' } });
+    const m2First = await prisma.job.findUniqueOrThrow({ where: { id: 'm2' } });
+    expect(m1First.attrsModelVersion).toBe(ATTRS_VERSION);
+    expect(m2First.attrsModelVersion).toBeNull();
+
+    // Rewriting m1 without calling the model resets attrsModelVersion to null
+    const secondWrite = await writeAttributes(prisma, [
+      {
+        id: 'm1',
+        descHash: 'h1',
+        modelTried: false,
+        attrs: {
+          experienceMinYears: 4,
+          clearanceRequired: false,
+          confidence: 'high',
+          source: 'rules',
+          evidence: { years: '4+ years' },
+        },
+      },
+    ]);
+
+    expect(secondWrite).toBe(1);
+    const m1Second = await prisma.job.findUniqueOrThrow({ where: { id: 'm1' } });
+    expect(m1Second.attrsModelVersion).toBeNull();
+  });
+
+  it('writer writes a 500-row batch in one call', async () => {
+    await seedEnrichJob(prisma, 'init', { active: false });
+    const batchData = Array.from({ length: 500 }, (_, i) => {
+      const id = `b-${String(i).padStart(3, '0')}`;
+      return {
+        id,
+        ashbyId: id,
+        source: 'ASHBY' as const,
+        externalId: id,
+        title: `Engineer ${i}`,
+        applyUrl: `https://jobs.ashbyhq.com/enrich-acme/${id}`,
+        companySlug: 'enrich-acme',
+        metadata: { descriptionPlain: i % 2 === 0 ? `${(i % 10) + 1}+ years` : 'No years stated' },
+        contentHash: `bh-${i}`,
+        active: true,
+      };
+    });
+    await prisma.job.createMany({ data: batchData });
+
+    const writes = Array.from({ length: 500 }, (_, i) => ({
+      id: `b-${String(i).padStart(3, '0')}`,
+      descHash: `bh-${i}`,
+      modelTried: false,
+      attrs: {
+        experienceMinYears: i % 2 === 0 ? (i % 10) + 1 : null,
+        clearanceRequired: i % 10 === 0,
+        confidence: 'high' as const,
+        source: 'rules' as const,
+        evidence: i % 2 === 0 ? { years: `${(i % 10) + 1}+ years` } : {},
+      },
+    }));
+
+    const written = await writeAttributes(prisma, writes);
+    expect(written).toBe(500);
+
+    const nullRow = await prisma.job.findUniqueOrThrow({ where: { id: 'b-001' } });
+    const numRow = await prisma.job.findUniqueOrThrow({ where: { id: 'b-002' } });
+    expect(nullRow.experienceMinYears).toBeNull();
+    expect(numRow.experienceMinYears).toBe(3);
   });
 });
