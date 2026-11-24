@@ -11,7 +11,8 @@ import { ATTRS_VERSION } from '../../src/enrichment/version';
 import { getDescriptionText } from '../../src/enrichment/text';
 import { pickJobsForEnrichment, countPickable } from '../../src/enrichment/picker';
 import { writeAttributes } from '../../src/enrichment/writer';
-import { seedEnrichJob } from './enrichSeed';
+import { runEnrichment } from '../../src/enrichment/run';
+import { seedEnrichJob, seedEnrichJobs } from './enrichSeed';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 const describeIfDb = TEST_DATABASE_URL ? describe : describe.skip;
@@ -420,5 +421,96 @@ describeIfDb('BF-027: Job attribute enrichment pass on real PostgreSQL', () => {
     const numRow = await prisma.job.findUniqueOrThrow({ where: { id: 'b-002' } });
     expect(nullRow.experienceMinYears).toBeNull();
     expect(numRow.experienceMinYears).toBe(3);
+  });
+
+  it('runEnrichment fills every active job and is idempotent', async () => {
+    await seedEnrichJobs(prisma, 1200);
+    await seedEnrichJob(prisma, 'inactive-1', { active: false });
+    await seedEnrichJob(prisma, 'inactive-2', { active: false });
+    await seedEnrichJob(prisma, 'inactive-3', { active: false });
+
+    const first = await runEnrichment(prisma, {
+      maxJobs: null,
+      budgetMin: 10,
+      dryRun: false,
+      modelMaxCalls: 0,
+    });
+    expect(first.written).toBe(1200);
+    expect(first.picked).toBe(1200);
+    expect(first.remaining).toBe(0);
+    expect(first.stoppedBy).toBe('done');
+
+    const second = await runEnrichment(prisma, {
+      maxJobs: null,
+      budgetMin: 10,
+      dryRun: false,
+      modelMaxCalls: 0,
+    });
+    expect(second.picked).toBe(0);
+    expect(second.written).toBe(0);
+    expect(second.remaining).toBe(0);
+    expect(second.stoppedBy).toBe('done');
+  });
+
+  it('budget stop leaves the rest pickable', async () => {
+    await seedEnrichJobs(prisma, 1200);
+
+    const times = [0, 0, 11 * 60_000, 11 * 60_000];
+    let idx = 0;
+    const now = (): number => times[idx++];
+
+    const res = await runEnrichment(
+      prisma,
+      { maxJobs: null, budgetMin: 10, dryRun: false, modelMaxCalls: 0 },
+      { now }
+    );
+
+    expect(res.written).toBe(500);
+    expect(res.remaining).toBe(700);
+    expect(res.stoppedBy).toBe('budget');
+  });
+
+  it('dry run writes nothing', async () => {
+    await seedEnrichJobs(prisma, 1200);
+
+    const res = await runEnrichment(prisma, {
+      maxJobs: null,
+      budgetMin: 10,
+      dryRun: true,
+      modelMaxCalls: 0,
+    });
+
+    expect(res.picked).toBe(1200);
+    expect(res.written).toBe(0);
+    expect(res.remaining).toBe(1200);
+
+    const processedCount = await prisma.job.count({
+      where: { attrsVersion: { not: null } },
+    });
+    expect(processedCount).toBe(0);
+  });
+
+  it('inactive jobs are never written', async () => {
+    await seedEnrichJob(prisma, 'active-1', { active: true });
+    await seedEnrichJob(prisma, 'inactive-1', { active: false });
+    await seedEnrichJob(prisma, 'inactive-2', { active: false });
+    await seedEnrichJob(prisma, 'inactive-3', { active: false });
+
+    const res = await runEnrichment(prisma, {
+      maxJobs: null,
+      budgetMin: 10,
+      dryRun: false,
+      modelMaxCalls: 0,
+    });
+    expect(res.written).toBe(1);
+    expect(res.remaining).toBe(0);
+
+    const inactiveRows = await prisma.job.findMany({
+      where: { id: { in: ['inactive-1', 'inactive-2', 'inactive-3'] } },
+    });
+    expect(inactiveRows).toHaveLength(3);
+    for (const row of inactiveRows) {
+      expect(row.attrsVersion).toBeNull();
+    }
   });
 });
