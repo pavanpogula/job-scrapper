@@ -26,20 +26,26 @@ export const CLEARANCE_FALSE_FRIENDS: readonly RegExp[] = Object.freeze([
   /\bregulatory clearance\b/i,
   /\bclearance\s+for\s+on-?site\s+work\b/i,
   /\bthose with\s+(?:an\s+)?active clearance\b[^.\n]{0,60}\bdifferential\b/i,
+  /\bbackground(?:\s+(?:check|screening|investigation))?\s+clearances?\b/i,
+  /\bcriminal(?:\s+(?:record|history|background))?(?:\s+check)?\s+clearances?\b/i,
+  /\bfingerprint(?:ing)?(?:\s+check)?\s+clearances?\b/i,
+  /\bchild\s+abuse(?:\s+(?:history|register|registry))?\s+clearances?\b/i,
+  /\b(?:childcare|working\s+with\s+children|vulnerable\s+sector|police(?:\s+check)?)\s+clearances?\b/i,
+  /\b(?:health|tb|tuberculosis|immunization|vaccination|drug(?:\s+(?:screen(?:ing)?|test(?:ing)?))?|pre-?employment|tax|ethics|ethical|visa|work|export|import|parking)\s+clearances?\b/i,
   /\btrade secrets?\b/i,
   /\bsecret sauce\b/i,
 ]);
 
 /** Strong US security clearance patterns. */
 export const CLEARANCE_STRONG_PATTERNS: readonly RegExp[] = Object.freeze([
-  /\b(security|government|federal|dod|doe|personnel|active|interim)\s+clearances?\b/i,
+  /\bsecurity\s+clearances?\b/i,
   /\btop[\s-]secret\b/i,
-  /\bTS\s*\/\s*SCI\b|\bTS-SCI\b/,
+  /\bTS\s*\/\s*SCI\b|\bTS-SCI\b|\bTS\s+clearances?\b/,
   /\bpublic\s+trust\b/i,
-  /\bpolygraph\b|\b(ci|full[\s-]scope|lifestyle|counter-?intelligence)\s+poly\b/i,
-  /\bsecret\b[^.\n]{0,40}\bclearance\b|\bclearance\b[^.\n]{0,40}\bsecret\b/i,
-  /\b[QL][\s-]clearance\b/,
-  /\bobtain\b[^.\n]{0,40}\bclearance\b|\beligib\w*\b[^.\n]{0,40}\bclearance\b/i,
+  /\bpolygraph\b/i,
+  /\bsecret\b[^.\n]{0,40}\bclearances?\b|\bclearances?\b[^.\n]{0,40}\bsecret\b/i,
+  /\beligib\w*\b[^.\n]{0,30}\b(?:Secret|TS|SCI)\b|\b(?:Secret|TS|SCI)\b[^.\n]{0,30}\beligib\w*\b/,
+  /\b[QL][\s-]clearances?\b/,
 ]);
 
 /** Strong non-US allied clearance patterns (UK, NATO, Canada, Australia). */
@@ -48,14 +54,12 @@ export const CLEARANCE_NON_US_PATTERNS: readonly RegExp[] = Object.freeze([
   /\(?\b(SC|DV)\)?\s+(clearance|cleared|vetting)\b|\bBPSS\b|\bCTC\s+(clearance|cleared)\b/,
   /\bNATO\s+(secret|confidential|cosmic|clearance)\b/i,
   /\b(NV1|NV2|AGSVA)\b|\bbaseline\s+(security\s+)?clearance\b|\bnegative vetting\b/i,
-  /\breliability\s+(status|clearance|screening)\b|\b(government of canada|canadian)\b[^.\n]{0,40}\b(security|secret|clearance)\b/i,
+  /\breliability\s+(status|clearance|screening)\b|\b(government of canada|canadian)\b[^.\n]{0,40}\b(security\s+clearances?|secret(?:\s+clearances?)?)\b/i,
 ]);
 
 /** Weak or bare clearance terms that indicate clearance sensitivity with ambiguity. */
 export const CLEARANCE_WEAK_PATTERNS: readonly RegExp[] = Object.freeze([
-  /\bclearance\b/i,
   /\bSCI\b/,
-  /\bpoly\b/i,
 ]);
 
 /** Negation cues within a sentence containing a clearance keyword. */
@@ -133,7 +137,12 @@ export function detectClearance(text: string): ClearanceResult {
     if (origSentence.trim().length === 0) continue;
     const cleaned = stripFalseFriends(origSentence);
     const match = matchSentence(cleaned);
-    if (!match) continue;
+    if (!match) {
+      if (/\bclearances?\b/i.test(cleaned) && CLEARANCE_NEGATION.test(cleaned)) {
+        hasNegated = true;
+      }
+      continue;
+    }
 
     if (CLEARANCE_NEGATION.test(cleaned)) {
       hasNegated = true;

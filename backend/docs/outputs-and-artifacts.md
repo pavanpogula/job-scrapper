@@ -197,7 +197,7 @@ Written by `writeEnrichReport()` (`src/enrichment/report.ts`) at the end of ever
     "startedAt": "<ISO-8601>",
     "finishedAt": "<ISO-8601>",
     "dryRun": false,
-    "attrsVersion": 1,
+    "attrsVersion": 2,
     "modelEnabled": false,
     "flags": { "maxJobs": 20000, "budgetMin": 10, "modelMaxCalls": 2000 }
   },

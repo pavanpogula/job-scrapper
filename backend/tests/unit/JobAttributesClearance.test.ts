@@ -21,6 +21,7 @@ const mainCases: ClearanceCase[] = [
   ['obtain and maintain Top Secret', 'Ability to obtain and maintain a Top Secret clearance', true, false],
   ['TS/SCI with polygraph', 'Active TS/SCI with full-scope polygraph', true, false],
   ['eligible for DoD clearance', 'Must be eligible for a DoD security clearance', true, false],
+  ['eligible for Public Trust or Secret', 'Must be eligible for Public Trust or Secret eligibility', true, false],
   ['Public Trust', 'Public Trust required', true, false],
   ['polygraph alone', 'Willingness to undergo a polygraph examination', true, false],
   ['DOE Q clearance', 'An active DOE Q clearance is required', true, false],
@@ -59,6 +60,32 @@ const falseFriendCases: ClearanceCase[] = [
   ['false friend: secret sauce', 'Our secret sauce is our people', false, undefined],
   ['false friend: SCIENCE', 'BS in COMPUTER SCIENCE required', false, undefined],
   ['false friend: polymer', 'Experience with polymer composites', false, undefined],
+  ['false friend: poly-bag', 'Pack finished garments into a clear poly-bag for fulfillment', false, false],
+  ['false friend: poly activité', 'Employé poly activité en magasin et logistique', false, false],
+  [
+    'false friend: abbreviated poly without polygraph',
+    'Graduated from Cal Poly or holds a CI poly',
+    false,
+    false,
+  ],
+  [
+    'false friend: background check clearance',
+    'Employment is contingent upon a satisfactory background check clearance',
+    false,
+    false,
+  ],
+  [
+    'false friend: fingerprinting clearance',
+    'Must obtain FBI fingerprinting clearance prior to start date',
+    false,
+    false,
+  ],
+  [
+    'false friend: child abuse register clearance',
+    'Candidates must obtain PA Child Abuse Register clearance and state criminal clearances',
+    false,
+    false,
+  ],
 ];
 
 describe('detectClearance', () => {

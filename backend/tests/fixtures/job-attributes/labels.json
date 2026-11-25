@@ -400,6 +400,20 @@
       "clearance": false,
       "yearsEvidence": "Roughly 3+ years of relevant experience in customer success, onboarding, implementations, or a related customer-facing role"
     },
+    "ab:reg-hospitality:ja1b-age-16-and-years-old": {
+      "split": "holdout",
+      "labelled": true,
+      "years": null,
+      "clearance": false,
+      "note": "JA-1b regression #4 & #6: age phrases must never count as experience or trigger low confidence"
+    },
+    "ab:reg-saas:ja1b-pay-transparency-no-years": {
+      "split": "tune",
+      "labelled": true,
+      "years": null,
+      "clearance": false,
+      "note": "JA-1b regression #6: blurb, hyphenated N-year, and salary per year near experience stay high confidence"
+    },
     "ab:saronic:2bade3e9-0ef9-4ebf-8cca-52761794def7": {
       "split": "tune",
       "labelled": true,
@@ -1043,6 +1057,39 @@
       "clearance": false,
       "yearsEvidence": "15+ years of experience in channel/alliance/partner management or ecosystem sales"
     },
+    "gh:reg-aerospace:ja1b-spelled-range-4-to-7": {
+      "split": "holdout",
+      "labelled": true,
+      "years": 4,
+      "clearance": true,
+      "yearsEvidence": "Four (4) years to seven (7) years of experience in avionics or flight-control systems engineering.",
+      "clearanceEvidence": "Must hold or be eligible for a U.S. Secret security clearance.",
+      "note": "JA-1b regression #3: spelled-out parenthetical range yields lower bound 4"
+    },
+    "gh:reg-education:ja1b-background-fingerprint-child-abuse": {
+      "split": "holdout",
+      "labelled": true,
+      "years": 1,
+      "clearance": false,
+      "yearsEvidence": "1+ year of experience working with school-age youth in an educational setting.",
+      "note": "JA-1b regression #2: background, fingerprinting, and child abuse register clearances are not security clearances"
+    },
+    "gh:reg-fulfillment:ja1b-poly-bag": {
+      "split": "holdout",
+      "labelled": true,
+      "years": 2,
+      "clearance": false,
+      "yearsEvidence": "2+ years of experience in fulfillment, warehouse packing, or inventory operations.",
+      "note": "JA-1b regression #1: poly inside poly-bag is not polygraph"
+    },
+    "gh:reg-platform:ja1b-all-levels-title": {
+      "split": "tune",
+      "labelled": true,
+      "years": 3,
+      "clearance": false,
+      "yearsEvidence": "3+ years of experience operating Kubernetes or cloud infrastructure in production.",
+      "note": "JA-1b regression #5: multi-level title marks extracted years low confidence"
+    },
     "gh:relativity:8451321002": {
       "split": "tune",
       "labelled": true,
@@ -1575,6 +1622,13 @@
       "labelled": true,
       "years": null,
       "clearance": false
+    },
+    "lv:reg-retail:ja1b-poly-activite": {
+      "split": "tune",
+      "labelled": true,
+      "years": null,
+      "clearance": false,
+      "note": "JA-1b regression #1: French poly activit\u00e9 is not polygraph"
     },
     "lv:spotify:3a0d23b5-5dda-456a-967b-0fcada78daf1": {
       "split": "tune",

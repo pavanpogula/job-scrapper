@@ -69,4 +69,8 @@ describe('experience buckets and enrichment version', () => {
     expect(Number.isInteger(ATTRS_VERSION)).toBe(true);
     expect(ATTRS_VERSION).toBeGreaterThan(0);
   });
+
+  it('ATTRS_VERSION is 2', () => {
+    expect(ATTRS_VERSION).toBe(2);
+  });
 });

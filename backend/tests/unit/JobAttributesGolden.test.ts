@@ -136,6 +136,21 @@ describe('extractAttributesByRules', () => {
     expect('years' in attrs.evidence).toBe(false);
     expect('clearance' in attrs.evidence).toBe(false);
   });
+
+  it('keeps empty description high confidence with empty evidence', () => {
+    const attrs = extractAttributesByRules({
+      id: 'unit-empty',
+      title: 'Software Engineer',
+      descriptionPlain: '',
+    });
+    expect(attrs).toEqual({
+      experienceMinYears: null,
+      clearanceRequired: false,
+      confidence: 'high',
+      source: 'rules',
+      evidence: {},
+    });
+  });
 });
 
 describe('scorer', () => {
@@ -214,6 +229,19 @@ describe('golden set integrity', () => {
           throw new Error(`Invalid years label on ${id}: ${String(lbl.years)}`);
         }
       }
+    }
+  });
+
+  it('no single board exceeds 15% of the golden set', () => {
+    const byBoard = new Map<string, number>();
+    for (const job of goldenJobs) {
+      const key = `${job.source}:${job.id.split(':')[1]}`;
+      byBoard.set(key, (byBoard.get(key) ?? 0) + 1);
+    }
+    const maxAllowed = Math.floor(goldenJobs.length * 0.15);
+    for (const [board, count] of byBoard.entries()) {
+      expect({ board, count }).toEqual({ board, count: expect.any(Number) });
+      expect(count).toBeLessThanOrEqual(maxAllowed);
     }
   });
 });
@@ -298,5 +326,78 @@ describe('golden set accuracy (BF-026)', () => {
     }
     expect(highPrecision).toBeGreaterThanOrEqual(0.95);
     expect(lowShare).toBeLessThanOrEqual(0.35);
+  });
+});
+
+describe('golden set real-data regressions (BF-026)', () => {
+  it.each<
+    [
+      name: string,
+      id: string,
+      expectedYears: number | null | undefined,
+      expectedClearance: boolean,
+      expectedConfidence: 'high' | 'low',
+    ]
+  >([
+    ['poly-bag is not clearance', 'gh:reg-fulfillment:ja1b-poly-bag', 2, false, 'high'],
+    ['poly activité is not clearance', 'lv:reg-retail:ja1b-poly-activite', null, false, 'high'],
+    [
+      'background check, fingerprinting and child abuse clearances are not security clearances',
+      'gh:reg-education:ja1b-background-fingerprint-child-abuse',
+      1,
+      false,
+      'high',
+    ],
+    [
+      'spelled-out range "Four (4) years to seven (7) years" gives lower bound 4',
+      'gh:reg-aerospace:ja1b-spelled-range-4-to-7',
+      4,
+      true,
+      'high',
+    ],
+    [
+      '"at least 16 years of age" and "18 years old" never count as experience',
+      'ab:reg-hospitality:ja1b-age-16-and-years-old',
+      null,
+      false,
+      'high',
+    ],
+    [
+      'multi-level title "(All Levels)" marks extracted years low confidence',
+      'gh:reg-platform:ja1b-all-levels-title',
+      3,
+      false,
+      'low',
+    ],
+    [
+      'multi-level real posting "Aircraft Structural Technician - all levels" marks years low confidence',
+      'gh:rocketlab:7731436003',
+      undefined,
+      false,
+      'low',
+    ],
+    [
+      'pay-transparency "per year, depending on experience" and blurbs stay high confidence with empty evidence',
+      'ab:reg-saas:ja1b-pay-transparency-no-years',
+      null,
+      false,
+      'high',
+    ],
+  ])('%s', (_name, id, expectedYears, expectedClearance, expectedConfidence) => {
+    const job = goldenJobs.find((j) => j.id === id);
+    expect(job).toBeDefined();
+    const pred = extractAttributesByRules({
+      id: job!.id,
+      title: job!.title,
+      descriptionPlain: job!.descriptionPlain,
+    });
+    if (expectedYears !== undefined) {
+      expect(pred.experienceMinYears).toBe(expectedYears);
+    }
+    expect(pred.clearanceRequired).toBe(expectedClearance);
+    expect(pred.confidence).toBe(expectedConfidence);
+    if (id === 'ab:reg-saas:ja1b-pay-transparency-no-years') {
+      expect(pred.evidence).toEqual({});
+    }
   });
 });
