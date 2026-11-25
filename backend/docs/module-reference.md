@@ -149,18 +149,54 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | `ClearanceResult` | `{ required: boolean, evidence: string \| null, ambiguous: boolean }` |
 | `CLEARANCE_*` constants | Six frozen stateless lexicon exports (`CLEARANCE_FALSE_FRIENDS`, `CLEARANCE_STRONG_PATTERNS`, `CLEARANCE_NON_US_PATTERNS`, `CLEARANCE_WEAK_PATTERNS`, `CLEARANCE_NEGATION`, `CLEARANCE_PREFERRED`) stripping expanded non-security false friends first, matching `polygraph`/qualified `poly` without bare `poly`, and restoring weak bare `clearance` |
 | `detectClearance(text)` | Sentence-scoped detector for US and allied security clearances stripping background/fingerprinting/child-abuse/physical/customs/regulatory false friends and respecting negations |
+| `containsClearanceKeyword(text)` | False-friend-stripped predicate verifying a clearance keyword exists (for model evidence validation and prompt trimming) |
 
 ### [rules/index.ts](../src/enrichment/rules/index.ts) — Rules Combiner
 | Symbol | Description |
 |---|---|
 | `extractAttributesByRules(input)` | Combines `extractMinYears(descriptionPlain, { title })` and `detectClearance(title + descriptionPlain)` into `JobAttributes` with `source: 'rules'` |
 
+### [model/ModelClient.ts](../src/enrichment/model/ModelClient.ts) — Model Client Contract (E3, BF-027)
+| Symbol | Description |
+|---|---|
+| `ModelAnswer` / `ModelClient` / `ModelUsage` | Structured classifier output shape, client interface (`classify`), and cumulative token/call counters |
+| `ModelErrorKind` / `ModelCallError` | Safe redacted error wrapper (`responded` for `bad_json`/`blocked`; `fatal` for `400`/`401`/`402`/`403`/`404`) without leaking API keys or HTTP config |
+
+### [model/prompt.ts](../src/enrichment/model/prompt.ts) — Model Prompt & Schema (E3, BF-027)
+| Symbol | Description |
+|---|---|
+| `MODEL_DESCRIPTION_MAX_CHARS` / `SYSTEM_PROMPT` / `MODEL_RESPONSE_SCHEMA` | `6000`-char cap, verbatim classification prompt, and strict 4-field JSON Schema |
+| `trimDescriptionForModel(text, maxChars?)` / `buildUserPrompt(input, maxChars?)` | Requirement-first line scorer (`2` years/clearance cues, `1` requirement sections, `0` other) preserving original order |
+
+### [model/validate.ts](../src/enrichment/model/validate.ts) — Deterministic Answer Validation (E3, BF-027)
+| Symbol | Description |
+|---|---|
+| `normalizeForMatch(s)` | NFKC, curly quote/dash normalization, whitespace collapse, and lowercase transform |
+| `validateModelAnswer(input, answer)` | Rejects answers unless evidence substrings (6–300 chars), year tokens/words (`0–30`), clearance keywords, and unambiguous rules clearances all agree |
+
+### [model/GeminiClient.ts](../src/enrichment/model/GeminiClient.ts) — Gemini REST Client (E3, BF-027)
+| Symbol | Description |
+|---|---|
+| `DEFAULT_GEMINI_MODEL` / `GEMINI_ENDPOINT` / `MINIMAL_THINKING_MODELS` | `'gemini-3.1-flash-lite'`, v1beta `generateContent` endpoint, and minimal-thinking allowlist |
+| `class GeminiClient` | Axios structured-output client using `x-goog-api-key`, `408`/`429`/`5xx`/timeout retries, `onRateLimit`, and token tracking |
+
+### [model/modelStep.ts](../src/enrichment/model/modelStep.ts) — Model Enrichment Step (E3, BF-027)
+| Symbol | Description |
+|---|---|
+| `MODEL_CONCURRENCY` / `ModelStopReason` / `ModelStep` | Concurrency-4 step (`name: 'model'`) routing only low-confidence rows under `maxCalls` and `deadlineAt`, cold-start fatal probe, and never-throw error degradation |
+| `buildModelStep(env, opts)` | Env-gated step factory requiring both `GEMINI_ENABLED === 'true'` and non-empty `GEMINI_API_KEY` |
+
+### [model/ModelEvalCli.ts](../src/enrichment/model/ModelEvalCli.ts) — Owner-Only Golden Eval CLI (E3, BF-027)
+| Symbol | Description |
+|---|---|
+| `runModelEval(argv, env, deps?)` | Offline DB-free CLI comparing rules-only vs rules+validated-model precision/recall and token cost on the golden set |
+
 ### [step.ts](../src/enrichment/step.ts) — Step Contract & Registry
 | Symbol | Description |
 |---|---|
-| `PickedJob` / `EnrichCounts` / `StepRunContext` | Picked row shape, shared run counters, and batch context passed across steps |
+| `PickedJob` / `EnrichCounts` / `StepRunContext` | Picked row shape, shared run counters (incl. `modelTokensIn`/`modelTokensOut`), and batch context passed across steps |
 | `EnrichmentStep` / `StepOptions` / `StepFactory` | Step interface (`name: 'rules' \| 'model'`, optional `exhausted`, `run`) and factory contract |
-| `DEFAULT_STEP_FACTORIES` | Default factory list (`[() => createRulesStep()]`) |
+| `DEFAULT_STEP_FACTORIES` | Default factory list (`createRulesStep`, `buildModelStep`) |
 | `buildSteps(opts, factories?)` | Instantiates non-null enabled steps in registry order |
 | `isModelEnabled(steps)` / `hasModelStep(steps)` / `emptyCounts()` | Picking/counting helpers and zeroed counter constructor |
 
@@ -186,15 +222,15 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | Symbol | Description |
 |---|---|
 | `ENRICH_BATCH_SIZE` | Default batch size constant (`500`) |
-| `StopReason` / `EnrichOptions` / `EnrichDeps` / `EnrichResult` | Runner configuration, injectable test deps, and result types |
-| `runEnrichment(prisma, opts, deps?)` | Executes sequential keyset batches under budget/`--max-jobs` limits, supports `--dry-run`, and counts `remaining` |
+| `StopReason` / `EnrichOptions` / `EnrichDeps` / `EnrichResult` | Runner configuration, injectable test deps, and result types (incl. `modelStoppedBy`) |
+| `runEnrichment(prisma, opts, deps?)` | Executes sequential keyset batches under budget/`--max-jobs` limits, copies model tokens/stop reason, supports `--dry-run`, and counts `remaining` |
 
 ### [report.ts](../src/enrichment/report.ts) — Report & Step Summary
 | Symbol | Description |
 |---|---|
-| `EnrichReport` | Version `'enrich-1'` JSON report schema (`run`, `counts`, `remaining`, `descBytes`) |
+| `EnrichReport` | Version `'enrich-1'` JSON report schema (`run`, `counts` incl. `modelStoppedBy` and token totals, `remaining`, `descBytes`) |
 | `writeEnrichReport(report, baseDir?)` | Writes `reports/<YYYY-MM>/enrich-<runId>.json` and `latest-enrich.json` (never writes `latest-error-report.json`) |
-| `formatEnrichSummary(report)` | Renders the pinned Markdown summary table and `Backfill complete:` status line |
+| `formatEnrichSummary(report)` | Renders the pinned Markdown summary tables (`Model stopped by`, `Model tokens in`/`out`) and `Backfill complete:` status line |
 
 ### [EnrichCli.ts](../src/enrichment/EnrichCli.ts) — `npm run enrich:jobs`
 | Symbol | Description |

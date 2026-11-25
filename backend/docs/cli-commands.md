@@ -205,7 +205,7 @@ Interactive `readline` loop (`Select an option [1-8]`). Runs on import (no `requ
   * `--all`: Remove the job cap (`maxJobs = null`); cannot be combined with `--max-jobs`.
   * `--budget-min=M`: Wall-time budget in minutes (`1..130`, default `10`; step deadline leaves a 30 s margin).
   * `--dry-run`: Pick and classify jobs without executing raw-SQL writes; still advances keyset cursor and reports `remaining` (`written: 0`).
-  * `--model-max-calls=N`: Max model calls passed to step options (`0..100000`, default `2000`; parsed and unused until E3).
+  * `--model-max-calls=N`: Hard cap on Gemini API calls enforced across batches by `ModelStep` when `GEMINI_ENABLED=true` and `GEMINI_API_KEY` is set (`0..100000`, default `2000`; scheduled CI passes `300` unless `GEMINI_MAX_CALLS` overrides).
 - Exit codes: `0` on clean completion (including budget/max-jobs stops and `--dry-run`), `1` on invalid flags or DB/runtime error (redacts DB credentials in stderr).
 - Writes `output/latest-enrich.json` and `output/reports/<YYYY-MM>/enrich-<runId>.json` (never writes `latest-error-report.json`), and appends Markdown summary to `$GITHUB_STEP_SUMMARY` when set.
 - **Localhost DB safety:** `EnrichCli` calls `dotenv.config()` inside `main()` and `backend/.env` may point at production. For local runs or testing, always set and guard a localhost URL in the same shell:
@@ -218,6 +218,16 @@ Interactive `readline` loop (`Select an option [1-8]`). Runs on import (no `requ
   * Scheduled CI pass: `npm run enrich:jobs -- --budget-min=10 --model-max-calls=$MAX_CALLS`
   * Manual CI backfill: `npm run enrich:jobs -- --all --budget-min=120 --model-max-calls=$MAX_CALLS`
   * Local dry run: `npm run enrich:jobs -- --dry-run --budget-min=1`
+
+### `npm run enrich:model-eval [-- --set=holdout|tune|all] [-- --limit=N] [-- --all-jobs] [-- --max-calls=N] [-- --price-in=N] [-- --price-out=N]` — `src/enrichment/model/ModelEvalCli.ts`
+- **Owner-only, paid evaluation tool (never run in CI or by agents):** Scores rules-only vs rules+validated-model precision/recall on the local golden set (`tests/fixtures/job-attributes/{jobs,labels}.json`) and prints estimated cost per call and per 2,000 calls.
+- Opens **no database connection** and does **not** load `.env`; requires `GEMINI_API_KEY` exported in the caller's own shell (exits `1` without sending any request when unset). Writes summary lines to stdout only (no files, never prints descriptions or keys).
+- Flags:
+  * `--set=holdout|tune|all`: Golden-set split to evaluate (default: `holdout`).
+  * `--limit=N`: Maximum filtered jobs to score (`>= 1`, default: `50`).
+  * `--all-jobs`: Evaluate all labelled jobs in the split instead of only low-confidence rules rows (default: `false`, low-confidence only).
+  * `--max-calls=N`: Model call cap for evaluation (`>= 0`, default: `100`).
+  * `--price-in=N` / `--price-out=N`: Token prices in USD per 1M tokens (defaults: `0.25` input / `1.50` output).
 
 ### `npm run source:deactivate -- <source> [--dry-run] [--i-know]` — `src/database/SourceDeactivate.ts`
 - Emergency rollback CLI to deactivate all jobs for an ATS source (e.g. `greenhouse`) by setting `active = false`.

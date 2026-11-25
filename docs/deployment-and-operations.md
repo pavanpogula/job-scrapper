@@ -34,6 +34,7 @@ The matrix below documents where every secret is configured and consumed:
 | `VERCEL_ORG_ID` | — | — | — | — | Vercel team ID (`boolean6`) for `deploy.yml`; `vercel-production` environment. |
 | `VERCEL_PROJECT_ID_FRONTEND` / `VERCEL_PROJECT_ID_BACKEND` | — | — | — | — | Project IDs of `job-scrapper-ui` / `job-scrapper-api` for `deploy.yml`; `vercel-production` environment. |
 | `GOOGLE_DRIVE_FOLDER_ID`| — | — | — | Optional | Folder ID for optional cloud CSV uploads (`scrape:csv -- --upload-cloud`). |
+| `GEMINI_API_KEY` | ✅ | — | — | Shell only (owner) | Gemini Developer API key for optional low-confidence job enrichment (`Enrich job attributes` and `Backfill job attributes` steps only, plus local owner `enrich:model-eval`). |
 
 ---
 
@@ -62,7 +63,7 @@ The matrix below documents where every secret is configured and consumed:
   5. Runs `npm run enrich:companies -- --sources=<effective>` to update display names and logos (skipped on `enrich_backfill=true`).
   6. Executes `npm run scrape:parallel -- --workers=4 --sources=<effective>` with automatic cache publishing (skipped on `enrich_backfill=true`).
   7. Classifies error telemetry via `npm run report:classify` and writes metrics (including `summary.bySource`) to GitHub Actions step summary (skipped on `enrich_backfill=true`).
-  7b. Enrich job attributes (`vars.ENRICH_ENABLED == 'true'`, `continue-on-error: true`, `--budget-min=10`, `--model-max-calls=300` unless `vars.GEMINI_MAX_CALLS` is set; skipped on `fixture_report`, `deactivate_source`, `publish_only`, `enrich_backfill`, or scrape exit code `1`). When `inputs.enrich_backfill == true`, runs `Backfill job attributes` (`--all --budget-min=ENRICH_BUDGET_INPUT`) instead.
+  7b. Enrich job attributes (`vars.ENRICH_ENABLED == 'true'`, `continue-on-error: true`, `--budget-min=10`, `--model-max-calls=300` unless `vars.GEMINI_MAX_CALLS` is set; skipped on `fixture_report`, `deactivate_source`, `publish_only`, `enrich_backfill`, or scrape exit code `1`). When `inputs.enrich_backfill == true`, runs `Backfill job attributes` (`--all --budget-min=ENRICH_BUDGET_INPUT`) instead. Both steps receive `GEMINI_ENABLED` (`vars.GEMINI_ENABLED`), `GEMINI_MODEL` (`vars.GEMINI_MODEL`, default `gemini-3.1-flash-lite`), and `GEMINI_API_KEY` (`secrets.GEMINI_API_KEY` from `environment: production`), and no other step receives the key.
   8. Uploads `scrape-report-<runId>` artifact (30-day retention, including any `enrich-<runId>.json`).
   9. On failure (`exitCode = 1` or infra alert), runs `scripts/ci/alert-issue.sh` to create or update a `scrape-alert` issue.
   10. Chains to the automated Claude fixer job when actionable issues are detected.
@@ -261,3 +262,34 @@ the server-side backstop.
    - `schema_validation`: Board format changed; inspect logged `validationIssues`.
    - `network_timeout`: Ashby API latency; check adaptive concurrency and rate limiting.
 4. Run locally with fixture to reproduce: `npm run report:install-fixture -- <artifact-path>`.
+
+### Runbook 6: Gemini errors or spend
+**Symptom:** `enrich:jobs` logs `Model step stopped: Gemini returned HTTP <status>; rules answers kept for the rest of the run.` or high `modelErrors` / spend approaches budget. Note that `enrich:jobs` continues writing rules answers and exits `0`.
+**Remediation:**
+- **Immediate kill switch:** Set repository variable `GEMINI_ENABLED=false` (rules still run cleanly on every job).
+- **HTTP 402 (prepay balance $0):** Add prepay credits in AI Studio if resuming model enrichment is desired (leaving auto-reload off keeps prepay as a hard cap).
+- **HTTP 403 (key revoked / billing / API restriction):** Create/restrict a new key to **Gemini API only** in AI Studio, update `GEMINI_API_KEY` in the `production` environment secrets, verify with one run, then disable/delete the old key.
+- **HTTP 404 (`model_not_found`):** Check live models in AI Studio (`https://aistudio.google.com/docs/models`) and update repository variable `GEMINI_MODEL` to a current Flash-Lite ID (or leave unset after updating code default).
+
+### Owner setup: Gemini developer account
+
+Do this yourself. **Never paste the key into a chat, an issue, a PR, or a file in the repo.**
+
+0. **Model id:** Check https://aistudio.google.com/docs/models for a stable Flash-Lite id (default: `gemini-3.1-flash-lite`).
+1. **Google Cloud project:** Go to https://console.cloud.google.com/ → project picker → **New project** → e.g. `boolean-enrichment` → **Create** (or reuse an existing project).
+2. **Open Google AI Studio:** Sign in at https://aistudio.google.com/ with the same Google account, open **Dashboard → Projects**, and import the project if needed.
+3. **Enable billing (paid tier):** In AI Studio **API keys** or **Projects**, click **Set up billing**. New accounts default to **Prepay**: buy the minimum credit (**$5–$10**) and **leave auto-reload off**. At `$0` balance every call fails with HTTP 402 and stops cleanly (`modelStoppedBy = 'fatal'`), acting as a hard spend ceiling. (Paid tier prompts are not used to improve Google products.)
+4. **Project spend cap (extra guard):** AI Studio → **Spend** → **Monthly spend cap** → **Edit spend cap** → e.g. **$10** (experimental, ~10-minute overage latency).
+5. **Budget alert:** https://console.cloud.google.com/ → **Billing** → **Budgets & alerts** → **$10 / month** at **50% / 90% / 100%** actual spend. (Alerts only; prepay balance + `--model-max-calls` + workflow time budget bound actual spend.)
+6. **Create & restrict the API key:** AI Studio → **API keys** → **Create API key**, then hover **Unrestricted** → **Add restrictions** → **Restrict to Gemini API only** (do not restrict via the generic Cloud Console list).
+7. **Local eval before enabling (owner shell only):**
+   ```bash
+   read -s GEMINI_API_KEY && export GEMINI_API_KEY
+   npm --prefix backend run enrich:model-eval -- --set=holdout --limit=50
+   # Optional check if account has 2.5 access:
+   GEMINI_MODEL=gemini-2.5-flash-lite npm --prefix backend run enrich:model-eval -- --limit=20
+   unset GEMINI_API_KEY
+   ```
+8. **GitHub secret:** Repo **Settings → Environments → `production` → Environment secrets → Add secret** → name `GEMINI_API_KEY` (never add to `fixer` or repository-level secrets).
+9. **Repo variables:** **Settings → Secrets and variables → Actions → Variables**: leave `GEMINI_MAX_CALLS` empty to start (`300` calls/run fallback ≈ `$0.23`), optional `GEMINI_MODEL`, and finally set `GEMINI_ENABLED=true`. Watch `modelCalls`, `modelAccepted`, `modelRejected`, `modelErrors`, `modelStoppedBy`, and token totals in the next run's step summary.
+10. **Rotate (every 90 days) & revoke:** Create new restricted key → update `production` secret → after one green run, disable then delete the old key. On suspected leak/runaway spend, set `GEMINI_ENABLED=false` first and delete the key immediately in AI Studio.

@@ -14,6 +14,9 @@ These are the **only** environment variables read anywhere in `src/`, `scripts/`
 | `VERCEL_TOKEN` | not set for the backend (removed from the scrape workflow in P3a; CDN purge not used). A separate token lives only in the GitHub `vercel-production` environment for `.github/workflows/deploy.yml` | `src/cache/Publisher.ts` | `undefined` (purge skipped) | — |
 | `VERCEL_PROJECT_ID` | deprecated / unused (removed from scrape workflow in P3a) | `src/cache/Publisher.ts` | `undefined` (purge skipped) | — |
 | `GOOGLE_DRIVE_FOLDER_ID` | optional; only with `scrape:csv -- --upload-cloud` | `src/core/ScraperCSV.ts` → `uploadToGoogleDrive()` | `undefined` → file goes to the service account's own My Drive root (not visible to you) | ID from `drive.google.com/drive/folders/<ID>` |
+| `GEMINI_ENABLED` | optional; enables LLM model step for low-confidence jobs (`'true'` required) | `src/enrichment/model/modelStep.ts` (`buildModelStep`) | `undefined` (model step off) | `'true'` |
+| `GEMINI_API_KEY` | required when `GEMINI_ENABLED='true'` or running `enrich:model-eval` | `src/enrichment/model/modelStep.ts`, `ModelEvalCli.ts` | `undefined` (model step off) | Stored in GitHub `production` secret & owner shell only |
+| `GEMINI_MODEL` | optional; overrides default Gemini Flash-Lite model ID | `src/enrichment/model/modelStep.ts`, `ModelEvalCli.ts` | `'gemini-3.1-flash-lite'` | `'gemini-2.5-flash-lite'` |
 
 No other tunables are environment-driven: concurrency (`CONCURRENCY_LIMIT = 15` in `Scraper.ts`/`ScraperCSV.ts`),
 `BATCH_SIZE = 100`, Redis TTL (7 days), HTTP timeouts (10 s Ashby, 15 s CommonCrawl), retries (`maxRetries = 2`,
@@ -32,7 +35,9 @@ No other tunables are environment-driven: concurrency (`CONCURRENCY_LIMIT = 15` 
 | Name | Kind | Default | Effect |
 |---|---|---|---|
 | `ENRICH_ENABLED` | Repository variable | unset (`false`) | Workflow gate for the post-classify `Enrich job attributes` step (`--budget-min=10`); `enrich:jobs` CLI itself does not read this variable |
-| `GEMINI_MAX_CALLS` | Repository variable | unset (`300` in workflow; `2000` in CLI) | Optional integer `0..100000` passed as `--model-max-calls` to both `Enrich job attributes` and `Backfill job attributes` (consumed once E3 adds the model step) |
+| `GEMINI_ENABLED` | Repository variable | unset (`false`) | Enables `ModelStep` during `Enrich job attributes` and `Backfill job attributes` when `'true'` and `GEMINI_API_KEY` is set |
+| `GEMINI_MODEL` | Repository variable | unset (`gemini-3.1-flash-lite`) | Optional Gemini model ID override passed only to `Enrich job attributes` and `Backfill job attributes` |
+| `GEMINI_MAX_CALLS` | Repository variable | unset (`300` in workflow; `2000` in CLI) | Optional integer `0..100000` passed as `--model-max-calls` to both `Enrich job attributes` and `Backfill job attributes` (enforced per run by `ModelStep`) |
 | `enrich_backfill` | `workflow_dispatch` boolean | `false` | Runs `npm run enrich:jobs -- --all` alone (skips `enrich:companies`, `scrape`, and `classify`); works with `ENRICH_ENABLED` off |
 | `enrich_budget_min` | `workflow_dispatch` string | `'120'` | Backfill wall-time budget in minutes (`1..130`; invalid values fall back to `120`) |
 
@@ -178,3 +183,4 @@ Use the service-account mode (non-interactive) for unattended runs. Remember `sc
   is nevertheless tracked in git). Keep secrets out of git.
 - `db:menu` option 7 executes arbitrary SQL with the DB user's privileges (`$queryRawUnsafe`) — local use only.
 - The service-account scope is full `drive`; prefer a dedicated service account with access to one folder only.
+- `GEMINI_API_KEY` is stored **only** in the GitHub Actions `production` environment secrets (never in the `fixer` environment or job-level `env`) and exported ephemerally in the owner's local shell for `enrich:model-eval`; never place it in repo `.env*` files, agent logs, or thrown errors.

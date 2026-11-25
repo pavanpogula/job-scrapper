@@ -310,3 +310,24 @@ File: `src/lib/GoogleDriveUserOAuth.ts`.
 
 > Files uploaded this way are owned by the user and use the user's quota — this is the fix for the service-account quota
 > problem, but `ScraperCSV.ts` has **not** been switched to it yet.
+
+---
+
+## 7. Google Gemini API (`generateContent`, E3 — verified 2026-11-23)
+
+*(Note: legacy `ai.google.dev/gemini-api/docs/*` pages 301-redirect to `aistudio.google.com/docs/*` as of 2026-11-23.)*
+
+| Item | Detail |
+|---|---|
+| Endpoint | `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` |
+| Client implementation | `src/enrichment/model/GeminiClient.ts` (`axios`, no Gemini SDK dependency) |
+| Auth header | `x-goog-api-key: <GEMINI_API_KEY>` (header only, never query string) |
+| Default model | `gemini-3.1-flash-lite` (stable; override via `GEMINI_MODEL`, e.g. `gemini-2.5-flash-lite` for past 2.5 users) |
+| Context / Output limits | `gemini-3.1-flash-lite`: 1,048,576 input tokens / 65,536 output tokens (`maxOutputTokens: 512`, input trimmed to `6,000` chars) |
+| Structured output | `generationConfig.responseMimeType: "application/json"` + `generationConfig.responseJsonSchema` (`minYears`, `clearanceRequired`, `yearsEvidence`, `clearanceEvidence`) |
+| Temperature & Thinking | `temperature: 0`; `thinkingConfig: { thinkingLevel: 'minimal' }` sent only for `MINIMAL_THINKING_MODELS` (`gemini-3.1-flash-lite`, `gemini-3.5-flash-lite`), omitted otherwise (thinking tokens are billed as output) |
+| Response parsing | `candidates[0].finishReason` must be `'STOP'`; joins `content.parts[].text`; parses and type-checks JSON (`'blocked'` or `'bad_json'` on invalid 200 responses, counting as `modelTried` without retrying) |
+| Pricing (paid tier, per 1M tokens) | `gemini-3.1-flash-lite`: `$0.25` in / `$1.50` out (~`$0.00075` per call); `gemini-2.5-flash-lite`: `$0.10` / `$0.40`; `gemini-3.5-flash-lite`: `$0.30` / `$2.50` |
+| Data use policy | Free tier: prompts may be used to improve Google products (**Yes**); Paid tier: **No** |
+| Retry & Fatal Error Policy | Retry only transient `408` / `429` / `5xx` and socket timeouts (`ECONNABORTED`, `ETIMEDOUT`, `ECONNRESET`) up to `maxRetries = 3` (4 attempts) with exponential backoff + jitter (base `1,000` ms, honoring `Retry-After` capped at 10 s); never retry `400` (bad request), `402` (prepay balance $0), `403` (permission/revoked/billing), or `404` (`model_not_found`) — `fatal` immediately halts model calls for the remainder of the run without failing `enrich:jobs` |
+| Secret Redaction | `ModelCallError` message includes only `kind`, optional `status`, and `attempts`; never attaches raw axios errors, `config`, headers, API keys, or posting text |
