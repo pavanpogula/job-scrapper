@@ -1,0 +1,23 @@
+[
+  {
+    "id": "low-a",
+    "title": "Software Engineer",
+    "descriptionPlain": "You have 7+ years of software engineering experience. 3+ years in Go preferred. Must be able to obtain a Secret clearance.",
+    "attrsConfidence": "low",
+    "descHash": "hash-low-a"
+  },
+  {
+    "id": "low-b",
+    "title": "Data Engineer",
+    "descriptionPlain": "Experience with Spark. 2-4 years preferred, 5 years a plus.",
+    "attrsConfidence": "low",
+    "descHash": "hash-low-b"
+  },
+  {
+    "id": "high-c",
+    "title": "Designer",
+    "descriptionPlain": "5+ years of product design experience required.",
+    "attrsConfidence": "high",
+    "descHash": "hash-high-c"
+  }
+]
