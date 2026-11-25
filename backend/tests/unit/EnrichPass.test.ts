@@ -8,6 +8,8 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { ModelAnswer, ModelCallError, ModelClient } from '../../src/enrichment/model/ModelClient';
+import { ModelStep } from '../../src/enrichment/model/modelStep';
 import * as stepModule from '../../src/enrichment/step';
 import {
   buildSteps,
@@ -260,6 +262,9 @@ describe('EnrichPass unit', () => {
         modelAccepted: 0,
         modelRejected: 0,
         modelErrors: 0,
+        modelStoppedBy: null,
+        modelTokensIn: 0,
+        modelTokensOut: 0,
         written: 500,
         remaining,
         durationMs: 61234,
@@ -373,5 +378,210 @@ describe('EnrichPass unit', () => {
     expect(formatEnrichSummary(sampleReport('2026-11-23T05:00:00.000Z', 7))).toMatch(
       /\| 7 \|.*\| (done|budget|maxJobs) \|/
     );
+  });
+
+  it('marks attrsModelVersion when tried', async () => {
+    const lowA = makeFakeJob('low-a', 'Preferred: 2+ years of experience with Spark.');
+    const lowB = makeFakeJob('low-b', 'Preferred: 3+ years of experience with Go.');
+    const highC = makeFakeJob('high-c', 'Requirements\n5+ years of experience required.');
+
+    const classify = jest
+      .fn<Promise<ModelAnswer>, [unknown]>()
+      .mockImplementation(async (input: unknown) => {
+        const job = input as { id: string };
+        if (job.id === 'low-a') {
+          return {
+            minYears: 9,
+            clearanceRequired: false,
+            yearsEvidence: '9+ years hallucinated',
+            clearanceEvidence: null,
+          };
+        }
+        throw new ModelCallError('timeout', undefined, 4);
+      });
+
+    const modelStep = new ModelStep({ client: { classify }, maxCalls: 10 });
+    const writtenRows: Array<{ id: string; modelTried: boolean }> = [];
+    const pick = jest
+      .fn()
+      .mockResolvedValueOnce([lowA, lowB, highC])
+      .mockResolvedValueOnce([]);
+    const write = jest
+      .fn()
+      .mockImplementation(async (_p, rows: Array<{ id: string; modelTried: boolean }>) => {
+        writtenRows.push(...rows);
+        return rows.length;
+      });
+    const count = jest.fn().mockResolvedValue(0);
+
+    await runEnrichment(
+      new PrismaClient(),
+      { maxJobs: null, budgetMin: 10, dryRun: false, modelMaxCalls: 10 },
+      { pick, write, count, steps: [createRulesStep(), modelStep], now: () => 0 }
+    );
+
+    expect(writtenRows.find((r) => r.id === 'low-a')?.modelTried).toBe(true);
+    expect(writtenRows.find((r) => r.id === 'low-b')?.modelTried).toBe(false);
+    expect(writtenRows.find((r) => r.id === 'high-c')?.modelTried).toBe(false);
+  });
+
+  it('picker stops asking for model rows once the model step is exhausted', async () => {
+    const pickCalls: Array<{ modelEnabled: boolean }> = [];
+    const pick = jest.fn().mockImplementation(async (_p, opts: { modelEnabled: boolean; afterId?: string }) => {
+      pickCalls.push({ modelEnabled: opts.modelEnabled });
+      if (opts.afterId === undefined) {
+        return [makeFakeJob('low-1', 'Preferred: 2+ years of experience.')];
+      }
+      if (opts.afterId === 'low-1') {
+        return [makeFakeJob('low-2', 'Preferred: 3+ years of experience.')];
+      }
+      return [];
+    });
+    const write = jest.fn().mockImplementation(async (_p, rows) => rows.length);
+    const count = jest.fn().mockResolvedValue(1);
+    const classify = jest.fn<Promise<ModelAnswer>, [unknown]>().mockResolvedValue({
+      minYears: null,
+      clearanceRequired: false,
+      yearsEvidence: null,
+      clearanceEvidence: null,
+    });
+    const modelStep = new ModelStep({ client: { classify }, maxCalls: 1 });
+
+    await runEnrichment(
+      new PrismaClient(),
+      { maxJobs: null, budgetMin: 10, dryRun: false, modelMaxCalls: 1, batchSize: 1 },
+      { pick, write, count, steps: [createRulesStep(), modelStep], now: () => 0 }
+    );
+
+    expect(pickCalls[0].modelEnabled).toBe(true);
+    expect(pickCalls[1].modelEnabled).toBe(false);
+    expect(count).toHaveBeenCalledWith(expect.anything(), { modelEnabled: true });
+    expect(classify).toHaveBeenCalledTimes(1);
+  });
+
+  it('chunk stopped by the model cap is not backfill complete', async () => {
+    const batch = [
+      makeFakeJob('low-1', 'Preferred: 2+ years of experience.'),
+      makeFakeJob('low-2', 'Preferred: 3+ years of experience.'),
+    ];
+    const pick = jest.fn().mockResolvedValueOnce(batch).mockResolvedValueOnce([]);
+    const write = jest.fn().mockImplementation(async (_p, rows) => rows.length);
+    const count = jest.fn().mockImplementation(async (_p, opts: { modelEnabled: boolean }) =>
+      opts.modelEnabled ? 3 : 0
+    );
+    const classify = jest.fn<Promise<ModelAnswer>, [unknown]>().mockResolvedValue({
+      minYears: null,
+      clearanceRequired: false,
+      yearsEvidence: null,
+      clearanceEvidence: null,
+    });
+    const modelStep = new ModelStep({ client: { classify }, maxCalls: 1 });
+
+    const result = await runEnrichment(
+      new PrismaClient(),
+      { maxJobs: null, budgetMin: 10, dryRun: false, modelMaxCalls: 1 },
+      { pick, write, count, steps: [createRulesStep(), modelStep], now: () => 0 }
+    );
+
+    expect(result.remaining).toBe(3);
+    expect(result.modelStoppedBy).toBe('maxCalls');
+
+    const report: EnrichReport = {
+      ...sampleReport('2026-11-23T05:00:00.000Z', result.remaining),
+      counts: {
+        ...sampleReport('2026-11-23T05:00:00.000Z', result.remaining).counts,
+        modelStoppedBy: result.modelStoppedBy,
+      },
+    };
+    expect(formatEnrichSummary(report)).not.toContain('Backfill complete: yes');
+  });
+
+  it('default steps include the model step only with flag and key', () => {
+    const spy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    try {
+      expect(
+        buildSteps({
+          modelMaxCalls: 5,
+          env: { GEMINI_ENABLED: 'true', GEMINI_API_KEY: 'k' },
+          deadlineAt: 0,
+        }).map((s) => s.name)
+      ).toEqual(['rules', 'model']);
+      expect(buildSteps({ modelMaxCalls: 5, env: {}, deadlineAt: 0 }).map((s) => s.name)).toEqual([
+        'rules',
+      ]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('model errors never fail the pass', async () => {
+    const lowJobs = [
+      makeFakeJob('low-1', 'Preferred: 2+ years of experience.'),
+      makeFakeJob('low-2', 'Preferred: 4+ years of experience.'),
+    ];
+    const classify = jest
+      .fn<Promise<ModelAnswer>, [unknown]>()
+      .mockRejectedValue(new ModelCallError('http', 503, 4));
+    const modelStep = new ModelStep({ client: { classify }, maxCalls: 10 });
+    const pick = jest.fn().mockResolvedValueOnce(lowJobs).mockResolvedValueOnce([]);
+    const write = jest.fn().mockImplementation(async (_p, rows) => rows.length);
+    const count = jest.fn().mockResolvedValue(0);
+
+    const result = await runEnrichment(
+      new PrismaClient(),
+      { maxJobs: null, budgetMin: 10, dryRun: false, modelMaxCalls: 10 },
+      { pick, write, count, steps: [createRulesStep(), modelStep], now: () => 0 }
+    );
+
+    expect(result.modelErrors).toBe(lowJobs.length);
+    expect(result.stoppedBy).toBe('done');
+  });
+
+  it('model counts and tokens reach the result', async () => {
+    const desc = 'Preferred: 5+ years of experience with distributed systems.';
+    const lowJob = makeFakeJob('low-1', desc);
+    const client: ModelClient = {
+      classify: async () => ({
+        minYears: null,
+        clearanceRequired: false,
+        yearsEvidence: null,
+        clearanceEvidence: null,
+      }),
+    };
+    const modelStep = new ModelStep({
+      client,
+      maxCalls: 10,
+      usage: () => ({ calls: 1, promptTokens: 2100, outputTokens: 150 }),
+    });
+    const pick = jest.fn().mockResolvedValueOnce([lowJob]).mockResolvedValueOnce([]);
+    const write = jest.fn().mockImplementation(async (_p, rows) => rows.length);
+    const count = jest.fn().mockResolvedValue(0);
+
+    const result = await runEnrichment(
+      new PrismaClient(),
+      { maxJobs: null, budgetMin: 10, dryRun: false, modelMaxCalls: 10 },
+      { pick, write, count, steps: [createRulesStep(), modelStep], now: () => 0 }
+    );
+
+    expect(result.modelCalls).toBe(1);
+    expect(result.modelAccepted).toBe(1);
+    expect(result.modelTokensIn).toBe(2100);
+    expect(result.modelTokensOut).toBe(150);
+    expect(result.modelStoppedBy).toBe('done');
+  });
+
+  it('formatEnrichSummary prints model rows', () => {
+    const base = sampleReport('2026-11-23T05:00:00.000Z', 0);
+    const summary = formatEnrichSummary({
+      ...base,
+      counts: {
+        ...base.counts,
+        modelStoppedBy: 'done',
+        modelTokensIn: 2100,
+        modelTokensOut: 150,
+      },
+    });
+    expect(summary).toContain('Model stopped by');
+    expect(summary).toContain('Model tokens in');
   });
 });

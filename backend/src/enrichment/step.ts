@@ -5,6 +5,7 @@
  */
 
 import { AttrsConfidence, EnrichmentInput, JobAttributes } from './types';
+import { buildModelStep } from './model/modelStep';
 import { createRulesStep } from './rulesStep';
 
 export interface PickedJob extends EnrichmentInput {
@@ -20,6 +21,8 @@ export interface EnrichCounts {
   modelAccepted: number;
   modelRejected: number;
   modelErrors: number;
+  modelTokensIn: number;
+  modelTokensOut: number;
   written: number;
 }
 
@@ -47,8 +50,12 @@ export interface StepOptions {
 
 export type StepFactory = (opts: StepOptions) => EnrichmentStep | null;
 
-/** Default pipeline steps run on each batch (rules only in E2; model step appended in E3). */
-export const DEFAULT_STEP_FACTORIES: StepFactory[] = [() => createRulesStep()];
+/** Default pipeline steps run on each batch: rules first, optional Gemini model step when enabled. */
+export const DEFAULT_STEP_FACTORIES: StepFactory[] = [
+  () => createRulesStep(),
+  (o: StepOptions) =>
+    buildModelStep(o.env, { maxCalls: o.modelMaxCalls, deadlineAt: o.deadlineAt }),
+];
 
 /**
  * @summary Instantiates enabled enrichment steps in factory order, dropping disabled null entries
@@ -93,6 +100,8 @@ export function emptyCounts(): EnrichCounts {
     modelAccepted: 0,
     modelRejected: 0,
     modelErrors: 0,
+    modelTokensIn: 0,
+    modelTokensOut: 0,
     written: 0,
   };
 }

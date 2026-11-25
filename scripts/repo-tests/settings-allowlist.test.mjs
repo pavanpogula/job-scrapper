@@ -27,6 +27,7 @@ const DANGEROUS = [
   'discover',
   'enrich:companies',
   'enrich:jobs',
+  'enrich:model-eval',
   'cache:publish',
   'cache:purge-legacy',
   'source:deactivate',
@@ -53,6 +54,7 @@ for (const [file, commandFor] of /** @type {[string, (s: string) => string][]} *
   test(`${file}: allow-list does not auto-approve production-affecting backend scripts`, () => {
     const settings = JSON.parse(fs.readFileSync(path.join(root, file), 'utf-8'));
     const allow = /** @type {string[]} */ (settings.permissions.allow);
+    assert.ok(DANGEROUS.includes('enrich:model-eval'), 'enrich:model-eval must remain in DANGEROUS');
     for (const script of DANGEROUS) {
       const cmd = commandFor(script);
       const hit = allow.find((r) => ruleMatches(r, cmd));
