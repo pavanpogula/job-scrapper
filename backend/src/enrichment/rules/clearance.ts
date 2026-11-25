@@ -167,3 +167,13 @@ export function detectClearance(text: string): ClearanceResult {
     ambiguous: hasNegated || anyWeak || anyPreferred,
   };
 }
+
+/**
+ * @summary True when the text contains a clearance keyword after removing false friends
+ */
+export function containsClearanceKeyword(text: string): boolean {
+  if (!text || text.trim().length === 0) {
+    return false;
+  }
+  return matchSentence(stripFalseFriends(text)) !== null;
+}
