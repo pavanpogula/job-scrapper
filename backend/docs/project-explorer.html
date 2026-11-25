@@ -91,7 +91,7 @@
     <header class="header">
         <h1><span class="material-icons-round">folder_special</span> Job Scraper Project Explorer</h1>
         <p>Click any file to see details and functions</p>
-        <div class="generated">Auto-generated on 2026-11-24</div>
+        <div class="generated">Auto-generated on 2026-11-25</div>
     </header>
     <div class="main">
         <aside class="sidebar">
@@ -2977,7 +2977,7 @@
       },
       {
         "label": "Functions",
-        "value": "9"
+        "value": "11"
       }
     ],
     "functions": [
@@ -2987,7 +2987,7 @@
       },
       {
         "name": "normalizeWorkingText()",
-        "desc": "Normalizes dash variants, curly apostrophes, and NBSP with 1:1 character lengths"
+        "desc": "Normalizes dash variants, curly apostrophes, NBSP, and \"between X and Y\" connectors with 1:1 character lengths"
       },
       {
         "name": "isInlinePreferred()",
@@ -3010,8 +3010,16 @@
         "desc": "Extracts a <=160 char evidence slice from the original line covering the winning match"
       },
       {
+        "name": "hasShortLineMultiLevel()",
+        "desc": "Checks short title/heading strings for multi-level range phrases without matching org-level prose"
+      },
+      {
+        "name": "hasMultiLevelPostingCue()",
+        "desc": "Detects multi-level job postings from title or non-blurb body cues"
+      },
+      {
         "name": "hasUnparsedExperienceYears()",
-        "desc": "Checks whether \"year(s)\" appears within 40 chars of \"experience\" in normalized text"
+        "desc": "Checks whether unrejected non-hyphenated \"year(s)\" appears within 40 chars of \"experience\" inside the same qualifying sentence"
       },
       {
         "name": "extractMinYears()",

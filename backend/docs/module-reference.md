@@ -121,7 +121,7 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 ### [version.ts](../src/enrichment/version.ts) — Enrichment Version Constant
 | Symbol | Description |
 |---|---|
-| `ATTRS_VERSION` | Positive integer version (`1`) written to `Job.attrsVersion` once enriched |
+| `ATTRS_VERSION` | Positive integer version (`2`) written to `Job.attrsVersion` once enriched (bumped in `BF-026` to re-process v1 rows) |
 
 ### [buckets.ts](../src/enrichment/buckets.ts) — Experience Filter Buckets
 | Symbol | Description |
@@ -140,20 +140,20 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 ### [rules/years.ts](../src/enrichment/rules/years.ts) — Years of Experience Rules
 | Symbol | Description |
 |---|---|
-| `YearsResult` | `{ value: number \| null, evidence: string \| null, ambiguous: boolean }` |
-| `extractMinYears(text)` | Pure 9-step line/section extractor over normalized description text; ignores blurbs/money/hyphenated adjectives and flags conflicting/preferred-only lines ambiguous |
+| `YearsResult` / `ExtractMinYearsOptions` | `{ value: number \| null, evidence: string \| null, ambiguous: boolean }` and optional `{ title?: string }` (checked only for multi-level cues, never for year numbers) |
+| `extractMinYears(text, opts?)` | Pure line/section extractor over normalized description text; parses spelled-out and repeated-`years` ranges, ignores blurbs/money/age/hyphenated adjectives, marks multi-level postings ambiguous, and scopes unparsed-years checks per qualifying sentence |
 
 ### [rules/clearance.ts](../src/enrichment/rules/clearance.ts) — Security Clearance Rules
 | Symbol | Description |
 |---|---|
 | `ClearanceResult` | `{ required: boolean, evidence: string \| null, ambiguous: boolean }` |
-| `CLEARANCE_*` constants | Six frozen stateless lexicon exports (`CLEARANCE_FALSE_FRIENDS`, `CLEARANCE_STRONG_PATTERNS`, `CLEARANCE_NON_US_PATTERNS`, `CLEARANCE_WEAK_PATTERNS`, `CLEARANCE_NEGATION`, `CLEARANCE_PREFERRED`) |
-| `detectClearance(text)` | Sentence-scoped detector for US and allied security clearances respecting false friends and negations |
+| `CLEARANCE_*` constants | Six frozen stateless lexicon exports (`CLEARANCE_FALSE_FRIENDS`, `CLEARANCE_STRONG_PATTERNS`, `CLEARANCE_NON_US_PATTERNS`, `CLEARANCE_WEAK_PATTERNS`, `CLEARANCE_NEGATION`, `CLEARANCE_PREFERRED`) stripping expanded non-security false friends first, matching `polygraph`/qualified `poly` without bare `poly`, and restoring weak bare `clearance` |
+| `detectClearance(text)` | Sentence-scoped detector for US and allied security clearances stripping background/fingerprinting/child-abuse/physical/customs/regulatory false friends and respecting negations |
 
 ### [rules/index.ts](../src/enrichment/rules/index.ts) — Rules Combiner
 | Symbol | Description |
 |---|---|
-| `extractAttributesByRules(input)` | Combines `extractMinYears(descriptionPlain)` and `detectClearance(title + descriptionPlain)` into `JobAttributes` with `source: 'rules'` |
+| `extractAttributesByRules(input)` | Combines `extractMinYears(descriptionPlain, { title })` and `detectClearance(title + descriptionPlain)` into `JobAttributes` with `source: 'rules'` |
 
 ### [step.ts](../src/enrichment/step.ts) — Step Contract & Registry
 | Symbol | Description |

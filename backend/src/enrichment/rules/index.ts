@@ -12,7 +12,7 @@ import { detectClearance } from './clearance';
  * @summary Extracts minimum years, security clearance, confidence, and sparse evidence using deterministic rules
  */
 export function extractAttributesByRules(input: EnrichmentInput): JobAttributes {
-  const years = extractMinYears(input.descriptionPlain);
+  const years = extractMinYears(input.descriptionPlain, { title: input.title });
   const clearance = detectClearance(`${input.title}\n${input.descriptionPlain}`);
 
   const evidence: JobAttributes['evidence'] = {};

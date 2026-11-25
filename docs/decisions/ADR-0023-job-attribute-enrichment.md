@@ -1,6 +1,6 @@
 # ADR-0023: Job Attribute Enrichment (Experience & Security Clearance)
 
-- Status: Accepted (E1: schema & rules implemented; E2: enrichment pass implemented, BF-027)
+- Status: Accepted (E1: schema & rules implemented, `ATTRS_VERSION = 2` via `BF-026` real-data rule hardening; E2: enrichment pass implemented, `BF-027`)
 - Date: 2026-11-24
 - Deciders: owner, scraper-architect, implementer
 - Related: BF-026, BF-011, [ADR-0018](./ADR-0018-job-last-updated-detection.md), [ADR-0021](./ADR-0021-multi-source-ats.md), [ADR-0022](./ADR-0022-lever-source.md)
@@ -28,8 +28,8 @@ Implement a phased hybrid enrichment architecture (PRs E1–E6) following `docs/
 3. **Pure Rules-First Extractor (`E1`):**
    - `backend/src/enrichment/` houses pure, zero-I/O TypeScript helpers and rules (`types.ts`, `version.ts`, `buckets.ts`, `text.ts`, `rules/{years,clearance,index}.ts`).
    - `EXPERIENCE_BUCKETS` is pinned to `['0-2', '3-5', '6-9', '10plus', 'unspecified']`.
-   - `extractMinYears` scans normalized `descriptionPlain` only (never `title`, so title tokens cannot inject experience numbers), keeps original non-dash-normalized substrings (<= 160 chars) for evidence checks, discards values `> 30`, and flags conflicting/preferred-only/unparsed cases as `ambiguous`.
-   - `detectClearance` scans `` `${input.title}\n${input.descriptionPlain}` `` (E1 Note 8) so title-only clearances (`Engineer (TS/SCI)`) are captured, strips false friends, evaluates allied US/non-US patterns, respects sentence-scoped negation, and marks preferred/weak/mixed cases `ambiguous`.
+   - `extractMinYears` scans normalized `descriptionPlain` only for numbers (using optional `opts.title` strictly for multi-level ambiguity cues like `"all levels"` or `"Senior/Staff"`, never to inject experience numbers), supports spelled-out/repeated-`years` ranges, rejects age phrases, keeps original non-dash-normalized substrings (<= 160 chars) for evidence checks, discards values `> 30`, and flags conflicting/multi-level/preferred-only/sentence-scoped unparsed cases as `ambiguous`.
+   - `detectClearance` scans `` `${input.title}\n${input.descriptionPlain}` `` (E1 Note 8) so title-only clearances (`Engineer (TS/SCI)`) are captured, strips physical/regulatory/background/fingerprinting/child-abuse/customs/clearance-sale false friends first, matches `polygraph` and qualified `(ci|full-scope|lifestyle|counter-intelligence) poly` (never bare `"poly"`), evaluates strong US/agency/obtain/active/non-US patterns plus weak bare `"clearance"`, respects sentence-scoped negation, and marks preferred/weak/mixed cases `ambiguous`.
 4. **Labelling Rule (`DESIGN §6.2`):**
    Minimum years required for a typical applicant: overall beats sub-skill, base lowest-degree path wins (`5+ BS / 3+ MS`), required beats preferred (preferred-only yields `null`), and ranges use the lower bound.
 5. **Phased Rollout (`E1–E6`):**

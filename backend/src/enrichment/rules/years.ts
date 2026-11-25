@@ -11,7 +11,13 @@ export interface YearsResult {
   ambiguous: boolean;
 }
 
+/** Optional context passed to extractMinYears (never used to extract year numbers). */
+export interface ExtractMinYearsOptions {
+  title?: string;
+}
+
 const NUMBER_WORDS: Readonly<Record<string, number>> = {
+  zero: 0,
   one: 1,
   two: 2,
   three: 3,
@@ -24,16 +30,33 @@ const NUMBER_WORDS: Readonly<Record<string, number>> = {
   ten: 10,
   eleven: 11,
   twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
   fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
   twenty: 20,
+  thirty: 30,
 };
 
-const NUM_TOKEN = '(?:\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty)';
+const NUM_WORDS_PATTERN =
+  'zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty';
+const NUM_TOKEN = `(?:\\d{1,2}|${NUM_WORDS_PATTERN})`;
+const PAREN_NUM = `(?:\\s*\\((?:\\d{1,2}|${NUM_WORDS_PATTERN})\\))?`;
 const CANDIDATE_SOURCE =
-  `(?<![\\d,.$€£])\\b(${NUM_TOKEN})(?:\\s*\\(\\d{1,2}\\))?\\s*(?:\\+|plus)?\\s*(?:(?:-|to)\\s*(${NUM_TOKEN})\\s*\\+?\\s*)?(?:or more\\s+|or greater\\s+)?(?:years?|yrs?)\\b(?!-)`;
+  `(?<![\\d,.$€£])(?<!\\w-)\\b(${NUM_TOKEN})${PAREN_NUM}\\s*(?:\\+|plus)?\\s*(?:(?:(?:years?|yrs?)\\s+)?(?:-|to|through)\\s*(?:${NUM_TOKEN})${PAREN_NUM}\\s*(?:\\+|plus)?\\s*)?(?:or more\\s+|or greater\\s+)?(?:years?|yrs?)\\b(?!-)`;
+const BETWEEN_AND_RE = new RegExp(
+  `(\\bbetween\\s+${NUM_TOKEN}${PAREN_NUM}(?:\\s+(?:years?|yrs?))?\\s+)and(?=\\s+${NUM_TOKEN})`,
+  'gi'
+);
 
-const POST_REJECT_RE = /^\s*(?:'s?\s*)?(?:in a row|ago|old|running|straight)\b/i;
+const POST_REJECT_RE =
+  /^\s*(?:'s?\s*)?(?:in a row|ago|old(?:er)?|of\s+age|(?:or\s+)?older|(?:or\s+)?younger|(?:or\s+)?under|running|straight)\b/i;
 const PRE_REJECT_RE = /\b(?:per|each|every|a)\b\s*$/i;
+const PRE_AGE_RE =
+  /\bage(?:\s+(?:of|requirement|limit|minimum))?\s*:?\s*(?:at\s+least\s+|minimum\s+(?:of\s+)?)?$/i;
 
 const REQ_HEADING_RE =
   /requirements|qualifications|what you(?:'ll| will)? (?:need|bring)|you (?:have|bring)|about you|must have|minimum|basic|who you are|what we(?:'re| are) looking for|what we look for|what we require|ideally you(?:'d| would) have/i;
@@ -63,8 +86,23 @@ const BACHELOR_ANY_RE = /\b(?:bachelor'?s?|bs|b\.?s\.?|undergraduate)\b/i;
 const AMBIGUOUS_LINE_RE = /not required|or equivalent experience in lieu|\bor\b.*\byears?\b.*\bor\b/i;
 const LEVEL_LABEL_RE =
   /^(?:junior|mid|senior|staff|principal|lead|level|L\d|IC\d|P\d)\b[^:\n]{0,40}:/i;
+const LEVEL_HEADING_QUALIFIER_RE =
+  /\b(?:level\s+(?:I{1,3}|IV|[1-5])|(?:tech(?:nician)?|engineer|developer|specialist|analyst|manager|designer|scientist|architect|rep(?:resentative)?)\s+(?:I{1,3}|IV|[1-5])|\b(?:junior|entry[- ]level|associate|mid[- ]level|senior|sr\.?|staff|principal)\b)/i;
 
-const YEAR_WORD_RE = /\byears?\b/gi;
+const MULTI_LEVEL_ORG_SUFFIX_RE =
+  /^\s*(?:of|within|in|across)\s+(?:the\s+|an?\s+|our\s+)?(?:organization|company|business|enterprise|leadership|management|stakeholders?|personnel|staff|team|clients?|customers?)\b/i;
+const MULTI_LEVEL_COMM_PREFIX_RE =
+  /\b(?:with|engage|engaging|engagement|communicate|communicating|collaborate|collaborating|interact|interacting|present|presenting|work|working|partner|partnering|relationships?)\s+(?:at\s+|across\s+|with\s+)?$/i;
+
+const UNPARSED_REJECT_SPAN_RE = new RegExp(
+  [
+    `\\b(?:per|each|every|a)\\s+(?:years?|yrs?)\\b`,
+    `\\b(?:${NUM_TOKEN})?${PAREN_NUM}\\s*(?:\\+|plus)?\\s*(?:years?|yrs?)\\s*(?:'s?\\s*)?(?:in a row|ago|old(?:er)?|of\\s+age|(?:or\\s+)?older|(?:or\\s+)?younger|(?:or\\s+)?under|running|straight)\\b`,
+    `\\bage(?:\\s+(?:of|requirement|limit|minimum))?\\s*:?\\s*(?:at\\s+least\\s+|minimum\\s+(?:of\\s+)?)?(?:${NUM_TOKEN})${PAREN_NUM}\\s*(?:years?|yrs?)\\b`,
+  ].join('|'),
+  'gi'
+);
+const NON_HYPHEN_YEAR_RE = /(?<!-)\b(?:years?|yrs?)\b(?!-)/gi;
 const EXP_WORD_RE = /\bexperience\b/gi;
 
 const MAX_REASONABLE_YEARS = 30;
@@ -78,6 +116,7 @@ interface Candidate {
   matchStart: number;
   matchEnd: number;
   preferred: boolean;
+  levelHeading: string | null;
   normLine: string;
   rawLine: string;
 }
@@ -94,13 +133,14 @@ function parseNumToken(token: string): number {
 }
 
 /**
- * @summary Normalizes dash variants, curly apostrophes, and NBSP with 1:1 character lengths
+ * @summary Normalizes dash variants, curly apostrophes, NBSP, and "between X and Y" connectors with 1:1 character lengths
  */
 function normalizeWorkingText(line: string): string {
   return line
     .replace(/[\u2013\u2014]/g, '-')
     .replace(/[\u2018\u2019]/g, "'")
-    .replace(/\u00A0/g, ' ');
+    .replace(/\u00A0/g, ' ')
+    .replace(BETWEEN_AND_RE, '$1to ');
 }
 
 /**
@@ -227,24 +267,108 @@ function buildEvidence(rawLine: string, normLine: string, matchStart: number, ma
 }
 
 /**
- * @summary Checks whether "year(s)" appears within 40 chars of "experience" in normalized text
+ * @summary Checks short title/heading strings for multi-level range phrases without matching org-level prose
  */
-function hasUnparsedExperienceYears(normText: string): boolean {
-  const collapsed = collapseSpaces(normText);
-  const yearPositions: number[] = [];
-  const expPositions: number[] = [];
-
-  for (const m of collapsed.matchAll(YEAR_WORD_RE)) {
-    if (m.index !== undefined) yearPositions.push(m.index);
+function hasShortLineMultiLevel(s: string): boolean {
+  const re = /\b(?:all|multiple|various|several)\s+(?:experience\s+|seniority\s+|career\s+)?levels\b/gi;
+  for (const m of s.matchAll(re)) {
+    const start = m.index ?? 0;
+    const end = start + m[0].length;
+    const before = s.slice(Math.max(0, start - 35), start);
+    const after = s.slice(end);
+    if (MULTI_LEVEL_ORG_SUFFIX_RE.test(after)) continue;
+    if (MULTI_LEVEL_COMM_PREFIX_RE.test(before)) continue;
+    return true;
   }
-  for (const m of collapsed.matchAll(EXP_WORD_RE)) {
-    if (m.index !== undefined) expPositions.push(m.index);
+  if (/\b(?:I\s*(?:\/|,)\s*II(?:\s*(?:\/|,|\bor\b)\s*(?:III|Senior|Sr\.?))?|II\s*(?:\/|,)\s*III|L[2-7]\s*\/\s*L[3-8]|IC[2-7]\s*\/\s*IC[3-8])\b/.test(s)) {
+    return true;
+  }
+  if (/\b(?:junior|jr\.?|mid(?:-level)?|senior|sr\.?|staff|principal)\s*\/\s*(?:mid(?:-level)?|senior|sr\.?|staff|principal)\b/i.test(s)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @summary Detects multi-level job postings from title or non-blurb body cues
+ */
+function hasMultiLevelPostingCue(normLines: string[], normTitle: string): boolean {
+  if (normTitle && hasShortLineMultiLevel(normTitle)) {
+    return true;
   }
 
-  for (const yIdx of yearPositions) {
-    for (const eIdx of expPositions) {
-      if (Math.abs(yIdx - eIdx) <= 40) {
-        return true;
+  let section: SectionKind = 'neutral';
+  for (const line of normLines) {
+    const trimmed = collapseSpaces(line);
+    if (trimmed.length === 0) continue;
+
+    section = classifyHeading(trimmed, section);
+    if (section === 'other') continue;
+    if (MONEY_LINE_RE.test(line)) continue;
+    if (BLURB_LINE_RE.test(line) && !CANDIDATE_PRONOUN_RE.test(line)) continue;
+
+    if (trimmed.length <= 80 && !trimmed.endsWith('.') && hasShortLineMultiLevel(trimmed)) {
+      return true;
+    }
+
+    const hiringMatch = trimmed.match(
+      /\b(?:hiring|interviewing|recruiting|seeking|considering|open(?:\s+to)?|looking\s+for|welcoming|accepting)\b[^.;\n]{0,60}\b(?:at|across|for|from)?\s*(?:all|multiple|several|various)\s+(?:experience\s+|seniority\s+|career\s+|engineering\s+)?levels\b(.*)/i
+    );
+    if (hiringMatch && !MULTI_LEVEL_ORG_SUFFIX_RE.test(hiringMatch[1])) {
+      return true;
+    }
+
+    if (
+      /\b(?:this\s+)?(?:role|position|requisition|opening|posting)\b[^.;\n]{0,60}\b(?:all|multiple|several|various)\s+(?:experience\s+|seniority\s+|career\s+)?levels\b/i.test(
+        trimmed
+      )
+    ) {
+      return true;
+    }
+
+    if (
+      /\b(?:can\s+be\s+hired|may\s+be\s+(?:hired|filled)|hired\s+at)\b[^.;\n]{0,60}\b(?:level\s+)?(?:I\b[^.;\n]{0,25}\bII\b|1\b[^.;\n]{0,25}\b2\b|(?:junior|associate|entry)[^.;\n]{0,30}(?:mid|senior|staff)|(?:mid|senior)[^.;\n]{0,30}(?:senior|staff|principal))/i.test(
+        trimmed
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * @summary Checks whether unrejected non-hyphenated "year(s)" appears within 40 chars of "experience" inside the same qualifying sentence
+ */
+function hasUnparsedExperienceYears(normLines: string[]): boolean {
+  let section: SectionKind = 'neutral';
+  for (const normLine of normLines) {
+    const trimmed = collapseSpaces(normLine);
+    section = classifyHeading(trimmed, section);
+    if (trimmed.length === 0) continue;
+    if (section === 'other') continue;
+    if (MONEY_LINE_RE.test(normLine)) continue;
+    if (BLURB_LINE_RE.test(normLine) && !CANDIDATE_PRONOUN_RE.test(normLine)) continue;
+
+    for (const rawSent of trimmed.split(/[.;!?]+/)) {
+      const cleaned = rawSent.replace(UNPARSED_REJECT_SPAN_RE, (m) => ' '.repeat(m.length));
+      const yearPositions: number[] = [];
+      const expPositions: number[] = [];
+
+      for (const m of cleaned.matchAll(NON_HYPHEN_YEAR_RE)) {
+        if (m.index !== undefined) yearPositions.push(m.index);
+      }
+      for (const m of cleaned.matchAll(EXP_WORD_RE)) {
+        if (m.index !== undefined) expPositions.push(m.index);
+      }
+
+      for (const yIdx of yearPositions) {
+        for (const eIdx of expPositions) {
+          if (Math.abs(yIdx - eIdx) <= 40) {
+            return true;
+          }
+        }
       }
     }
   }
@@ -254,22 +378,45 @@ function hasUnparsedExperienceYears(normText: string): boolean {
 /**
  * @summary Extracts minimum required years of experience, original-text evidence, and ambiguity flag
  */
-export function extractMinYears(text: string): YearsResult {
+export function extractMinYears(text: string, opts?: ExtractMinYearsOptions): YearsResult {
   if (!text || text.trim().length === 0) {
     return { value: null, evidence: null, ambiguous: false };
   }
 
   const rawLines = text.split(/\r?\n/);
+  const normLines = rawLines.map(normalizeWorkingText);
+  const normTitle = opts?.title ? collapseSpaces(normalizeWorkingText(opts.title)) : '';
   let section: SectionKind = 'neutral';
+  let currentLevelHeading: string | null = null;
   const accepted: Candidate[] = [];
   let sawOverLimit = false;
 
   for (let i = 0; i < rawLines.length; i++) {
     const rawLine = rawLines[i];
-    const normLine = normalizeWorkingText(rawLine);
+    const normLine = normLines[i];
     const trimmedNorm = collapseSpaces(normLine);
 
+    const prevSection: SectionKind = section;
     section = classifyHeading(trimmedNorm, section);
+    if (
+      trimmedNorm.length > 0 &&
+      trimmedNorm.length <= 60 &&
+      !trimmedNorm.endsWith('.') &&
+      section !== prevSection &&
+      section !== 'required'
+    ) {
+      currentLevelHeading = null;
+    } else if (
+      trimmedNorm.length > 0 &&
+      trimmedNorm.length <= 60 &&
+      !trimmedNorm.endsWith('.') &&
+      section === 'required' &&
+      REQ_HEADING_RE.test(trimmedNorm) &&
+      LEVEL_HEADING_QUALIFIER_RE.test(trimmedNorm)
+    ) {
+      currentLevelHeading = trimmedNorm.toLowerCase();
+    }
+
     if (trimmedNorm.length === 0) continue;
 
     if (MONEY_LINE_RE.test(normLine)) continue;
@@ -289,9 +436,15 @@ export function extractMinYears(text: string): YearsResult {
       const end = start + match[0].length;
       const after = normLine.slice(end);
       if (POST_REJECT_RE.test(after)) continue;
+      if (after.trim().length === 0 && i + 1 < normLines.length) {
+        if (POST_REJECT_RE.test(` ${normLines[i + 1].trimStart()}`)) continue;
+      }
 
       const before12 = normLine.slice(Math.max(0, start - 12), start);
       if (PRE_REJECT_RE.test(before12)) continue;
+
+      const before35 = normLine.slice(Math.max(0, start - 35), start);
+      if (PRE_AGE_RE.test(before35)) continue;
 
       const value = parseNumToken(match[1]);
       if (Number.isNaN(value) || value < 0) continue;
@@ -310,6 +463,7 @@ export function extractMinYears(text: string): YearsResult {
         matchStart: start,
         matchEnd: end,
         preferred,
+        levelHeading: !preferred && section === 'required' ? currentLevelHeading : null,
         normLine,
         rawLine,
       });
@@ -321,7 +475,7 @@ export function extractMinYears(text: string): YearsResult {
 
   if (required.length === 0) {
     const onlyPreferred = preferred.length > 0;
-    const unparsedYears = !onlyPreferred && !sawOverLimit && hasUnparsedExperienceYears(normalizeWorkingText(text));
+    const unparsedYears = !onlyPreferred && !sawOverLimit && hasUnparsedExperienceYears(normLines);
     return {
       value: null,
       evidence: null,
@@ -339,15 +493,23 @@ export function extractMinYears(text: string): YearsResult {
   const evidence = buildEvidence(winner.rawLine, winner.normLine, winner.matchStart, winner.matchEnd);
 
   const levelValues = new Set<number>();
+  const headingLevels = new Set<string>();
+  const headingLevelValues = new Set<number>();
   for (const c of required) {
     if (LEVEL_LABEL_RE.test(c.normLine.trimStart())) {
       levelValues.add(c.value);
+    }
+    if (c.levelHeading !== null) {
+      headingLevels.add(c.levelHeading);
+      headingLevelValues.add(c.value);
     }
   }
 
   const ambiguous =
     AMBIGUOUS_LINE_RE.test(winner.normLine) ||
-    levelValues.size >= 2;
+    levelValues.size >= 2 ||
+    (headingLevels.size >= 2 && headingLevelValues.size >= 2) ||
+    hasMultiLevelPostingCue(normLines, normTitle);
 
   return {
     value: winner.value,

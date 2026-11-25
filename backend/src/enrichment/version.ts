@@ -7,4 +7,4 @@
 /**
  * Bump when rules change; every job is re-processed by E2's picker (attrsVersion < ATTRS_VERSION).
  */
-export const ATTRS_VERSION = 1;
+export const ATTRS_VERSION = 2;
