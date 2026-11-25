@@ -147,8 +147,8 @@ Every file that touches the DB creates its **own** `new PrismaClient()` at modul
 | Symbol | Description |
 |---|---|
 | `ClearanceResult` | `{ required: boolean, evidence: string \| null, ambiguous: boolean }` |
-| `CLEARANCE_*` constants | Six frozen stateless lexicon exports (`CLEARANCE_FALSE_FRIENDS`, `CLEARANCE_STRONG_PATTERNS`, `CLEARANCE_NON_US_PATTERNS`, `CLEARANCE_WEAK_PATTERNS`, `CLEARANCE_NEGATION`, `CLEARANCE_PREFERRED`) scoped to security clearances and full `polygraph` |
-| `detectClearance(text)` | Sentence-scoped detector for US and allied security clearances stripping background/fingerprinting/child-abuse/physical false friends and respecting negations |
+| `CLEARANCE_*` constants | Six frozen stateless lexicon exports (`CLEARANCE_FALSE_FRIENDS`, `CLEARANCE_STRONG_PATTERNS`, `CLEARANCE_NON_US_PATTERNS`, `CLEARANCE_WEAK_PATTERNS`, `CLEARANCE_NEGATION`, `CLEARANCE_PREFERRED`) stripping expanded non-security false friends first, matching `polygraph`/qualified `poly` without bare `poly`, and restoring weak bare `clearance` |
+| `detectClearance(text)` | Sentence-scoped detector for US and allied security clearances stripping background/fingerprinting/child-abuse/physical/customs/regulatory false friends and respecting negations |
 
 ### [rules/index.ts](../src/enrichment/rules/index.ts) — Rules Combiner
 | Symbol | Description |
