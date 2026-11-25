@@ -409,6 +409,49 @@
                     <div class="tree-item folder" onclick="toggleFolder(this)">
                         <span class="material-icons-round arrow">chevron_right</span>
                         <span class="material-icons-round folder-icon">folder</span>
+                        <span>model</span>
+                    </div>
+                    <ul><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_model_GeminiClient_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GeminiClient.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_model_ModelClient_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ModelClient.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_model_ModelEvalCli_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ModelEvalCli.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_model_modelStep_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>modelStep.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_model_prompt_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>prompt.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('src_enrichment_model_validate_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>validate.ts</span>
+                        
+                    </div>
+                </li></ul>
+                </li><li class="">
+                    <div class="tree-item folder" onclick="toggleFolder(this)">
+                        <span class="material-icons-round arrow">chevron_right</span>
+                        <span class="material-icons-round folder-icon">folder</span>
                         <span>rules</span>
                     </div>
                     <ul><li>
@@ -1067,6 +1110,12 @@
                         
                     </div>
                 </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_GeminiClient_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>GeminiClient.test.ts</span>
+                        
+                    </div>
+                </li><li>
                     <div class="tree-item file" onclick="showFile('tests_unit_GenerateDocs_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>GenerateDocs.test.ts</span>
@@ -1178,6 +1227,30 @@
                     <div class="tree-item file" onclick="showFile('tests_unit_LeverDiscovery_test_ts')">
                         <span class="material-icons-round">description</span>
                         <span>LeverDiscovery.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ModelEval_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ModelEval.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ModelPrompt_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ModelPrompt.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ModelStep_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ModelStep.test.ts</span>
+                        
+                    </div>
+                </li><li>
+                    <div class="tree-item file" onclick="showFile('tests_unit_ModelValidate_test_ts')">
+                        <span class="material-icons-round">description</span>
+                        <span>ModelValidate.test.ts</span>
                         
                     </div>
                 </li><li>
@@ -2808,6 +2881,260 @@
       }
     ]
   },
+  "src_enrichment_model_GeminiClient_ts": {
+    "name": "GeminiClient.ts",
+    "path": "src/enrichment/model/GeminiClient.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "axios REST call with structured JSON output, retry/backoff and usage counters for the enrichment model step",
+    "tags": [
+      "Enrichment",
+      "Gemini",
+      "Model",
+      "HTTP",
+      "Retry",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "5"
+      }
+    ],
+    "functions": [
+      {
+        "name": "asTokenCount()",
+        "desc": "Converts an optional token count field into a non-negative finite number"
+      },
+      {
+        "name": "parseModelAnswer()",
+        "desc": "Validates parsed JSON output against the expected ModelAnswer shape"
+      },
+      {
+        "name": "constructor()",
+        "desc": "Initializes a GeminiClient instance without reading process.env"
+      },
+      {
+        "name": "classify()",
+        "desc": "Sends one job posting to Gemini generateContent with retries on 408/429/5xx and socket timeouts"
+      },
+      {
+        "name": "getUsage()",
+        "desc": "Returns cumulative HTTP 200 calls and prompt/output token counts"
+      }
+    ]
+  },
+  "src_enrichment_model_ModelClient_ts": {
+    "name": "ModelClient.ts",
+    "path": "src/enrichment/model/ModelClient.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "ModelAnswer, ModelClient, ModelUsage and ModelCallError shared by the Gemini client and the model step",
+    "tags": [
+      "Enrichment",
+      "Model",
+      "Errors",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "2"
+      }
+    ],
+    "functions": [
+      {
+        "name": "classify()",
+        "desc": "Classifies one job posting into structured years and clearance evidence"
+      },
+      {
+        "name": "constructor()",
+        "desc": "Builds a redacted ModelCallError with kind, optional HTTP status, and attempt count"
+      }
+    ]
+  },
+  "src_enrichment_model_ModelEvalCli_ts": {
+    "name": "ModelEvalCli.ts",
+    "path": "src/enrichment/model/ModelEvalCli.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Scores rules vs rules+validated model on the golden set and estimates cost; needs GEMINI_API_KEY in the owner's shell, never CI",
+    "tags": [
+      "Enrichment",
+      "Model",
+      "Eval",
+      "CLI",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "7"
+      }
+    ],
+    "functions": [
+      {
+        "name": "parseIntFlag()",
+        "desc": "Parses an integer CLI flag value with inclusive lower bound validation"
+      },
+      {
+        "name": "parsePriceFlag()",
+        "desc": "Parses a non-negative floating-point USD price flag"
+      },
+      {
+        "name": "parseEvalArgs()",
+        "desc": "Parses and validates CLI flags for enrich:model-eval"
+      },
+      {
+        "name": "scoreYears()",
+        "desc": "Local precision/recall helper matching tests/helpers/goldenScore.ts scoreYears definition"
+      },
+      {
+        "name": "scoreClearance()",
+        "desc": "Local precision/recall helper matching tests/helpers/goldenScore.ts scoreClearance definition"
+      },
+      {
+        "name": "formatPR()",
+        "desc": "Formats precision and recall pair percentages concisely for stdout reporting"
+      },
+      {
+        "name": "runModelEval()",
+        "desc": "Runs golden-set model evaluation without DB access and prints P/R, usage, and cost estimates"
+      }
+    ]
+  },
+  "src_enrichment_model_modelStep_ts": {
+    "name": "modelStep.ts",
+    "path": "src/enrichment/model/modelStep.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Sends low-confidence jobs to the model within a call cap and deadline, keeps validated answers, never fails the pass",
+    "tags": [
+      "Enrichment",
+      "Model",
+      "Step",
+      "Concurrency",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "constructor()",
+        "desc": "Initializes a ModelStep with bounded concurrency, call cap, and optional wall-clock deadline"
+      },
+      {
+        "name": "usage()",
+        "desc": "Returns cumulative call and token counters from the underlying client if available"
+      },
+      {
+        "name": "run()",
+        "desc": "Evaluates low-confidence jobs in prior order and returns only validated model overrides"
+      },
+      {
+        "name": "buildModelStep()",
+        "desc": "Registers ModelStep only when GEMINI_ENABLED === 'true' and GEMINI_API_KEY is non-empty"
+      }
+    ]
+  },
+  "src_enrichment_model_prompt_ts": {
+    "name": "prompt.ts",
+    "path": "src/enrichment/model/prompt.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "System prompt, JSON response schema and requirement-first description trimming for the model step",
+    "tags": [
+      "Enrichment",
+      "Model",
+      "Prompt",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "3"
+      }
+    ],
+    "functions": [
+      {
+        "name": "isHeadingCandidate()",
+        "desc": "Detects whether a short line introduces a new section heading"
+      },
+      {
+        "name": "trimDescriptionForModel()",
+        "desc": "Keeps highest-scoring years, clearance, and requirement-section lines within maxChars in original order"
+      },
+      {
+        "name": "buildUserPrompt()",
+        "desc": "Builds the user prompt containing title and fenced, requirement-trimmed posting text"
+      }
+    ]
+  },
+  "src_enrichment_model_validate_ts": {
+    "name": "validate.ts",
+    "path": "src/enrichment/model/validate.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Accepts a model answer only when its evidence, years and clearance claims are confirmed from the job text",
+    "tags": [
+      "Enrichment",
+      "Model",
+      "Validation",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "4"
+      }
+    ],
+    "functions": [
+      {
+        "name": "normalizeForMatch()",
+        "desc": "Normalizes Unicode compatibility forms, curly quotes, dashes, whitespace, and casing for substring checks"
+      },
+      {
+        "name": "isValidEvidenceSubstring()",
+        "desc": "Checks that non-null evidence is 6-300 normalized chars and appears in normalized title + description"
+      },
+      {
+        "name": "evidenceConfirmsYears()",
+        "desc": "Checks that yearsEvidence contains a unit cue and either digits or the English word for minYears"
+      },
+      {
+        "name": "validateModelAnswer()",
+        "desc": "Validates a raw ModelAnswer against title + descriptionPlain and the E1 clearance lexicon"
+      }
+    ]
+  },
   "src_enrichment_picker_ts": {
     "name": "picker.ts",
     "path": "src/enrichment/picker.ts",
@@ -2905,7 +3232,7 @@
       },
       {
         "label": "Functions",
-        "value": "4"
+        "value": "5"
       }
     ],
     "functions": [
@@ -2924,6 +3251,10 @@
       {
         "name": "detectClearance()",
         "desc": "Detects government security clearance requirements or eligibility from job title and/or description"
+      },
+      {
+        "name": "containsClearanceKeyword()",
+        "desc": "True when the text contains a clearance keyword after removing false friends"
       }
     ]
   },
@@ -5942,6 +6273,33 @@
     ],
     "functions": []
   },
+  "tests_unit_GeminiClient_test_ts": {
+    "name": "GeminiClient.test.ts",
+    "path": "tests/unit/GeminiClient.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Verifies structured output payload, thinkingConfig gating, retries (408/429/timeout), fatal errors (402), bad_json/blocked handling, usage accounting, and API key non-leakage (BF-027)",
+    "tags": [
+      "test",
+      "unit",
+      "enrichment",
+      "model",
+      "gemini",
+      "http",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
   "tests_unit_GenerateDocs_test_ts": {
     "name": "GenerateDocs.test.ts",
     "path": "tests/unit/GenerateDocs.test.ts",
@@ -6418,6 +6776,110 @@
       "Validation",
       "Fixtures",
       "ADR-0022"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ModelEval_test_ts": {
+    "name": "ModelEval.test.ts",
+    "path": "tests/unit/ModelEval.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Verifies missing-key refusal, golden-set scoring with injected client, flag validation, and zero network calls (BF-027)",
+    "tags": [
+      "test",
+      "unit",
+      "enrichment",
+      "model",
+      "eval",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ModelPrompt_test_ts": {
+    "name": "ModelPrompt.test.ts",
+    "path": "tests/unit/ModelPrompt.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Verifies requirement-first description trimming, fenced user prompt formatting, and Gemini JSON schema (BF-027)",
+    "tags": [
+      "test",
+      "unit",
+      "enrichment",
+      "model",
+      "prompt",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ModelStep_test_ts": {
+    "name": "ModelStep.test.ts",
+    "path": "tests/unit/ModelStep.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Verifies low-confidence routing, call cap, deadline, error handling, answer validation, and env gating (BF-027)",
+    "tags": [
+      "test",
+      "unit",
+      "enrichment",
+      "model",
+      "step",
+      "BF-027"
+    ],
+    "info": [
+      {
+        "label": "Type",
+        "value": "TypeScript"
+      },
+      {
+        "label": "Functions",
+        "value": "0"
+      }
+    ],
+    "functions": []
+  },
+  "tests_unit_ModelValidate_test_ts": {
+    "name": "ModelValidate.test.ts",
+    "path": "tests/unit/ModelValidate.test.ts",
+    "icon": "📝",
+    "iconClass": "blue",
+    "summary": "Verifies deterministic evidence matching, years bounds, clearance lexicon checks, and error semantics (BF-027)",
+    "tags": [
+      "test",
+      "unit",
+      "enrichment",
+      "model",
+      "validation",
+      "BF-027"
     ],
     "info": [
       {

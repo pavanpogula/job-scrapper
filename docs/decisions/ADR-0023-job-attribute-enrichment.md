@@ -1,6 +1,6 @@
 # ADR-0023: Job Attribute Enrichment (Experience & Security Clearance)
 
-- Status: Accepted (E1: schema & rules implemented, `ATTRS_VERSION = 2` via `BF-026` real-data rule hardening; E2: enrichment pass implemented, `BF-027`)
+- Status: Accepted (E1: schema & rules implemented, `ATTRS_VERSION = 2` via `BF-026` real-data rule hardening; E2: enrichment pass implemented, `BF-027`; E3: Gemini model step implemented behind `GEMINI_ENABLED`, `BF-027`, default model `gemini-3.1-flash-lite` verified 2026-11-24)
 - Date: 2026-11-24
 - Deciders: owner, scraper-architect, implementer
 - Related: BF-026, BF-011, [ADR-0018](./ADR-0018-job-last-updated-detection.md), [ADR-0021](./ADR-0021-multi-source-ats.md), [ADR-0022](./ADR-0022-lever-source.md)

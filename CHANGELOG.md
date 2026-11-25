@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **feat(enrichment)**: Gemini model step validated by rules, disabled by default (`BF-027`, `ADR-0023`).
+  - Added optional `ModelStep` (`name: 'model'`, `MODEL_CONCURRENCY = 4`, `DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite'`) in `backend/src/enrichment/model/` (`ModelClient.ts`, `prompt.ts`, `validate.ts`, `GeminiClient.ts`, `modelStep.ts`, `ModelEvalCli.ts`) registered behind `GEMINI_ENABLED=true` and non-empty `GEMINI_API_KEY`.
+  - Routes only `confidence === 'low'` postings from E1 rules, trims inputs requirement-first to `6,000` chars, uses `x-goog-api-key` header only with `responseJsonSchema`, retries `408`/`429`/`5xx`/timeouts, halts cleanly on fatal `400`–`404` without exposing headers/keys, and marks `modelTried` only on HTTP 200 responses so transport failures stay retryable and failures never fail `enrich:jobs`.
+  - Validates every model answer deterministically via `validateModelAnswer` (6–300 normalized evidence substring in title+description, integer years `0–30` backed by number token/word and `year(s)/yr(s)`, `containsClearanceKeyword` false-friend stripping, and rejecting false overrides where E1 found an unambiguous clearance).
+  - Wired `modelStoppedBy`, `modelTokensIn`, and `modelTokensOut` into `EnrichCounts`, `runEnrichment`, `EnrichReport`, `EnrichCli`, and `formatEnrichSummary`; scoped `GEMINI_ENABLED`, `GEMINI_API_KEY`, and `GEMINI_MODEL` in `.github/workflows/scrape-daily.yml` exclusively to `Enrich job attributes` and `Backfill job attributes`; added owner-only `npm run enrich:model-eval`.
+  - Guarded by `ModelValidate.test.ts` [10], `ModelPrompt.test.ts` [4], `GeminiClient.test.ts` [9], `ModelStep.test.ts` [11], `ModelEval.test.ts` [3], extended `EnrichPass.test.ts` [30], `toggles.test.mjs`, and `settings-allowlist.test.mjs`. Nothing runs in production until the owner completes setup and sets `GEMINI_ENABLED=true`.
+
 - **fix(enrichment)**: Hardened job-attribute extraction rules against real-data false positives and bumped `ATTRS_VERSION` from `1` to `2` (`BF-026`, `ADR-0023`).
   - Root cause & rule fixes:
     1. **Clearance `poly` false positives (`clearance.ts`):** Removed bare `/\bpoly\b/i` while keeping qualified `(ci|full-scope|lifestyle|counter-intelligence) poly` and `polygraph` so `"poly-bag"`, `"poly activité"`, and `"Cal Poly"` never match while `"CI poly"` and `"Full scope poly"` still match.

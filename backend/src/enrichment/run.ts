@@ -6,6 +6,8 @@
 
 import { PrismaClient } from '@prisma/client';
 import { pickJobsForEnrichment, countPickable } from './picker';
+import type { ModelUsage } from './model/ModelClient';
+import type { ModelStopReason } from './model/modelStep';
 import * as stepModule from './step';
 import type { EnrichCounts, EnrichmentStep, StepRunContext } from './step';
 import type { JobAttributes } from './types';
@@ -35,7 +37,13 @@ export interface EnrichResult extends EnrichCounts {
   remaining: number;
   durationMs: number;
   stoppedBy: StopReason;
+  modelStoppedBy: ModelStopReason | null;
   descBytes: number;
+}
+
+interface ModelStepLike extends EnrichmentStep {
+  stoppedBy?: ModelStopReason;
+  usage?: () => ModelUsage;
 }
 
 /**
@@ -132,6 +140,21 @@ export async function runEnrichment(
   const remaining = await count(prisma, {
     modelEnabled: stepModule.hasModelStep(steps),
   });
+  const modelStep = steps.find((s): s is ModelStepLike => s.name === 'model');
+  let modelStoppedBy: ModelStopReason | null = null;
+  if (modelStep) {
+    if (typeof modelStep.usage === 'function') {
+      const u = modelStep.usage();
+      counts.modelTokensIn = u.promptTokens;
+      counts.modelTokensOut = u.outputTokens;
+    }
+    modelStoppedBy =
+      typeof modelStep.stoppedBy === 'string'
+        ? modelStep.stoppedBy
+        : modelStep.exhausted
+          ? 'maxCalls'
+          : 'done';
+  }
   const durationMs = Math.max(0, now() - start);
 
   return {
@@ -139,6 +162,7 @@ export async function runEnrichment(
     remaining,
     durationMs,
     stoppedBy,
+    modelStoppedBy,
     descBytes,
   };
 }

@@ -334,3 +334,60 @@ test('scrape-daily.yml wires job attribute enrichment behind ENRICH_ENABLED and 
     'GEMINI_MAX_CALLS_VAR must come from vars.GEMINI_MAX_CALLS in Backfill job attributes'
   );
 });
+
+test('scrape-daily.yml passes Gemini settings only to the job attribute steps', () => {
+  const root = getRepoRoot();
+  const content = fs.readFileSync(path.join(root, '.github/workflows/scrape-daily.yml'), 'utf-8');
+  const parsed = parseYaml(content);
+
+  const geminiSteps = new Set(['Enrich job attributes', 'Backfill job attributes']);
+  const foundSteps = new Set();
+
+  for (const [jobId, job] of Object.entries(parsed.jobs || {})) {
+    const jobEnvStr = JSON.stringify(job?.env || {});
+    assert.ok(!jobEnvStr.includes('GEMINI_API_KEY'), `${jobId} job-level env must not contain GEMINI_API_KEY`);
+
+    for (const step of job?.steps || []) {
+      const stepName = String(step?.name || '');
+      const envStr = JSON.stringify(step?.env || {});
+      const withStr = JSON.stringify(step?.with || {});
+      const runStr = String(step?.run || '');
+
+      if (geminiSteps.has(stepName)) {
+        foundSteps.add(stepName);
+        assert.ok(
+          String(step.env?.GEMINI_API_KEY).includes('secrets.GEMINI_API_KEY'),
+          `${stepName} must set GEMINI_API_KEY from secrets.GEMINI_API_KEY`
+        );
+        assert.ok(
+          String(step.env?.GEMINI_ENABLED).includes('vars.GEMINI_ENABLED'),
+          `${stepName} must set GEMINI_ENABLED from vars.GEMINI_ENABLED`
+        );
+        assert.ok(
+          String(step.env?.GEMINI_MODEL).includes('vars.GEMINI_MODEL'),
+          `${stepName} must set GEMINI_MODEL from vars.GEMINI_MODEL`
+        );
+        assert.ok(
+          String(step.env?.GEMINI_MAX_CALLS_VAR).includes('vars.GEMINI_MAX_CALLS'),
+          `${stepName} must keep GEMINI_MAX_CALLS_VAR from vars.GEMINI_MAX_CALLS`
+        );
+        if (stepName === 'Backfill job attributes') {
+          assert.ok(
+            String(step.env?.ENRICH_BUDGET_INPUT).includes('inputs.enrich_budget_min'),
+            `${stepName} must keep ENRICH_BUDGET_INPUT`
+          );
+        }
+        assert.ok(!withStr.includes('GEMINI_API_KEY'), `${stepName} with block must not contain GEMINI_API_KEY`);
+        assert.ok(!runStr.includes('GEMINI_API_KEY'), `${stepName} run block must not reference GEMINI_API_KEY directly`);
+      } else {
+        const combined = `${envStr}\n${withStr}\n${runStr}`;
+        assert.ok(
+          !combined.includes('GEMINI_API_KEY'),
+          `Non-enrichment step "${stepName}" in job "${jobId}" must not mention GEMINI_API_KEY`
+        );
+      }
+    }
+  }
+
+  assert.equal(foundSteps.size, geminiSteps.size, 'Both job attribute steps must exist in scrape-daily.yml');
+});

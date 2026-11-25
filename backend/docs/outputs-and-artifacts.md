@@ -209,6 +209,9 @@ Written by `writeEnrichReport()` (`src/enrichment/report.ts`) at the end of ever
     "modelAccepted": 0,
     "modelRejected": 0,
     "modelErrors": 0,
+    "modelStoppedBy": null,   // null (off) | "done" | "maxCalls" | "deadline" | "fatal"
+    "modelTokensIn": 0,
+    "modelTokensOut": 0,
     "written": 500,
     "remaining": 128000,    // countPickable(..., { modelEnabled: hasModelStep(steps) }); 0 = backfill complete
     "durationMs": 61234,

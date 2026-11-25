@@ -217,6 +217,9 @@ jobs:
         timeout-minutes: 15
         env:
           GEMINI_MAX_CALLS_VAR: ${{ vars.GEMINI_MAX_CALLS }}
+          GEMINI_ENABLED: ${{ vars.GEMINI_ENABLED }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
         run: |
           MAX_CALLS=300
           if [ -n "$GEMINI_MAX_CALLS_VAR" ]; then
@@ -233,6 +236,9 @@ jobs:
         env:
           ENRICH_BUDGET_INPUT: ${{ inputs.enrich_budget_min }}
           GEMINI_MAX_CALLS_VAR: ${{ vars.GEMINI_MAX_CALLS }}
+          GEMINI_ENABLED: ${{ vars.GEMINI_ENABLED }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
         timeout-minutes: 140
         run: |
           if ! printf '%s' "$ENRICH_BUDGET_INPUT" | grep -Eq '^[0-9]+$' || [ "$ENRICH_BUDGET_INPUT" -lt 1 ] || [ "$ENRICH_BUDGET_INPUT" -gt 130 ]; then

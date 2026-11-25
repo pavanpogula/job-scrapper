@@ -6,6 +6,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { ModelStopReason } from './model/modelStep';
 import type { StopReason } from './run';
 
 export interface EnrichReport {
@@ -31,6 +32,9 @@ export interface EnrichReport {
     modelAccepted: number;
     modelRejected: number;
     modelErrors: number;
+    modelStoppedBy: ModelStopReason | null;
+    modelTokensIn: number;
+    modelTokensOut: number;
     written: number;
     remaining: number;
     durationMs: number;
@@ -76,6 +80,12 @@ export function formatEnrichSummary(report: EnrichReport): string {
     '| picked | rulesHigh | rulesLow | modelCalls | modelAccepted | modelRejected | modelErrors | written | remaining | durationMs | stoppedBy |',
     '|---|---|---|---|---|---|---|---|---|---|---|',
     `| ${c.picked} | ${c.rulesHigh} | ${c.rulesLow} | ${c.modelCalls} | ${c.modelAccepted} | ${c.modelRejected} | ${c.modelErrors} | ${c.written} | ${c.remaining} | ${c.durationMs} | ${c.stoppedBy} |`,
+    '',
+    '| Metric | Value |',
+    '|---|---|',
+    `| Model stopped by | ${c.modelStoppedBy ?? 'off'} |`,
+    `| Model tokens in | ${c.modelTokensIn} |`,
+    `| Model tokens out | ${c.modelTokensOut} |`,
     '',
     `Backfill complete: ${complete} (\`remaining\` = ${c.remaining}). Dry run: ${dry}. Description bytes read: ${mb} MB.`,
   ].join('\n');
